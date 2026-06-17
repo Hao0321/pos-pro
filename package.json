@@ -1,0 +1,72 @@
+{
+  "name": "pos-system",
+  "version": "2.5.0",
+  "private": true,
+  "description": "POS Pro — 零售收銀、庫存、會員、訂貨與複式記帳一體化系統",
+  "author": "Chroma Street Studio <chromastreetstudio@gmail.com>",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron:dev": "vite build && electron .",
+    "electron:build": "vite build && electron-builder --win",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.106.2",
+    "better-sqlite3": "^11.7.0",
+    "cloudflared": "^0.7.1",
+    "electron-store": "^10.0.0",
+    "express": "^4.21.0",
+    "html5-qrcode": "^2.3.8",
+    "jsbarcode": "^3.11.6",
+    "lucide-react": "^0.383.0",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "vite": "^5.4.0",
+    "vitest": "^2.1.9"
+  },
+  "build": {
+    "appId": "com.posPro.desktop",
+    "productName": "POS Pro",
+    "copyright": "Copyright © 2026 Chroma Street Studio",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/menu/**/*"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.js"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": [
+        "zh_TW",
+        "en_US"
+      ]
+    },
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/cloudflared/**/*"
+    ]
+  }
+}

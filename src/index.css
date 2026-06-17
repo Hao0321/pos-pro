@@ -1,0 +1,388 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700;900&family=Noto+Serif+TC:wght@600;700;900&family=DM+Mono:wght@400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* —— 暖色基底 + 鮮活綠強調 —— */
+  --bg-base:    #faf7f2;
+  --bg-raised:  #ffffff;
+  --bg-overlay: #f4efe6;
+  --bg-hover:   rgba(0,0,0,0.04);
+  --bg-active:  #ede6d9;
+  --bg-glass:   rgba(255,255,255,0.72);
+
+  --border-dim:    rgba(45,40,30,0.06);
+  --border-subtle: rgba(45,40,30,0.10);
+  --border-mid:    rgba(45,40,30,0.16);
+  --border-strong: rgba(45,40,30,0.28);
+
+  --text-primary:   #1f1d1a;
+  --text-secondary: #5e5b54;
+  --text-tertiary:  #9a958a;
+  --text-disabled:  #c4bfb4;
+
+  /* 主色：保留溫暖棕 + 漸層 */
+  --accent:        #b8895a;
+  --accent-bright: #d4a36b;
+  --accent-deep:   #8c6438;
+  --accent-dim:    rgba(184,137,90,0.12);
+  --accent-glow:   rgba(184,137,90,0.18);
+  --accent-grad:   linear-gradient(135deg, #d4a36b 0%, #b8895a 50%, #8c6438 100%);
+
+  --gold:        #b8895a;
+  --gold-bright: #d4a36b;
+  --gold-dim:    rgba(184,137,90,0.12);
+  --gold-glow:   rgba(184,137,90,0.18);
+
+  /* 點綴色 — 更明亮活潑 */
+  --blue:       #4f7fc4;
+  --blue-dim:   rgba(79,127,196,0.12);
+  --green:      #3fb27a;
+  --green-dim:  rgba(63,178,122,0.14);
+  --red:        #e25c52;
+  --red-dim:    rgba(226,92,82,0.10);
+  --amber:      #e89d2a;
+  --amber-dim:  rgba(232,157,42,0.14);
+  --teal:       #2bb39d;
+  --teal-dim:   rgba(43,179,157,0.14);
+  --purple:     #8b6dc7;
+  --purple-dim: rgba(139,109,199,0.14);
+  --pink:       #e26da7;
+  --pink-dim:   rgba(226,109,167,0.14);
+
+  --font-sans:  'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif: 'Noto Serif TC', serif;
+  --font-mono:  'DM Mono', 'SF Mono', monospace;
+
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:20px;--s6:24px;--s8:32px;--s10:40px;--s12:48px;
+  --r1:6px;--r2:10px;--r3:14px;--r4:18px;--r5:24px;--r6:32px;--r-pill:999px;
+
+  /* 動畫曲線 — 加 spring */
+  --ease:       cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out:   cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring:cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-snap:  cubic-bezier(0.4, 0, 0.2, 1);
+
+  --t1:120ms;--t2:200ms;--t3:320ms;--t4:480ms;
+
+  --sidebar-w: 232px;
+  --topbar-h: 60px;
+
+  /* 三層陰影 — 更現代 */
+  --shadow-xs: 0 1px 2px rgba(45,40,30,0.04);
+  --shadow-sm: 0 1px 3px rgba(45,40,30,0.05), 0 1px 2px rgba(45,40,30,0.03);
+  --shadow-md: 0 4px 12px rgba(45,40,30,0.07), 0 2px 4px rgba(45,40,30,0.04);
+  --shadow-lg: 0 12px 32px rgba(45,40,30,0.10), 0 4px 12px rgba(45,40,30,0.05);
+  --shadow-xl: 0 24px 60px rgba(45,40,30,0.14), 0 8px 24px rgba(45,40,30,0.08);
+  --shadow-glow: 0 0 0 4px rgba(184,137,90,0.14);
+  --ring-focus: 0 0 0 3px rgba(184,137,90,0.25);
+}
+
+[data-theme="dark"] {
+  --bg-base:    #15140f;
+  --bg-raised:  #1f1d18;
+  --bg-overlay: #2a2620;
+  --bg-hover:   rgba(255,255,255,0.05);
+  --bg-active:  #34302a;
+  --bg-glass:   rgba(31,29,24,0.78);
+
+  --border-dim:    rgba(255,255,255,0.06);
+  --border-subtle: rgba(255,255,255,0.10);
+  --border-mid:    rgba(255,255,255,0.16);
+  --border-strong: rgba(255,255,255,0.28);
+
+  --text-primary:   #f0e9db;
+  --text-secondary: #b3aa9a;
+  --text-tertiary:  #80796c;
+  --text-disabled:  #4a463f;
+
+  --accent:        #d4a36b;
+  --accent-bright: #e8bd84;
+  --accent-deep:   #b8895a;
+  --accent-dim:    rgba(212,163,107,0.16);
+  --accent-glow:   rgba(212,163,107,0.22);
+  --accent-grad:   linear-gradient(135deg, #e8bd84 0%, #d4a36b 50%, #b8895a 100%);
+
+  --gold:        #d4a36b;
+  --gold-bright: #e8bd84;
+  --gold-dim:    rgba(212,163,107,0.16);
+  --gold-glow:   rgba(212,163,107,0.22);
+
+  --blue:       #82a8db;
+  --blue-dim:   rgba(130,168,219,0.16);
+  --green:      #5fcc92;
+  --green-dim:  rgba(95,204,146,0.16);
+  --red:        #ec7d74;
+  --red-dim:    rgba(236,125,116,0.16);
+  --amber:      #f0b260;
+  --amber-dim:  rgba(240,178,96,0.16);
+  --teal:       #4dcdb6;
+  --teal-dim:   rgba(77,205,182,0.16);
+  --purple:     #ab90db;
+  --purple-dim: rgba(171,144,219,0.16);
+  --pink:       #ed8fbe;
+  --pink-dim:   rgba(237,143,190,0.16);
+
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.45), 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.35);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-xl: 0 24px 60px rgba(0,0,0,0.7), 0 8px 24px rgba(0,0,0,0.45);
+  --shadow-glow: 0 0 0 4px rgba(212,163,107,0.18);
+  --ring-focus: 0 0 0 3px rgba(212,163,107,0.3);
+}
+
+html,body,#root{height:100%;width:100%;overflow:hidden}
+body{
+  font-family:var(--font-sans);
+  background:var(--bg-base);
+  color:var(--text-primary);
+  font-size:14px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+button{
+  font-family:inherit; cursor:pointer; border:none; background:none; outline:none;
+  font-size:14px; color:inherit;
+  transition: transform var(--t1) var(--ease-spring),
+              background-color var(--t2) var(--ease-snap),
+              color var(--t2) var(--ease-snap),
+              border-color var(--t2) var(--ease-snap),
+              box-shadow var(--t2) var(--ease-snap);
+}
+button:focus-visible { outline:none; box-shadow: var(--ring-focus) }
+input,textarea,select{
+  font-family:inherit; font-size:14px;
+  color:var(--text-primary); background:none; border:none; outline:none;
+  transition: border-color var(--t2), box-shadow var(--t2);
+}
+input::placeholder,textarea::placeholder{color:var(--text-tertiary)}
+select option{background:var(--bg-raised);color:var(--text-primary)}
+
+/* —— 捲軸 —— */
+*{scrollbar-width:thin;scrollbar-color:var(--border-mid) transparent}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-mid);border-radius:var(--r-pill);border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:var(--border-strong);background-clip:padding-box;border:2px solid transparent}
+
+/* —— 文字工具 —— */
+.mono{font-family:var(--font-mono); font-feature-settings: 'tnum' 1}
+.serif{font-family:var(--font-serif)}
+.muted{color:var(--text-secondary)}
+.tabular{font-variant-numeric:tabular-nums}
+
+/* —— 標籤 Badge —— */
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:var(--r-pill);
+  font-size:11px;font-weight:600;letter-spacing:.02em;
+  white-space:nowrap;
+}
+.badge-gold{background:var(--gold-dim);color:var(--gold)}
+.badge-green{background:var(--green-dim);color:var(--green)}
+.badge-red{background:var(--red-dim);color:var(--red)}
+.badge-amber{background:var(--amber-dim);color:var(--amber)}
+.badge-blue{background:var(--blue-dim);color:var(--blue)}
+.badge-teal{background:var(--teal-dim);color:var(--teal)}
+.badge-purple{background:var(--purple-dim);color:var(--purple)}
+.badge-pink{background:var(--pink-dim);color:var(--pink)}
+
+/* —— 輸入框 —— */
+.field{
+  background:var(--bg-raised);
+  border:1.5px solid var(--border-subtle);
+  border-radius:var(--r2);
+  padding:11px 14px; width:100%;
+  color:var(--text-primary);
+  font-weight:500;
+  transition: border-color var(--t2), box-shadow var(--t2), transform var(--t1);
+}
+.field:hover{border-color:var(--border-mid)}
+.field:focus{
+  border-color:var(--accent);
+  box-shadow:var(--ring-focus);
+}
+
+/* —— 按鈕 —— */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);
+  padding:11px 20px;border-radius:var(--r2);
+  font-size:14px;font-weight:600; letter-spacing:.01em;
+  cursor:pointer;white-space:nowrap;
+  transition: transform var(--t1) var(--ease-spring),
+              background-color var(--t2) var(--ease-snap),
+              box-shadow var(--t2) var(--ease-snap),
+              border-color var(--t2) var(--ease-snap),
+              color var(--t2) var(--ease-snap);
+  position:relative;
+}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:translateY(0) scale(0.97)}
+
+.btn-primary{
+  background:var(--accent-grad);
+  color:#fff;
+  box-shadow: 0 2px 8px rgba(184,137,90,0.28),
+              inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.btn-primary:hover{
+  box-shadow: 0 4px 16px rgba(184,137,90,0.4),
+              inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.btn-primary:disabled{opacity:0.45; cursor:not-allowed; transform:none}
+
+.btn-ghost{
+  border:1.5px solid var(--border-mid);
+  color:var(--text-primary);
+  background:var(--bg-raised);
+}
+.btn-ghost:hover{
+  border-color:var(--accent);
+  background:var(--accent-dim);
+  color:var(--accent-deep);
+}
+
+.btn-danger{
+  background:var(--red-dim); color:var(--red);
+  border:1.5px solid transparent;
+}
+.btn-danger:hover{
+  background:var(--red); color:#fff;
+}
+
+.btn-sm{padding:7px 14px; font-size:12px; gap:6px}
+.btn-lg{padding:14px 28px; font-size:15px; border-radius:var(--r3)}
+
+.btn-icon{
+  padding:8px; border-radius:var(--r2);
+  color:var(--text-secondary);
+  display:inline-flex; align-items:center; justify-content:center;
+}
+.btn-icon:hover{background:var(--bg-hover); color:var(--text-primary)}
+
+/* —— 卡片 —— */
+.card{
+  background:var(--bg-raised);
+  border:1px solid var(--border-dim);
+  border-radius:var(--r3);
+  box-shadow:var(--shadow-sm);
+  transition: box-shadow var(--t3) var(--ease), border-color var(--t2);
+}
+.card-hover:hover{
+  box-shadow:var(--shadow-md);
+  border-color:var(--border-subtle);
+}
+
+.divider{border:none;border-top:1px solid var(--border-dim)}
+
+/* —— 玻璃效果 —— */
+.glass{
+  background:var(--bg-glass);
+  backdrop-filter:blur(20px) saturate(160%);
+  -webkit-backdrop-filter:blur(20px) saturate(160%);
+}
+
+/* —— 動畫 —— */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.94)}to{opacity:1;transform:scale(1)}}
+@keyframes slideRight{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 0 0 var(--accent-glow)}50%{box-shadow:0 0 0 8px transparent}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes pop{0%{transform:scale(0.8);opacity:0}50%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+@keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-3deg)}75%{transform:rotate(3deg)}}
+
+.animate-up{animation:fadeUp var(--t3) var(--ease-out) both}
+.animate-in{animation:fadeIn var(--t3) var(--ease-out) both}
+.animate-scale{animation:scaleIn var(--t3) var(--ease-spring) both}
+.animate-slide{animation:slideRight var(--t3) var(--ease-out) both}
+.animate-pop{animation:pop var(--t3) var(--ease-spring) both}
+.animate-pulse{animation:pulseGlow 2s var(--ease) infinite}
+
+.delay-1{animation-delay:50ms}
+.delay-2{animation-delay:100ms}
+.delay-3{animation-delay:150ms}
+.delay-4{animation-delay:200ms}
+.delay-5{animation-delay:250ms}
+
+/* —— Loading 骨架 —— */
+.skeleton{
+  background: linear-gradient(90deg, var(--bg-overlay), var(--bg-hover), var(--bg-overlay));
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: var(--r2);
+}
+
+/* —— 焦點 ring —— */
+:focus-visible { outline:none }
+
+/* —— 標題層級 —— */
+h1,h2,h3,h4,h5{font-weight:700; letter-spacing:-0.01em; line-height:1.25}
+h1{font-size:28px} h2{font-size:22px} h3{font-size:18px} h4{font-size:15px}
+
+/* —— Mobile / iOS PWA —— */
+@media (max-width: 768px) {
+  :root { --sidebar-w: 0px; }
+  body { font-size: 15px; }
+  .btn{padding:12px 20px; min-height:44px}
+  .btn-sm{min-height:38px}
+  .btn-icon{min-width:38px; min-height:38px}
+  h1{font-size:24px} h2{font-size:20px}
+  .field{min-height:42px; font-size:16px} /* 16px 防 iOS 自動 zoom */
+  input, select, textarea { font-size:16px }
+  /* 隱藏 desktop-only 元素 */
+  .desktop-only { display: none !important }
+}
+@media (min-width: 769px) {
+  .mobile-only { display: none !important }
+}
+
+/* —— iOS safe-area —— */
+@supports (padding: env(safe-area-inset-top)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* —— PWA standalone 模式 —— */
+@media all and (display-mode: standalone) {
+  body { user-select: none; -webkit-user-select: none; }
+  input, textarea { user-select: text; -webkit-user-select: text; }
+}
+
+/* —— 數字遞增動畫工具 —— */
+.tick{display:inline-block;animation:fadeUp 400ms var(--ease-spring) both}
+
+/* —— 旋轉動畫 —— */
+@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+.spin { animation: spin 1s linear infinite }
+
+/* —— 大列表效能：content-visibility 原生「虛擬化」 —— */
+/* 瀏覽器自動跳過螢幕外項目的 layout/paint，500+ 商品捲動不卡。漸進增強：舊瀏覽器自動忽略 */
+.cv-card { content-visibility: auto; contain-intrinsic-size: auto 180px; }
+.cv-row  { content-visibility: auto; contain-intrinsic-size: auto 52px; }
+
+/* —— POS 商品卡 hover（取代 inline JS handler，減少事件成本）—— */
+.pos-card { transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out); }
+@media (hover: hover) {
+  .pos-card:not(:disabled):hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+}
+.pos-card:not(:disabled):active { transform: translateY(-1px); }
+
+/* —— 互動連結式按鈕 —— */
+.link{color:var(--accent-deep); cursor:pointer; transition:color var(--t2)}
+.link:hover{color:var(--accent-bright)}
+
+/* —— Section 標題 —— */
+.section-title{
+  font-size:11px; font-weight:700;
+  color:var(--text-tertiary);
+  letter-spacing:.08em; text-transform:uppercase;
+  margin-bottom:8px;
+}

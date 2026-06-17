@@ -1,0 +1,16 @@
+{
+  "name": "POS Pro 雜貨店管理系統",
+  "short_name": "POS Pro",
+  "description": "離線可用的雜貨店收銀、庫存、訂貨、會員管理系統",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f5f2ed",
+  "theme_color": "#8b7355",
+  "lang": "zh-TW",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
