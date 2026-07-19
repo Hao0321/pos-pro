@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useMemo, lazy, Suspense } from 'react'
-import { Plus, Pencil, Trash2, X, Check, AlertTriangle, ChevronUp, ChevronDown, Barcode, Printer, Tag, Truck, Camera, Upload, Download, FileText } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Check, AlertTriangle, ChevronUp, ChevronDown, Barcode, Printer, Tag, Truck, Camera, Upload, Download, FileText, Search, MoreHorizontal, CheckSquare } from 'lucide-react'
 import JsBarcode from 'jsbarcode'
 import { loadSuppliers, loadPurchases } from '../utils/dataAccess'
-import { DEFAULT_CATEGORIES, CATEGORY_META, mergeCategories } from '../utils/categories'
+import { DEFAULT_CATEGORIES, CATEGORY_META, mergeCategories, groupByCategory } from '../utils/categories'
 import { getExpiringProducts, getProductHistory } from '../utils/analytics'
 import { parseCSV, stringifyCSV, downloadCSV, readFileAsText, PRODUCT_CSV_HEADERS, productToCSVRow, csvRowToProduct } from '../utils/csv'
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
@@ -30,13 +30,18 @@ function BarcodeDisplay({ value }) {
 
 const EMPTY = { name:'', category:'', price:'', cost:'', stock:'', barcode:'', unit:'個', noBarcode:false, imageUrl:'', expiryDate:'', supplierId:'', reorderLevel:'' }
 
+// 低庫存判斷：有設安全庫存就用安全庫存，沒設就用 5（零庫存另計）
+const isLowStock = p => p.stock > 0 && (p.reorderLevel > 0 ? p.stock <= p.reorderLevel : p.stock <= 5)
+
 export default function InventoryPage({ store }) {
   const { products, addProduct, updateProduct, deleteProduct, categories, orders = [], wasteLog = [] } = store
   const [editing,   setEditing]   = useState(null)
   const [form,      setForm]      = useState(EMPTY)
   const [search,    setSearch]    = useState('')
-  const [filter,    setFilter]    = useState('all')
-  const [sortKey,   setSortKey]   = useState('name')
+  const [filter,    setFilter]    = useState('all')       // 快速篩選：all / low / zero / expiry / nobc
+  const [catFilter, setCatFilter] = useState('all')       // 分類 chip
+  const [sortMode,  setSortMode]  = useState('category')  // category / name / stockAsc / stockDesc / priceDesc / column
+  const [sortKey,   setSortKey]   = useState('name')      // 欄位排序（點表頭時 sortMode='column'）
   const [sortAsc,   setSortAsc]   = useState(true)
   const [confirmDel, setConfirmDel] = useState(null)
   const [barcodePreview, setBarcodePreview] = useState(null)
@@ -44,6 +49,8 @@ export default function InventoryPage({ store }) {
   const [suppliers, setSuppliers] = useState([])
   const [showCamera, setShowCamera] = useState(false)
   const [showBatch, setShowBatch] = useState(false)
+  const [showTools, setShowTools] = useState(false)   // 「⋯ 更多工具」下拉選單
+  const [batchMode, setBatchMode] = useState(false)   // 批量操作模式（顯示勾選欄）
   const [batchForm, setBatchForm] = useState({ action: 'price', value: '', supplierId: '', category: '' })
   const [csvImport, setCsvImport] = useState(null) // { records, toAdd, toUpdate, errors }
   const [purchases, setPurchases] = useState([])
@@ -212,36 +219,64 @@ export default function InventoryPage({ store }) {
   }
 
   function handleSort(key) {
+    setSortMode('column')
     if (sortKey === key) setSortAsc(v => !v)
     else { setSortKey(key); setSortAsc(true) }
   }
 
   // 即將過期 / 已過期商品 id 集合（給 filter 用）— useMemo 避免每次 render 重掃全商品
-  const { expiredIds, expiringIds, expired, soon } = useMemo(() => {
+  const { expiredIds, expiringIds, soon } = useMemo(() => {
     const { expired, soon } = getExpiringProducts(products, 7)
     return {
-      expired, soon,
+      soon,
       expiredIds: new Set(expired.map(p => p.id)),
       expiringIds: new Set([...expired.map(p => p.id), ...soon.map(p => p.id)]),
     }
   }, [products])
 
-  const filtered = useMemo(() => products
-    .filter(p => {
-      const okSearch = !search || (p.name||'').includes(search) || (p.category||'').includes(search)
-      if (filter === 'low')      return okSearch && p.stock <= 5 && p.stock > 0
-      if (filter === 'zero')     return okSearch && p.stock === 0
-      if (filter === 'nobc')     return okSearch && p.noBarcode
-      if (filter === 'expiring') return okSearch && expiringIds.has(p.id)
-      if (filter === 'expired')  return okSearch && expiredIds.has(p.id)
-      return okSearch
+  // 搜尋（名稱 + 條碼 + 分類）+ 分類 chip + 快速篩選
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return products.filter(p => {
+      if (q) {
+        const hit = (p.name||'').toLowerCase().includes(q)
+          || (p.barcode||'').toLowerCase().includes(q)
+          || (p.category||'').toLowerCase().includes(q)
+        if (!hit) return false
+      }
+      if (catFilter !== 'all' && (p.category || '未分類') !== catFilter) return false
+      if (filter === 'low')    return isLowStock(p)
+      if (filter === 'zero')   return p.stock === 0
+      if (filter === 'nobc')   return !!p.noBarcode
+      if (filter === 'expiry') return expiringIds.has(p.id)
+      return true
     })
-    .sort((a, b) => {
-      let va = a[sortKey], vb = b[sortKey]
-      if (typeof va === 'string') va = va.toLowerCase()
-      if (typeof vb === 'string') vb = vb.toLowerCase()
-      return sortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1)
-    }), [products, search, filter, sortKey, sortAsc, expiringIds, expiredIds])
+  }, [products, search, catFilter, filter, expiringIds])
+
+  // 排序 → 展開成列（分類模式插入分組標題列）
+  const rows = useMemo(() => {
+    const byName = (a, b) => (a.name||'').localeCompare(b.name||'', 'zh-Hant')
+    const list = [...filtered]
+    if (sortMode === 'name')           list.sort(byName)
+    else if (sortMode === 'stockAsc')  list.sort((a, b) => (a.stock||0) - (b.stock||0))
+    else if (sortMode === 'stockDesc') list.sort((a, b) => (b.stock||0) - (a.stock||0))
+    else if (sortMode === 'priceDesc') list.sort((a, b) => (b.price||0) - (a.price||0))
+    else if (sortMode === 'column') {
+      list.sort((a, b) => {
+        let va = a[sortKey], vb = b[sortKey]
+        if (typeof va === 'string') va = va.toLowerCase()
+        if (typeof vb === 'string') vb = vb.toLowerCase()
+        return sortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1)
+      })
+    } else {
+      // 分類分組（預設）：組間依預設分類順序、組內依名稱
+      return groupByCategory(list).flatMap(g => [
+        { type: 'header', category: g.category, count: g.products.length },
+        ...g.products.slice().sort(byName).map(p => ({ type: 'product', p })),
+      ])
+    }
+    return list.map(p => ({ type: 'product', p }))
+  }, [filtered, sortMode, sortKey, sortAsc])
 
   function startNew()  { setEditing('new'); setForm(EMPTY) }
   function startEdit(p){ setEditing(p.id);  setForm({...p}) }
@@ -265,17 +300,26 @@ export default function InventoryPage({ store }) {
     deleteProduct(id); setConfirmDel(null)
   }
 
-  const lowCount  = products.filter(p => p.stock <= 5 && p.stock > 0).length
-  const zeroCount = products.filter(p => p.stock === 0).length
+  const lowCount    = products.filter(isLowStock).length
+  const zeroCount   = products.filter(p => p.stock === 0).length
+  const expiryCount = expiringIds.size
+  const nobcCount   = products.filter(p => p.noBarcode).length
 
-  const FILTERS = [
-    ['all',      '全部',         products.length],
-    ['low',      '低庫存',       lowCount],
-    ['zero',     '缺貨',         zeroCount],
-    ['expiring', '即將過期',     soon.length],
-    ['expired',  '已過期',       expired.length],
-    ['nobc',     '無條碼',       products.filter(p=>p.noBarcode).length],
+  // 一鍵快速篩選（可再點一次取消）
+  const QUICK_FILTERS = [
+    ['low',    '⚠️ 低庫存',        lowCount],
+    ['zero',   '🚫 零庫存',        zeroCount],
+    ['expiry', '⏰ 快過期/已過期', expiryCount],
+    ['nobc',   '🏷️ 無條碼',        nobcCount],
   ]
+
+  // 分類 chips：只列出商品中實際存在的分類（依預設分類順序），附數量
+  const catChips = useMemo(
+    () => groupByCategory(products).map(g => ({ cat: g.category, count: g.products.length })),
+    [products]
+  )
+
+  const filtersActive = search.trim() !== '' || catFilter !== 'all' || filter !== 'all'
 
   const COLS = [
     { key:'name',  label:'商品名稱',  flex:'2fr' },
@@ -286,7 +330,7 @@ export default function InventoryPage({ store }) {
     { key:'barcode', label:'條碼',    flex:'1.4fr', mono:true },
   ]
 
-  const gridTpl = '32px ' + COLS.map(c=>c.flex).join(' ') + ' 80px'
+  const gridTpl = (batchMode ? '32px ' : '') + COLS.map(c=>c.flex).join(' ') + ' 80px'
 
   return (
     <div style={iv.root}>
@@ -294,7 +338,9 @@ export default function InventoryPage({ store }) {
         <div>
           <h2 style={iv.title}>庫存管理</h2>
           <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
-            共 {products.length} 種商品
+            {filtersActive
+              ? <>顯示 {filtered.length} / {products.length} 項</>
+              : <>共 {products.length} 種商品</>}
             {(lowCount + zeroCount) > 0 && (
               <span style={{color:'var(--amber)', marginLeft:8}}>
                 · {lowCount + zeroCount} 項需補貨
@@ -302,56 +348,117 @@ export default function InventoryPage({ store }) {
             )}
           </div>
         </div>
-        <button className="btn btn-primary btn-sm" onClick={startNew}>
-          <Plus size={15}/>新增商品
-        </button>
+        <div style={{display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
+          <button className="btn btn-ghost" style={{minHeight:44, padding:'8px 16px'}} onClick={()=>setShowCamera(true)} title="用相機掃條碼快速找/新增商品">
+            <Camera size={15}/>掃條碼
+          </button>
+          <div style={{position:'relative'}}>
+            <button className="btn btn-ghost" style={{minHeight:44, padding:'8px 16px'}} onClick={()=>setShowTools(v=>!v)} title="CSV 匯入匯出、範本、批量操作">
+              <MoreHorizontal size={15}/>更多工具
+            </button>
+            {showTools && (
+              <>
+                {/* 透明 backdrop：點外面關閉 */}
+                <div style={{position:'fixed', inset:0, zIndex:90}} onClick={()=>setShowTools(false)}/>
+                <div style={iv.toolsMenu}>
+                  <button style={iv.toolsItem} onClick={()=>{ setShowTools(false); csvFileRef.current?.click() }} title="從 CSV 批量匯入（新增 + 更新）">
+                    <Upload size={14}/>匯入 CSV
+                  </button>
+                  <button style={iv.toolsItem} onClick={()=>{ setShowTools(false); handleExportCSV() }} title="匯出全部商品為 CSV">
+                    <Download size={14}/>匯出 CSV
+                  </button>
+                  <button style={iv.toolsItem} onClick={()=>{ setShowTools(false); handleDownloadTemplate() }} title="下載 CSV 範本">
+                    <FileText size={14}/>下載範本
+                  </button>
+                  <button
+                    style={{...iv.toolsItem, color: batchMode ? 'var(--accent)' : 'var(--text-primary)'}}
+                    onClick={()=>{ setShowTools(false); if (batchMode) setSelectedIds(new Set()); setBatchMode(!batchMode) }}
+                    title="開啟後可勾選多項商品批量編輯 / 列印標籤"
+                  >
+                    <CheckSquare size={14}/>{batchMode ? '結束批量操作' : '批量操作'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+          <button className="btn btn-primary" style={{minHeight:44, padding:'8px 18px'}} onClick={startNew}>
+            <Plus size={15}/>新增商品
+          </button>
+        </div>
       </div>
 
-      <div style={iv.toolbar}>
-        <input className="field" value={search} onChange={e=>setSearch(e.target.value)} placeholder="搜尋商品名稱或分類..." style={{flex:1, maxWidth:280, padding:'8px 12px'}}/>
-        <button className="btn btn-ghost btn-sm" onClick={()=>setShowCamera(true)} title="用相機掃條碼快速找/新增商品">
-          <Camera size={14}/>掃條碼
-        </button>
-        <button className="btn btn-ghost btn-sm" onClick={handleExportCSV} title="匯出全部商品為 CSV">
-          <Download size={14}/>匯出 CSV
-        </button>
-        <button className="btn btn-ghost btn-sm" onClick={()=>csvFileRef.current?.click()} title="從 CSV 批量匯入（新增 + 更新）">
-          <Upload size={14}/>匯入 CSV
-        </button>
-        <button className="btn btn-ghost btn-sm" onClick={handleDownloadTemplate} title="下載 CSV 範本">
-          <FileText size={14}/>範本
-        </button>
-        <input ref={csvFileRef} type="file" accept=".csv" style={{display:'none'}} onChange={handleCSVFile}/>
-        <div style={{display:'flex', gap:4}}>
-          {FILTERS.map(([k,l,n]) => (
-            <button key={k} onClick={()=>setFilter(k)} style={{
-              ...iv.filterBtn,
-              background: filter===k ? 'var(--bg-active)' : 'transparent',
-              color: filter===k ? 'var(--text-primary)' : 'var(--text-tertiary)',
-              border: `1px solid ${filter===k ? 'var(--border-mid)' : 'transparent'}`,
-            }}>
-              {l}
-              <span style={{...iv.filterCount, background: filter===k?'var(--bg-overlay)':'var(--border-dim)', color: filter===k?'var(--text-secondary)':'var(--text-disabled)'}}>{n}</span>
+      {/* 🔍 找商品優先區：大搜尋框 + 分類 chips + 快速篩選 + 排序 */}
+      <div style={iv.findBar}>
+        <div style={{position:'relative', width:'100%'}}>
+          <Search size={16} style={{position:'absolute', left:14, top:'50%', transform:'translateY(-50%)', color:'var(--text-tertiary)', pointerEvents:'none'}}/>
+          <input
+            className="field"
+            value={search}
+            onChange={e=>setSearch(e.target.value)}
+            placeholder="搜尋商品名稱 / 條碼 / 分類…"
+            style={{minHeight:44, fontSize:15, paddingLeft:40, paddingRight:46}}
+          />
+          {search && (
+            <button onClick={()=>setSearch('')} title="清除搜尋" style={iv.searchClear}>
+              <X size={16}/>
+            </button>
+          )}
+        </div>
+
+        <div style={iv.chipRow}>
+          <button onClick={()=>setCatFilter('all')} style={{...iv.chip, ...(catFilter==='all' ? iv.chipOn : {})}}>
+            全部 <span style={iv.chipCount}>{products.length}</span>
+          </button>
+          {catChips.map(({ cat, count }) => (
+            <button key={cat} onClick={()=>setCatFilter(catFilter===cat ? 'all' : cat)} style={{...iv.chip, ...(catFilter===cat ? iv.chipOn : {})}}>
+              {CATEGORY_META[cat]?.icon || '📦'} {cat} <span style={iv.chipCount}>{count}</span>
             </button>
           ))}
         </div>
+
+        <div style={{display:'flex', gap:6, alignItems:'center', flexWrap:'wrap'}}>
+          {QUICK_FILTERS.map(([k, l, n]) => (
+            <button key={k} onClick={()=>setFilter(filter===k ? 'all' : k)} style={{...iv.chip, ...(filter===k ? iv.chipOn : {})}}>
+              {l} <span style={iv.chipCount}>{n}</span>
+            </button>
+          ))}
+          <div style={{flex:1}}/>
+          <select
+            className="field"
+            value={sortMode}
+            onChange={e=>setSortMode(e.target.value)}
+            title="排序方式"
+            style={{width:'auto', minHeight:40, padding:'6px 12px', fontSize:13, cursor:'pointer'}}
+          >
+            <option value="category">排序：分類（預設）</option>
+            <option value="name">排序：名稱</option>
+            <option value="stockAsc">排序：庫存 少→多</option>
+            <option value="stockDesc">排序：庫存 多→少</option>
+            <option value="priceDesc">排序：價格 高→低</option>
+            {sortMode === 'column' && <option value="column">排序：欄位（點表頭）</option>}
+          </select>
+        </div>
+
+        <input ref={csvFileRef} type="file" accept=".csv" style={{display:'none'}} onChange={handleCSVFile}/>
       </div>
 
       {/* Table */}
       <div style={iv.tableWrap}>
         {/* Header */}
         <div style={{...iv.row, ...iv.rowHead, gridTemplateColumns: gridTpl}}>
-          <input
-            type="checkbox"
-            checked={filtered.length > 0 && filtered.every(p => selectedIds.has(p.id))}
-            onChange={e => toggleAll(filtered.map(p=>p.id), e.target.checked)}
-            title="全選"
-            style={{cursor:'pointer', accentColor:'var(--gold)'}}
-          />
+          {batchMode && (
+            <input
+              type="checkbox"
+              checked={filtered.length > 0 && filtered.every(p => selectedIds.has(p.id))}
+              onChange={e => toggleAll(filtered.map(p=>p.id), e.target.checked)}
+              title="全選"
+              style={{cursor:'pointer', accentColor:'var(--gold)'}}
+            />
+          )}
           {COLS.map(col => (
             <button key={col.key} onClick={()=>handleSort(col.key)} style={{...iv.colHead, justifyContent: col.align==='right' ? 'flex-end' : 'flex-start'}}>
               {col.label}
-              {sortKey===col.key && (sortAsc ? <ChevronUp size={11}/> : <ChevronDown size={11}/>)}
+              {sortMode==='column' && sortKey===col.key && (sortAsc ? <ChevronUp size={11}/> : <ChevronDown size={11}/>)}
             </button>
           ))}
           <span style={{...iv.colHead, fontSize:11}}>操作</span>
@@ -360,21 +467,49 @@ export default function InventoryPage({ store }) {
         {/* Rows */}
         <div style={{flex:1, overflowY:'auto'}}>
           {filtered.length === 0 ? (
-            <div style={iv.empty}>沒有符合條件的商品</div>
-          ) : filtered.map(p => {
-            const low  = p.stock <= 5 && p.stock > 0
+            <div style={iv.empty}>
+              {search.trim() ? (
+                <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:14}}>
+                  <div>找不到「{search.trim()}」— 檢查一下關鍵字，或直接新增</div>
+                  <button
+                    className="btn btn-primary"
+                    style={{minHeight:44}}
+                    onClick={()=>{
+                      const q = search.trim()
+                      setEditing('new')
+                      // 純數字長串 → 當條碼預填；否則當商品名稱預填
+                      setForm(/^\d{6,}$/.test(q) ? { ...EMPTY, barcode:q, noBarcode:false } : { ...EMPTY, name:q })
+                    }}
+                  >
+                    <Plus size={15}/>新增商品
+                  </button>
+                </div>
+              ) : '沒有符合條件的商品'}
+            </div>
+          ) : rows.map(r => {
+            if (r.type === 'header') return (
+              <div key={'hdr-'+r.category} style={iv.catHead}>
+                <span style={{fontSize:14}}>{CATEGORY_META[r.category]?.icon || '📦'}</span>
+                <span>{r.category}</span>
+                <span style={{fontFamily:'var(--font-mono)', fontWeight:400, color:'var(--text-tertiary)'}}>{r.count}</span>
+              </div>
+            )
+            const p = r.p
+            const low  = isLowStock(p)
             const zero = p.stock === 0
             return (
               <div key={p.id} className="cv-row" style={{...iv.row, gridTemplateColumns: gridTpl, background: selectedIds.has(p.id) ? 'var(--gold-dim)' : expiredIds.has(p.id) ? 'rgba(217,79,68,0.06)' : zero?'rgba(217,79,68,0.04)': low?'rgba(217,119,6,0.04)' : expiringIds.has(p.id) ? 'rgba(217,119,6,0.05)' : 'transparent'}}>
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(p.id)}
-                  onChange={()=>toggleSelect(p.id)}
-                  style={{cursor:'pointer', accentColor:'var(--gold)'}}
-                />
+                {batchMode && (
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(p.id)}
+                    onChange={()=>toggleSelect(p.id)}
+                    style={{cursor:'pointer', accentColor:'var(--gold)'}}
+                  />
+                )}
                 <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
                   {p.noBarcode && <span style={{fontSize:9, border:'1px solid var(--border-mid)', color:'var(--text-tertiary)', borderRadius:4, padding:'1px 5px', flexShrink:0}}>自包</span>}
-                  <span style={{fontWeight:500, fontSize:13}}>{p.name}</span>
+                  <span style={{fontWeight:600, fontSize:14}}>{p.name}</span>
                   {expiredIds.has(p.id) && (
                     <span style={{fontSize:9, background:'var(--red-dim)', color:'var(--red)', borderRadius:4, padding:'1px 5px', fontWeight:600}}>已過期</span>
                   )}
@@ -390,9 +525,16 @@ export default function InventoryPage({ store }) {
                 <span style={{fontFamily:'var(--font-mono)', fontSize:12, color:'var(--text-secondary)', textAlign:'right'}}>
                   {p.cost ? p.cost.toLocaleString() : '—'}
                 </span>
-                <span style={{fontFamily:'var(--font-mono)', fontSize:13, textAlign:'right', fontWeight: (low||zero)?600:400, color: zero?'var(--red)':low?'var(--amber)':'var(--text-primary)'}}>
-                  {p.stock}
-                  {low  && <AlertTriangle size={11} style={{marginLeft:4, verticalAlign:'middle'}}/>}
+                <span style={{display:'flex', justifyContent:'flex-end', alignItems:'center'}}>
+                  {zero ? (
+                    <span className="badge badge-red" style={{fontFamily:'var(--font-mono)'}}>0</span>
+                  ) : low ? (
+                    <span className="badge badge-amber" style={{fontFamily:'var(--font-mono)'}}>
+                      <AlertTriangle size={10}/>{p.stock}
+                    </span>
+                  ) : (
+                    <span style={{fontFamily:'var(--font-mono)', fontSize:13}}>{p.stock}</span>
+                  )}
                 </span>
                 <span style={{fontFamily:'var(--font-mono)', fontSize:11, color: p.noBarcode?'var(--text-tertiary)':'var(--teal)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
                   {p.noBarcode ? '—' : p.barcode || '—'}
@@ -815,9 +957,15 @@ const iv = {
   root:{ display:'flex', flexDirection:'column', height:'100%', padding:'16px', gap:14, overflow:'hidden' },
   header:{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexShrink:0, flexWrap:'wrap', gap:10 },
   title:{ fontFamily:'var(--font-serif)', fontSize:20, fontWeight:600 },
-  toolbar:{ display:'flex', gap:10, alignItems:'center', flexShrink:0, flexWrap:'wrap' },
-  filterBtn:{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:6, fontSize:12, cursor:'pointer', transition:'all 120ms' },
-  filterCount:{ borderRadius:20, padding:'0 6px', fontSize:10, fontFamily:'var(--font-mono)' },
+  findBar:{ display:'flex', flexDirection:'column', gap:8, flexShrink:0 },
+  searchClear:{ position:'absolute', right:3, top:'50%', transform:'translateY(-50%)', width:40, height:40, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:8, border:'none', background:'transparent', color:'var(--text-tertiary)', cursor:'pointer' },
+  chipRow:{ display:'flex', gap:6, overflowX:'auto', paddingBottom:2, flexShrink:0 },
+  chip:{ display:'inline-flex', alignItems:'center', gap:6, minHeight:40, padding:'6px 14px', borderRadius:'var(--r-pill)', fontSize:13, fontWeight:500, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0, background:'var(--bg-raised)', color:'var(--text-secondary)', border:'1px solid var(--border-dim)', transition:'all 120ms' },
+  chipOn:{ background:'var(--accent-dim)', color:'var(--accent)', border:'1px solid var(--accent)', fontWeight:600 },
+  chipCount:{ fontFamily:'var(--font-mono)', fontSize:11, opacity:0.75 },
+  catHead:{ display:'flex', alignItems:'center', gap:8, padding:'6px 16px', minWidth:700, background:'var(--bg-overlay)', borderBottom:'1px solid var(--border-dim)', fontSize:12, fontWeight:600, color:'var(--text-secondary)' },
+  toolsMenu:{ position:'absolute', top:'calc(100% + 6px)', right:0, zIndex:95, minWidth:200, background:'var(--bg-raised)', border:'1px solid var(--border-dim)', borderRadius:12, boxShadow:'var(--shadow-lg)', padding:6, display:'flex', flexDirection:'column' },
+  toolsItem:{ display:'flex', alignItems:'center', gap:10, minHeight:44, padding:'10px 14px', borderRadius:8, border:'none', fontSize:13, fontWeight:500, color:'var(--text-primary)', background:'transparent', cursor:'pointer', textAlign:'left', width:'100%' },
   tableWrap:{ flex:1, display:'flex', flexDirection:'column', background:'var(--bg-raised)', border:'1px solid var(--border-dim)', borderRadius:'var(--r3)', overflow:'auto', boxShadow:'var(--shadow-sm)' },
   row:{ display:'grid', gap:10, padding:'10px 16px', borderBottom:'1px solid var(--border-dim)', alignItems:'center', minWidth:700 },
   rowHead:{ background:'var(--bg-overlay)', flexShrink:0 },

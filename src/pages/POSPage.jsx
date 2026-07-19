@@ -14,7 +14,7 @@ export default function POSPage({ store, session }) {
     addToCart, removeFromCart, updateCartQty, updateCartItemPrice, clearCart, checkout,
     findByBarcode, findMember, categories,
     heldOrders, holdCart, recallHeld, removeHeld,
-    openShift, pointsRule, manualDiscount, setManualDiscount,
+    openShift, startShift, pointsRule, manualDiscount, setManualDiscount,
     setView,
   } = store
 
@@ -26,6 +26,9 @@ export default function POSPage({ store, session }) {
   const [showHeld,  setShowHeld]   = useState(false)
   const [showLookup,setShowLookup] = useState(false)
   const [showCamera,setShowCamera] = useState(false)
+  // 一鍵開班：零用金自動帶上次的值，收銀員不用每天跳去班別管理
+  const [quickCash, setQuickCash] = useState(() => { try { return localStorage.getItem('pos_last_open_cash') || '' } catch { return '' } })
+  const [opening,   setOpening]   = useState(false)
   const scanRef = useRef(null)
   const searchRef = useRef(null)
   const isMobile = useIsMobile()
@@ -95,23 +98,45 @@ export default function POSPage({ store, session }) {
   const allCats = ['全部', ...categories]
   const cartCount = cart.reduce((s,i)=>s+i.qty, 0)
 
-  // 班別檢查
+  // 班別檢查 — v2.6.1: 直接在收銀台一鍵開班，不用跳去班別管理（零用金自動帶上次金額）
   if (!openShift) {
+    const quickOpen = async () => {
+      if (opening) return
+      setOpening(true)
+      try { await startShift(session?.username || '', parseFloat(quickCash) || 0, session?.id || '') }
+      finally { setOpening(false) }
+    }
     return (
-      <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16, padding:40}}>
+      <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:14, padding:40}}>
         <div style={{
-          width:64, height:64, borderRadius:'50%', background:'var(--amber-dim)',
+          width:64, height:64, borderRadius:'50%', background:'var(--accent-dim)',
           display:'flex', alignItems:'center', justifyContent:'center',
         }}>
-          <Clock size={28} color="var(--amber)"/>
+          <Clock size={28} color="var(--accent)"/>
         </div>
-        <div style={{fontSize:18, fontWeight:600, color:'var(--text-primary)'}}>尚未開班</div>
+        <div style={{fontSize:18, fontWeight:600, color:'var(--text-primary)'}}>開班就能開始收銀</div>
         <div style={{fontSize:13, color:'var(--text-secondary)', textAlign:'center', maxWidth:300}}>
-          請先到「班別管理」開班並設定零用金，才能開始收銀。
+          確認抽屜裡的零用金，按一下就開班。
         </div>
-        <button className="btn btn-primary" onClick={()=>setView('shifts')} style={{padding:'10px 24px'}}>
-          前往班別管理
-        </button>
+        <div style={{display:'flex', flexDirection:'column', gap:10, width:280}}>
+          <div>
+            <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>
+              開班零用金{quickCash !== '' && '（已自動帶入上次金額）'}
+            </div>
+            <input className="field" type="number" value={quickCash}
+              onChange={e=>setQuickCash(e.target.value)} placeholder="例：2000"
+              onKeyDown={e=>{ if (e.key === 'Enter') quickOpen() }}
+              style={{textAlign:'center', fontFamily:'var(--font-mono)', fontSize:16}}/>
+          </div>
+          <button className="btn btn-primary" disabled={opening}
+            style={{padding:'12px 24px', minHeight:48, fontSize:15, opacity: opening ? 0.6 : 1}}
+            onClick={quickOpen}>
+            {opening ? '開班中...' : '一鍵開班，開始收銀'}
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={()=>setView('shifts')}>
+            查看班別管理（現金流水 / 歷史班別）
+          </button>
+        </div>
       </div>
     )
   }

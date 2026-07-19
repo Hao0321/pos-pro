@@ -92,7 +92,7 @@ export default function ShiftPage({ store, session }) {
           </div>
         </div>
         {!openShift ? (
-          <button className="btn btn-primary" onClick={()=>setShowOpen(true)} style={{display:'flex',alignItems:'center',gap:6}}>
+          <button className="btn btn-primary" onClick={()=>{ setShowOpen(true); try { setOpenCash(localStorage.getItem('pos_last_open_cash') || '') } catch {} }} style={{display:'flex',alignItems:'center',gap:6}}>
             <LogIn size={16}/> 開班
           </button>
         ) : (

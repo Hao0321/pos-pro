@@ -447,6 +447,8 @@ export function useStore(){
       cashier, cashierId, openCash,
       openTime: new Date().toISOString(),
     }
+    // 記住這次的零用金 → 明天開班自動帶入，不用每天重打
+    try { localStorage.setItem('pos_last_open_cash', String(openCash || 0)) } catch {}
     if (isElectron) await apiOpenShift(data)
     setOpenShiftState({ ...data, status: 'open' })
     fireWebhook('shift_open', payloadFromShift(data, 'open')).catch(()=>{})
