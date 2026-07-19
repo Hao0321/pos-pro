@@ -34,7 +34,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
       {/* Logo */}
       <div style={s.logoWrap}>
         <div style={s.logoMark}>
-          <Sparkles size={14} style={{position:'absolute', top:-6, right:-6, color:'var(--gold-bright)', filter:'drop-shadow(0 0 6px rgba(212,163,107,0.6))'}}/>
+          <Sparkles size={14} style={{position:'absolute', top:-6, right:-6, color:'var(--gold-bright)', filter:'drop-shadow(0 0 6px var(--accent-glow))'}}/>
           P
         </div>
         <div>
@@ -146,7 +146,7 @@ const s = {
     display:'flex', alignItems:'center', justifyContent:'center',
     fontFamily:'var(--font-serif)', fontWeight:900, fontSize:18,
     flexShrink:0, position:'relative',
-    boxShadow:'0 4px 12px rgba(184,137,90,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
+    boxShadow:'0 4px 12px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
   },
   logoName:{
     fontSize:16, fontWeight:800, letterSpacing:'-.01em',
@@ -228,7 +228,7 @@ const s = {
     background:'var(--amber-dim)',
     borderRadius:'var(--r2)',
     padding:'8px 12px', margin:'0 14px',
-    border:'1px solid rgba(232,157,42,0.18)',
+    border:'1px solid var(--amber-dim)',
   },
   userRow:{
     display:'flex', alignItems:'center', gap:10,

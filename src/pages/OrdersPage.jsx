@@ -3,10 +3,10 @@ import { Bell, Check, X, Clock, ChefHat, RefreshCw } from 'lucide-react'
 import { isElectron, loadCustomerOrders, updateOrderStatus } from '../utils/dataAccess'
 
 const STATUS_MAP = {
-  pending:   { label: '待處理', color: '#e67e22', icon: Clock },
-  accepted:  { label: '準備中', color: '#3498db', icon: ChefHat },
-  completed: { label: '已完成', color: '#27ae60', icon: Check },
-  rejected:  { label: '已拒絕', color: '#e74c3c', icon: X },
+  pending:   { label: '待處理', color: '#d97706', icon: Clock },
+  accepted:  { label: '準備中', color: '#0284c7', icon: ChefHat },
+  completed: { label: '已完成', color: '#16a34a', icon: Check },
+  rejected:  { label: '已拒絕', color: '#d94f44', icon: X },
 }
 
 export default function OrdersPage() {
@@ -63,7 +63,7 @@ export default function OrdersPage() {
         <h2 style={{ flex: 1, fontSize: '1.3rem' }}>顧客點餐</h2>
         {pendingCount > 0 && (
           <span style={{
-            background: '#e74c3c', color: '#fff', padding: '4px 12px',
+            background: 'var(--red)', color: '#fff', padding: '4px 12px',
             borderRadius: 20, fontSize: '0.85rem', fontWeight: 700,
           }}>
             {pendingCount} 筆待處理
@@ -178,14 +178,14 @@ export default function OrdersPage() {
                   <button
                     onClick={() => handleAccept(order.id)}
                     className="btn btn-sm"
-                    style={{ flex: 1, background: '#27ae60', color: '#fff', border: 'none' }}
+                    style={{ flex: 1, background: 'var(--green)', color: '#fff', border: 'none' }}
                   >
                     <Check size={14} /> 接單
                   </button>
                   <button
                     onClick={() => handleReject(order.id)}
                     className="btn btn-sm"
-                    style={{ flex: 1, background: '#e74c3c', color: '#fff', border: 'none' }}
+                    style={{ flex: 1, background: 'var(--red)', color: '#fff', border: 'none' }}
                   >
                     <X size={14} /> 拒絕
                   </button>
@@ -195,7 +195,7 @@ export default function OrdersPage() {
                 <button
                   onClick={() => handleComplete(order.id)}
                   className="btn btn-sm"
-                  style={{ width: '100%', background: '#27ae60', color: '#fff', border: 'none' }}
+                  style={{ width: '100%', background: 'var(--green)', color: '#fff', border: 'none' }}
                 >
                   <Check size={14} /> 標記完成
                 </button>

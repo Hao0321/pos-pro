@@ -31,7 +31,7 @@ async function init() {
   } catch (err) {
     document.getElementById('store-name').textContent = '無法連線'
     document.getElementById('product-list').innerHTML =
-      '<p style="text-align:center;color:#888;padding:40px;grid-column:1/-1">無法載入菜單，請確認網路連線</p>'
+      '<p style="text-align:center;color:var(--text-dim);padding:40px;grid-column:1/-1">無法載入菜單，請確認網路連線</p>'
   }
   connectWebSocket()
 }
@@ -116,7 +116,7 @@ function renderProducts() {
   }).join('')
 
   if (!filtered.length) {
-    list.innerHTML = '<p style="text-align:center;color:#888;padding:40px;grid-column:1/-1">沒有符合的商品</p>'
+    list.innerHTML = '<p style="text-align:center;color:var(--text-dim);padding:40px;grid-column:1/-1">沒有符合的商品</p>'
   }
 
   // 用 event delegation 取代 inline onclick — 修 audit #23 邊界 case，安全處理含特殊字元的 id

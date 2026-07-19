@@ -87,7 +87,8 @@ module.exports = function initDatabase(dbPath) {
       contact TEXT DEFAULT '',
       phone TEXT DEFAULT '',
       payTerms TEXT DEFAULT '',
-      note TEXT DEFAULT ''
+      note TEXT DEFAULT '',
+      catalog TEXT DEFAULT '[]'
     );
 
     CREATE TABLE IF NOT EXISTS purchases (
@@ -244,6 +245,7 @@ module.exports = function initDatabase(dbPath) {
     ensureColumn('orders', 'cashier', "TEXT DEFAULT ''")
     ensureColumn('orders', 'fullRefund', 'INTEGER DEFAULT 0')
     ensureColumn('orders', 'balanceUsed', 'REAL DEFAULT 0')
+    ensureColumn('suppliers', 'catalog', "TEXT DEFAULT '[]'")  // v2.6 商家貨源清單（JSON 陣列）
     ensureColumn('members', 'balance', 'REAL DEFAULT 0')
     ensureColumn('members', 'birthday', "TEXT DEFAULT ''")
     ensureColumn('members', 'lastBirthdayBonus', "TEXT DEFAULT ''")
@@ -310,12 +312,12 @@ module.exports = function initDatabase(dbPath) {
     // --- Suppliers ---
     getAllSuppliers: db.prepare('SELECT * FROM suppliers ORDER BY name'),
     insertSupplier: db.prepare(`
-      INSERT INTO suppliers (id, name, contact, phone, payTerms, note)
-      VALUES (@id, @name, @contact, @phone, @payTerms, @note)
+      INSERT INTO suppliers (id, name, contact, phone, payTerms, note, catalog)
+      VALUES (@id, @name, @contact, @phone, @payTerms, @note, @catalog)
     `),
     updateSupplier: db.prepare(`
       UPDATE suppliers SET name=@name, contact=@contact, phone=@phone,
-      payTerms=@payTerms, note=@note WHERE id=@id
+      payTerms=@payTerms, note=@note, catalog=@catalog WHERE id=@id
     `),
     deleteSupplier: db.prepare('DELETE FROM suppliers WHERE id = ?'),
 
@@ -455,6 +457,23 @@ module.exports = function initDatabase(dbPath) {
     refundOf: o.refundOf || '',
     cashier: o.cashier || '',
     fullRefund: o.fullRefund ? 1 : 0,
+  })
+
+  // 廠商參數統一組裝：catalog（貨源清單）為 JSON 陣列，存 TEXT；三個寫入點（新增/更新/遷移）共用
+  const supplierParams = (s, id) => ({
+    // 亂數後綴：還原備份時迴圈連續插入，同毫秒撞 id 會讓整個 migrateTx rollback
+    id: id || s.id || 's' + Date.now() + Math.random().toString(36).slice(2, 6),
+    name: s.name || '',
+    contact: s.contact || '',
+    phone: s.phone || '',
+    payTerms: s.payTerms || '',
+    note: s.note || '',
+    catalog: typeof s.catalog === 'string' ? s.catalog : JSON.stringify(s.catalog || []),
+  })
+  // 讀出時把 catalog 還原成陣列（壞 JSON 安全降級成空陣列）
+  const parseSupplier = (row) => ({
+    ...row,
+    catalog: (() => { try { return JSON.parse(row.catalog || '[]') } catch { return [] } })(),
   })
 
   const checkoutTx = db.transaction((orderData, stockUpdates, memberUpdate) => {
@@ -624,14 +643,7 @@ module.exports = function initDatabase(dbPath) {
     // Suppliers
     if (data.suppliers && data.suppliers.length) {
       for (const s of data.suppliers) {
-        stmts.insertSupplier.run({
-          id: s.id,
-          name: s.name || '',
-          contact: s.contact || '',
-          phone: s.phone || '',
-          payTerms: s.payTerms || '',
-          note: s.note || '',
-        })
+        stmts.insertSupplier.run(supplierParams(s))
       }
     }
 
@@ -936,20 +948,13 @@ module.exports = function initDatabase(dbPath) {
     },
 
     // Suppliers
-    getSuppliers() { return stmts.getAllSuppliers.all() },
+    getSuppliers() { return stmts.getAllSuppliers.all().map(parseSupplier) },
     addSupplier(data) {
-      stmts.insertSupplier.run({
-        id: data.id || 's' + Date.now(),
-        name: data.name || '',
-        contact: data.contact || '',
-        phone: data.phone || '',
-        payTerms: data.payTerms || '',
-        note: data.note || '',
-      })
+      stmts.insertSupplier.run(supplierParams(data))
       return { success: true }
     },
     updateSupplier(id, data) {
-      stmts.updateSupplier.run({ id, name: data.name || '', contact: data.contact || '', phone: data.phone || '', payTerms: data.payTerms || '', note: data.note || '' })
+      stmts.updateSupplier.run(supplierParams(data, id))
       return { success: true }
     },
     deleteSupplier(id) { stmts.deleteSupplier.run(id); return { success: true } },
@@ -1112,7 +1117,7 @@ module.exports = function initDatabase(dbPath) {
             id: i.productId, name: i.name, price: i.price, qty: i.qty,
           })),
         })),
-        suppliers: stmts.getAllSuppliers.all(),
+        suppliers: stmts.getAllSuppliers.all().map(parseSupplier),
         purchases: stmts.getAllPurchases.all().map(p => ({ ...p, items: JSON.parse(p.items || '[]') })),
         promotions: stmts.getAllPromotions.all(),
         users: stmts.getAllUsers.all(),
@@ -1160,7 +1165,7 @@ module.exports = function initDatabase(dbPath) {
             id: i.productId, name: i.name, price: i.price, qty: i.qty,
           })),
         })),
-        suppliers: stmts.getAllSuppliers.all(),
+        suppliers: stmts.getAllSuppliers.all().map(parseSupplier),
         purchases: stmts.getAllPurchases.all().map(p => ({ ...p, items: JSON.parse(p.items || '[]') })),
         promotions: stmts.getAllPromotions.all().map(p => ({
           ...p, condition: JSON.parse(p.condition_data || '{}'), enabled: !!p.enabled,

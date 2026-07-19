@@ -276,7 +276,7 @@ export default function CartPanel({
               ))}
             </div>
             {paid > 0 && (
-              <div style={{...cs.changeRow, background: change>=0?'var(--green-dim)':'var(--red-dim)', borderColor: change>=0?'rgba(52,201,122,0.2)':'rgba(229,90,90,0.2)'}}>
+              <div style={{...cs.changeRow, background: change>=0?'var(--green-dim)':'var(--red-dim)', borderColor: change>=0?'rgba(22,163,74,0.25)':'rgba(217,79,68,0.25)'}}>
                 <span style={{color:'var(--text-secondary)', fontSize:13}}>找零</span>
                 <span style={{fontFamily:'var(--font-mono)', fontWeight:600, color: change>=0?'var(--green)':'var(--red)'}}>
                   NT$ {change.toLocaleString()}
@@ -450,7 +450,7 @@ export default function CartPanel({
 
       {showHoldDlg && (
         <>
-          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:998}} onClick={()=>setShowHoldDlg(false)}/>
+          <div style={{position:'fixed',inset:0,background:'rgba(23,37,60,0.50)',zIndex:998}} onClick={()=>setShowHoldDlg(false)}/>
           <div style={{position:'fixed', top:'40%', left:'50%', transform:'translate(-50%,-50%)', background:'var(--bg-raised)', borderRadius:12, width:340, maxWidth:'90vw', boxShadow:'var(--shadow-lg)', zIndex:999, padding:20}}>
             <div style={{fontWeight:600, fontSize:15, marginBottom:12}}>掛單</div>
             <input className="field" placeholder="標籤（選填，例：黃先生）" value={holdLabel} onChange={e=>setHoldLabel(e.target.value)} autoFocus
@@ -531,7 +531,7 @@ const cs = {
     color:'#fff',
     display:'flex', alignItems:'center', justifyContent:'center',
     marginBottom:24,
-    boxShadow:'0 8px 24px rgba(63,178,122,0.35), inset 0 1px 0 rgba(255,255,255,.2)',
+    boxShadow:'0 8px 24px rgba(22,163,74,0.35), inset 0 1px 0 rgba(255,255,255,.2)',
   },
   totalDisplay:{
     padding:'24px 20px', marginBottom:16,

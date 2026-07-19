@@ -1,6 +1,12 @@
 # POS Pro 專案接手文件
 
 ## 目前進度
+- 版本：v2.6.0
+- **v2.6.0（藍白改版 + 商家貨源系統）**：
+  - 🎨 全站改為藍白明亮主題：`src/index.css` 的 `:root` / `[data-theme="dark"]` 調色盤整組換新（主色 #2563eb；`--gold` 系列保留名稱、值改為藍 = 主色別名，避免全站改名）。散落在 JSX inline style / index.html / manifest / ErrorBoundary / 顧客點餐頁（public/menu 有**自己的獨立調色盤**）的硬編碼暖色全部獵殺換新；`sw.js` 快取版本升 v2.6.0 強制 PWA 更新主題。
+  - 📋 **商家貨源系統**：`suppliers.catalog`（JSON 陣列，項目 `{id,name,unit,cost,barcode,productId}`）端到端——SQLite 欄位 + `ensureColumn` 自動遷移 + `supplierParams`/`parseSupplier` 統一序列化、cloudSync pick、schema.sql（含 alter table）。SupplierList 可維護每家廠商的貨源目錄；NewPurchase 選廠商後可直接從貨源目錄挑品叫貨，未建檔品項到貨時自動建檔進庫存。
+  - 🔴 修重大 bug：**桌面版廠商新增/編輯從未寫入 SQLite**（dbAddSupplier/dbUpdateSupplier 有 import 沒呼叫）→ 重開程式廠商消失。已接上 + 新增刪除廠商（含引用保護與確認）。
+  - 🧭 傻瓜化：叫貨流程 ①②③ 步驟指示、停用按鈕附說明文字、送單前確認摘要、silent return 改 toast、ReceiveModal「全部照單全收」、付款條件快選 chips、電話欄位補上。
 - 版本：v2.5.0
 - 狀態：可打包成 .exe，也可作為 PWA 部署給 iPhone/iPad（Safari「加到主畫面」即可當 app 使用）
 - v2.5.0（第三輪全面 audit 強化）：修 2 個會造成「本機資料整庫遺失」的雲端/還原 bug、2 個金額/點數錯誤（生日贈點重複發、部分退貨可重複超退）、會計引擎退貨沖回與折抵修正、時區/防呆/相機洩漏一批，測試 57→70

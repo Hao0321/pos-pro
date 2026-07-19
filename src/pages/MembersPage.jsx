@@ -5,7 +5,7 @@ import { computeMemberRFM } from '../utils/analytics'
 
 const TIER = {
   normal: { label:'一般', color:'var(--text-secondary)', bg:'var(--bg-active)', min:0,     max:10000 },
-  silver: { label:'銀卡', color:'#aab8cc',               bg:'rgba(170,184,204,0.12)', min:10000, max:30000 },
+  silver: { label:'銀卡', color:'var(--silver)',         bg:'var(--silver-dim)',   min:10000, max:30000 },
   gold:   { label:'金卡', color:'var(--gold-bright)',    bg:'var(--gold-dim)',     min:30000, max:Infinity },
 }
 const EMPTY_FORM = { name:'', phone:'', note:'', birthday:'' }
@@ -386,6 +386,6 @@ const ms = {
   statsGrid:{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, flexShrink:0 },
   sectionTitle:{ fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.08em', textTransform:'uppercase', flexShrink:0 },
   orderRow:{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid var(--border-dim)' },
-  overlay:{ position:'fixed', inset:0, background:'rgba(44,42,38,0.25)',backdropFilter:'blur(2px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100 },
+  overlay:{ position:'fixed', inset:0, background:'rgba(23,37,60,0.30)',backdropFilter:'blur(2px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100 },
   drawer:{ background:'var(--bg-raised)', border:'1px solid var(--border-mid)', borderRadius:'var(--r4)', padding:24, width:'90%', maxWidth:420 },
 }

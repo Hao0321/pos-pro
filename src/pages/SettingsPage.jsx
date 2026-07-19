@@ -653,11 +653,11 @@ function HardwareTab({ session }) {
                 <>
                   {/* 外網 QR Code */}
                   {serverInfo.tunnelUrl ? (
-                    <div style={{marginBottom:12, padding:'12px', background:'var(--green-dim)', borderRadius:8, border:'1px solid rgba(90,158,111,0.2)', textAlign:'center'}}>
+                    <div style={{marginBottom:12, padding:'12px', background:'var(--green-dim)', borderRadius:8, border:'1px solid rgba(22,163,74,0.25)', textAlign:'center'}}>
                       <div style={{fontSize:11, color:'var(--green)', fontWeight:600, marginBottom:8}}>外網點餐 QR Code（任何網路皆可掃）</div>
                       {tunnelQr && (
                         <img src={tunnelQr} alt="外網點餐QR Code"
-                          style={{width:180, height:180, borderRadius:8, border:'4px solid #fff', boxShadow:'0 2px 8px rgba(0,0,0,0.15)', display:'block', margin:'0 auto 8px'}}/>
+                          style={{width:180, height:180, borderRadius:8, border:'4px solid #fff', boxShadow:'var(--shadow-sm)', display:'block', margin:'0 auto 8px'}}/>
                       )}
                       <code style={{fontFamily:'var(--font-mono)', fontSize:10, color:'var(--text-secondary)', wordBreak:'break-all', display:'block'}}>
                         {serverInfo.tunnelUrl}/menu
@@ -674,7 +674,7 @@ function HardwareTab({ session }) {
                     <div style={{fontSize:11, color:'var(--text-secondary)', fontWeight:600, marginBottom:8}}>區域網路 QR Code（同一 WiFi）</div>
                     {lanQr && (
                       <img src={lanQr} alt="區域網路QR Code"
-                        style={{width:140, height:140, borderRadius:6, border:'3px solid #fff', boxShadow:'0 2px 6px rgba(0,0,0,0.1)', display:'block', margin:'0 auto 8px'}}/>
+                        style={{width:140, height:140, borderRadius:6, border:'3px solid #fff', boxShadow:'var(--shadow-xs)', display:'block', margin:'0 auto 8px'}}/>
                     )}
                     <code style={{fontFamily:'var(--font-mono)', fontSize:10, color:'var(--text-tertiary)'}}>
                       http://{serverInfo.ip}:{serverInfo.port}/menu
@@ -786,7 +786,7 @@ function BackupTab({ session }) {
           <input type="file" accept=".json" style={{display:'none'}} onChange={handleImport}/>
         </label>
       </div>
-      {msg && <div style={{background:'var(--green-dim)',border:'1px solid rgba(52,201,122,.2)',color:'var(--green)',borderRadius:8,padding:'8px 14px',fontSize:13,flexShrink:0}}>{msg}</div>}
+      {msg && <div style={{background:'var(--green-dim)',border:'1px solid rgba(22,163,74,0.25)',color:'var(--green)',borderRadius:8,padding:'8px 14px',fontSize:13,flexShrink:0}}>{msg}</div>}
 
       <div style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:8}}>
         {backups.length===0 ? (
@@ -1243,6 +1243,6 @@ const ss = {
   title:{fontFamily:'var(--font-serif)',fontSize:20,fontWeight:600},
   tabBar:{display:'flex',borderBottom:'1px solid var(--border-dim)',flexShrink:0},
   tab:{display:'flex',alignItems:'center',gap:7,padding:'9px 14px',fontSize:13,fontWeight:500,transition:'all 150ms',borderRadius:0,letterSpacing:'.01em'},
-  overlay:{position:'fixed',inset:0,background:'rgba(44,42,38,0.25)',backdropFilter:'blur(2px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200},
+  overlay:{position:'fixed',inset:0,background:'rgba(23,37,60,0.30)',backdropFilter:'blur(2px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200},
   modal:{background:'var(--bg-raised)',border:'1px solid var(--border-dim)',borderRadius:'var(--r4)',padding:24,width:'90%',maxWidth:420},
 }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-  <meta name="theme-color" content="#8b7355" />
+  <meta name="theme-color" content="#2563eb" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="POS Pro" />
@@ -16,11 +16,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 </head>
-<body style="background:#f5f2ed;color:#2c2a26;-webkit-tap-highlight-color:transparent;overscroll-behavior:none">
+<body style="background:#f4f7fb;color:#17253c;-webkit-tap-highlight-color:transparent;overscroll-behavior:none">
   <div id="root">
     <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif">
-      <div style="font-size:24px;font-weight:700;color:#8b7355">POS Pro</div>
-      <div style="font-size:13px;color:#6b6860">啟動中...</div>
+      <div style="font-size:24px;font-weight:700;color:#2563eb">POS Pro</div>
+      <div style="font-size:13px;color:#64748b">啟動中...</div>
     </div>
   </div>
   <script type="module" src="/src/main.jsx"></script>
@@ -28,7 +28,7 @@
     window.addEventListener('error', e => {
       const root = document.getElementById('root')
       if (root && !root.querySelector('[data-react-mounted]')) {
-        root.innerHTML = '<div style="padding:40px;font-family:sans-serif"><h2 style="color:#c25550">啟動錯誤</h2><pre style="background:#f8f1ec;padding:16px;border-radius:8px;font-size:12px;overflow:auto">'+(e.message || e)+'\n\n'+(e.error?.stack || '')+'</pre><button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:#8b7355;color:#fff;border:none;border-radius:8px;cursor:pointer">重新載入</button></div>'
+        root.innerHTML = '<div style="padding:40px;font-family:sans-serif"><h2 style="color:#d94f44">啟動錯誤</h2><pre style="background:#edf2f8;padding:16px;border-radius:8px;font-size:12px;overflow:auto">'+(e.message || e)+'\n\n'+(e.error?.stack || '')+'</pre><button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer">重新載入</button></div>'
       }
     })
     // 註冊 Service Worker（僅在 http/https，Electron file:// 跳過）

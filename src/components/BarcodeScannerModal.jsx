@@ -119,7 +119,7 @@ export default function BarcodeScannerModal({ onScan, onClose, title = '掃描�
 const styles = {
   overlay: {
     position:'fixed', inset:0, zIndex:500,
-    background:'rgba(20,18,15,0.85)',
+    background:'rgba(15,26,46,0.60)',
     display:'flex', alignItems:'center', justifyContent:'center',
   },
   modal: {

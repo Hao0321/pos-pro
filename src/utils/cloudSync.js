@@ -53,6 +53,7 @@ const TABLES = [
     pick: (s) => ({
       id: s.id, name: s.name || '', contact: s.contact || '',
       phone: s.phone || '', payTerms: s.payTerms || '', note: s.note || '',
+      catalog: Array.isArray(s.catalog) ? s.catalog : [],   // v2.6 貨源清單
     }),
   },
   {

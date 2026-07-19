@@ -163,7 +163,7 @@ export default function LoginScreen({ onLogin }) {
             </div>
 
             <div style={ls.tipBox}>
-              <span style={{fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.04em'}}>v2.5.0 · 穩定強化</span>
+              <span style={{fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.04em'}}>v2.6.0 · 藍白新裝</span>
             </div>
           </div>
         </div>
@@ -204,7 +204,7 @@ export default function LoginScreen({ onLogin }) {
                         transition: 'all 240ms var(--ease-spring)',
                         display:'flex', flexDirection:'column', alignItems:'center', gap:8,
                         transform: active ? 'translateY(-2px)' : 'translateY(0)',
-                        boxShadow: active ? '0 8px 24px rgba(184,137,90,0.2)' : 'var(--shadow-xs)',
+                        boxShadow: active ? '0 8px 24px rgba(37,99,235,0.28)' : 'var(--shadow-xs)',
                       }}>
                       <div style={{
                         width:46, height:46, borderRadius:'50%',
@@ -294,7 +294,7 @@ const ls = {
     display:'flex', alignItems:'center', justifyContent:'center',
     fontFamily:'var(--font-serif)', fontWeight:900, fontSize:22,
     flexShrink:0, position:'relative',
-    boxShadow:'0 6px 20px rgba(184,137,90,0.4), inset 0 1px 0 rgba(255,255,255,.2)',
+    boxShadow:'0 6px 20px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,.2)',
   },
   clock:{
     fontSize:64, fontWeight:600, letterSpacing:'-.04em', lineHeight:1,
@@ -340,11 +340,11 @@ const ls = {
     background:'var(--accent-grad)',
     display:'flex', alignItems:'center', justifyContent:'center',
     margin:'0 auto 16px',
-    boxShadow:'0 8px 24px rgba(184,137,90,0.4), inset 0 1px 0 rgba(255,255,255,.15)',
+    boxShadow:'0 8px 24px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,.15)',
   },
   errorBanner:{
     background:'var(--red-dim)',
-    border:'1.5px solid rgba(226,92,82,0.2)',
+    border:'1.5px solid rgba(217,79,68,0.22)',
     borderRadius:'var(--r2)', padding:'12px 16px', marginBottom:14,
     display:'flex', gap:10, alignItems:'center', color:'var(--red)',
     fontSize:13, fontWeight:600,

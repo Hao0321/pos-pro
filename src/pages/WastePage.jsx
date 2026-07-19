@@ -105,7 +105,7 @@ export default function WastePage({ store, session }) {
               <div key={p.id} style={{
                 padding:'10px 12px', borderRadius:8,
                 background: p.daysLeft <= 0 ? 'var(--red-dim)' : p.daysLeft <= 3 ? 'var(--amber-dim)' : 'var(--bg-overlay)',
-                border:`1px solid ${p.daysLeft <= 0 ? 'rgba(194,85,80,0.2)' : 'transparent'}`,
+                border:`1px solid ${p.daysLeft <= 0 ? 'rgba(217,79,68,0.22)' : 'transparent'}`,
               }}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4}}>
                   <div style={{fontSize:13, fontWeight:500, flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name}</div>
@@ -188,7 +188,7 @@ export default function WastePage({ store, session }) {
 
       {showAdd && (
         <>
-          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:998}} onClick={()=>setShowAdd(false)}/>
+          <div style={{position:'fixed',inset:0,background:'rgba(23,37,60,0.40)',zIndex:998}} onClick={()=>setShowAdd(false)}/>
           <div style={{position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', background:'var(--bg-raised)', borderRadius:12, width:420, maxWidth:'90vw', boxShadow:'var(--shadow-lg)', zIndex:999}}>
             <div style={{padding:'14px 18px', borderBottom:'1px solid var(--border-dim)', fontSize:15, fontWeight:600}}>記錄損耗</div>
             <div style={{padding:18}}>

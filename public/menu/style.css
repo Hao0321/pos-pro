@@ -1,12 +1,12 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
-  --accent: #8b7355;
-  --accent-light: #a8956f;
-  --bg: #faf8f5;
+  --accent: #2563eb;
+  --accent-light: #4f86f5;
+  --bg: #f6f9fc;
   --card: #ffffff;
-  --text: #2c2c2c;
-  --text-dim: #888;
-  --border: #e8e4df;
+  --text: #1c2a3f;
+  --text-dim: #7a8699;
+  --border: #dde6f0;
   --success: #4caf50;
   --radius: 12px;
 }
@@ -89,7 +89,7 @@ body {
 .product-card .p-category {
   font-size: 0.7rem;
   color: var(--text-dim);
-  background: #f0ede8;
+  background: #eaf0f7;
   padding: 2px 8px;
   border-radius: 10px;
   width: fit-content;
@@ -110,19 +110,19 @@ body {
 }
 .product-card .p-stock-low {
   font-size: 0.7rem;
-  color: #e67e22;
+  color: #d97706;
 }
 .product-card .p-stock-last {
   font-size: 0.7rem;
   font-weight: 600;
-  color: #e67e22;
+  color: #d97706;
   animation: pulse 1.4s ease-in-out infinite;
 }
 .product-card .p-soldout {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #c25550;
-  background: rgba(194,85,80,0.1);
+  color: #d94f44;
+  background: rgba(217,79,68,0.10);
   padding: 2px 8px;
   border-radius: 4px;
   align-self: flex-start;
@@ -153,7 +153,7 @@ body {
 }
 .product-card .add-btn:active { background: var(--accent-light); }
 .product-card .add-btn:disabled {
-  background: #ccc;
+  background: #c6d2e0;
   cursor: not-allowed;
 }
 
@@ -205,7 +205,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 16px rgba(23,37,60,0.25);
   cursor: pointer;
   z-index: 20;
   transition: transform 0.2s;
@@ -215,7 +215,7 @@ body {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #e74c3c;
+  background: #d94f44;
   color: #fff;
   width: 22px;
   height: 22px;
@@ -231,7 +231,7 @@ body {
 .cart-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(23,37,60,0.40);
   z-index: 30;
   display: none;
   opacity: 0;
@@ -306,7 +306,7 @@ body {
   align-items: center;
   justify-content: center;
 }
-.cart-item .ci-controls button:active { background: #f0f0f0; }
+.cart-item .ci-controls button:active { background: #e8eef6; }
 .cart-item .ci-qty {
   font-weight: 700;
   min-width: 20px;
@@ -356,7 +356,7 @@ body {
 .order-form-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(23,37,60,0.50);
   z-index: 40;
   display: flex;
   align-items: center;

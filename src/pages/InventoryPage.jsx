@@ -365,7 +365,7 @@ export default function InventoryPage({ store }) {
             const low  = p.stock <= 5 && p.stock > 0
             const zero = p.stock === 0
             return (
-              <div key={p.id} className="cv-row" style={{...iv.row, gridTemplateColumns: gridTpl, background: selectedIds.has(p.id) ? 'var(--gold-dim)' : expiredIds.has(p.id) ? 'rgba(229,90,90,0.06)' : zero?'rgba(229,90,90,0.03)': low?'rgba(229,160,48,0.03)' : expiringIds.has(p.id) ? 'rgba(229,160,48,0.04)' : 'transparent'}}>
+              <div key={p.id} className="cv-row" style={{...iv.row, gridTemplateColumns: gridTpl, background: selectedIds.has(p.id) ? 'var(--gold-dim)' : expiredIds.has(p.id) ? 'rgba(217,79,68,0.06)' : zero?'rgba(217,79,68,0.04)': low?'rgba(217,119,6,0.04)' : expiringIds.has(p.id) ? 'rgba(217,119,6,0.05)' : 'transparent'}}>
                 <input
                   type="checkbox"
                   checked={selectedIds.has(p.id)}
@@ -399,7 +399,7 @@ export default function InventoryPage({ store }) {
                 </span>
                 <div style={{display:'flex', gap:4, justifyContent:'flex-end'}}>
                   {window.electronAPI && (
-                    <button className="btn-icon btn-sm" title="產生條碼" onClick={()=>handleGenerateBarcode(p)} style={{color:'var(--teal,#2d9c8f)'}}><Barcode size={13}/></button>
+                    <button className="btn-icon btn-sm" title="產生條碼" onClick={()=>handleGenerateBarcode(p)} style={{color:'var(--teal)'}}><Barcode size={13}/></button>
                   )}
                   <button className="btn-icon btn-sm" onClick={()=>startEdit(p)}><Pencil size={13}/></button>
                   <button className="btn-icon btn-sm" style={{color:'var(--red)'}} onClick={()=>setConfirmDel(p.id)}><Trash2 size={13}/></button>
@@ -724,7 +724,7 @@ export default function InventoryPage({ store }) {
           position:'fixed', bottom:24, right:24, zIndex:100,
           display:'flex', gap:8, alignItems:'center',
           background:'var(--bg-raised)', padding:'10px 14px',
-          borderRadius:'var(--r-pill)', boxShadow:'0 6px 20px rgba(0,0,0,0.18)',
+          borderRadius:'var(--r-pill)', boxShadow:'var(--shadow-lg)',
           border:'1px solid var(--border-mid)',
         }}>
           <span style={{fontSize:13, fontWeight:600, color:'var(--text-secondary)', marginRight:4}}>
@@ -823,7 +823,7 @@ const iv = {
   rowHead:{ background:'var(--bg-overlay)', flexShrink:0 },
   colHead:{ display:'flex', alignItems:'center', gap:4, fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.06em', textTransform:'uppercase', cursor:'pointer', background:'none', fontFamily:'var(--font-sans)' },
   empty:{ textAlign:'center', padding:'48px', color:'var(--text-tertiary)', fontSize:13 },
-  overlay:{ position:'fixed', inset:0, background:'rgba(44,42,38,0.3)', backdropFilter:'blur(2px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100 },
+  overlay:{ position:'fixed', inset:0, background:'rgba(23,37,60,0.30)', backdropFilter:'blur(2px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100 },
   drawer:{ background:'var(--bg-raised)', border:'1px solid var(--border-dim)', borderRadius:16, padding:24, width:'90%', maxWidth:460, boxShadow:'var(--shadow-lg)' },
   drawerHeader:{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 },
 }

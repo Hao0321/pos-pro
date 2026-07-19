@@ -315,7 +315,7 @@ const sh = {
   },
 }
 const mod = {
-  overlay:{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:998},
+  overlay:{position:'fixed',inset:0,background:'rgba(23,37,60,0.40)',zIndex:998},
   box:{
     position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
     background:'var(--bg-raised)', borderRadius:12, width:380, maxWidth:'90vw',

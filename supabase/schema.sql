@@ -73,8 +73,11 @@ create table if not exists suppliers (
   "contact" text default '',
   "phone" text default '',
   "payTerms" text default '',
-  "note" text default ''
+  "note" text default '',
+  "catalog" jsonb default '[]'
 );
+-- v2.6.0 既有資料庫請補這欄（新建可略過）：商家貨源清單
+alter table suppliers add column if not exists "catalog" jsonb default '[]';
 
 -- ===== 進貨單 =====
 create table if not exists purchases (

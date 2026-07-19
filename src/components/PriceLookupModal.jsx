@@ -68,7 +68,7 @@ export default function PriceLookupModal({ products, onClose }) {
 }
 
 const pl = {
-  overlay:{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:998},
+  overlay:{position:'fixed',inset:0,background:'rgba(23,37,60,0.50)',zIndex:998},
   box:{
     position:'fixed', top:'10%', left:'50%', transform:'translateX(-50%)',
     background:'var(--bg-raised)', borderRadius:12, width:600, maxWidth:'92vw',

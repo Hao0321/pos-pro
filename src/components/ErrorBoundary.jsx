@@ -21,26 +21,26 @@ export default class ErrorBoundary extends React.Component {
         <div style={{
           padding: 40,
           fontFamily: 'sans-serif',
-          color: '#2c2a26',
-          background: '#f5f2ed',
+          color: 'var(--text-primary)',
+          background: 'var(--bg-base)',
           minHeight: '100vh',
           overflow: 'auto',
         }}>
-          <h2 style={{ color: '#c25550', marginBottom: 16 }}>應用程式發生錯誤</h2>
+          <h2 style={{ color: 'var(--red)', marginBottom: 16 }}>應用程式發生錯誤</h2>
           <pre style={{
-            background: '#fff',
+            background: 'var(--bg-raised)',
             padding: 16,
             borderRadius: 8,
             fontSize: 12,
             overflow: 'auto',
             maxWidth: 800,
-            border: '1px solid rgba(0,0,0,.1)',
+            border: '1px solid var(--border-subtle)',
           }}>
             {this.state.error?.message || String(this.state.error)}
             {'\n\n'}
             {this.state.error?.stack}
           </pre>
-          <details style={{ marginTop: 16, color: '#6b6860' }}>
+          <details style={{ marginTop: 16, color: 'var(--text-secondary)' }}>
             <summary style={{ cursor: 'pointer' }}>元件堆疊</summary>
             <pre style={{ fontSize: 11, marginTop: 8 }}>
               {this.state.errorInfo?.componentStack}
@@ -49,7 +49,7 @@ export default class ErrorBoundary extends React.Component {
           <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
             <button onClick={() => location.reload()} style={{
               padding: '10px 24px',
-              background: '#8b7355',
+              background: 'var(--accent)',
               color: '#fff',
               border: 'none',
               borderRadius: 8,
@@ -64,8 +64,8 @@ export default class ErrorBoundary extends React.Component {
             }} style={{
               padding: '10px 24px',
               background: 'transparent',
-              color: '#c25550',
-              border: '1px solid #c25550',
+              color: 'var(--red)',
+              border: '1px solid var(--red)',
               borderRadius: 8,
               cursor: 'pointer',
               fontSize: 14,

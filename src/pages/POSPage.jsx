@@ -179,7 +179,7 @@ export default function POSPage({ store, session }) {
           <div style={{
             ...ps.feedback,
             background: feedback.ok ? 'var(--green-dim)' : 'var(--red-dim)',
-            border: `1px solid ${feedback.ok ? 'rgba(90,158,111,0.2)' : 'rgba(194,85,80,0.2)'}`,
+            border: `1px solid ${feedback.ok ? 'rgba(22,163,74,0.25)' : 'rgba(217,79,68,0.22)'}`,
             color: feedback.ok ? 'var(--green)' : 'var(--red)',
           }} className="animate-in">
             {feedback.msg}
@@ -426,7 +426,7 @@ const ps = {
     position:'fixed', bottom:'calc(20px + env(safe-area-inset-bottom))', right:20, zIndex:100,
     width:60, height:60, borderRadius:'50%',
     background:'var(--accent-grad)',
-    boxShadow:'0 8px 24px rgba(184,137,90,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
+    boxShadow:'0 8px 24px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
     display:'flex', alignItems:'center', justifyContent:'center',
     transition:'transform var(--t2) var(--ease-spring)',
   },
@@ -440,7 +440,7 @@ const ps = {
   },
   mobileOverlay:{
     position:'fixed', inset:0, zIndex:200,
-    background:'rgba(31,29,26,0.4)', backdropFilter:'blur(8px)',
+    background:'rgba(15,26,46,0.40)', backdropFilter:'blur(8px)',
   },
   mobileCart:{
     position:'fixed', bottom:0, left:0, right:0, zIndex:201,

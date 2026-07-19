@@ -523,7 +523,8 @@ export function useStore(){
   }, [])
 
   const addProduct = useCallback(p=>{
-    const n={...p,id:'p'+Date.now()}
+    // id 加亂數後綴：到貨自動建檔會在迴圈連續建多筆，純 Date.now() 同毫秒會撞號互蓋
+    const n={...p,id:'p'+Date.now()+Math.random().toString(36).slice(2,6)}
     setProducts(x=>[...x,n])
     if (isElectron) dbAddProduct(n).catch(logDbErr('addProduct'))
     return n

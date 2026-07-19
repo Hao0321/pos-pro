@@ -182,7 +182,7 @@ export default function App() {
 const syncOverlay = {
   root: {
     position:'fixed', inset:0, zIndex:9999,
-    background:'rgba(44,42,38,0.4)', backdropFilter:'blur(4px)',
+    background:'rgba(23,37,60,0.40)', backdropFilter:'blur(4px)',
     display:'flex', alignItems:'center', justifyContent:'center',
   },
   box: {
@@ -197,7 +197,7 @@ const syncOverlay = {
 const mob = {
   overlay: {
     position:'fixed', inset:0, zIndex:998,
-    background:'rgba(44,42,38,0.2)', backdropFilter:'blur(2px)',
+    background:'rgba(23,37,60,0.30)', backdropFilter:'blur(2px)',
   },
   drawer: {
     position:'fixed', top:0, left:0, bottom:0,

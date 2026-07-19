@@ -153,7 +153,7 @@ export default function RefundModal({ order, onClose, onRefund, session, priorRe
 }
 
 const rm = {
-  overlay:{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:998},
+  overlay:{position:'fixed',inset:0,background:'rgba(15,26,46,0.45)',zIndex:998},
   box:{
     position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
     background:'var(--bg-raised)', borderRadius:12, width:480, maxWidth:'92vw',

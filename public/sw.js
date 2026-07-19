@@ -1,5 +1,5 @@
 // POS Pro Service Worker — offline-first cache
-const VERSION = 'pos-pro-v2.3.0'
+const VERSION = 'pos-pro-v2.6.0' // 換版本號會讓 activate 清掉舊快取 → PWA 用戶才拿得到藍白新主題
 const CORE = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon.png']
 
 self.addEventListener('install', (e) => {

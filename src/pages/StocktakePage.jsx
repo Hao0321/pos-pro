@@ -253,7 +253,7 @@ export default function StocktakePage({ store, session }) {
             const diff = cnt !== undefined ? cnt - p.stock : null
             const hasDiff = diff !== null && diff !== 0
             return (
-              <div key={p.id} className="cv-row" style={{display:'grid', gridTemplateColumns:'1fr 80px 90px 100px', gap:8, padding:'9px 14px', borderBottom:'1px solid var(--border-dim)', alignItems:'center', background:hasDiff?'rgba(229,160,48,0.03)':'transparent'}}>
+              <div key={p.id} className="cv-row" style={{display:'grid', gridTemplateColumns:'1fr 80px 90px 100px', gap:8, padding:'9px 14px', borderBottom:'1px solid var(--border-dim)', alignItems:'center', background:hasDiff?'rgba(217,119,6,0.06)':'transparent'}}>
                 <div style={{minWidth:0}}>
                   <span style={{fontSize:13, fontWeight:500}}>{p.name}</span>
                   <span style={{fontSize:11, color:'var(--text-tertiary)', marginLeft:8}}>{p.category}</span>

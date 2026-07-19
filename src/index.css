@@ -3,52 +3,55 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* —— 暖色基底 + 鮮活綠強調 —— */
-  --bg-base:    #faf7f2;
+  /* —— 藍白基底：乾淨、明亮、簡約 —— */
+  --bg-base:    #f4f7fb;
   --bg-raised:  #ffffff;
-  --bg-overlay: #f4efe6;
-  --bg-hover:   rgba(0,0,0,0.04);
-  --bg-active:  #ede6d9;
-  --bg-glass:   rgba(255,255,255,0.72);
+  --bg-overlay: #edf2f8;
+  --bg-hover:   rgba(37,99,235,0.05);
+  --bg-active:  #e2ebf6;
+  --bg-glass:   rgba(255,255,255,0.78);
 
-  --border-dim:    rgba(45,40,30,0.06);
-  --border-subtle: rgba(45,40,30,0.10);
-  --border-mid:    rgba(45,40,30,0.16);
-  --border-strong: rgba(45,40,30,0.28);
+  --border-dim:    rgba(30,58,105,0.07);
+  --border-subtle: rgba(30,58,105,0.12);
+  --border-mid:    rgba(30,58,105,0.18);
+  --border-strong: rgba(30,58,105,0.30);
 
-  --text-primary:   #1f1d1a;
-  --text-secondary: #5e5b54;
-  --text-tertiary:  #9a958a;
-  --text-disabled:  #c4bfb4;
+  --text-primary:   #17253c;
+  --text-secondary: #4c5f7d;
+  --text-tertiary:  #8595ac;
+  --text-disabled:  #bcc7d6;
 
-  /* 主色：保留溫暖棕 + 漸層 */
-  --accent:        #b8895a;
-  --accent-bright: #d4a36b;
-  --accent-deep:   #8c6438;
-  --accent-dim:    rgba(184,137,90,0.12);
-  --accent-glow:   rgba(184,137,90,0.18);
-  --accent-grad:   linear-gradient(135deg, #d4a36b 0%, #b8895a 50%, #8c6438 100%);
+  /* 主色：清爽藍 + 漸層 */
+  --accent:        #2563eb;
+  --accent-bright: #4f86f5;
+  --accent-deep:   #1d4ed8;
+  --accent-dim:    rgba(37,99,235,0.10);
+  --accent-glow:   rgba(37,99,235,0.16);
+  --accent-grad:   linear-gradient(135deg, #4f86f5 0%, #2563eb 50%, #1d4ed8 100%);
 
-  --gold:        #b8895a;
-  --gold-bright: #d4a36b;
-  --gold-dim:    rgba(184,137,90,0.12);
-  --gold-glow:   rgba(184,137,90,0.18);
+  /* 歷史命名：--gold 系列 = 主色別名（v2.6 藍白改版後值為藍色，保留名稱避免全站改名風險） */
+  --gold:        #2563eb;
+  --gold-bright: #4f86f5;
+  --gold-dim:    rgba(37,99,235,0.10);
+  --gold-glow:   rgba(37,99,235,0.16);
 
-  /* 點綴色 — 更明亮活潑 */
-  --blue:       #4f7fc4;
-  --blue-dim:   rgba(79,127,196,0.12);
-  --green:      #3fb27a;
-  --green-dim:  rgba(63,178,122,0.14);
-  --red:        #e25c52;
-  --red-dim:    rgba(226,92,82,0.10);
-  --amber:      #e89d2a;
-  --amber-dim:  rgba(232,157,42,0.14);
-  --teal:       #2bb39d;
-  --teal-dim:   rgba(43,179,157,0.14);
-  --purple:     #8b6dc7;
-  --purple-dim: rgba(139,109,199,0.14);
-  --pink:       #e26da7;
-  --pink-dim:   rgba(226,109,167,0.14);
+  /* 點綴色 — 亮色系、與主藍區隔 */
+  --blue:       #0284c7;
+  --blue-dim:   rgba(2,132,199,0.12);
+  --green:      #16a34a;
+  --green-dim:  rgba(22,163,74,0.12);
+  --red:        #d94f44;
+  --red-dim:    rgba(217,79,68,0.10);
+  --amber:      #d97706;
+  --amber-dim:  rgba(217,119,6,0.12);
+  --teal:       #0d9488;
+  --teal-dim:   rgba(13,148,136,0.12);
+  --purple:     #7c5cd6;
+  --purple-dim: rgba(124,92,214,0.12);
+  --pink:       #e0559a;
+  --pink-dim:   rgba(224,85,154,0.12);
+  --silver:     #64748b;                     /* 會員銀卡（亮色可讀） */
+  --silver-dim: rgba(100,116,139,0.12);
 
   --font-sans:  'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-serif: 'Noto Serif TC', serif;
@@ -68,68 +71,70 @@
   --sidebar-w: 232px;
   --topbar-h: 60px;
 
-  /* 三層陰影 — 更現代 */
-  --shadow-xs: 0 1px 2px rgba(45,40,30,0.04);
-  --shadow-sm: 0 1px 3px rgba(45,40,30,0.05), 0 1px 2px rgba(45,40,30,0.03);
-  --shadow-md: 0 4px 12px rgba(45,40,30,0.07), 0 2px 4px rgba(45,40,30,0.04);
-  --shadow-lg: 0 12px 32px rgba(45,40,30,0.10), 0 4px 12px rgba(45,40,30,0.05);
-  --shadow-xl: 0 24px 60px rgba(45,40,30,0.14), 0 8px 24px rgba(45,40,30,0.08);
-  --shadow-glow: 0 0 0 4px rgba(184,137,90,0.14);
-  --ring-focus: 0 0 0 3px rgba(184,137,90,0.25);
+  /* 三層陰影 — 藍墨底、輕透 */
+  --shadow-xs: 0 1px 2px rgba(23,37,60,0.05);
+  --shadow-sm: 0 1px 3px rgba(23,37,60,0.06), 0 1px 2px rgba(23,37,60,0.04);
+  --shadow-md: 0 4px 12px rgba(23,37,60,0.08), 0 2px 4px rgba(23,37,60,0.05);
+  --shadow-lg: 0 12px 32px rgba(23,37,60,0.11), 0 4px 12px rgba(23,37,60,0.06);
+  --shadow-xl: 0 24px 60px rgba(23,37,60,0.15), 0 8px 24px rgba(23,37,60,0.09);
+  --shadow-glow: 0 0 0 4px rgba(37,99,235,0.14);
+  --ring-focus: 0 0 0 3px rgba(37,99,235,0.25);
 }
 
 [data-theme="dark"] {
-  --bg-base:    #15140f;
-  --bg-raised:  #1f1d18;
-  --bg-overlay: #2a2620;
+  --bg-base:    #0e1420;
+  --bg-raised:  #16202f;
+  --bg-overlay: #1e2a3d;
   --bg-hover:   rgba(255,255,255,0.05);
-  --bg-active:  #34302a;
-  --bg-glass:   rgba(31,29,24,0.78);
+  --bg-active:  #263449;
+  --bg-glass:   rgba(22,32,47,0.80);
 
   --border-dim:    rgba(255,255,255,0.06);
   --border-subtle: rgba(255,255,255,0.10);
   --border-mid:    rgba(255,255,255,0.16);
   --border-strong: rgba(255,255,255,0.28);
 
-  --text-primary:   #f0e9db;
-  --text-secondary: #b3aa9a;
-  --text-tertiary:  #80796c;
-  --text-disabled:  #4a463f;
+  --text-primary:   #e8eef7;
+  --text-secondary: #a7b4c8;
+  --text-tertiary:  #71809a;
+  --text-disabled:  #454f63;
 
-  --accent:        #d4a36b;
-  --accent-bright: #e8bd84;
-  --accent-deep:   #b8895a;
-  --accent-dim:    rgba(212,163,107,0.16);
-  --accent-glow:   rgba(212,163,107,0.22);
-  --accent-grad:   linear-gradient(135deg, #e8bd84 0%, #d4a36b 50%, #b8895a 100%);
+  --accent:        #5b8ef7;
+  --accent-bright: #7fa6f9;
+  --accent-deep:   #3b6fe0;
+  --accent-dim:    rgba(91,142,247,0.16);
+  --accent-glow:   rgba(91,142,247,0.22);
+  --accent-grad:   linear-gradient(135deg, #7fa6f9 0%, #5b8ef7 50%, #3b6fe0 100%);
 
-  --gold:        #d4a36b;
-  --gold-bright: #e8bd84;
-  --gold-dim:    rgba(212,163,107,0.16);
-  --gold-glow:   rgba(212,163,107,0.22);
+  --gold:        #5b8ef7;
+  --gold-bright: #7fa6f9;
+  --gold-dim:    rgba(91,142,247,0.16);
+  --gold-glow:   rgba(91,142,247,0.22);
 
-  --blue:       #82a8db;
-  --blue-dim:   rgba(130,168,219,0.16);
-  --green:      #5fcc92;
-  --green-dim:  rgba(95,204,146,0.16);
-  --red:        #ec7d74;
-  --red-dim:    rgba(236,125,116,0.16);
-  --amber:      #f0b260;
-  --amber-dim:  rgba(240,178,96,0.16);
-  --teal:       #4dcdb6;
-  --teal-dim:   rgba(77,205,182,0.16);
-  --purple:     #ab90db;
-  --purple-dim: rgba(171,144,219,0.16);
-  --pink:       #ed8fbe;
-  --pink-dim:   rgba(237,143,190,0.16);
+  --blue:       #56b8f0;
+  --blue-dim:   rgba(86,184,240,0.16);
+  --green:      #4ade80;
+  --green-dim:  rgba(74,222,128,0.16);
+  --red:        #f47c72;
+  --red-dim:    rgba(244,124,114,0.16);
+  --amber:      #f0b25e;
+  --amber-dim:  rgba(240,178,94,0.16);
+  --teal:       #45d6c0;
+  --teal-dim:   rgba(69,214,192,0.16);
+  --purple:     #a78bfa;
+  --purple-dim: rgba(167,139,250,0.16);
+  --pink:       #ef8fbe;
+  --pink-dim:   rgba(239,143,190,0.16);
+  --silver:     #a5b4c8;                     /* 會員銀卡（暗色可讀） */
+  --silver-dim: rgba(165,180,200,0.16);
 
   --shadow-xs: 0 1px 2px rgba(0,0,0,0.4);
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.45), 0 1px 2px rgba(0,0,0,0.3);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.35);
   --shadow-lg: 0 12px 32px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4);
   --shadow-xl: 0 24px 60px rgba(0,0,0,0.7), 0 8px 24px rgba(0,0,0,0.45);
-  --shadow-glow: 0 0 0 4px rgba(212,163,107,0.18);
-  --ring-focus: 0 0 0 3px rgba(212,163,107,0.3);
+  --shadow-glow: 0 0 0 4px rgba(91,142,247,0.18);
+  --ring-focus: 0 0 0 3px rgba(91,142,247,0.3);
 }
 
 html,body,#root{height:100%;width:100%;overflow:hidden}
@@ -225,11 +230,11 @@ select option{background:var(--bg-raised);color:var(--text-primary)}
 .btn-primary{
   background:var(--accent-grad);
   color:#fff;
-  box-shadow: 0 2px 8px rgba(184,137,90,0.28),
+  box-shadow: 0 2px 8px rgba(37,99,235,0.28),
               inset 0 1px 0 rgba(255,255,255,0.15);
 }
 .btn-primary:hover{
-  box-shadow: 0 4px 16px rgba(184,137,90,0.4),
+  box-shadow: 0 4px 16px rgba(37,99,235,0.40),
               inset 0 1px 0 rgba(255,255,255,0.2);
 }
 .btn-primary:disabled{opacity:0.45; cursor:not-allowed; transform:none}

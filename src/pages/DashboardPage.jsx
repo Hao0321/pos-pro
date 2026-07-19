@@ -397,7 +397,7 @@ const ds = {
     color:'var(--green)',
     borderRadius:'var(--r-pill)',
     fontSize:13, fontWeight:600,
-    border:'1px solid rgba(63,178,122,0.18)',
+    border:'1px solid rgba(22,163,74,0.25)',
   },
   liveDot:{
     width:8, height:8, borderRadius:'50%',
