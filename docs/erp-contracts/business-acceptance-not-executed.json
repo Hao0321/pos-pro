@@ -1,0 +1,149 @@
+{
+  "status": "SPECIFICATION_ONLY_NOT_EXECUTED",
+  "cases": [
+    {
+      "id": "P01",
+      "given_when": "未核准採購單嘗試收貨",
+      "expected": "拒絕，庫存不變",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P02",
+      "given_when": "訂購10單位，分兩次收4與6",
+      "expected": "收貨單2張，總收10，不增加重複庫存",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P03",
+      "given_when": "已收4，再收7",
+      "expected": "拒絕超收，所有表不變",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P04",
+      "given_when": "未收貨先登錄請款",
+      "expected": "三方核對失敗，不入帳",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P05",
+      "given_when": "已收4，請款5",
+      "expected": "拒絕超請款",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P06",
+      "given_when": "請款單價不同於核准採購價",
+      "expected": "列為差異待核，不靜默通過",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P07",
+      "given_when": "同供應商重複請款號碼",
+      "expected": "唯一約束拒絕",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P08",
+      "given_when": "應付120，先付50再付70",
+      "expected": "餘額70再歸零，收貨狀態不變",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P09",
+      "given_when": "已付50，再付71",
+      "expected": "拒絕超付，不新增付款／分攤",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P10",
+      "given_when": "同 operationId 同內容重播",
+      "expected": "只回原結果，不再次入庫或核銷",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P11",
+      "given_when": "同 operationId 不同金額",
+      "expected": "衝突拒絕",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P12",
+      "given_when": "入庫寫入中途失敗",
+      "expected": "單據、流水、餘額、稽核一併回滾",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P13",
+      "given_when": "提交成功但回覆遺失",
+      "expected": "保留待確認，查原單號，不重新收款",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P14",
+      "given_when": "兩台裝置同時收最後剩餘量",
+      "expected": "只有一筆成功，其餘版本／數量衝突",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P15",
+      "given_when": "來源倉4單位調撥1",
+      "expected": "來源3目的1，同一交易",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P16",
+      "given_when": "來源倉不足還調撥",
+      "expected": "拒絕，兩倉都不變",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P17",
+      "given_when": "過期批次退回可售庫存",
+      "expected": "拒絕或進隔離，保留批次期限",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P18",
+      "given_when": "採購建立人自行核准",
+      "expected": "可信後端拒絕",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P19",
+      "given_when": "舊版 partial 配 paidDate",
+      "expected": "標示付款資料待核，不杜撰付款",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P20",
+      "given_when": "缺明確結算規則",
+      "expected": "到期日未知，不標為未逾期",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P21",
+      "given_when": "恢復含新表備份",
+      "expected": "逐表數量、交易引用與內容校驗相同",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P22",
+      "given_when": "庫存帳與POS結帳庫存不同",
+      "expected": "阻擋上線，先核對唯一庫存來源",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P23",
+      "given_when": "跨供應商分攤一筆付款",
+      "expected": "拒絕",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "P24",
+      "given_when": "退款／折讓後重跑總帳",
+      "expected": "不重複認列，保留原始單據引用",
+      "status": "NOT_EXECUTED"
+    }
+  ]
+}

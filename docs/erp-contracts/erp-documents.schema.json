@@ -1,0 +1,608 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:hao:erp:r6:documents",
+  "title": "R6 ERP document input contracts — NOT integrated",
+  "description": "Structural validation only. Totals, references, permissions, stock and atomic commit require the backend described in ERP_IMPLEMENTATION_BLUEPRINT.md. Amounts are integer cents, quantities integer thousandths. No automatic tax or currency conversion.",
+  "$defs": {
+    "purchaseOrder": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "erp-r6-contract-v1"
+        },
+        "type": {
+          "const": "purchaseOrder"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "storeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "supplierId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "warehouseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "currency": {
+          "const": "TWD"
+        },
+        "orderedDate": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$"
+        },
+        "expectedDate": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "approvalStatus": {
+          "enum": [
+            "draft",
+            "submitted",
+            "approved",
+            "cancelled"
+          ]
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 500,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "lineId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\s\\x00-\\x1f].*$"
+              },
+              "productId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\s\\x00-\\x1f].*$"
+              },
+              "baseUnit": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\s\\x00-\\x1f].*$"
+              },
+              "orderedQtyMilli": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000000000
+              },
+              "unitCostMinor": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "lineAmountMinor": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              }
+            },
+            "required": [
+              "lineId",
+              "productId",
+              "baseUnit",
+              "orderedQtyMilli",
+              "unitCostMinor",
+              "lineAmountMinor"
+            ]
+          }
+        },
+        "totalMinor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000000
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "type",
+        "id",
+        "storeId",
+        "supplierId",
+        "warehouseId",
+        "currency",
+        "orderedDate",
+        "expectedDate",
+        "version",
+        "approvalStatus",
+        "lines",
+        "totalMinor"
+      ]
+    },
+    "goodsReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "erp-r6-contract-v1"
+        },
+        "type": {
+          "const": "goodsReceipt"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "storeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "purchaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "warehouseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "receivedDate": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "posted",
+            "reversed"
+          ]
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 500,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "lineId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\s\\x00-\\x1f].*$"
+              },
+              "poLineId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\s\\x00-\\x1f].*$"
+              },
+              "productId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\s\\x00-\\x1f].*$"
+              },
+              "acceptedQtyMilli": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000000000
+              },
+              "lotId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\s\\x00-\\x1f].*$"
+              },
+              "batchNo": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\s\\x00-\\x1f].*$"
+              },
+              "expiryDate": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date",
+                    "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "lineId",
+              "poLineId",
+              "productId",
+              "acceptedQtyMilli",
+              "lotId",
+              "batchNo",
+              "expiryDate"
+            ]
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "type",
+        "id",
+        "storeId",
+        "purchaseId",
+        "warehouseId",
+        "receivedDate",
+        "status",
+        "lines"
+      ]
+    },
+    "supplierInvoice": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "erp-r6-contract-v1"
+        },
+        "type": {
+          "const": "supplierInvoice"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "storeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "supplierId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "purchaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "currency": {
+          "const": "TWD"
+        },
+        "invoiceNumber": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "invoiceDate": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$"
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$"
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 500,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "lineId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\s\\x00-\\x1f].*$"
+              },
+              "poLineId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\s\\x00-\\x1f].*$"
+              },
+              "receiptLineIds": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 500,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "pattern": "^[^\\s\\x00-\\x1f].*$"
+                }
+              },
+              "qtyMilli": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000000000
+              },
+              "unitCostMinor": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "lineAmountMinor": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              }
+            },
+            "required": [
+              "lineId",
+              "poLineId",
+              "receiptLineIds",
+              "qtyMilli",
+              "unitCostMinor",
+              "lineAmountMinor"
+            ]
+          }
+        },
+        "totalMinor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000000
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "type",
+        "id",
+        "storeId",
+        "supplierId",
+        "purchaseId",
+        "currency",
+        "invoiceNumber",
+        "invoiceDate",
+        "dueDate",
+        "lines",
+        "totalMinor"
+      ]
+    },
+    "supplierPayment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "erp-r6-contract-v1"
+        },
+        "type": {
+          "const": "supplierPayment"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "storeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "supplierId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "currency": {
+          "const": "TWD"
+        },
+        "paymentDate": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$"
+        },
+        "method": {
+          "enum": [
+            "cash",
+            "bank"
+          ]
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "amountMinor": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000000000
+        },
+        "allocations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 500,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "invoiceId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\s\\x00-\\x1f].*$"
+              },
+              "amountMinor": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000000000
+              }
+            },
+            "required": [
+              "invoiceId",
+              "amountMinor"
+            ]
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "type",
+        "id",
+        "storeId",
+        "supplierId",
+        "currency",
+        "paymentDate",
+        "method",
+        "reference",
+        "amountMinor",
+        "allocations"
+      ]
+    },
+    "stockTransfer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "erp-r6-contract-v1"
+        },
+        "type": {
+          "const": "stockTransfer"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "storeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "fromWarehouseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "toWarehouseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "transferDate": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\x00-\\x1f].*$"
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 500,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "lineId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\s\\x00-\\x1f].*$"
+              },
+              "productId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\s\\x00-\\x1f].*$"
+              },
+              "lotId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[^\\s\\x00-\\x1f].*$"
+              },
+              "qtyMilli": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000000000
+              }
+            },
+            "required": [
+              "lineId",
+              "productId",
+              "lotId",
+              "qtyMilli"
+            ]
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "type",
+        "id",
+        "storeId",
+        "fromWarehouseId",
+        "toWarehouseId",
+        "transferDate",
+        "reason",
+        "lines"
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/purchaseOrder"
+    },
+    {
+      "$ref": "#/$defs/goodsReceipt"
+    },
+    {
+      "$ref": "#/$defs/supplierInvoice"
+    },
+    {
+      "$ref": "#/$defs/supplierPayment"
+    },
+    {
+      "$ref": "#/$defs/stockTransfer"
+    }
+  ]
+}

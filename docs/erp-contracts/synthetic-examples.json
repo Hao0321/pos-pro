@@ -1,0 +1,112 @@
+{
+  "synthetic": true,
+  "not_posted": true,
+  "documents": [
+    {
+      "schemaVersion": "erp-r6-contract-v1",
+      "storeId": "DEMO",
+      "type": "purchaseOrder",
+      "id": "PO-DEMO",
+      "supplierId": "SUP-DEMO",
+      "warehouseId": "MAIN",
+      "currency": "TWD",
+      "orderedDate": "2026-10-05",
+      "expectedDate": "2026-10-10",
+      "version": 0,
+      "approvalStatus": "approved",
+      "lines": [
+        {
+          "lineId": "POL-1",
+          "productId": "P-DEMO",
+          "baseUnit": "kg",
+          "orderedQtyMilli": 10000,
+          "unitCostMinor": 3000,
+          "lineAmountMinor": 30000
+        }
+      ],
+      "totalMinor": 30000
+    },
+    {
+      "schemaVersion": "erp-r6-contract-v1",
+      "storeId": "DEMO",
+      "type": "goodsReceipt",
+      "id": "GR-DEMO",
+      "purchaseId": "PO-DEMO",
+      "warehouseId": "MAIN",
+      "receivedDate": "2026-10-05",
+      "status": "posted",
+      "lines": [
+        {
+          "lineId": "GRL-1",
+          "poLineId": "POL-1",
+          "productId": "P-DEMO",
+          "acceptedQtyMilli": 4000,
+          "lotId": "LOT-DEMO",
+          "batchNo": "BATCH-DEMO",
+          "expiryDate": "2027-01-01"
+        }
+      ]
+    },
+    {
+      "schemaVersion": "erp-r6-contract-v1",
+      "storeId": "DEMO",
+      "type": "supplierInvoice",
+      "id": "INV-DEMO",
+      "supplierId": "SUP-DEMO",
+      "purchaseId": "PO-DEMO",
+      "currency": "TWD",
+      "invoiceNumber": "DEMO-001",
+      "invoiceDate": "2026-10-05",
+      "dueDate": "2026-11-04",
+      "lines": [
+        {
+          "lineId": "IL-1",
+          "poLineId": "POL-1",
+          "receiptLineIds": [
+            "GRL-1"
+          ],
+          "qtyMilli": 4000,
+          "unitCostMinor": 3000,
+          "lineAmountMinor": 12000
+        }
+      ],
+      "totalMinor": 12000
+    },
+    {
+      "schemaVersion": "erp-r6-contract-v1",
+      "storeId": "DEMO",
+      "type": "supplierPayment",
+      "id": "PAY-DEMO",
+      "supplierId": "SUP-DEMO",
+      "currency": "TWD",
+      "paymentDate": "2026-10-05",
+      "method": "bank",
+      "reference": "DEMO-REFERENCE",
+      "amountMinor": 5000,
+      "allocations": [
+        {
+          "invoiceId": "INV-DEMO",
+          "amountMinor": 5000
+        }
+      ]
+    },
+    {
+      "schemaVersion": "erp-r6-contract-v1",
+      "storeId": "DEMO",
+      "type": "stockTransfer",
+      "id": "TRANSFER-DEMO",
+      "fromWarehouseId": "MAIN",
+      "toWarehouseId": "FRONT",
+      "transferDate": "2026-10-05",
+      "reason": "展示區補貨",
+      "lines": [
+        {
+          "lineId": "TL-1",
+          "productId": "P-DEMO",
+          "lotId": "LOT-DEMO",
+          "qtyMilli": 1000
+        }
+      ]
+    }
+  ]
+}

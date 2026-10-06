@@ -26,7 +26,6 @@ module.exports = function initDatabase(dbPath) {
       createdAt TEXT DEFAULT (datetime('now','localtime')),
       updatedAt TEXT DEFAULT (datetime('now','localtime'))
     );
-    CREATE INDEX IF NOT EXISTS idx_products_supplier ON products(supplierId);
     CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
     CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 
@@ -236,6 +235,7 @@ module.exports = function initDatabase(dbPath) {
     ensureColumn('products', 'imageUrl', "TEXT DEFAULT ''")
     ensureColumn('products', 'expiryDate', "TEXT DEFAULT ''")
     ensureColumn('products', 'supplierId', "TEXT DEFAULT ''")
+    db.exec('CREATE INDEX IF NOT EXISTS idx_products_supplier ON products(supplierId)')
     ensureColumn('products', 'reorderLevel', 'INTEGER DEFAULT 0')
     ensureColumn('orders', 'manualDiscount', 'REAL DEFAULT 0')
     ensureColumn('orders', 'payments', "TEXT DEFAULT '[]'")
@@ -657,6 +657,7 @@ module.exports = function initDatabase(dbPath) {
           status: p.status || 'draft',
           date: p.date || '',
           receivedDate: p.receivedDate || '',
+          paidDate: p.paidDate || '',
           note: p.note || '',
           total: p.total || 0,
           items: JSON.stringify(p.items || []),
@@ -790,7 +791,7 @@ module.exports = function initDatabase(dbPath) {
   const replaceAllTx = db.transaction((data) => {
     db.exec(`
       DELETE FROM products; DELETE FROM members;
-      DELETE FROM orders; DELETE FROM order_items;
+      DELETE FROM order_items; DELETE FROM orders;
       DELETE FROM suppliers; DELETE FROM purchases;
       DELETE FROM promotions; DELETE FROM users;
       DELETE FROM manual_journal;

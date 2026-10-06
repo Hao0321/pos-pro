@@ -1,0 +1,3 @@
+# Preserve verified checkout modules and their generated mirror on Windows.
+electron/checkout*.cjs text eol=lf
+src/utils/checkout*.mjs text eol=lf
