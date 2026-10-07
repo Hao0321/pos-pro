@@ -203,22 +203,24 @@ create table if not exists audit_log (
 );
 create index if not exists idx_audit_timestamp on audit_log("timestamp");
 
--- ===== 關閉 RLS（單店家用模式）=====
--- ⚠️ 警告：關閉 RLS = 任何拿到 anon key 的人可讀寫所有資料（包含員工密碼 hash）
--- 適用單店家 / 自有裝置；多店家或不可信員工請改用 RLS policy
--- 如要加固 users 表（員工密碼），把這行改為 enable：
--- alter table users enable row level security;
-alter table products disable row level security;
-alter table members disable row level security;
-alter table orders disable row level security;
-alter table suppliers disable row level security;
-alter table purchases disable row level security;
-alter table promotions disable row level security;
-alter table users disable row level security;
-alter table manual_journal disable row level security;
-alter table held_orders disable row level security;
-alter table shifts disable row level security;
-alter table cash_log disable row level security;
-alter table waste_log disable row level security;
-alter table member_topups disable row level security;
-alter table audit_log disable row level security;
+alter table orders add column if not exists "itemCosts" jsonb default '{}';
+
+-- Every remotely synchronized row belongs to an authenticated cloud owner.
+-- Existing unowned rows stay inaccessible until the database owner migrates them explicitly.
+do $$
+declare t text;
+begin
+  foreach t in array array['products','members','orders','suppliers','purchases','promotions','manual_journal','held_orders','shifts','cash_log','waste_log','member_topups','audit_log'] loop
+    execute format('alter table public.%I add column if not exists owner_id uuid default auth.uid()',t);
+    execute format('alter table public.%I enable row level security',t);
+    execute format('revoke all on public.%I from anon, public',t);
+    execute format('grant select, insert, update, delete on public.%I to authenticated',t);
+    execute format('drop policy if exists pos_owner_allow on public.%I',t);
+    execute format('drop policy if exists pos_owner_boundary on public.%I',t);
+    execute format('create policy pos_owner_allow on public.%I for all to authenticated using (owner_id = (select auth.uid())) with check (owner_id = (select auth.uid()))',t);
+    execute format('create policy pos_owner_boundary on public.%I as restrictive for all to authenticated using (owner_id = (select auth.uid())) with check (owner_id = (select auth.uid()))',t);
+  end loop;
+end $$;
+-- POS employee credentials are local; never grant cloud access to their hashes.
+alter table public.users enable row level security;
+revoke all on public.users from anon, authenticated, public;
