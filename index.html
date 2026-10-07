@@ -2,7 +2,8 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: wss:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#2563eb" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -24,19 +25,6 @@
     </div>
   </div>
   <script type="module" src="/src/main.jsx"></script>
-  <script>
-    window.addEventListener('error', e => {
-      const root = document.getElementById('root')
-      if (root && !root.querySelector('[data-react-mounted]')) {
-        root.innerHTML = '<div style="padding:40px;font-family:sans-serif"><h2 style="color:#d94f44">啟動錯誤</h2><pre style="background:#edf2f8;padding:16px;border-radius:8px;font-size:12px;overflow:auto">'+(e.message || e)+'\n\n'+(e.error?.stack || '')+'</pre><button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer">重新載入</button></div>'
-      }
-    })
-    // 註冊 Service Worker（僅在 http/https，Electron file:// 跳過）
-    if ('serviceWorker' in navigator && (location.protocol === 'http:' || location.protocol === 'https:')) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(() => {})
-      })
-    }
-  </script>
+  <script type="module" src="/src/startup.js"></script>
 </body>
 </html>

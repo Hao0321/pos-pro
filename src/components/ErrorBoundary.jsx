@@ -1,3 +1,4 @@
+import { browserStorage } from '../utils/browserStorage'
 import React from 'react'
 
 export default class ErrorBoundary extends React.Component {
@@ -58,7 +59,7 @@ export default class ErrorBoundary extends React.Component {
             }}>重新載入</button>
             <button onClick={() => {
               if (confirm('清除所有本地資料？只清 localStorage，SQLite 資料保留')) {
-                localStorage.clear()
+                browserStorage.clear()
                 location.reload()
               }
             }} style={{

@@ -1,14 +1,15 @@
+import { browserStorage } from './browserStorage'
 // 主題切換工具
 const KEY = 'pos_theme'
 
 export function getTheme() {
-  return localStorage.getItem(KEY) || 'light'
+  return browserStorage.getItem(KEY) || 'light'
 }
 
 export function applyTheme(theme) {
   const t = theme === 'dark' ? 'dark' : 'light'
   document.documentElement.setAttribute('data-theme', t)
-  localStorage.setItem(KEY, t)
+  browserStorage.setItem(KEY, t)
 }
 
 export function toggleTheme() {

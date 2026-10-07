@@ -1,3 +1,4 @@
+import { browserStorage, readRecords, writeRecords } from './browserStorage'
 // 雲端同步（手動 push/pull）
 // push：把本機（localStorage 或 SQLite）資料 upsert 到 Supabase
 // pull：從 Supabase 拉全部資料，覆蓋本機
@@ -45,7 +46,7 @@ const TABLES = [
       time: o.time, source: o.source || 'pos', status: o.status || 'completed',
       tableNum: o.tableNum || '', note: o.note || '', taxId: o.taxId || '',
       shiftId: o.shiftId || '', refundOf: o.refundOf || '', cashier: o.cashier || '',
-      fullRefund: !!o.fullRefund,
+      fullRefund: !!o.fullRefund, itemCosts:o.itemCosts||{},
     }),
   },
   {
@@ -72,12 +73,6 @@ const TABLES = [
       id: p.id, name: p.name || '', type: p.type || '',
       condition: p.condition || {}, enabled: !!p.enabled,
       startAt: p.startAt || '', endAt: p.endAt || '',
-    }),
-  },
-  {
-    localKey: 'pos_users', cloud: 'users',
-    pick: (u) => ({
-      id: u.id, username: u.username || '', password: u.password || '', role: u.role || 'staff',
     }),
   },
   {
@@ -147,11 +142,10 @@ const TABLES = [
 
 // ===== 工具 =====
 function loadLS(key) {
-  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : [] }
-  catch { return [] }
+  const v=browserStorage.getItem(key);return v?JSON.parse(v):[]
 }
 function saveLS(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)) } catch {}
+  browserStorage.setItem(key,JSON.stringify(value))
 }
 
 // 從本機讀全部資料（Electron 用 exportData，Browser 用 localStorage）
@@ -159,6 +153,7 @@ async function readLocal() {
   if (isElectron) {
     const data = await window.electronAPI.db.exportData()
     return {
+      _revision:data._revision,
       pos2_products: data.products || [],
       pos2_members: data.members || [],
       pos2_orders: data.orders || [],
@@ -181,7 +176,7 @@ async function readLocal() {
 }
 
 // 寫本機（Electron 統一走 importData；Browser 走 localStorage）
-async function writeLocal(allByKey) {
+async function writeLocal(allByKey, before) {
   if (isElectron) {
     // importData 會 DELETE 14 張表後重新 insert，包含 held_orders/shifts/cash_log/waste_log/member_topups/audit_log
     await window.electronAPI.db.importData({
@@ -191,7 +186,7 @@ async function writeLocal(allByKey) {
       suppliers: allByKey['pos_suppliers'] || [],
       purchases: allByKey['pos_purchases'] || [],
       promotions: allByKey['pos_promotions'] || [],
-      users: allByKey['pos_users'] || [],
+      users: before.pos_users || [],
       manualJournal: allByKey['pos2_manual_j'] || [],
       heldOrders: allByKey['pos2_held_orders'] || [],
       shifts: allByKey['pos2_shifts'] || [],
@@ -199,12 +194,10 @@ async function writeLocal(allByKey) {
       wasteLog: allByKey['pos2_waste'] || [],
       memberTopups: allByKey['pos2_topups'] || [],
       auditLog: allByKey['pos_audit_log'] || [],
-    })
+    }, before._revision)
     return
   }
-  for (const t of TABLES) {
-    if (allByKey[t.localKey]) saveLS(t.localKey, allByKey[t.localKey])
-  }
+  writeRecords(Object.fromEntries(TABLES.map(t=>[t.localKey,allByKey[t.localKey] || []])))
 }
 
 // ===== Push：本機 → 雲端（upsert） =====
@@ -213,6 +206,8 @@ export async function pushAll(onProgress = () => {}) {
   const sb = getSupabase()
   if (!sb) throw new Error('雲端 client 初始化失敗')
 
+  const auth=await sb.auth.getUser()
+  if (auth.error || !auth.data?.user) throw new Error('請先登入雲端帳號；禁止匿名同步')
   const allLocal = await readLocal()
   const report = []
 
@@ -246,6 +241,10 @@ export async function pullAll(onProgress = () => {}) {
   const sb = getSupabase()
   if (!sb) throw new Error('雲端 client 初始化失敗')
 
+  const auth=await sb.auth.getUser()
+  if (auth.error || !auth.data?.user) throw new Error('請先登入雲端帳號；禁止匿名同步')
+  const before=await readLocal()
+  const browserRevision=isElectron ? null : readRecords().revision
   const result = {}
   const report = []
   for (const t of TABLES) {
@@ -255,7 +254,7 @@ export async function pullAll(onProgress = () => {}) {
     let all = []
     let from = 0
     while (true) {
-      const { data, error } = await sb.from(t.cloud).select('*').range(from, from + PAGE - 1)
+      const { data, error } = await sb.from(t.cloud).select('*').order('id', {ascending:true}).range(from, from + PAGE - 1)
       if (error) {
         report.push({ table: t.cloud, count: all.length, error: error.message })
         throw new Error(`${t.cloud}: ${error.message}`)
@@ -268,7 +267,15 @@ export async function pullAll(onProgress = () => {}) {
     result[t.localKey] = all
     report.push({ table: t.cloud, count: all.length })
   }
-  await writeLocal(result)
+  if (JSON.stringify(await readLocal())!==JSON.stringify(before)) throw new Error('拉取期間本機資料已改變，已取消覆蓋')
+  if (isElectron) {
+    const saved=await window.electronAPI.db.createBackup('雲端覆蓋前完整備份','管理員')
+    if (saved?.success!==true) throw new Error('備份未完成，已取消覆蓋')
+  } else {
+    if (readRecords().revision!==browserRevision) throw new Error('本機資料已改變，已取消覆蓋')
+    browserStorage.setItem('pos_pre_cloud_backup',JSON.stringify({time:new Date().toISOString(),data:before}))
+  }
+  await writeLocal(result,before)
   return report
 }
 

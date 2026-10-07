@@ -1,14 +1,14 @@
 // 簡易 Excel 匯出（HTML→XLS，無需第三方套件）
 // rows: [['標題1','標題2',...], ['資料1','資料2',...], ...]
+const esc = v => String(v ?? '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&apos;' }[c]))
 export function exportXLS(rows, filename = 'export.xls') {
-  const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   const html = [
     '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">',
     '<head><meta charset="utf-8"></head><body><table border="1" style="border-collapse:collapse">',
     ...rows.map(r => '<tr>' + r.map(c => {
       const v = c == null ? '' : c
-      const isNum = typeof v === 'number'
-      return `<td${isNum ? ' x:num' : ''}>${esc(v)}</td>`
+      const isNum = typeof v === 'number' && Number.isFinite(v)
+      return `<td${isNum ? ' x:num' : ' x:str style="mso-number-format:\\@"'}>${esc(v)}</td>`
     }).join('') + '</tr>'),
     '</table></body></html>',
   ].join('')
@@ -26,11 +26,10 @@ export function exportXLS(rows, filename = 'export.xls') {
 // 但透過多個 worksheet 可以達成。為簡化，每張表獨立檔）
 export function exportMultiSheetXLS(sheets, filename = 'export.xls') {
   // sheets: { sheetName: [[row...], ...] }
-  const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   const sheetXmls = Object.entries(sheets).map(([name, rows]) => `
     <Worksheet ss:Name="${esc(name)}">
       <Table>
-        ${rows.map(r => '<Row>' + r.map(c => `<Cell><Data ss:Type="${typeof c === 'number' ? 'Number' : 'String'}">${esc(c)}</Data></Cell>`).join('') + '</Row>').join('')}
+        ${rows.map(r => '<Row>' + r.map(c => `<Cell><Data ss:Type="${typeof c === 'number' && Number.isFinite(c) ? 'Number' : 'String'}">${esc(c)}</Data></Cell>`).join('') + '</Row>').join('')}
       </Table>
     </Worksheet>
   `).join('')

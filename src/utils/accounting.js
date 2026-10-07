@@ -42,6 +42,7 @@ export const ACCOUNT_GROUPS = {
 
 // ── 從訂單自動產生分錄 ────────────────────────────────────
 export function orderToJournalEntries(order, products) {
+  if(order.source==='customer' || order.payMethod==='pending' || (order.status && !['completed','refunded'].includes(order.status)))return []
   const entries = []
   const items = order.items || []
   const date  = (order.time || '').slice(0, 10)
@@ -50,7 +51,7 @@ export function orderToJournalEntries(order, products) {
   // 計算銷貨成本（退貨單 qty 為負 → cogs 為負，用來沖回成本與存貨）
   const cogs = items.reduce((sum, item) => {
     const prod = products.find(p => p.id === item.id)
-    return sum + (prod?.cost || 0) * item.qty
+    return sum + (order.itemCosts?.[item.id] ?? prod?.cost ?? 0) * item.qty
   }, 0)
 
   const payAccount = order.payMethod === 'cash' ? '1101' : '1103'

@@ -1,16 +1,11 @@
+import { browserStorage, writeRecords, readRecords, withSalesLock } from './browserStorage'
+import { commitBrowserSale, browserReceipt, commitBrowserRefund } from './browserSales'
 // 資料存取抽象層 — 自動判斷 Electron (SQLite) 或 瀏覽器 (localStorage)
 export const isElectron = !!(typeof window !== 'undefined' && window.electronAPI)
 
-function loadLS(key, fallback) {
-  try {
-    const v = localStorage.getItem(key)
-    return v ? JSON.parse(v) : fallback
-  } catch { return fallback }
-}
+function loadLS(key, fallback) { const value=browserStorage.getItem(key);return value==null?fallback:JSON.parse(value) }
 
-function saveLS(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)) } catch {}
-}
+function saveLS(key, value) { browserStorage.setItem(key, JSON.stringify(value)) }
 
 // ===== Products =====
 export async function loadProducts(fallback) {
@@ -62,6 +57,11 @@ export async function saveOrders(orders) {
 }
 export async function dbCheckout(orderData, stockUpdates, memberUpdate) {
   if (isElectron) return window.electronAPI.db.checkout(orderData, stockUpdates, memberUpdate)
+  return commitBrowserSale(orderData)
+}
+export async function lookupCheckout(id) {
+  if (isElectron) return window.electronAPI.db.checkoutReceipt(id)
+  return browserReceipt(id)
 }
 
 // ===== Manual Journal =====
@@ -210,10 +210,12 @@ export async function checkAndMigrate() {
       members: loadLS('pos2_members', []),
       orders: loadLS('pos2_orders', []),
       manualJournal: loadLS('pos2_manual_j', []),
-      users: [],  // 不遷移舊帳號，用新的
+      users: [], // Accounts are preserved by the dedicated bootstrap
       suppliers: loadLS('pos_suppliers', []),
       purchases: loadLS('pos_purchases', []),
       promotions: loadLS('pos_promotions', []),
+      heldOrders:loadLS('pos2_held_orders',[]),shifts:loadLS('pos2_shifts',[]),cashLog:loadLS('pos2_cash_log',[]),
+      wasteLog:loadLS('pos2_waste',[]),memberTopups:loadLS('pos2_topups',[]),auditLog:loadLS('pos_audit_log',[]),
     }
 
     const hasData = Object.values(data).some(arr => arr && arr.length > 0)
@@ -221,9 +223,7 @@ export async function checkAndMigrate() {
 
     await window.electronAPI.db.migrateFromLocalStorage(data)
     return true
-  } catch {
-    return false
-  }
+  } catch(error) { throw new Error('舊資料匯入未完成，請保留原始資料：'+error.message) }
 }
 
 // ===== Customer Orders =====
@@ -238,6 +238,7 @@ export async function updateOrderStatus(id, status) {
 // ===== Refund =====
 export async function dbRefund(origId, refundData, stockUpdates, memberUpdate) {
   if (isElectron) return window.electronAPI.db.refundOrder(origId, refundData, stockUpdates, memberUpdate)
+  return commitBrowserRefund(refundData)
 }
 
 // ===== Held Orders 掛單 =====
@@ -268,16 +269,20 @@ export async function getOpenShift() {
 }
 export async function openShift(data) {
   if (isElectron) return window.electronAPI.db.openShift(data)
+  if(typeof data.openCash!=='number'||!Number.isFinite(data.openCash)||data.openCash<0||data.openCash>1e9)throw new Error('開班現金不正確')
   const arr = loadLS('pos2_shifts', [])
+  if(arr.some(s=>s.status==='open'))throw new Error('已有開啟中的班別')
   arr.unshift({ ...data, status: 'open' })
   saveLS('pos2_shifts', arr)
   return { success: true, id: data.id }
 }
 export async function closeShift(id, data) {
   if (isElectron) return window.electronAPI.db.closeShift(id, data)
+  if(typeof data.closeCash!=='number'||!Number.isFinite(data.closeCash)||data.closeCash<0||data.closeCash>1e9)throw new Error('交班現金不正確')
   const arr = loadLS('pos2_shifts', [])
   const idx = arr.findIndex(s => s.id === id)
-  if (idx >= 0) arr[idx] = { ...arr[idx], ...data, status: 'closed' }
+  if(idx<0||arr[idx].status!=='open')throw new Error('班別已關閉或不存在')
+  arr[idx] = { ...arr[idx], ...data, status: 'closed' }
   saveLS('pos2_shifts', arr)
   return { success: true }
 }
@@ -298,8 +303,13 @@ export async function loadWasteLog() {
 }
 export async function addWaste(data) {
   if (isElectron) return window.electronAPI.db.addWaste(data)
-  const arr = loadLS('pos2_waste', [])
-  arr.unshift(data); saveLS('pos2_waste', arr)
+  return withSalesLock(()=>{
+    const current=readRecords(),records=current.data,p=records.pos2_products.find(p=>p.id===data.productId)
+    if(!p||typeof data.qty!=='number'||!Number.isFinite(data.qty)||data.qty<=0||data.qty>p.stock)throw new Error('損耗商品或數量不正確')
+    const product={...p,stock:p.stock-data.qty},waste={...data,productName:p.name,cost:p.cost||0}
+    writeRecords({pos2_waste:[waste,...records.pos2_waste],pos2_products:records.pos2_products.map(x=>x.id===p.id?product:x)},current.revision)
+    return {success:true,product,waste}
+  })
 }
 export async function deleteWaste(id) {
   if (isElectron) return window.electronAPI.db.deleteWaste(id)
@@ -315,6 +325,19 @@ export async function loadTopups(memberId) {
 }
 export async function addTopup(data) {
   if (isElectron) return window.electronAPI.db.addTopup(data)
-  const arr = loadLS('pos2_topups', [])
-  arr.unshift(data); saveLS('pos2_topups', arr)
+  return withSalesLock(()=>{
+    try {
+      const current=readRecords(),records=current.data,old=records.pos2_topups.find(t=>t.id===data.id)
+      const member=records.pos2_members.find(m=>m.id===data.memberId)
+      if (!member) throw new Error('會員不存在')
+      if (old) {
+        if(JSON.stringify(old)!==JSON.stringify(data)) throw new Error('儲值單號內容不一致')
+        return {success:true,member,topup:old}
+      }
+      if ([data.amount,data.bonus].some(n=>typeof n!=='number'||!Number.isFinite(n)||n<0||n>1e9) || !['cash','card'].includes(data.payMethod)) throw new Error('儲值金額或付款方式不正確')
+      const next={...member,balance:Math.round(((member.balance||0)+data.amount+data.bonus)*100)/100}
+      writeRecords({pos2_topups:[data,...records.pos2_topups],pos2_members:records.pos2_members.map(m=>m.id===next.id?next:m)},current.revision)
+      return {success:true,member:next,topup:data}
+    }catch(error){return {success:false,committed:false,error:error.message}}
+  })
 }

@@ -1,3 +1,4 @@
+import { browserStorage, DATA_KEYS, writeRecords } from './browserStorage'
 // ═══════════════════════════════════════════════════════════════════
 // 資安核心模組 — POS Pro Security Layer
 // ═══════════════════════════════════════════════════════════════════
@@ -101,7 +102,7 @@ export function getSession() {
     const raw = sessionStorage.getItem(SESSION_KEY)
     if (!raw) return null
     const session = JSON.parse(raw)
-    if (Date.now() > session.expiresAt) {
+    if (!session || typeof session.userId!=='string' || !ROLES[session.role] || !Number.isFinite(session.expiresAt) || !Number.isFinite(session.loginAt) || session.expiresAt-session.loginAt>SESSION_TTL || Date.now() >= session.expiresAt) {
       sessionStorage.removeItem(SESSION_KEY)
       return null
     }
@@ -183,7 +184,7 @@ export function writeAuditLog(action, session, detail = {}) {
       const logs = readAuditLogs()
       logs.unshift(entry)
       const trimmed = logs.slice(0, AUDIT_MAX)
-      localStorage.setItem(AUDIT_KEY, JSON.stringify(trimmed))
+      browserStorage.setItem(AUDIT_KEY, JSON.stringify(trimmed))
     }
     return entry
   } catch { return null }
@@ -192,7 +193,7 @@ export function writeAuditLog(action, session, detail = {}) {
 export function readAuditLogs() {
   try {
     if (isElectron) return [] // Electron 由 IPC 非同步取得
-    const raw = localStorage.getItem(AUDIT_KEY)
+    const raw = browserStorage.getItem(AUDIT_KEY)
     return raw ? JSON.parse(raw) : []
   } catch { return [] }
 }
@@ -255,93 +256,73 @@ export function maskName(name) {
 // ── 8. 自動備份 ──────────────────────────────────────────────────────
 const BACKUP_KEY     = 'pos_backups'
 const BACKUP_MAX     = 10
-const BACKUP_KEYS    = ['pos2_products','pos2_members','pos2_orders','pos2_manual_j']
+const BACKUP_KEYS = DATA_KEYS
 
-export function createBackup(session, label = '') {
-  try {
-    if (isElectron) {
-      // Electron: SQLite 備份
-      window.electronAPI.db.createBackup(label || '自動備份', session?.username || '系統').catch(() => {})
-      return { id: 'BK' + Date.now() }
+export async function createBackup(session, label = '') {
+  if (isElectron) {
+    const result=await window.electronAPI.db.createBackup(label||'自動備份',session?.username||'系統')
+    if(result?.success!==true)throw new Error(result?.error||'備份保存失敗')
+    return result
+  }
+  const raw=browserStorage.getItem(BACKUP_KEY),backups=raw?JSON.parse(raw):[]
+  const data=Object.fromEntries(BACKUP_KEYS.map(k=>[k,JSON.parse(browserStorage.getItem(k))]))
+  const backup={id:'BK-'+crypto.randomUUID(),label:label||`備份 ${new Date().toLocaleString('zh-TW')}`,
+    createdAt:new Date().toISOString(),createdBy:session?.username||'系統',size:JSON.stringify(data).length,data}
+  browserStorage.setItem(BACKUP_KEY,JSON.stringify([backup,...backups].slice(0,BACKUP_MAX)))
+  writeAuditLog('BACKUP_CREATE',session,{label:backup.label})
+  return backup
+}
+
+export async function getBackupList() {
+  if(isElectron)return window.electronAPI.db.getBackups()
+  const raw=browserStorage.getItem(BACKUP_KEY)
+  return raw?JSON.parse(raw).map(({data,...meta})=>meta):[]
+}
+
+export async function restoreBackup(backupId, session) {
+  if(isElectron){
+    const result=await window.electronAPI.db.restoreBackup(backupId)
+    if(result?.success!==true)throw new Error(result?.error||'還原失敗')
+  }else{
+    const backups=JSON.parse(browserStorage.getItem(BACKUP_KEY)||'[]'),backup=backups.find(b=>b.id===backupId)
+    if(!backup?.data)throw new Error('備份不存在')
+    writeRecords(Object.fromEntries(BACKUP_KEYS.filter(k=>Object.hasOwn(backup.data,k)).map(k=>[k,backup.data[k]])))
+  }
+  writeAuditLog('BACKUP_RESTORE',session,{backupId})
+  return true
+}
+
+export async function exportBackupFile(session) {
+  const data=isElectron?await window.electronAPI.db.exportData():Object.fromEntries(BACKUP_KEYS.map(k=>[k,JSON.parse(browserStorage.getItem(k))]))
+  const content=JSON.stringify({exportedAt:new Date().toISOString(),version:'3.1',storage:isElectron?'sqlite':'browser',data},null,2)
+  const url=URL.createObjectURL(new Blob([content],{type:'application/json'})),a=document.createElement('a')
+  const filename=`POSPro_backup_${new Date().toISOString().slice(0,10)}.json`
+  a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url)
+  writeAuditLog('DATA_EXPORT',session,{filename})
+  return true
+}
+
+export function importBackupFile(file,session) {
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader()
+    reader.onload=async e=>{
+      try{
+        const {data,storage}=JSON.parse(e.target.result)
+        if(!data||typeof data!=='object')throw new Error('備份格式錯誤')
+        if(isElectron){
+          if(!Array.isArray(data.products)||storage==='browser')throw new Error('請選擇桌面版匯出的備份')
+          await createBackup(session,'匯入前備份')
+          const result=await window.electronAPI.db.importData(data)
+          if(result?.success!==true)throw new Error(result?.error||'匯入失敗')
+        }else{
+          if(!Array.isArray(data.pos2_products)||storage==='sqlite')throw new Error('請選擇瀏覽器版匯出的備份')
+          await createBackup(session,'匯入前備份')
+          writeRecords(Object.fromEntries(BACKUP_KEYS.filter(k=>Object.hasOwn(data,k)).map(k=>[k,data[k]])))
+        }
+        writeAuditLog('BACKUP_RESTORE',session,{source:'file'});resolve(true)
+      }catch(error){reject(error)}
     }
-
-    const backups = getBackupList()
-    const data    = {}
-    BACKUP_KEYS.forEach(k => {
-      try { data[k] = JSON.parse(localStorage.getItem(k) || '[]') } catch { data[k] = [] }
-    })
-
-    const backup = {
-      id:        'BK' + Date.now(),
-      label:     label || `備份 ${new Date().toLocaleString('zh-TW')}`,
-      createdAt: new Date().toISOString(),
-      createdBy: session?.username || '系統',
-      size:      JSON.stringify(data).length,
-      data,
-    }
-
-    backups.unshift(backup)
-    const trimmed = backups.slice(0, BACKUP_MAX)
-    localStorage.setItem(BACKUP_KEY, JSON.stringify(trimmed))
-    writeAuditLog('BACKUP_CREATE', session, { label: backup.label })
-    return backup
-  } catch { return null }
-}
-
-export function getBackupList() {
-  try {
-    const raw = localStorage.getItem(BACKUP_KEY)
-    return raw ? JSON.parse(raw).map(b => ({ ...b, data: undefined })) : []
-  } catch { return [] }
-}
-
-export function restoreBackup(backupId, session) {
-  try {
-    const raw     = localStorage.getItem(BACKUP_KEY)
-    const backups = raw ? JSON.parse(raw) : []
-    const backup  = backups.find(b => b.id === backupId)
-    if (!backup?.data) throw new Error('備份不存在')
-
-    BACKUP_KEYS.forEach(k => {
-      if (backup.data[k]) localStorage.setItem(k, JSON.stringify(backup.data[k]))
-    })
-    writeAuditLog('BACKUP_RESTORE', session, { backupId, label: backup.label })
-    return true
-  } catch { return false }
-}
-
-export function exportBackupFile(session) {
-  try {
-    const data = {}
-    BACKUP_KEYS.forEach(k => {
-      try { data[k] = JSON.parse(localStorage.getItem(k) || '[]') } catch { data[k] = [] }
-    })
-    const content   = JSON.stringify({ exportedAt: new Date().toISOString(), version: '3.0', data }, null, 2)
-    const blob      = new Blob([content], { type: 'application/json' })
-    const url       = URL.createObjectURL(blob)
-    const a         = document.createElement('a')
-    const filename  = `POSPro_backup_${new Date().toISOString().slice(0,10)}.json`
-    a.href = url; a.download = filename; a.click()
-    URL.revokeObjectURL(url)
-    writeAuditLog('DATA_EXPORT', session, { filename })
-    return true
-  } catch { return false }
-}
-
-export function importBackupFile(file, session) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = e => {
-      try {
-        const { data } = JSON.parse(e.target.result)
-        if (!data) throw new Error('格式錯誤')
-        BACKUP_KEYS.forEach(k => {
-          if (data[k]) localStorage.setItem(k, JSON.stringify(data[k]))
-        })
-        writeAuditLog('BACKUP_RESTORE', session, { source: 'file' })
-        resolve(true)
-      } catch(err) { reject(err) }
-    }
+    reader.onerror=()=>reject(new Error('備份檔案無法讀取'))
     reader.readAsText(file)
   })
 }

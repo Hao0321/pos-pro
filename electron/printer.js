@@ -3,8 +3,7 @@
  * 支援 ESC/POS 相容的 USB 熱感印表機 (58mm / 80mm)
  * 透過 Windows RAW 列印或 net.Socket 網路印表機
  */
-const net = require('net')
-const { exec } = require('child_process')
+const { sendToPrinter, getStatus } = require('./printerTransport.cjs')
 
 // ESC/POS 指令常數
 const ESC = 0x1B
@@ -34,7 +33,7 @@ const CMD = {
 
 function textToBuffer(text) {
   // 使用 Big5/UTF-8 編碼 (大部分 POS 印表機支援 UTF-8)
-  return Buffer.from(text, 'utf8')
+  return Buffer.from(String(text).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, ''), 'utf8')
 }
 
 function line(text) {
@@ -50,55 +49,6 @@ function padLine(left, right, width = 32) {
   return line(left + ' '.repeat(Math.max(1, gap)) + right)
 }
 
-// 透過網路發送到印表機
-async function sendToNetworkPrinter(ip, port, data) {
-  return new Promise((resolve, reject) => {
-    const client = new net.Socket()
-    client.setTimeout(5000)
-    client.connect(port, ip, () => {
-      client.write(Buffer.concat(data), () => {
-        client.end()
-        resolve({ success: true })
-      })
-    })
-    client.on('error', (err) => reject(err))
-    client.on('timeout', () => { client.destroy(); reject(new Error('印表機連線逾時')) })
-  })
-}
-
-// 透過 Windows 共享印表機 (RAW)
-async function sendToWindowsPrinter(printerName, data) {
-  const fs = require('fs')
-  const path = require('path')
-  const os = require('os')
-  const tmpFile = path.join(os.tmpdir(), 'pos_receipt_' + Date.now() + '.bin')
-  fs.writeFileSync(tmpFile, Buffer.concat(data))
-  return new Promise((resolve, reject) => {
-    // 使用 Windows 的 COPY 命令發送 RAW 資料到印表機
-    exec(`copy /b "${tmpFile}" "${printerName}"`, { shell: 'cmd.exe' }, (err) => {
-      try { fs.unlinkSync(tmpFile) } catch {}
-      if (err) reject(err)
-      else resolve({ success: true })
-    })
-  })
-}
-
-async function sendToPrinter(settings, data) {
-  const type = settings.printerType || 'network' // 'network' | 'windows'
-  try {
-    if (type === 'network') {
-      const ip = settings.printerIP || '192.168.1.100'
-      const port = parseInt(settings.printerPort || '9100')
-      return await sendToNetworkPrinter(ip, port, data)
-    } else {
-      const name = settings.printerName || '\\\\localhost\\POS_PRINTER'
-      return await sendToWindowsPrinter(name, data)
-    }
-  } catch (err) {
-    return { success: false, error: err.message }
-  }
-}
-
 // ===== 公開 API =====
 
 async function printReceipt(orderData, settings) {
@@ -106,7 +56,8 @@ async function printReceipt(orderData, settings) {
   const storeAddr = settings.storeAddress || ''
   const storePhone = settings.storePhone || ''
   const footer = settings.receiptFooter || '感謝您的光臨！'
-  const width = parseInt(settings.receiptWidth || '32')
+  const requestedWidth = Number(settings.receiptWidth || 32)
+  const width = Number.isInteger(requestedWidth) && requestedWidth >= 16 && requestedWidth <= 80 ? requestedWidth : 32
 
   const data = []
   data.push(CMD.INIT)
@@ -204,26 +155,6 @@ async function testPrint(settings) {
   data.push(CMD.CUT_PARTIAL)
 
   return sendToPrinter(settings, data)
-}
-
-async function getStatus(settings) {
-  const type = settings.printerType || 'network'
-  if (type === 'network') {
-    const ip = settings.printerIP || '192.168.1.100'
-    const port = parseInt(settings.printerPort || '9100')
-    return new Promise((resolve) => {
-      const client = new net.Socket()
-      client.setTimeout(3000)
-      client.connect(port, ip, () => {
-        client.destroy()
-        resolve({ connected: true, type: 'network', ip, port })
-      })
-      client.on('error', () => resolve({ connected: false, type: 'network', ip, port }))
-      client.on('timeout', () => { client.destroy(); resolve({ connected: false, type: 'network', ip, port }) })
-    })
-  }
-  // Windows 印表機 - 檢查是否存在
-  return { connected: true, type: 'windows', name: settings.printerName || '' }
 }
 
 module.exports = { printReceipt, openCashDrawer, testPrint, getStatus }

@@ -1,3 +1,4 @@
+import { browserStorage } from '../utils/browserStorage'
 import { useState, useEffect } from 'react'
 import { Clock, Plus, Minus, LogIn, LogOut, FileText, AlertCircle } from 'lucide-react'
 import { loadShifts, loadCashLog } from '../utils/dataAccess'
@@ -92,7 +93,7 @@ export default function ShiftPage({ store, session }) {
           </div>
         </div>
         {!openShift ? (
-          <button className="btn btn-primary" onClick={()=>{ setShowOpen(true); try { setOpenCash(localStorage.getItem('pos_last_open_cash') || '') } catch {} }} style={{display:'flex',alignItems:'center',gap:6}}>
+          <button className="btn btn-primary" onClick={()=>{ setShowOpen(true); try { setOpenCash(browserStorage.getItem('pos_last_open_cash') || '') } catch {} }} style={{display:'flex',alignItems:'center',gap:6}}>
             <LogIn size={16}/> 開班
           </button>
         ) : (

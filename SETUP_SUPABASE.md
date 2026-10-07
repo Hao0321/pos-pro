@@ -1,119 +1,31 @@
-# 雲端同步設定教學 (Supabase)
+# 選用的 Supabase 雲端同步
 
-POS Pro v2.3.0 起支援用 Supabase 做跨裝置同步。本指南帶你 10 分鐘設定完成。
+POS 所有功能對所有使用者免費。核心資料存在本機，不需要付費雲端或指定硬體；選擇外部雲端時，其價格、配額與服務條款依 [Supabase 官方說明](https://supabase.com/pricing)。
 
-## 為什麼用 Supabase？
+目前同步是手動上傳／拉取完整資料，尚未提供多台裝置同時編輯的合併演算法。建議選一台主要編輯裝置，拉取前確認本機備份；登入 POS 不會自動從雲端覆蓋資料。
 
-- **免費額度足夠單店家**：500MB 資料庫、不限 API 呼叫次數、50,000 月活用戶
-- **零維運**：託管在雲端，不用自己架伺服器
-- **跨裝置一致**：iPhone 改一筆 → 桌機點「拉取」就同步
+## 新專案
 
-## 設定步驟
+1. 在 Supabase 建立專案，資料庫密碼存於密碼管理員。
+2. 在 SQL Editor 執行本專案 [supabase/schema.sql](supabase/schema.sql)。13 張業務資料表會啟用 RLS，資料列的 `owner_id` 取自登入的雲端身份；員工 `users` 表拒絕前端存取。
+3. 使用 Supabase Auth 建立自己的雲端使用者，依專案的 Email 驗證設定完成驗證。不同裝置登入相同雲端身份才會看見同一份資料。POS 本機員工帳號與這個身份分開管理。
+4. 老闆登入 POS → 設定 → 雲端同步，填入 HTTPS Project URL 和公開 publishable／anon key，儲存後用自己的雲端 Email 和密碼登入。禁止填入 secret／service_role key。
+5. 完成登入後測試連線。在具有完整資料的主要裝置手動推上雲端，再在另一台裝置拉取。
 
-### 1. 註冊 Supabase 帳號
+上傳與拉取都會先驗證雲端身份。拉取覆蓋前建立本機備份；若拉取期間本機資料已變動，系統取消覆蓋。上傳仍採逐表 upsert，途中中斷可能只完成部分資料，需保留主要裝置並重試、核對。
 
-1. 開 [https://supabase.com](https://supabase.com)
-2. 點右上 **Start your project** → 用 GitHub 或 Email 登入
+## 已有專案的更新
 
-### 2. 建一個新專案
+先從 Supabase 與 POS 分別匯出備份，再執行新的 schema。這是雲端管理者的操作，本次本機修正沒有替你連線或修改任何正式雲端專案。
 
-1. 登入後點 **New Project**
-2. 選一個 Organization（沒有就建一個，名字隨便取，例如 "personal"）
-3. 填寫：
-   - **Name**：`pos-pro`（隨便）
-   - **Database Password**：隨機產生並**存到密碼管理員**（之後找不回）
-   - **Region**：選 `Northeast Asia (Tokyo)` 或 `Southeast Asia (Singapore)`，台灣連線最快
-   - **Pricing Plan**：Free
-4. 點 **Create new project**，等 1-2 分鐘建立完成
+舊資料的 `owner_id` 可能為空。系統會保留它們並拒絕前端讀取，直到資料庫管理者確認資料歸屬後逐批遷移。請以已確認的 Auth UUID 和明確資料列 ID 設定歸屬；不要把所有店家的舊資料一律交給同一個身份。
 
-### 3. 建立資料表 Schema
+新的 restrictive policy 限制舊 permissive policy 擴大授權。仍需在自己的專案驗證：已登入者能讀寫自己的資料；匿名者與另一個雲端身份不能讀取或改寫；前端不能讀取員工密碼雜湊。不要關閉 RLS 解決連線問題。
 
-1. 進入專案後，左側選 **SQL Editor**
-2. 點 **+ New query**
-3. 開啟本專案 `supabase/schema.sql` 檔，整個複製貼上
-4. 點右下 **Run**（或 Ctrl+Enter）
-5. 看到 `Success. No rows returned` 就成功了
+## 同步與備份範圍
 
-### 4. 複製連線資訊
+同步商品、會員、訂單、供應商、進貨、促銷、會計分錄、掛單、班別、現金流水、損耗、儲值和稽核日誌。員工帳號、印表機等本機設定與備份檔不會上傳。
 
-1. 左側 **Settings** (齒輪圖示) → **API**
-2. 複製：
-   - **Project URL**：類似 `https://xxxxx.supabase.co`
-   - **Project API keys → anon / public**：一段很長的 `eyJhbGciOi...` 字串
+完整本機備份包含 14 類業務資料與員工帳號。桌面與瀏覽器各自匯出適用於該儲存模式的 JSON；請保管包含個資與密碼雜湊的備份。還原會取代指定的資料集合，匯入格式或資料不正確時原資料會保留。
 
-   ⚠️ **不要用 service_role**，那是 server 端用的、有完整權限會洩漏資料
-
-### 5. 在 POS 系統設定
-
-1. 打開 POS Pro（桌機 Electron 或 iPad PWA 都可以）
-2. 老闆登入 → 設定 → **雲端同步**
-3. 填入剛剛複製的 URL 和 anon key
-4. 點 **儲存設定**
-5. 點 **測試連線** → 看到 ✓ 表示成功
-
-### 6. 第一次同步
-
-**從哪台裝置開始？**
-
-- 如果你**桌機 Electron 已有完整資料** → 在桌機按「⬆ 推上雲端」，把資料推上去
-- 然後在 iPad/手機按「⬇ 從雲端拉下來」，會把桌機資料下載過來
-
-之後每次：
-- 哪台裝置改了東西 → 點「推上雲端」
-- 另一台要看到最新 → 點「從雲端拉下來」（會覆蓋本機）
-
-## 注意事項
-
-### 安全 ⚠️ 重要
-
-**預設設定（schema.sql）關閉 RLS，這代表：**
-- 任何拿到 anon key 的人都可以**讀寫所有資料**，包含：
-  - 訂單、會員、員工**密碼 hash**（PBKDF2-SHA256）
-  - 進貨單、會計分錄
-- anon key 設計上是「公開」金鑰（可以放前端），但「公開」≠「任何人都可拿」
-- **不要把 anon key 貼到 GitHub / 公開 Discord / 截圖到網路**
-- 適用：單店家、自己的裝置、家人或值得信任的店員
-- 不適用：多店家共用一個雲端、店員不全可信、資料對外有合規要求
-
-**如果擔心員工密碼洩漏（建議加固）：**
-
-在 Supabase SQL Editor 跑：
-```sql
--- 對 users 表加 RLS，只讓 service_role 讀寫（前端 anon 看不到密碼）
-alter table users enable row level security;
--- 注意：之後 cloudSync 推/拉 users 表會失敗，需要員工資料同步請改用 Supabase Dashboard 手動管理
-```
-
-或更完整的：申請 Supabase Auth + RLS policies 做角色控管（超出本指南範圍）。
-
-**其他建議：**
-- 定期到 Supabase Dashboard → Settings → API → **Reset anon key** 換 key（之後在 POS 重新設定）
-- 重要資料定期「設定 → 備份還原 → 匯出 JSON 檔」做本機離線備份
-
-### 衝突
-- 兩台裝置同時改不同筆資料 → 都 push 後雲端會同時保留兩邊新增的，但**同一筆 id 的修改後 push 會蓋掉前 push**
-- 對家庭/小型店家來說：盡量「一台主裝置編輯、其他裝置查詢」可避免衝突
-- 真的衝突了，從備份還原即可（**設定 → 備份還原** 有自動備份）
-
-### 容量
-- Supabase 免費 500MB 對 POS 來說超充足
-- 估算：1 萬筆訂單 + 1000 商品 + 500 會員大約 50MB 不到
-- 若超過：可以定期清舊資料、或升級 Pro plan ($25/月)
-
-### 同步什麼？
-- 同步：商品、會員、訂單、供應商、進貨單、促銷、員工、會計、掛單、班別、現金流水、損耗、會員儲值、稽核日誌
-- **不同步**：本機設定（主題、印表機 IP）、備份檔（這些本來就是裝置特定）
-
-## 常見問題
-
-**Q: 不設定雲端同步可以嗎？**
-A: 可以。不設定就跟以前一樣，每台裝置各自存資料。雲端同步是選用功能。
-
-**Q: 雲端可以多店家共用嗎？**
-A: 目前一個 Supabase 專案就是一個店家的資料。多店家請建多個專案，或進階做 RLS 隔離（需要技術）。
-
-**Q: Supabase 倒了我的資料怎麼辦？**
-A: 平時還是有本機 SQLite/localStorage，雲端只是同步副本。建議定期到「設定 → 備份還原 → 匯出 JSON」做離線備份。
-
-**Q: 我能直接編輯雲端資料嗎？**
-A: 可以。Supabase Dashboard → Table Editor 可以直接改。但改完記得在 POS 端「從雲端拉下來」才會同步到本機。
+公開 publishable／anon key 用於識別專案；資料權限必須由 Auth 和 RLS 管控，不能把隱藏公開 key 當作存取控制。[API key 說明](https://supabase.com/docs/guides/api/api-keys)、[RLS 說明](https://supabase.com/docs/guides/database/postgres/row-level-security)。

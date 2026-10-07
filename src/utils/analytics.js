@@ -2,14 +2,13 @@
 // 所有函式都是 pure function，方便測試與快取
 // 訂單格式：{ id, items: [{id, qty, price}], total, time, status, refundOf, fullRefund, memberId }
 
+import { settledOrders, netSale, orderCost } from './orderLedger'
 const DAY_MS = 86400000
 const now = () => Date.now()
 
 // ===== 過濾出「有效訂單」（排除完整退貨配對）=====
 export function effectiveOrders(orders = []) {
-  return orders.filter(o =>
-    o.status !== 'refunded' && !(o.refundOf && o.fullRefund)
-  )
+  return settledOrders(orders)
 }
 
 // ===== 銷售速度：每日均銷量 =====
@@ -196,12 +195,8 @@ export function profitAnalysis(orders = [], products = [], days = 30) {
   let revenue = 0, cost = 0
   for (const o of effectiveOrders(orders)) {
     if (new Date(o.time).getTime() < since) continue
-    revenue += o.total || 0
-    for (const it of (o.items || [])) {
-      const id = it.id || it.productId
-      const p = productMap.get(id)
-      if (p) cost += (Number(p.cost) || 0) * (it.qty || 0)
-    }
+    revenue += netSale(o)
+    cost += orderCost(o,products)
   }
   const profit = revenue - cost
   const marginRate = revenue > 0 ? (profit / revenue) * 100 : 0

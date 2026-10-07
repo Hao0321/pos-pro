@@ -1,74 +1,10 @@
+import { browserStorage } from '../utils/browserStorage'
 import { useState, useEffect } from 'react'
 import { Lock, Eye, EyeOff, AlertTriangle, Shield, Sparkles, ShoppingBag, TrendingUp, Users as UsersIcon, Smartphone } from 'lucide-react'
-import { hashPassword, verifyPassword, createSession, writeAuditLog } from '../utils/security'
+import { hashPassword, verifyPassword, createSession, writeAuditLog, checkRateLimit, resetRateLimit } from '../utils/security'
+import { initAccounts, setupAccount } from '../utils/accountBootstrap'
 import { isElectron } from '../utils/dataAccess'
 import useIsMobile from '../hooks/useIsMobile'
-
-// 簡化：只有老闆和員工
-const SEED_USERS = [
-  { id:'u001', username:'老闆', password:'1234', role:'owner' },
-  { id:'u002', username:'員工', password:'0000', role:'staff'  },
-]
-
-const USERS_KEY = 'pos_users'
-const USERS_VER = 'pos_users_ver'
-const CURRENT_VER = '3'  // 改版號強制重建帳號
-
-async function initUsers() {
-  // 版本號不符就強制重建
-  const ver = localStorage.getItem(USERS_VER)
-  if (ver === CURRENT_VER) {
-    // 版本正確，直接載入
-    if (isElectron) {
-      try {
-        const users = await window.electronAPI.db.getUsers()
-        if (users && users.length > 0) return users
-      } catch {}
-    }
-    try {
-      const raw = localStorage.getItem(USERS_KEY)
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (parsed && parsed.length > 0) return parsed
-      }
-    } catch {}
-  }
-
-  // 需要重建帳號
-  console.log('[POS] 重建帳號...')
-  const hashed = await Promise.all(
-    SEED_USERS.map(async u => ({
-      id: u.id,
-      username: u.username,
-      password: await hashPassword(u.password),
-      role: u.role,
-    }))
-  )
-
-  // 寫入 localStorage
-  localStorage.setItem(USERS_KEY, JSON.stringify(hashed))
-  localStorage.setItem(USERS_VER, CURRENT_VER)
-
-  // Electron: 清空 + 重建
-  if (isElectron) {
-    try {
-      const old = await window.electronAPI.db.getUsers()
-      for (const u of (old || [])) {
-        try { await window.electronAPI.db.deleteUser(u.id) } catch {}
-      }
-      for (const u of hashed) {
-        try {
-          await window.electronAPI.db.addUser({
-            id: u.id, username: u.username,
-            password: u.password, role: u.role,
-          })
-        } catch {}
-      }
-    } catch {}
-  }
-
-  return hashed
-}
 
 export default function LoginScreen({ onLogin }) {
   const [username, setUsername] = useState('')
@@ -77,36 +13,45 @@ export default function LoginScreen({ onLogin }) {
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState('')
   const [users,    setUsers]    = useState([])
+  const [accountsReady,setAccountsReady]=useState(false)
+  const [newPassword,setNewPassword]=useState('')
+  const [needsPasswordChange,setNeedsPasswordChange]=useState(false)
   const isMobile = useIsMobile()
 
   useEffect(() => {
-    initUsers().then(setUsers).catch(() => {})
+    initAccounts(isElectron?window.electronAPI:undefined).then(value=>{setUsers(value);setAccountsReady(true)}).catch(e=>setError(e.message))
   }, [])
 
   async function handleLogin(e) {
     e.preventDefault()
-    setError('')
-    setLoading(true)
+    if (loading || !accountsReady) return
+    setError('');setLoading(true)
     try {
-      const user = users.find(u => u.username === username)
-      if (!user) {
-        setError('請先選擇身份')
-        setLoading(false)
-        return
+      let session
+      if (!users.length) {
+        const created=await setupAccount(username,password,isElectron?window.electronAPI:undefined)
+        session=isElectron?created:createSession(created)
+      } else if(isElectron) {
+        session=await window.electronAPI.auth.login({username,password,newPassword})
+        if(session.needsPasswordChange){setNeedsPasswordChange(true);throw new Error('請更換至少 8 字元的密碼後再登入')}
+      } else {
+        const limit=checkRateLimit('login:'+username)
+        if(!limit.allowed)throw new Error('嘗試次數過多，請稍後再試')
+        const user=users.find(u=>u.username===username)
+        if(!user || !await verifyPassword(password,user.password))throw new Error('帳號或密碼錯誤')
+        if(password.length<8){
+          if(newPassword.length<8 || newPassword===password){setNeedsPasswordChange(true);throw new Error('請更換至少 8 字元的密碼後再登入')}
+          user.password=await hashPassword(newPassword)
+          browserStorage.setItem('pos_users',JSON.stringify(users))
+        }
+        session=createSession(user)
+        resetRateLimit('login:'+username)
       }
-      const ok = await verifyPassword(password, user.password)
-      if (!ok) {
-        setError('密碼錯誤')
-        setLoading(false)
-        return
-      }
-      const session = createSession(user)
-      writeAuditLog('LOGIN', session, { username })
-      onLogin(session)
-    } catch {
-      setError('登入失敗，請稍後再試')
-      setLoading(false)
-    }
+      sessionStorage.setItem('pos_session',JSON.stringify(session))
+      writeAuditLog('LOGIN',session,{username})
+      await onLogin(session)
+    } catch(e){setError(e.message||'登入未完成，請稍後再試')}
+    finally {setLoading(false)}
   }
 
   // 即時時間
@@ -189,6 +134,7 @@ export default function LoginScreen({ onLogin }) {
           <form onSubmit={handleLogin} style={{display:'flex', flexDirection:'column', gap:18}}>
             <div>
               <div className="section-title">身份</div>
+              {accountsReady && !users.length && <input className="field" value={username} onChange={e=>setUsername(e.target.value)} placeholder="建立管理員名稱" autoComplete="username"/>}
               <div style={{display:'flex', gap:10}}>
                 {users.map(u => {
                   const active = username === u.username
@@ -247,16 +193,17 @@ export default function LoginScreen({ onLogin }) {
               </div>
             </div>
 
+            {needsPasswordChange && <input type="password" className="field" value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="設定至少 8 字元的新密碼" autoComplete="new-password"/>}
             <button type="submit" className="btn btn-primary btn-lg"
-              disabled={loading || !username || !password}
+              disabled={loading || !accountsReady || !username || !password}
               style={{width:'100%', marginTop:8}}>
-              {loading ? '驗證中...' : '登入系統'}
+              {loading ? '驗證中...' : users.length ? '登入系統' : '建立管理員並開始'}
             </button>
           </form>
 
           <div style={ls.secNote}>
             <Shield size={12} style={{flexShrink:0}}/>
-            <span>預設密碼：老闆 <code style={ls.code}>1234</code> · 員工 <code style={ls.code}>0000</code></span>
+            <span>首次使用請建立自己的管理員；更新會保留既有帳號。</span>
           </div>
         </div>
       </div>

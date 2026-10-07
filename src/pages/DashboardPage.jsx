@@ -1,3 +1,4 @@
+import { settledOrders, netSale, orderCost } from '../utils/orderLedger'
 import { useMemo, useEffect, useState } from 'react'
 import {
   TrendingUp, ShoppingBag, Users, Package, AlertTriangle,
@@ -32,12 +33,12 @@ export default function DashboardPage({ store, session }) {
   const stats = useMemo(() => {
     // 排除完整退貨配對（原訂單 status='refunded' + 對應的全退負數訂單）；
     // 部分退貨保留：原訂單 (status='completed') 與負數退貨訂單兩邊都計入，總和會正確
-    const validOrders = orders.filter(o => o.status !== 'refunded' && !(o.refundOf && o.fullRefund))
+    const validOrders = settledOrders(orders)
     const today = new Date().toDateString()
     const yesterday = new Date(Date.now() - 86400000).toDateString()
     const ordersToday    = validOrders.filter(o => new Date(o.time).toDateString() === today)
     const ordersYesterday = validOrders.filter(o => new Date(o.time).toDateString() === yesterday)
-    const revYesterday    = ordersYesterday.reduce((s,o) => s + o.total, 0)
+    const revYesterday    = ordersYesterday.reduce((s,o) => s + netSale(o), 0)
     const revDelta = revYesterday > 0 ? ((todayRevenue - revYesterday) / revYesterday * 100) : 0
 
     // 最近 7 天
@@ -45,7 +46,7 @@ export default function DashboardPage({ store, session }) {
       const d = new Date(); d.setDate(d.getDate() - (6-i))
       const ds = d.toDateString()
       const dayOrders = validOrders.filter(o => new Date(o.time).toDateString() === ds)
-      return { date: d, label: d.getDate() + '日', revenue: dayOrders.reduce((s,o)=>s+o.total,0), count: dayOrders.length }
+      return { date: d, label: d.getDate() + '日', revenue: dayOrders.reduce((s,o)=>s+netSale(o),0), count: dayOrders.length }
     })
     const max7 = Math.max(...last7.map(d => d.revenue), 1)
 

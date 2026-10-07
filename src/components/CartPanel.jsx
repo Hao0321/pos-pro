@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Trash2, Plus, Minus, User, X, CreditCard, Banknote, Check, ChevronRight, Gift, Printer, Pause, Percent, Wallet, Receipt, ShoppingCart } from 'lucide-react'
 
 export default function CartPanel({
@@ -10,6 +10,9 @@ export default function CartPanel({
   pointsRule = { earn: 10, redeem: 1 },
   manualDiscount = 0, setManualDiscount,
 }) {
+  const submitting = useRef(false)
+  const [saving,setSaving] = useState(false)
+  const [saveError,setSaveError] = useState('')
   const [stage, setStage]       = useState('cart')   // cart | member | pay | done
   const [payMethod, setPayMethod] = useState('cash')
   const [paidInput, setPaidInput] = useState('')
@@ -50,35 +53,16 @@ export default function CartPanel({
     else setMemberError('查無此會員')
   }
 
-  function handleCheckout() {
-    if (splitMode) {
-      if (!splitOK) return
-      const order = onCheckout('mixed', total, pointsUsed, {
-        taxId,
-        payments: [
-          ...(splitCashAmt > 0 ? [{ method: 'cash', amount: splitCashAmt }] : []),
-          ...(splitCardAmt > 0 ? [{ method: 'card', amount: splitCardAmt }] : []),
-        ],
-        manualDiscountAmt: manualDiscount,
-        balanceUsed,
-      })
-      if (order) {
-        setLastOrder(order); setStage('done')
-        setPointsUsed(0); setPaidInput(''); setBalanceUsed(0)
-        setSplitMode(false); setSplitCash(''); setSplitCard(''); setTaxId('')
-      }
-      return
-    }
-    if (payMethod === 'cash' && paid < total) return
-    const order = onCheckout(payMethod, paid, pointsUsed, {
-      taxId,
-      manualDiscountAmt: manualDiscount,
-      balanceUsed,
-    })
-    if (order) {
-      setLastOrder(order); setStage('done')
-      setPointsUsed(0); setPaidInput(''); setBalanceUsed(0); setTaxId('')
-    }
+  async function handleCheckout() {
+    if (submitting.current || (splitMode ? !splitOK : payMethod==='cash' && paid<total)) return
+    submitting.current=true;setSaving(true);setSaveError('')
+    try {
+      const order=await onCheckout(splitMode?'mixed':payMethod,splitMode?total:paid,pointsUsed,{
+        taxId,manualDiscountAmt:manualDiscount,balanceUsed,
+        ...(splitMode?{payments:[...(splitCashAmt>0?[{method:'cash',amount:splitCashAmt}]:[]),...(splitCardAmt>0?[{method:'card',amount:splitCardAmt}]:[])]}:{})})
+      if(order){setLastOrder(order);setStage('done');setPointsUsed(0);setPaidInput('');setBalanceUsed(0);setSplitMode(false);setSplitCash('');setSplitCard('');setTaxId('')}
+    } catch(e) {setSaveError(e.message || '保存尚未確認，請勿再次收款')}
+    finally {submitting.current=false;setSaving(false)}
   }
 
   function reset() {
@@ -86,10 +70,10 @@ export default function CartPanel({
     setMemberQuery(''); setMemberError('')
   }
 
-  function handleHold() {
+  async function handleHold() {
     if (!cart.length) return
-    if (onHold) onHold(holdLabel)
-    setShowHoldDlg(false); setHoldLabel('')
+    try{if(onHold)await onHold(holdLabel);setShowHoldDlg(false);setHoldLabel('')}
+    catch(e){setSaveError(e.message)}
   }
 
   function startEditPrice(item) {
@@ -151,9 +135,10 @@ export default function CartPanel({
   // ===== Pay stage =====
   if (stage === 'pay') return (
     <div style={cs.panel}>
+      {saveError && <div role="alert" style={{padding:12,color:'var(--red)'}}>{saveError}</div>}
       <div style={cs.panelHeader}>
-        <span style={{fontWeight:600}}>確認付款</span>
-        <button className="btn-icon" onClick={() => setStage('cart')}><X size={16}/></button>
+        <span style={{fontWeight:600}}>{saving ? '保存中，請勿再次收款' : '確認付款'}</span>
+        <button className="btn-icon" disabled={saving} onClick={() => setStage('cart')}><X size={16}/></button>
       </div>
       <div style={cs.stageContent}>
         {/* 點數折抵 */}
@@ -300,7 +285,7 @@ export default function CartPanel({
           style={{width:'100%', padding:14,
             opacity: (splitMode ? !splitOK : (payMethod==='cash' && paid < total)) ? 0.45 : 1
           }}
-          disabled={splitMode ? !splitOK : (payMethod==='cash' && paid < total)}
+          disabled={saving || (splitMode ? !splitOK : (payMethod==='cash' && paid < total))}
           onClick={handleCheckout}>
           確認收款
         </button>

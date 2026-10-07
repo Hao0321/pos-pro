@@ -1,3 +1,4 @@
+import { browserStorage } from '../utils/browserStorage'
 import { useState, useEffect, useRef } from 'react'
 import { Shield, Users, Database, FileText, Download, Upload, Trash2, Plus, X, Check, RefreshCw, Printer, Wifi, Sun, Moon, Settings as Cog, Gift, Cloud, ArrowUp, ArrowDown, AlertTriangle } from 'lucide-react'
 import QRCode from 'qrcode'
@@ -8,7 +9,7 @@ import {
 } from '../utils/security'
 import { isElectron, loadUsers, saveUsers as dbSaveUsers, getSetting, setSetting } from '../utils/dataAccess'
 import { getTheme, applyTheme } from '../utils/theme'
-import { getCloudConfig, saveCloudConfig, clearCloudConfig, testConnection, isCloudEnabled } from '../utils/supabaseClient'
+import { getCloudConfig, saveCloudConfig, clearCloudConfig, testConnection, signInCloud, isCloudEnabled } from '../utils/supabaseClient'
 import { pushAll, pullAll, SYNC_TABLES } from '../utils/cloudSync'
 import { getWebhookConfig, saveWebhookConfig, fireWebhook, WEBHOOK_EVENTS } from '../utils/webhook'
 
@@ -259,13 +260,13 @@ function UsersTab({ session }) {
     if (isElectron) {
       loadUsers([]).then(setUsers)
     } else {
-      try { setUsers(JSON.parse(localStorage.getItem('pos_users')||'[]')) } catch {}
+      try { setUsers(JSON.parse(browserStorage.getItem('pos_users')||'[]')) } catch {}
     }
   },[])
 
   function saveUsers(u) {
+    if (!isElectron) browserStorage.setItem('pos_users', JSON.stringify(u))
     setUsers(u)
-    if (!isElectron) localStorage.setItem('pos_users', JSON.stringify(u))
   }
 
   // ── 新增帳號 ─────────────────────────────────────────────
@@ -274,22 +275,29 @@ function UsersTab({ session }) {
     if (addForm.password.length < 8) { setAddErr('密碼至少 8 字元'); return }
     if (users.find(u=>u.username===addForm.username)) { setAddErr('帳號名稱已存在'); return }
     setAddErr(''); setSaving(true)
+    try {
     const hashed  = await hashPassword(addForm.password)
     const newUser = { id:'u'+Date.now(), username:addForm.username, password:hashed, role:addForm.role }
-    saveUsers([...users, newUser])
+
     writeAuditLog('USER_CREATE', session, { username:addForm.username, role:addForm.role })
     // Electron: 同步到 SQLite
     if (isElectron) {
-      window.electronAPI.db.addUser({ id: newUser.id, username: newUser.username, password: newUser.password, role: newUser.role }).catch(() => {})
+      await window.electronAPI.db.addUser({ id: newUser.id, username: newUser.username, password: newUser.password, role: newUser.role })
     }
+    saveUsers([...users,newUser])
     setAdding(false); setAddForm({username:'',password:'',role:'staff'}); setSaving(false)
+    }catch(e){setAddErr(e.message)}finally{setSaving(false)}
   }
 
   // ── 刪除帳號 ─────────────────────────────────────────────
-  function handleDelete(u) {
+  async function handleDelete(u) {
     if (u.id === session.userId) return
+    if(u.role==='owner'&&users.filter(u=>u.role==='owner').length<2){alert('必須保留管理員帳號');return}
+    try{
+    if(isElectron)await window.electronAPI.db.deleteUser(u.id)
     saveUsers(users.filter(x=>x.id!==u.id))
     writeAuditLog('USER_DELETE', session, { username:u.username })
+    }catch(e){alert('刪除未完成：'+e.message)}
   }
 
   // ── 變更密碼 ─────────────────────────────────────────────
@@ -298,6 +306,7 @@ function UsersTab({ session }) {
     const isSelf  = changePw.id === session.userId
     const isOwner = session.role === 'owner'
     setPwErr(''); setPwOk(''); setSaving(true)
+    try{
 
     // 自己改：需驗舊密碼
     if (isSelf) {
@@ -310,13 +319,15 @@ function UsersTab({ session }) {
     if (isSelf && pwForm.newPw === pwForm.oldPw) { setPwErr('新密碼不能與舊密碼相同'); setSaving(false); return }
 
     const hashed = await hashPassword(pwForm.newPw)
-    saveUsers(users.map(u => u.id===changePw.id ? {...u, password:hashed} : u))
+
     if (isElectron) {
-      window.electronAPI.db.updateUser(changePw.id, { password: hashed }).catch(() => {})
+      await window.electronAPI.db.updateUser(changePw.id, { password: hashed })
     }
+    saveUsers(users.map(u=>u.id===changePw.id?{...u,password:hashed}:u))
     writeAuditLog('USER_UPDATE', session, { action:'change_password', target:changePw.username, by:session.username })
     setSaving(false); setPwOk('密碼已更新'); setPwForm({oldPw:'',newPw:'',confirmPw:''})
     setTimeout(()=>{ setChangePw(null); setPwOk('') }, 1200)
+    }catch(e){setPwErr('密碼更新未完成：'+e.message)}finally{setSaving(false)}
   }
 
   const isOwner = session.role === 'owner'
@@ -510,6 +521,7 @@ function HardwareTab({ session }) {
   const [testMsg, setTestMsg] = useState('')
   const [tunnelQr, setTunnelQr] = useState(null)
   const [lanQr, setLanQr] = useState(null)
+  const [publicOrdering,setPublicOrdering]=useState(false)
 
   const isE = !!window.electronAPI
 
@@ -536,6 +548,7 @@ function HardwareTab({ session }) {
       if (s.storeAddress) setStoreAddress(s.storeAddress)
       if (s.storePhone) setStorePhone(s.storePhone)
       if (s.receiptFooter) setReceiptFooter(s.receiptFooter)
+      setPublicOrdering(s.publicOrderingEnabled==='true')
     })
     window.electronAPI.printer.getStatus().then(setPrinterStatus)
     window.electronAPI.server.getStatus().then(setServerInfo)
@@ -544,12 +557,12 @@ function HardwareTab({ session }) {
   async function handleSave() {
     if (!isE) return
     setSaving(true)
-    const settings = { printerType, printerIP, printerPort, printerName, storeName, storeAddress, storePhone, receiptFooter }
+    const settings = { printerType, printerIP, printerPort, printerName, storeName, storeAddress, storePhone, receiptFooter,publicOrderingEnabled:String(publicOrdering) }
     for (const [k, v] of Object.entries(settings)) {
       await window.electronAPI.settings.set(k, v)
     }
     setSaving(false)
-    setTestMsg('設定已儲存')
+    setTestMsg('設定已儲存；對外點餐通道的變更會在重啟桌面版後套用')
     setTimeout(() => setTestMsg(''), 2000)
   }
 
@@ -642,6 +655,8 @@ function HardwareTab({ session }) {
           <h3 style={{fontSize:14, fontWeight:600, marginBottom:12, display:'flex', alignItems:'center', gap:6}}>
             <Wifi size={15}/> 點餐系統
           </h3>
+          <label style={{display:'flex',gap:8,marginBottom:12,fontSize:13}}><input type="checkbox" checked={publicOrdering} onChange={e=>setPublicOrdering(e.target.checked)}/>允許建立對外點餐通道（儲存後重啟套用）</label>
+          <p style={{fontSize:12,color:'var(--text-secondary)'}}>啟用後，知道網址的人可開啟菜單並送出訂單。核心 POS 和區網菜單不需要此通道。</p>
           {serverInfo && (
             <>
               <div style={{fontSize:13, marginBottom:8}}>
@@ -665,7 +680,7 @@ function HardwareTab({ session }) {
                     </div>
                   ) : (
                     <div style={{marginBottom:12, padding:'10px 12px', background:'var(--amber-dim)', borderRadius:8, fontSize:11, color:'var(--amber)'}}>
-                      外網穿透連線中...（如果一直無法連線，請檢查網路）
+                      {publicOrdering?'尚未取得對外網址；請重啟桌面版並檢查連線狀態':'對外點餐通道已關閉；可使用下方區網菜單'}
                     </div>
                   )}
 
@@ -744,28 +759,21 @@ function SecurityTab({ session }) {
 
 // ── 備份還原 ──────────────────────────────────────────────────
 function BackupTab({ session }) {
-  const [backups,  setBackups]  = useState(getBackupList)
+  const [backups,setBackups]=useState([])
+  useEffect(()=>{getBackupList().then(setBackups).catch(e=>setMsg(e.message))},[])
   const [restoring,setRestoring]= useState(null)
   const [msg,      setMsg]      = useState('')
 
-  function doBackup() {
-    createBackup(session, `手動備份 ${new Date().toLocaleString('zh-TW')}`)
-    setBackups(getBackupList())
-    setMsg('備份建立成功')
-    setTimeout(()=>setMsg(''),2500)
+  async function doBackup() {
+    try{await createBackup(session,`手動備份 ${new Date().toLocaleString('zh-TW')}`);setBackups(await getBackupList());setMsg('備份建立成功')}
+    catch(e){setMsg('備份未完成：'+e.message)}
   }
-
-  function doRestore(id) {
-    const ok = restoreBackup(id, session)
-    setRestoring(null)
-    setMsg(ok ? '✓ 還原成功，請重新整理頁面' : '還原失敗')
-    setTimeout(()=>setMsg(''),4000)
+  async function doRestore(id) {
+    try{await restoreBackup(id,session);setRestoring(null);setMsg('✓ 還原成功，請重新整理頁面')}
+    catch(e){setMsg('還原未完成：'+e.message)}
   }
-
-  function doExport() {
-    exportBackupFile(session)
-    setMsg('匯出完成')
-    setTimeout(()=>setMsg(''),2000)
+  async function doExport() {
+    try{await exportBackupFile(session);setMsg('匯出完成')}catch(e){setMsg('匯出未完成：'+e.message)}
   }
 
   function handleImport(e) {
@@ -797,7 +805,7 @@ function BackupTab({ session }) {
               <div style={{fontWeight:500,fontSize:13}}>{b.label}</div>
               <div style={{fontSize:11,color:'var(--text-tertiary)',marginTop:3,fontFamily:'var(--font-mono)'}}>
                 {new Date(b.createdAt).toLocaleString('zh-TW')} · {b.createdBy}
-                · {Math.round(b.size/1024)}KB
+                · {Math.round((b.size||0)/1024)}KB
               </div>
             </div>
             <button className="btn btn-ghost btn-sm" style={{color:'var(--amber)'}} onClick={()=>setRestoring(b.id)}>
@@ -1008,6 +1016,8 @@ function WebhookTab({ session }) {
 
 // ── 雲端同步 ──────────────────────────────────────────────────
 function CloudSyncTab({ session }) {
+  const [cloudEmail,setCloudEmail]=useState(''),[cloudPassword,setCloudPassword]=useState('')
+  const [cloudLoginMessage,setCloudLoginMessage]=useState('')
   const initial = getCloudConfig() || { url: '', anonKey: '' }
   const [url, setUrl] = useState(initial.url || '')
   const [anonKey, setAnonKey] = useState(initial.anonKey || '')
@@ -1017,7 +1027,7 @@ function CloudSyncTab({ session }) {
   const [busy, setBusy] = useState(null) // 'push' | 'pull' | null
   const [progress, setProgress] = useState([])
   const [confirmPull, setConfirmPull] = useState(false)
-  const [lastSync, setLastSync] = useState(() => localStorage.getItem('pos_last_sync') || '')
+  const [lastSync, setLastSync] = useState(() => browserStorage.getItem('pos_last_sync') || '')
   const [msg, setMsg] = useState('')
 
   function showMsg(m, ms = 2500) {
@@ -1059,7 +1069,7 @@ function CloudSyncTab({ session }) {
         setProgress(prev => [...prev, { table, status }])
       })
       const total = report.reduce((s, r) => s + (r.count || 0), 0)
-      localStorage.setItem('pos_last_sync', new Date().toISOString())
+      browserStorage.setItem('pos_last_sync', new Date().toISOString())
       setLastSync(new Date().toISOString())
       writeAuditLog('CLOUD_PUSH', session, { total, tables: report.length })
       showMsg(`✓ 推送完成（共 ${total} 筆，${report.length} 張表）`, 5000)
@@ -1079,7 +1089,7 @@ function CloudSyncTab({ session }) {
         setProgress(prev => [...prev, { table, status }])
       })
       const total = report.reduce((s, r) => s + (r.count || 0), 0)
-      localStorage.setItem('pos_last_sync', new Date().toISOString())
+      browserStorage.setItem('pos_last_sync', new Date().toISOString())
       setLastSync(new Date().toISOString())
       writeAuditLog('CLOUD_PULL', session, { total, tables: report.length })
       showMsg(`✓ 拉取完成（共 ${total} 筆）— 自動重新載入...`, 3000)
@@ -1093,6 +1103,13 @@ function CloudSyncTab({ session }) {
 
   return (
     <div style={{padding:'0 4px', overflowY:'auto', height:'100%', display:'flex', flexDirection:'column', gap:18}}>
+      <div className="card" style={{padding:14}}>
+        <div>雲端使用 Supabase Auth 驗證；員工登入密碼不會同步到雲端。</div>
+        <input className="field" type="email" value={cloudEmail} onChange={e=>setCloudEmail(e.target.value)} placeholder="雲端帳號 Email" autoComplete="username"/>
+        <input className="field" type="password" value={cloudPassword} onChange={e=>setCloudPassword(e.target.value)} placeholder="雲端帳號密碼" autoComplete="current-password"/>
+        <button className="btn btn-primary" onClick={async()=>{try{await signInCloud(cloudEmail,cloudPassword);setCloudPassword('');setCloudLoginMessage('雲端身份已驗證')}catch(e){setCloudLoginMessage(e.message)}}}>登入雲端</button>
+        <div role="status">{cloudLoginMessage}</div>
+      </div>
       <div className="card" style={{padding:'14px 16px', background: enabled ? 'var(--green-dim)' : 'var(--bg-overlay)', borderLeft: `3px solid ${enabled ? 'var(--green)' : 'var(--text-tertiary)'}`}}>
         <div style={{display:'flex', alignItems:'center', gap:10}}>
           <Cloud size={18} style={{color: enabled ? 'var(--green)' : 'var(--text-tertiary)'}}/>

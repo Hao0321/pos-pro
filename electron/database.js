@@ -1,3 +1,6 @@
+const { createHash, randomUUID } = require('node:crypto')
+const { prepareRefund, refundSignature } = require('./refundSafety.cjs')
+const { prepareDatabaseCheckout, signature, PROTOCOL } = require('./checkoutContract.cjs')
 const Database = require('better-sqlite3')
 const path = require('path')
 const fs = require('fs')
@@ -239,6 +242,9 @@ module.exports = function initDatabase(dbPath) {
     ensureColumn('products', 'reorderLevel', 'INTEGER DEFAULT 0')
     ensureColumn('orders', 'manualDiscount', 'REAL DEFAULT 0')
     ensureColumn('orders', 'payments', "TEXT DEFAULT '[]'")
+    ensureColumn('orders', 'itemCosts', "TEXT DEFAULT '{}'")
+    ensureColumn('orders', 'trackingTokenHash', "TEXT DEFAULT ''")
+    ensureColumn('orders', 'requestSignature', "TEXT DEFAULT ''")
     ensureColumn('orders', 'taxId', "TEXT DEFAULT ''")
     ensureColumn('orders', 'shiftId', "TEXT DEFAULT ''")
     ensureColumn('orders', 'refundOf', "TEXT DEFAULT ''")
@@ -250,7 +256,7 @@ module.exports = function initDatabase(dbPath) {
     ensureColumn('members', 'birthday', "TEXT DEFAULT ''")
     ensureColumn('members', 'lastBirthdayBonus', "TEXT DEFAULT ''")
     ensureColumn('purchases', 'paidDate', "TEXT DEFAULT ''")
-  } catch (e) { console.log('[DB] ensureColumn:', e.message) }
+  } catch(e){db.close();throw new Error('資料庫結構更新未完成，已保留原始資料：'+e.message)}
 
   // ===== Prepared Statements =====
 
@@ -295,10 +301,10 @@ module.exports = function initDatabase(dbPath) {
     insertOrder: db.prepare(`
       INSERT INTO orders (id, subtotal, discount, manualDiscount, balanceUsed, total, payMethod, paid, change_amount,
         payments, memberId, pointsUsed, pointsEarned, time, source, status, tableNum, note,
-        taxId, shiftId, refundOf, cashier, fullRefund)
+        taxId, shiftId, refundOf, cashier, fullRefund, trackingTokenHash, requestSignature, itemCosts)
       VALUES (@id, @subtotal, @discount, @manualDiscount, @balanceUsed, @total, @payMethod, @paid, @change_amount,
         @payments, @memberId, @pointsUsed, @pointsEarned, @time, @source, @status, @tableNum, @note,
-        @taxId, @shiftId, @refundOf, @cashier, @fullRefund)
+        @taxId, @shiftId, @refundOf, @cashier, @fullRefund, @trackingTokenHash, @requestSignature, @itemCosts)
     `),
     updateOrderStatus: db.prepare('UPDATE orders SET status = ? WHERE id = ?'),
 
@@ -457,6 +463,9 @@ module.exports = function initDatabase(dbPath) {
     refundOf: o.refundOf || '',
     cashier: o.cashier || '',
     fullRefund: o.fullRefund ? 1 : 0,
+    trackingTokenHash: o.trackingTokenHash || '',
+    requestSignature: o.requestSignature || '',
+    itemCosts: typeof o.itemCosts==='string'?o.itemCosts:JSON.stringify(o.itemCosts||{}),
   })
 
   // 廠商參數統一組裝：catalog（貨源清單）為 JSON 陣列，存 TEXT；三個寫入點（新增/更新/遷移）共用
@@ -476,7 +485,31 @@ module.exports = function initDatabase(dbPath) {
     catalog: (() => { try { return JSON.parse(row.catalog || '[]') } catch { return [] } })(),
   })
 
+  function readOrder(id) {
+    const row = stmts.getOrderById.get(id)
+    if (!row) return null
+    return {...row,change:row.change_amount,memberId:row.memberId||null,fullRefund:!!row.fullRefund,itemCosts:JSON.parse(row.itemCosts||'{}'),payments:JSON.parse(row.payments || '[]'),
+      items:stmts.getOrderItems.all(id).map(i=>({id:i.productId,name:i.name,price:i.price,qty:i.qty}))}
+  }
+  function checkoutReceipt(id) {
+    const order=readOrder(id)
+    if (!order) return {protocol:PROTOCOL,success:true,found:false}
+    return {protocol:PROTOCOL,success:true,orderId:id,order,
+      products:order.items.map(i=>stmts.getProductById.get(i.id)).filter(Boolean),
+      member:order.memberId ? stmts.getMemberById.get(order.memberId) || null : null}
+  }
   const checkoutTx = db.transaction((orderData, stockUpdates, memberUpdate) => {
+    const old=readOrder(orderData.id)
+    if (old) {
+      if (signature(old)!==signature(orderData)) throw new Error('單號已存在，內容不符')
+      return {success:true,orderId:old.id}
+    }
+    const plan=prepareDatabaseCheckout(orderData,{
+      product:id=>stmts.getProductById.get(id),member:id=>stmts.getMemberById.get(id),
+      shift:id=>stmts.getShiftById.get(id),setting:key=>stmts.getSetting.get(key)?.value,
+    })
+    plan.order.itemCosts=Object.fromEntries(plan.order.items.map(i=>[i.id,stmts.getProductById.get(i.id).cost||0]))
+    orderData=plan.order;stockUpdates=plan.stockUpdates;memberUpdate=plan.memberUpdate
     stmts.insertOrder.run(orderInsertParams(orderData))
 
     if (orderData.items) {
@@ -518,40 +551,22 @@ module.exports = function initDatabase(dbPath) {
     return { success: true, orderId: orderData.id }
   })
 
-  // 退貨：建立負數訂單 + 補回庫存 + 沖回會員點數/累計消費
-  const refundTx = db.transaction((origOrder, refundOrderData, stockUpdates, memberUpdate) => {
-    stmts.insertOrder.run(orderInsertParams(refundOrderData))
-    if (refundOrderData.items) {
-      for (const item of refundOrderData.items) {
-        stmts.insertOrderItem.run({
-          orderId: refundOrderData.id,
-          productId: item.id || item.productId || '',
-          name: item.name,
-          price: item.price,
-          qty: item.qty,
-        })
-      }
+  const refundTx = db.transaction(request => {
+    const old=readOrder(request.id)
+    if (old) {
+      if (old.requestSignature!==refundSignature(request)) throw new Error('退貨單號內容不一致')
+      return {...checkoutReceipt(old.id),original:readOrder(old.refundOf)}
     }
-    if (stockUpdates) {
-      for (const su of stockUpdates) stmts.updateProductStock.run({ id: su.id, delta: su.delta })
-    }
-    if (memberUpdate && memberUpdate.id) {
-      const m = stmts.getMemberById.get(memberUpdate.id)
-      if (m) {
-        stmts.updateMember.run({
-          id: m.id, name: m.name, phone: m.phone,
-          points: Math.max(0, (m.points || 0) + (memberUpdate.pointsDelta || 0)),
-          tier: memberUpdate.tier || m.tier,
-          totalSpent: Math.max(0, (m.totalSpent || 0) + (memberUpdate.spentDelta || 0)),
-          balance: Math.max(0, (m.balance || 0) + (memberUpdate.balanceDelta || 0)),
-          birthday: m.birthday || '', lastBirthdayBonus: m.lastBirthdayBonus || '',
-        })
-      }
-    }
-    if (origOrder?.id) {
-      stmts.updateOrderStatus.run('refunded', origOrder.id)
-    }
-    return { success: true, orderId: refundOrderData.id }
+    const original=readOrder(request.refundOf)
+    const previous=db.prepare('SELECT id FROM orders WHERE refundOf=?').all(request.refundOf).map(o=>readOrder(o.id))
+    const plan=prepareRefund(original,previous,request,original?.memberId?stmts.getMemberById.get(original.memberId):null)
+    if (plan.stockUpdates.some(u=>!stmts.getProductById.get(u.id))) throw new Error('退貨商品已不存在，請先核對庫存')
+    stmts.insertOrder.run(orderInsertParams(plan.order))
+    for (const i of plan.order.items) stmts.insertOrderItem.run({orderId:plan.order.id,productId:i.id,name:i.name,price:i.price,qty:i.qty})
+    for (const u of plan.stockUpdates) stmts.updateProductStock.run(u)
+    if (plan.member) stmts.updateMember.run(plan.member)
+    if (plan.order.fullRefund) stmts.updateOrderStatus.run('refunded',original.id)
+    return {...checkoutReceipt(plan.order.id),original:readOrder(original.id)}
   })
 
   // ===== Migration =====
@@ -896,19 +911,9 @@ module.exports = function initDatabase(dbPath) {
     },
 
     // Orders
-    getOrders() {
-      const orders = stmts.getAllOrders.all()
-      return orders.map(o => ({
-        ...o,
-        change: o.change_amount,
-        fullRefund: !!o.fullRefund,
-        payments: (() => { try { return JSON.parse(o.payments || '[]') } catch { return [] } })(),
-        items: stmts.getOrderItems.all(o.id).map(i => ({
-          id: i.productId, name: i.name, price: i.price, qty: i.qty,
-        })),
-      }))
-    },
+    getOrders() {return stmts.getAllOrders.all().map(o=>readOrder(o.id))},
     addOrder(data) {
+      return db.transaction(() => {
       stmts.insertOrder.run(orderInsertParams(data))
       if (data.items) {
         for (const item of data.items) {
@@ -922,16 +927,24 @@ module.exports = function initDatabase(dbPath) {
         }
       }
       return { success: true }
+      })()
     },
+    getOrder: readOrder,
+    checkoutReceipt,
     getOrderItems(orderId) {
       return stmts.getOrderItems.all(orderId)
     },
     checkout(orderData, stockUpdates, memberUpdate) {
-      return checkoutTx(orderData, stockUpdates, memberUpdate)
+      try {
+        checkoutTx(orderData, stockUpdates, memberUpdate)
+        return checkoutReceipt(orderData.id)
+      } catch(error) { return {protocol:PROTOCOL,success:false,committed:false,orderId:orderData?.id,error:error.message} }
     },
-    refundOrder(origOrderId, refundData, stockUpdates, memberUpdate) {
-      const orig = origOrderId ? stmts.getOrderById.get(origOrderId) : null
-      return refundTx(orig, refundData, stockUpdates, memberUpdate)
+    refundOrder(origOrderId, request) {
+      try {
+        if (origOrderId!==request.refundOf) throw new Error('原始訂單編號不符')
+        return refundTx(request)
+      } catch (error) {return {success:false,committed:false,error:error.message}}
     },
     getCustomerOrders() {
       const orders = stmts.getCustomerOrders.all()
@@ -944,6 +957,11 @@ module.exports = function initDatabase(dbPath) {
       }))
     },
     updateOrderStatus(id, status) {
+      const order=stmts.getOrderById.get(id)
+      if(!order||order.source!=='customer')throw new Error('只能更新顧客點餐進度，不能修改收款訂單')
+      if(order.status===status)return {success:true}
+      const allowed={pending:['accepted','rejected'],accepted:['completed','rejected']}
+      if(!allowed[order.status]?.includes(status))throw new Error('點餐狀態轉換不正確')
       stmts.updateOrderStatus.run(status, id)
       return { success: true }
     },
@@ -1106,30 +1124,11 @@ module.exports = function initDatabase(dbPath) {
 
     // Backups
     getBackups() {
-      return stmts.getAllBackups.all()
+      return db.prepare('SELECT id,label,createdAt,createdBy,length(data) AS size FROM backups ORDER BY createdAt DESC').all()
     },
     createBackup(label, createdBy) {
-      const allData = {
-        products: stmts.getAllProducts.all(),
-        members: stmts.getAllMembers.all(),
-        orders: stmts.getAllOrders.all().map(o => ({
-          ...o, change: o.change_amount,
-          items: stmts.getOrderItems.all(o.id).map(i => ({
-            id: i.productId, name: i.name, price: i.price, qty: i.qty,
-          })),
-        })),
-        suppliers: stmts.getAllSuppliers.all().map(parseSupplier),
-        purchases: stmts.getAllPurchases.all().map(p => ({ ...p, items: JSON.parse(p.items || '[]') })),
-        promotions: stmts.getAllPromotions.all(),
-        users: stmts.getAllUsers.all(),
-        manualJournal: stmts.getAllManualJournal.all().map(j => ({ ...j, lines: JSON.parse(j.lines || '[]') })),
-        heldOrders: stmts.getAllHeld.all().map(h => ({ ...h, cart: (() => { try { return JSON.parse(h.cart || '[]') } catch { return [] } })() })),
-        shifts: stmts.getAllShifts.all(),
-        cashLog: stmts.getAllCashLog.all(),
-        wasteLog: stmts.getAllWaste.all(),
-        memberTopups: stmts.getAllTopups.all(),
-      }
-      const id = 'bk' + Date.now()
+      const allData = this.exportData()
+      const id = 'bk-' + randomUUID()
       stmts.insertBackup.run({
         id,
         label: label || '自動備份',
@@ -1153,19 +1152,18 @@ module.exports = function initDatabase(dbPath) {
       const data = JSON.parse(backup.data)
       // 清空所有表再匯入 — 包在「單一 transaction」內：若匯入中途 throw，DELETE 會一起 rollback，
       // 不會發生「舊資料已清掉、新資料卻沒匯入」的整庫遺失。
-      replaceAllTx(data)
+      if(!data||typeof data!=='object')throw new Error('備份格式錯誤')
+      const current=this.exportData(),merged={...current,...data}
+      for(const key of Object.keys(current).filter(k=>k!=='_revision'))if(!Array.isArray(merged[key]))throw new Error('備份資料集合格式錯誤：'+key)
+      if(current.users.length && !merged.users.some(u=>u.role==='owner'))throw new Error('備份必須保留管理員帳號')
+      replaceAllTx(merged)
       return { success: true }
     },
     exportData() {
-      return {
+      const data = {
         products: stmts.getAllProducts.all().map(p => ({ ...p, noBarcode: !!p.noBarcode })),
         members: stmts.getAllMembers.all(),
-        orders: stmts.getAllOrders.all().map(o => ({
-          ...o, change: o.change_amount,
-          items: stmts.getOrderItems.all(o.id).map(i => ({
-            id: i.productId, name: i.name, price: i.price, qty: i.qty,
-          })),
-        })),
+        orders: stmts.getAllOrders.all().map(o=>readOrder(o.id)),
         suppliers: stmts.getAllSuppliers.all().map(parseSupplier),
         purchases: stmts.getAllPurchases.all().map(p => ({ ...p, items: JSON.parse(p.items || '[]') })),
         promotions: stmts.getAllPromotions.all().map(p => ({
@@ -1174,16 +1172,22 @@ module.exports = function initDatabase(dbPath) {
         users: stmts.getAllUsers.all(),
         manualJournal: stmts.getAllManualJournal.all().map(j => ({ ...j, lines: JSON.parse(j.lines || '[]') })),
         heldOrders: stmts.getAllHeld.all().map(h => ({ ...h, cart: (() => { try { return JSON.parse(h.cart || '[]') } catch { return [] } })() })),
-        shifts: stmts.getAllShifts.all(),
-        cashLog: stmts.getAllCashLog.all(),
-        wasteLog: stmts.getAllWaste.all(),
-        memberTopups: stmts.getAllTopups.all(),
-        auditLog: stmts.getAuditLogs.all(),
+        shifts: db.prepare('SELECT * FROM shifts ORDER BY openTime DESC').all(),
+        cashLog: db.prepare('SELECT * FROM cash_log ORDER BY time DESC').all(),
+        wasteLog: db.prepare('SELECT * FROM waste_log ORDER BY time DESC').all(),
+        memberTopups: db.prepare('SELECT * FROM member_topups ORDER BY time DESC').all(),
+        auditLog: db.prepare('SELECT * FROM audit_log ORDER BY timestamp DESC').all(),
       }
+      return {...data,_revision:createHash('sha256').update(JSON.stringify(data)).digest('hex')}
     },
-    importData(data) {
+    importData(data, expectedRevision) {
       // 同 restoreBackup：清空＋重匯包成單一 transaction，避免匯入失敗造成整庫遺失
-      replaceAllTx(data)
+      if (expectedRevision && this.exportData()._revision!==expectedRevision) throw new Error('本機資料已改變，已取消覆蓋')
+      if(!data||typeof data!=='object')throw new Error('備份格式錯誤')
+      const current=this.exportData(),merged={...current,...data}
+      for(const key of Object.keys(current).filter(k=>k!=='_revision'))if(!Array.isArray(merged[key]))throw new Error('備份資料集合格式錯誤：'+key)
+      if(current.users.length && !merged.users.some(u=>u.role==='owner'))throw new Error('備份必須保留管理員帳號')
+      replaceAllTx(merged)
       return { success: true }
     },
 
@@ -1208,8 +1212,7 @@ module.exports = function initDatabase(dbPath) {
       return migrateTx(data)
     },
     isEmpty() {
-      const count = db.prepare('SELECT COUNT(*) as c FROM products').get()
-      return count.c === 0
+      return ['products','members','orders','suppliers','purchases','promotions','manual_journal','held_orders','shifts','cash_log','waste_log','member_topups'].every(t=>db.prepare('SELECT 1 FROM '+t+' LIMIT 1').get()==null)
     },
 
     // ===== Held Orders 掛單 =====
@@ -1241,6 +1244,8 @@ module.exports = function initDatabase(dbPath) {
     getShifts() { return stmts.getAllShifts.all() },
     getOpenShift() { return stmts.getOpenShift.get() || null },
     openShift(data) {
+      if(typeof data.openCash!=='number'||!Number.isFinite(data.openCash)||data.openCash<0||data.openCash>1e9)throw new Error('開班現金不正確')
+      if(stmts.getOpenShift.get())throw new Error('已有開啟中的班別')
       const id = data.id || 'S' + Date.now()
       stmts.insertShift.run({
         id, cashier: data.cashier || '', cashierId: data.cashierId || '',
@@ -1251,16 +1256,16 @@ module.exports = function initDatabase(dbPath) {
     },
     closeShift(id, data) {
       const shift = stmts.getShiftById.get(id)
-      if (!shift) return { success: false }
+      if(!shift||shift.status!=='open')throw new Error('班別已關閉或不存在')
+      if(typeof data.closeCash!=='number'||!Number.isFinite(data.closeCash)||data.closeCash<0||data.closeCash>1e9)throw new Error('交班現金不正確')
       // 計算這班的現金/卡片銷售（混合付款拆分；完整退貨配對抵銷不計）
       const orders = db.prepare("SELECT * FROM orders WHERE shiftId = ?").all(id)
       let cashSales = 0, cardSales = 0, refundCount = 0, refundAmount = 0
       for (const o of orders) {
-        if (o.status === 'refunded') continue  // 完整退貨原訂單：跳過
+        if (o.source==='customer' || !['cash','card','mixed'].includes(o.payMethod)) continue
         if (o.refundOf) {
           refundCount += 1
           refundAmount += Math.abs(o.total)
-          if (o.fullRefund) continue  // 完整退貨負數訂單：跳過（與原訂單一起抵銷）
           // 部分退貨：照付款方式扣回
           if (o.payMethod === 'mixed') {
             try {
@@ -1301,6 +1306,7 @@ module.exports = function initDatabase(dbPath) {
       return shiftId ? stmts.getCashLog.all(shiftId) : stmts.getAllCashLog.all()
     },
     addCashLog(data) {
+      if(!['in','out'].includes(data.type)||typeof data.amount!=='number'||!Number.isFinite(data.amount)||data.amount<=0||data.amount>1e9||stmts.getShiftById.get(data.shiftId)?.status!=='open')throw new Error('現金異動或班別不正確')
       stmts.insertCashLog.run({
         id: data.id || 'CL' + Date.now() + Math.random().toString(36).slice(2,5),
         shiftId: data.shiftId || '',
@@ -1318,21 +1324,14 @@ module.exports = function initDatabase(dbPath) {
       return stmts.getAllWaste.all()
     },
     addWaste(data) {
-      stmts.insertWaste.run({
-        id: data.id || 'W' + Date.now(),
-        productId: data.productId || '',
-        productName: data.productName || '',
-        qty: data.qty || 0,
-        reason: data.reason || '',
-        cost: data.cost || 0,
-        time: data.time || new Date().toISOString(),
-        cashier: data.cashier || '',
-      })
-      // 同步扣庫存
-      if (data.productId && data.qty) {
-        stmts.updateProductStock.run({ id: data.productId, delta: -Math.abs(data.qty) })
-      }
-      return { success: true }
+      return db.transaction(()=>{
+        const p=stmts.getProductById.get(data.productId)
+        if(!p||typeof data.qty!=='number'||!Number.isFinite(data.qty)||data.qty<=0||data.qty>p.stock)throw new Error('損耗商品或數量不正確')
+        const waste={...data,productName:p.name,cost:p.cost||0,reason:data.reason||'',cashier:data.cashier||''}
+        stmts.insertWaste.run(waste)
+        stmts.updateProductStock.run({id:p.id,delta:-data.qty})
+        return {success:true,waste,product:stmts.getProductById.get(p.id)}
+      })()
     },
     deleteWaste(id) { stmts.deleteWaste.run(id); return { success: true } },
 
@@ -1341,21 +1340,19 @@ module.exports = function initDatabase(dbPath) {
       return memberId ? stmts.getMemberTopups.all(memberId) : stmts.getAllTopups.all()
     },
     addTopup(data) {
-      const totalCredit = (data.amount || 0) + (data.bonus || 0)
-      stmts.insertTopup.run({
-        id: data.id || 'TP' + Date.now(),
-        memberId: data.memberId || '',
-        amount: data.amount || 0,
-        bonus: data.bonus || 0,
-        payMethod: data.payMethod || 'cash',
-        time: data.time || new Date().toISOString(),
-        cashier: data.cashier || '',
-        note: data.note || '',
-      })
-      if (data.memberId) {
-        stmts.updateMemberBalance.run({ id: data.memberId, delta: totalCredit })
-      }
-      return { success: true, credited: totalCredit }
+      try {return db.transaction(()=>{
+        if ([data.amount,data.bonus].some(n=>typeof n!=='number'||!Number.isFinite(n)||n<0||n>1e9)||!['cash','card'].includes(data.payMethod)) throw new Error('儲值金額或付款方式不正確')
+        const member=stmts.getMemberById.get(data.memberId)
+        if (!member) throw new Error('會員不存在')
+        const old=db.prepare('SELECT * FROM member_topups WHERE id=?').get(data.id)
+        if (old) {
+          if (['memberId','amount','bonus','payMethod','time','cashier','note'].some(k=>(old[k]||'')!==(data[k]||''))) throw new Error('儲值單號內容不一致')
+          return {success:true,member,topup:old}
+        }
+        stmts.insertTopup.run({...data,note:data.note||'',cashier:data.cashier||''})
+        stmts.updateMemberBalance.run({id:member.id,delta:Math.round((data.amount+data.bonus)*100)/100})
+        return {success:true,member:stmts.getMemberById.get(member.id),topup:data}
+      })()} catch(error){return {success:false,committed:false,error:error.message}}
     },
 
     close() {

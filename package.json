@@ -13,28 +13,34 @@
     "electron:build": "vite build && electron-builder --win",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:native": "node scripts/run-native-security.cjs",
+    "test:desktop": "npm run build && node scripts/run-native-security.cjs --ui",
+    "test:offline": "npm run build && node scripts/run-native-security.cjs --pwa",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
-    "better-sqlite3": "^11.7.0",
+    "better-sqlite3": "13.0.3",
     "cloudflared": "^0.7.1",
     "electron-store": "^10.0.0",
-    "express": "^4.21.0",
+    "express": "5.2.1",
     "html5-qrcode": "^2.3.8",
     "jsbarcode": "^3.11.6",
     "lucide-react": "^0.383.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "ws": "^8.18.0"
+    "ws": "8.22.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.1",
-    "electron": "^33.2.0",
-    "electron-builder": "^25.1.8",
-    "vite": "^5.4.0",
-    "vitest": "^2.1.9"
+    "@vitejs/plugin-react": "6.1.2",
+    "electron": "44.6.0",
+    "electron-builder": "26.15.3",
+    "vite": "8.3.3",
+    "vitest": "5.0.3",
+    "@testing-library/react": "16.3.0",
+    "jsdom": "27.4.0",
+    "@electric-sql/pglite": "0.5.8"
   },
   "build": {
     "appId": "com.posPro.desktop",
@@ -68,5 +74,11 @@
       "node_modules/better-sqlite3/**/*",
       "node_modules/cloudflared/**/*"
     ]
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "overrides": {
+    "@electron/get": "5.1.0"
   }
 }

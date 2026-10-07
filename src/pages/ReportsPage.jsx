@@ -1,3 +1,4 @@
+import { settledOrders, netSale, orderCost } from '../utils/orderLedger'
 import { useMemo, useState } from 'react'
 import { TrendingUp, ShoppingCart, Users, Package, ArrowUp, ArrowDown, Download, Zap, AlertTriangle, Trophy } from 'lucide-react'
 import { exportXLS } from '../utils/exportXLS'
@@ -9,7 +10,7 @@ export default function ReportsPage({ store }) {
 
   const now = new Date()
   // 排除完整退貨配對；部分退貨保留兩邊（原訂單 + 負數退貨訂單），總額自動抵銷正確
-  const orders = rawOrders.filter(o => o.status !== 'refunded' && !(o.refundOf && o.fullRefund))
+  const orders = settledOrders(rawOrders)
   const filtered = useMemo(() => orders.filter(o => {
     const d = new Date(o.time)
     if (range === 'today') return d.toDateString() === now.toDateString()
@@ -27,14 +28,11 @@ export default function ReportsPage({ store }) {
     })
   }, [orders, range])
 
-  const revenue = filtered.reduce((s,o)=>s+o.total,0)
-  const prevRevenue = prev.reduce((s,o)=>s+o.total,0)
+  const revenue = filtered.reduce((s,o)=>s+netSale(o),0)
+  const prevRevenue = prev.reduce((s,o)=>s+netSale(o),0)
   const revDelta = prevRevenue ? ((revenue-prevRevenue)/prevRevenue*100).toFixed(1) : null
 
-  const profit = useMemo(()=> filtered.reduce((s,o)=> s + o.items.reduce((a,i)=>{
-    const p = products.find(x=>x.id===i.id)
-    return a + (p ? (i.price-(p.cost||0))*i.qty : 0)
-  },0), 0), [filtered, products])
+  const profit=useMemo(()=>filtered.reduce((sum,o)=>sum+netSale(o)-orderCost(o,products),0),[filtered,products])
 
   const avgOrder = filtered.length ? Math.round(revenue / filtered.length) : 0
   const newMembers = members.filter(m => {

@@ -1,3 +1,4 @@
+import { browserStorage } from '../utils/browserStorage'
 import { useState, useEffect } from 'react'
 import { Cloud, CloudOff, ArrowUp, ArrowDown, RefreshCw, Check } from 'lucide-react'
 import { isCloudEnabled } from '../utils/supabaseClient'
@@ -16,7 +17,7 @@ function formatAgo(iso) {
 
 export default function SyncStatusBadge({ onGoToSettings }) {
   const [enabled, setEnabled] = useState(isCloudEnabled())
-  const [lastSync, setLastSync] = useState(() => localStorage.getItem('pos_last_sync') || '')
+  const [lastSync, setLastSync] = useState(() => browserStorage.getItem('pos_last_sync') || '')
   const [busy, setBusy] = useState(null) // 'push' | 'pull' | null
   const [open, setOpen] = useState(false)
   const [feedback, setFeedback] = useState('')
@@ -25,7 +26,7 @@ export default function SyncStatusBadge({ onGoToSettings }) {
   useEffect(() => {
     function refresh() {
       setEnabled(isCloudEnabled())
-      setLastSync(localStorage.getItem('pos_last_sync') || '')
+      setLastSync(browserStorage.getItem('pos_last_sync') || '')
     }
     const t = setInterval(refresh, 5000)
     window.addEventListener('storage', refresh)
@@ -39,7 +40,7 @@ export default function SyncStatusBadge({ onGoToSettings }) {
     try {
       const report = await pushAll(() => {})
       const total = report.reduce((s, r) => s + (r.count || 0), 0)
-      localStorage.setItem('pos_last_sync', new Date().toISOString())
+      browserStorage.setItem('pos_last_sync', new Date().toISOString())
       setLastSync(new Date().toISOString())
       setFeedback(`✓ 已推送 ${total} 筆`)
       setTimeout(() => setFeedback(''), 3000)
@@ -57,7 +58,7 @@ export default function SyncStatusBadge({ onGoToSettings }) {
     setFeedback('')
     try {
       await pullAll(() => {})
-      localStorage.setItem('pos_last_sync', new Date().toISOString())
+      browserStorage.setItem('pos_last_sync', new Date().toISOString())
       setFeedback('✓ 拉取完成，重新載入...')
       setTimeout(() => location.reload(), 800)
     } catch (e) {

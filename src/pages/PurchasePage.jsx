@@ -1,3 +1,4 @@
+import { browserStorage } from '../utils/browserStorage'
 import { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react'
 import { Plus, Check, X, Truck, Package, ChevronRight, ChevronLeft, ChevronDown, Clock, CheckCircle, Zap, AlertTriangle, Pencil, Trash2, Camera } from 'lucide-react'
 import { writeAuditLog, sanitizeObject } from '../utils/security'
@@ -60,11 +61,11 @@ export default function PurchasePage({ store, session }) {
 
   function saveSuppliers(s) {
     setSuppliers(s)
-    if (!isElectron) localStorage.setItem('pos_suppliers', JSON.stringify(s))
+    if (!isElectron) browserStorage.setItem('pos_suppliers', JSON.stringify(s))
   }
   function savePurchases(p) {
     setPurchases(p)
-    if (!isElectron) localStorage.setItem('pos_purchases', JSON.stringify(p))
+    if (!isElectron) browserStorage.setItem('pos_purchases', JSON.stringify(p))
   }
 
   // 在 Electron 模式同步單筆異動到 SQLite

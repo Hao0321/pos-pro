@@ -1,6 +1,13 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  auth: {
+    list: legacy => ipcRenderer.invoke('auth:list', legacy),
+    setup: input => ipcRenderer.invoke('auth:setup', input),
+    login: input => ipcRenderer.invoke('auth:login', input),
+    session: () => ipcRenderer.invoke('auth:session'),
+    logout: () => ipcRenderer.invoke('auth:logout'),
+  },
   // ----- Products -----
   db: {
     getProducts: () => ipcRenderer.invoke('db:getProducts'),
@@ -14,6 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     updateMember: (id, data) => ipcRenderer.invoke('db:updateMember', id, data),
     deleteMember: (id) => ipcRenderer.invoke('db:deleteMember', id),
 
+    checkoutReceipt: id => ipcRenderer.invoke('db:checkoutReceipt', id),
     getOrders: () => ipcRenderer.invoke('db:getOrders'),
     addOrder: (data) => ipcRenderer.invoke('db:addOrder', data),
     getOrderItems: (orderId) => ipcRenderer.invoke('db:getOrderItems', orderId),
@@ -54,7 +62,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     createBackup: (label, createdBy) => ipcRenderer.invoke('db:createBackup', label, createdBy),
     restoreBackup: (id) => ipcRenderer.invoke('db:restoreBackup', id),
     exportData: () => ipcRenderer.invoke('db:exportData'),
-    importData: (data) => ipcRenderer.invoke('db:importData', data),
+    importData: (data, expectedRevision) => ipcRenderer.invoke('db:importData', data, expectedRevision),
 
     migrateFromLocalStorage: (data) => ipcRenderer.invoke('db:migrateFromLocalStorage', data),
     isEmpty: () => ipcRenderer.invoke('db:isEmpty'),

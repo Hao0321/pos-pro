@@ -1,9 +1,8 @@
+import { browserStorage } from './utils/browserStorage'
 import { useState, useEffect, useCallback } from 'react'
 import { Menu, X, Cloud } from 'lucide-react'
 import { useStore } from './store/useStore'
-import { getSession, destroySession, writeAuditLog, startIdleTimer, hasPermission, createBackup } from './utils/security'
-import { getCloudConfig } from './utils/supabaseClient'
-import { pullAll } from './utils/cloudSync'
+import { getSession, destroySession, writeAuditLog, startIdleTimer, hasPermission, createBackup, getBackupList } from './utils/security'
 import LoginScreen from './pages/LoginScreen'
 import Sidebar from './components/Sidebar'
 import POSPage from './pages/POSPage'
@@ -22,12 +21,12 @@ import WastePage from './pages/WastePage'
 import { isElectron } from './utils/dataAccess'
 import useIsMobile from './hooks/useIsMobile'
 
-const AUTO_SYNC_INTERVAL_MS = 10 * 60 * 1000 // 上次同步超過 10 分鐘才自動 pull
 
 export default function App() {
-  const store = useStore()
+  const [session, setSession] = useState(() => isElectron ? null : getSession())
+  const store = useStore(session)
   const { view, setView, lowStockCount, todayRevenue, todayOrders } = store
-  const [session, setSession] = useState(() => getSession())
+  useEffect(()=>{if(isElectron)window.electronAPI.auth.session().then(setSession).catch(()=>setSession(null))},[])
   const [menuOpen, setMenuOpen] = useState(false)
   const [pendingOrders, setPendingOrders] = useState(0)
   const [autoSync, setAutoSync] = useState(null) // 'syncing' | 'done' | 'failed' | null
@@ -42,41 +41,25 @@ export default function App() {
     return unsub
   }, [])
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
     writeAuditLog('LOGOUT', session, {})
-    if (session) createBackup(session, '自動備份（登出）')
+    if(session?.role==='owner')try{await createBackup(session,'自動備份（登出）')}catch(e){console.error('登出備份未完成',e)}
+    if(isElectron)window.electronAPI.auth.logout().catch(()=>{})
     destroySession()
     setSession(null)
   }, [session])
 
   const handleLogin = useCallback(async (newSession) => {
     setSession(newSession)
-    const backups = JSON.parse(localStorage.getItem('pos_backups') || '[]')
+    if(newSession.role!=='owner')return
+    let backups
+    try{backups=await getBackupList()}catch(e){console.error('備份清單讀取失敗',e);return}
     const today = new Date().toDateString()
     const hasToday = backups.some(b => new Date(b.createdAt).toDateString() === today)
-    if (!hasToday) createBackup(newSession, '自動備份（' + today + '）')
+    if(!hasToday)try{await createBackup(newSession,'自動備份（'+today+'）')}catch(e){console.error('自動備份未完成',e)}
 
-    // 自動拉取雲端最新（只在有設定 + 上次同步太久）
-    const cloudCfg = getCloudConfig()
-    if (!cloudCfg) return
-    const last = localStorage.getItem('pos_last_sync')
-    const stale = !last || (Date.now() - new Date(last).getTime() > AUTO_SYNC_INTERVAL_MS)
-    if (!stale) return
+    // Cloud replacement requires an explicit action in Settings; login never overwrites local sales.
 
-    setAutoSync('syncing')
-    try {
-      await pullAll(() => {})
-      localStorage.setItem('pos_last_sync', new Date().toISOString())
-      writeAuditLog('CLOUD_AUTO_PULL', newSession, { trigger: 'login' })
-      // 用 reload 讓 useStore 重新從本機（已被 cloudSync 覆蓋）拉資料；session 在 sessionStorage 不會掉
-      setAutoSync('done')
-      setTimeout(() => location.reload(), 600)
-    } catch (e) {
-      console.warn('[POS] auto-pull failed:', e)
-      writeAuditLog('CLOUD_AUTO_PULL_FAIL', newSession, { error: e.message })
-      setAutoSync('failed')
-      setTimeout(() => setAutoSync(null), 2500)
-    }
   }, [])
 
   useEffect(() => {
@@ -90,13 +73,13 @@ export default function App() {
     setMenuOpen(false)
   }, [setView])
 
+  if (!session) return <LoginScreen onLogin={handleLogin}/>
+  if (store.dataError) return <div role="alert" style={{padding:30}}><h2>資料需要核對</h2><p>{store.dataError}</p><button onClick={()=>location.reload()}>重新載入</button></div>
   if (!store.ready) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',background:'var(--bg-base)',color:'var(--text-secondary)',fontSize:14}}>
       載入中...
     </div>
   )
-  if (!session) return <LoginScreen onLogin={handleLogin}/>
-
   const can = (perm) => hasPermission(session, perm)
 
   const NAV_LABELS = {
@@ -128,6 +111,10 @@ export default function App() {
       )}
 
       <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column', minWidth:0 }}>
+        {store.checkoutState.phase !== 'idle' && <div role="alert" style={{padding:12,background:'var(--gold-dim)'}}>
+          {store.checkoutState.message} {store.checkoutState.orderId}
+          {store.checkoutState.phase === 'uncertain' && <><button onClick={()=>store.reconcileCheckout().catch(e=>alert(e.message))}>查詢原交易</button><button onClick={()=>store.retryCheckout().catch(e=>alert(e.message))}>原單號重試保存</button></>}
+        </div>}
         {isMobile && (
           <div style={mob.topBar}>
             <button onClick={() => setMenuOpen(v => !v)} style={mob.menuBtn}>
@@ -137,7 +124,7 @@ export default function App() {
             <div style={{ width: 36 }}/>
           </div>
         )}
-        <main style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+        <main inert={store.checkoutState.phase!=='idle'?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
           {view === 'dashboard'  && can('pos.use')         && <DashboardPage  store={store} session={session}/>}
           {view === 'pos'        && can('pos.use')         && <POSPage        store={store} session={session}/>}
           {view === 'shifts'     && can('pos.use')         && <ShiftPage      store={store} session={session}/>}

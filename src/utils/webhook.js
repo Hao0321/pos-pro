@@ -1,3 +1,4 @@
+import { browserStorage } from './browserStorage'
 // 通用 webhook 通知系統
 // 支援：原始 JSON POST、Discord webhook、Slack webhook（自動偵測格式）
 // 用法：fireWebhook('low_stock', { products: [...] })
@@ -17,13 +18,13 @@ export const WEBHOOK_EVENTS = [
 
 export function getWebhookConfig() {
   try {
-    const v = localStorage.getItem(STORAGE_KEY)
+    const v = browserStorage.getItem(STORAGE_KEY)
     return v ? JSON.parse(v) : { url: '', events: ['low_stock', 'big_sale', 'refund'] }
   } catch { return { url: '', events: [] } }
 }
 
 export function saveWebhookConfig(cfg) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg))
+  browserStorage.setItem(STORAGE_KEY, JSON.stringify(cfg))
 }
 
 export function isWebhookEnabled() {
@@ -37,12 +38,12 @@ function isSlackUrl(url)   { return /hooks\.slack\.com/.test(url) }
 // throttle：每個 event 一段時間內只通知一次（毫秒）
 // 只「檢查」不寫入，避免 fetch 失敗仍記為已送導致漏送
 function isThrottled(event, intervalMs) {
-  const last = parseInt(localStorage.getItem(THROTTLE_KEY_PREFIX + event) || '0')
+  const last = parseInt(browserStorage.getItem(THROTTLE_KEY_PREFIX + event) || '0')
   return Date.now() - last < intervalMs
 }
 // 真正送出成功後才記時間戳
 function markEventSent(event) {
-  localStorage.setItem(THROTTLE_KEY_PREFIX + event, String(Date.now()))
+  browserStorage.setItem(THROTTLE_KEY_PREFIX + event, String(Date.now()))
 }
 
 // === Discord embed 格式 ===

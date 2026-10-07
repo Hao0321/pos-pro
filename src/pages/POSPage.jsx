@@ -1,3 +1,4 @@
+import { browserStorage } from '../utils/browserStorage'
 import { useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense } from 'react'
 import { Search, ScanLine, X, Tag, ShoppingCart, DollarSign, Pause, Eye, Clock, Camera } from 'lucide-react'
 import CartPanel from '../components/CartPanel'
@@ -27,7 +28,7 @@ export default function POSPage({ store, session }) {
   const [showLookup,setShowLookup] = useState(false)
   const [showCamera,setShowCamera] = useState(false)
   // 一鍵開班：零用金自動帶上次的值，收銀員不用每天跳去班別管理
-  const [quickCash, setQuickCash] = useState(() => { try { return localStorage.getItem('pos_last_open_cash') || '' } catch { return '' } })
+  const [quickCash, setQuickCash] = useState(() => { try { return browserStorage.getItem('pos_last_open_cash') || '' } catch { return '' } })
   const [opening,   setOpening]   = useState(false)
   const scanRef = useRef(null)
   const searchRef = useRef(null)
@@ -275,7 +276,7 @@ export default function POSPage({ store, session }) {
             <div style={{flex:1,overflow:'auto'}}>
               <CartPanel cart={cart} cartSubtotal={cartSubtotal} activeMember={activeMember}
                 onUpdateQty={updateCartQty} onRemove={removeFromCart} onClear={clearCart}
-                onCheckout={(m,p,pts,opts) => { const r = handleCheckout(m,p,pts,opts); if(r) setShowCart(false); return r }}
+                onCheckout={handleCheckout}
                 onFindMember={findMember} onSelectMember={setActiveMember}
                 onUpdatePrice={handleUpdatePrice} onHold={handleHold}
                 pointsRule={pointsRule}

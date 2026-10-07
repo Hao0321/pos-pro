@@ -1,0 +1,12 @@
+{
+  "exclude": [
+    ".git/**", "node_modules/**", ".rd/**", "dist/**", "build/**", "release/**",
+    ".venv/**", "venv/**", "__pycache__/**", "*.pyc"
+  ],
+  "update_coverage": {
+    "classification": "manual-only",
+    "canonical_origin": "https://github.com/Hao0321/pos-pro",
+    "manager": "Maintainer-reviewed source updates",
+    "evidence": ["package.json", "README.md"]
+  }
+}

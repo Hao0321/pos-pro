@@ -1,3 +1,4 @@
+import { browserStorage } from '../utils/browserStorage'
 import { useState, useEffect } from 'react'
 import { Plus, X, Check, Tag, Clock, Percent, Gift } from 'lucide-react'
 import { writeAuditLog, sanitizeObject } from '../utils/security'
@@ -83,7 +84,7 @@ export default function PromotionsPage({ store, session }) {
 
   function save(ps) {
     setPromotions(ps)
-    if (!isElectron) localStorage.setItem('pos_promotions', JSON.stringify(ps))
+    if (!isElectron) browserStorage.setItem('pos_promotions', JSON.stringify(ps))
   }
 
   function toggle(id) {

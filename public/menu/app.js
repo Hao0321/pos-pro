@@ -10,9 +10,7 @@ let submitting = false
 
 // 防 XSS：跳脫 HTML 特殊字元
 function esc(str) {
-  const d = document.createElement('div')
-  d.textContent = str
-  return d.innerHTML
+  return String(str ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]))
 }
 
 // ===== 初始化 =====
@@ -37,21 +35,15 @@ async function init() {
 }
 
 // ===== WebSocket =====
+let trackingToken=null, pendingOrderRequest=null
 function connectWebSocket() {
-  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-  try {
-    ws = new WebSocket(protocol + '//' + location.host)
-    ws.onmessage = (e) => {
-      try {
-        const msg = JSON.parse(e.data)
-        if (msg.type === 'order-status' && msg.orderId === currentOrderId) {
-          updateOrderStatus(msg.status)
-        }
-      } catch {}
-    }
-    ws.onclose = () => setTimeout(connectWebSocket, 3000)
-    ws.onerror = () => {}
-  } catch {}
+  setInterval(async()=>{
+    if(!currentOrderId || !trackingToken)return
+    try{
+      const r=await fetch(API+'/api/order/'+encodeURIComponent(currentOrderId),{headers:{Authorization:'Bearer '+trackingToken}})
+      const data=await r.json();if(data.success)updateOrderStatus(data.order.status)
+    }catch{}
+  },3000)
 }
 
 // ===== 分類 =====
@@ -108,7 +100,7 @@ function renderProducts() {
         ${qtyBadge}
         <span class="p-category">${esc(p.category)}</span>
         <span class="p-name">${esc(p.name)}</span>
-        <span class="p-price">$${p.price} <span class="p-unit">/ ${esc(p.unit || '個')}</span></span>
+        <span class="p-price">$${esc(p.price)} <span class="p-unit">/ ${esc(p.unit || '個')}</span></span>
         ${stockNote}
         <button class="add-btn" data-pid="${esc(p.id)}" ${soldOut ? 'disabled' : ''}>${soldOut ? '售完' : '加入購物車'}</button>
       </div>
@@ -189,12 +181,12 @@ function updateCartUI() {
     <div class="cart-item">
       <div class="ci-info">
         <div class="ci-name">${esc(item.name)}</div>
-        <div class="ci-price">$${item.price} / ${esc(item.unit || '個')}</div>
+        <div class="ci-price">$${esc(item.price)} / ${esc(item.unit || '個')}</div>
       </div>
       <div class="ci-controls">
-        <button onclick="removeFromCart('${esc(item.id)}')">-</button>
+        <button data-action="removeFromCart" data-pid="${esc(item.id)}">-</button>
         <span class="ci-qty">${item.qty}</span>
-        <button onclick="addToCart('${esc(item.id)}')">+</button>
+        <button data-action="addToCart" data-pid="${esc(item.id)}">+</button>
       </div>
       <span class="ci-subtotal">$${item.price * item.qty}</span>
     </div>
@@ -242,24 +234,28 @@ async function confirmOrder() {
 
   const orderItems = cart.map(c => ({ id: c.id, qty: c.qty }))
 
+  pendingOrderRequest ||= {items:orderItems,customerName,tableNum,note,requestId:crypto.randomUUID()}
   try {
     const res = await fetch(API + '/api/order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: orderItems, customerName, tableNum, note }),
+      body: JSON.stringify(pendingOrderRequest),
     })
     const data = await res.json()
     if (data.success) {
       currentOrderId = data.orderId
+      trackingToken = data.trackingToken
+      pendingOrderRequest = null
       closeOrderForm()
       showSuccess(data.orderId, data.total)
       cart = []
       updateCartUI()
     } else {
+      if(res.status===400)pendingOrderRequest=null
       alert(data.error || '訂單送出失敗')
     }
   } catch (err) {
-    alert('無法連線到伺服器')
+    alert('連線中斷，結果尚未確認。再次送出會使用原請求編號，請勿另外建立訂單。')
   }
   submitting = false
   if (btn) { btn.disabled = false; btn.textContent = '確認送出' }
@@ -293,4 +289,11 @@ function resetApp() {
 }
 
 // 啟動
+document.getElementById('search-input').addEventListener('input', e => setSearch(e.target.value))
 init()
+
+document.addEventListener('click',e=>{
+  const button=e.target.closest('[data-action]');if(!button)return
+  const actions={toggleCart,submitOrder,closeOrderForm,confirmOrder,resetApp,addToCart,removeFromCart}
+  actions[button.dataset.action]?.(button.dataset.pid)
+})

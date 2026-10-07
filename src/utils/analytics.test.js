@@ -12,7 +12,7 @@ const daysAgo = (d) => new Date(now - d * DAY).toISOString()
 const ymd = (d) => new Date(now - d * DAY).toISOString().slice(0, 10)
 
 describe('effectiveOrders', () => {
-  it('排除完整退貨原訂單與配對負數訂單', () => {
+  it('保留已收款的原始單與所有退貨，依各自日期抵銷', () => {
     const orders = [
       { id: 'o1', status: 'completed', total: 100 },
       { id: 'o2', status: 'refunded', total: 200 },          // 完整退貨原單 → 排除
@@ -20,7 +20,8 @@ describe('effectiveOrders', () => {
       { id: 'r2', refundOf: 'o3', fullRefund: false, total: -50 },  // 部分退貨 → 保留
     ]
     const result = effectiveOrders(orders)
-    expect(result.map(o => o.id)).toEqual(['o1', 'r2'])
+    expect(result.map(o => o.id)).toEqual(['o1', 'o2', 'r1', 'r2'])
+    expect(result.reduce((sum,o)=>sum+o.total,0)).toBe(50)
   })
 })
 
