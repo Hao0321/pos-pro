@@ -5,6 +5,7 @@ import { hashPassword, verifyPassword, createSession, writeAuditLog, checkRateLi
 import { initAccounts, setupAccount } from '../utils/accountBootstrap'
 import { isElectron } from '../utils/dataAccess'
 import useIsMobile from '../hooks/useIsMobile'
+import { version } from '../../package.json'
 
 export default function LoginScreen({ onLogin }) {
   const [username, setUsername] = useState('')
@@ -108,7 +109,7 @@ export default function LoginScreen({ onLogin }) {
             </div>
 
             <div style={ls.tipBox}>
-              <span style={{fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.04em'}}>v2.6.0 · 藍白新裝</span>
+              <span style={{fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.04em'}}>v{version} · 藍白新裝</span>
             </div>
           </div>
         </div>

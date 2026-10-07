@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-2.6.0-b8895a">
+  <img alt="version" src="https://img.shields.io/badge/version-2.6.1-b8895a">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20PWA-555">
   <img alt="tests" src="https://img.shields.io/badge/tests-vitest%20%2B%20native-3f9c5e">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
@@ -20,7 +20,7 @@
 
 ## 這是什麼
 
-目前版本：v2.6.0（原始碼版本；本次安全修正尚未建立新的正式安裝檔）。
+目前版本：v2.6.1。包含本機交易、帳號與權限、點餐服務及離線保存的安全修正；Windows 安裝檔目前未簽章。
 
 POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模與店型，不設訂閱或進階功能解鎖費。資料預設存在本機（桌面版走 SQLite、瀏覽器版走 localStorage），雲端同步是選用。
 
@@ -56,6 +56,8 @@ POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模�
 舊 Releases 的安裝檔未經程式碼簽章。這次修正的原始碼與歷史安裝檔需分開驗證；不要只憑檔名判斷版本或來源。
 
 首次啟動由你建立管理員名稱與至少 8 字元密碼。既有帳號會保留；舊的短密碼必須在驗證後更換，登入流程不再重建預設帳號。
+
+最新版的本機產物、更新方式與封包資訊見 [2.6.1 安裝檔說明](docs/INSTALLER_2_6_1.md)。
 
 ### 自行編譯 / 開發
 

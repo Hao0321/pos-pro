@@ -1,16 +1,17 @@
 {
   "name": "pos-system",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "private": true,
   "description": "POS Pro — 零售收銀、庫存、會員、訂貨與複式記帳一體化系統",
   "author": "Chroma Street Studio <chromastreetstudio@gmail.com>",
+  "license": "MIT",
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "electron:dev": "vite build && electron .",
-    "electron:build": "vite build && electron-builder --win",
+    "electron:build": "node scripts/build-installer.cjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:native": "node scripts/run-native-security.cjs",
@@ -50,9 +51,11 @@
       "output": "release"
     },
     "files": [
+      "LICENSE",
       "dist/**/*",
       "electron/**/*",
-      "public/menu/**/*"
+      "public/menu/**/*",
+      "!**/*.map"
     ],
     "extraMetadata": {
       "main": "electron/main.js"
