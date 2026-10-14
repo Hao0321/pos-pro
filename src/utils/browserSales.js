@@ -16,6 +16,7 @@ export async function commitBrowserRefund(request) {
         return {...receipt(existing,data),original:data.pos2_orders.find(o=>o.id===existing.refundOf)}
       }
       const original=data.pos2_orders.find(o=>o.id===request.refundOf),member=data.pos2_members.find(m=>m.id===original?.memberId)
+      if(data.pos_restaurant_orders.some(e=>e.saleId===request.refundOf))throw Error('預訂退款請在「預訂出餐」取消原單，避免回補已耗用食材')
       const plan=prepareRefund(original,data.pos2_orders.filter(o=>o.refundOf===original?.id),request,member)
       if (plan.stockUpdates.some(u=>!data.pos2_products.some(p=>p.id===u.id))) throw new Error('退貨商品已不存在，請先核對庫存')
       const orig={...original,...(plan.order.fullRefund?{status:'refunded'}:{})}

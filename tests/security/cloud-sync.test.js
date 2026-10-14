@@ -31,3 +31,7 @@ test('a local mutation during cloud download cancels replacement and preserves t
 test('malformed local data is reported instead of uploading empty collections',async()=>{
   map.set(RECORD_KEY,'broken');await expect(pushAll()).rejects.toThrow();expect(uploads).toEqual([])
 })
+test('an enabled formal restaurant cannot upload or replace an incomplete cloud snapshot',async()=>{
+  browserStorage.setItem('pos_settings_restaurantConfig',JSON.stringify(JSON.stringify({enabled:true,dailyCapacity:30,slotCapacity:5,recipes:{}})))
+  const before=map.get(RECORD_KEY);await expect(pushAll()).rejects.toThrow('完整預訂');await expect(pullAll()).rejects.toThrow('完整預訂');expect(map.get(RECORD_KEY)).toBe(before);expect(queries).toEqual([])
+})

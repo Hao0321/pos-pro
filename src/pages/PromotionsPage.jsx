@@ -1,8 +1,8 @@
 import { browserStorage } from '../utils/browserStorage'
-import { useState, useEffect } from 'react'
+import { useState, useEffect,useRef } from 'react'
 import { Plus, X, Check, Tag, Clock, Percent, Gift } from 'lucide-react'
 import { writeAuditLog, sanitizeObject } from '../utils/security'
-import { isElectron, loadPromotions, savePromotions as dbSavePromotions } from '../utils/dataAccess'
+import { isElectron, loadPromotions,dbAddPromotion,dbUpdatePromotion,dbDeletePromotion } from '../utils/dataAccess'
 
 export const PROMO_TYPES = {
   threshold:  { label:'滿額折扣',    icon:'💰', desc:'消費滿 X 元折 Y 元' },
@@ -79,19 +79,28 @@ export default function PromotionsPage({ store, session }) {
   const [promotions, setPromotions] = useState([])
   const [editing,  setEditing]  = useState(null)
   const [form,     setForm]     = useState(null)
+  const saving=useRef(false),newId=useRef(''),[error,setError]=useState('')
 
-  useEffect(() => { loadPromotions(SEED_PROMOTIONS).then(setPromotions) }, [])
+  useEffect(() => {const reload=()=>loadPromotions([]).then(setPromotions).catch(e=>setError(e.message));reload();window.addEventListener('pos-data-refreshed',reload);return()=>window.removeEventListener('pos-data-refreshed',reload)}, [])
 
-  function save(ps) {
-    setPromotions(ps)
+  async function save(ps) {
+    if(saving.current)throw Error('促銷設定保存中')
+    saving.current=true;setError('')
+    try{if(isElectron){
+      for(const old of promotions)if(!ps.some(p=>p.id===old.id)){const r=await dbDeletePromotion(old.id);if(r?.success!==true)throw Error(r?.error||'促銷刪除失敗')}
+      for(const p of ps){const old=promotions.find(row=>row.id===p.id);if(!old||JSON.stringify(old)!==JSON.stringify(p)){const r=await(old?dbUpdatePromotion(p.id,p):dbAddPromotion(p));if(r?.success!==true)throw Error(r?.error||'促銷保存失敗')}}
+    }
     if (!isElectron) browserStorage.setItem('pos_promotions', JSON.stringify(ps))
+    setPromotions(ps)
+    }finally{saving.current=false}
   }
 
   function toggle(id) {
-    save(promotions.map(p => p.id===id ? {...p, enabled:!p.enabled} : p))
+    save(promotions.map(p => p.id===id ? {...p, enabled:!p.enabled} : p)).catch(e=>setError(e.message))
   }
 
   function startNew(type) {
+    newId.current='pr'+crypto.randomUUID()
     const defaults = {
       threshold: { threshold:500, discount:50 },
       percent:   { rate:0.9 },
@@ -112,17 +121,18 @@ export default function PromotionsPage({ store, session }) {
     setForm({...p, startAt:p.startAt.slice(0,16), endAt:p.endAt.slice(0,16)})
   }
 
-  function saveForm() {
+  async function saveForm() {
     if (!form.name) return
     const clean = { ...sanitizeObject(form), startAt:form.startAt+':00', endAt:form.endAt+':00' }
-    if (editing==='new') {
-      const n = { ...clean, id:'pr'+Date.now() }
-      save([...promotions, n])
+    try{if (editing==='new') {
+      const n = { ...clean, id:newId.current }
+      await save([...promotions.filter(p=>p.id!==n.id), n])
       writeAuditLog('PROMO_CREATE', session, { promoName:n.name, type:n.type })
     } else {
-      save(promotions.map(p=>p.id===editing?clean:p))
+      await save(promotions.map(p=>p.id===editing?clean:p))
     }
     setEditing(null); setForm(null)
+    }catch(e){setError(e.message)}
   }
 
   const now    = new Date().toISOString()
@@ -130,6 +140,8 @@ export default function PromotionsPage({ store, session }) {
 
   return (
     <div style={pm.root}>
+      {error&&<p role="alert" style={{color:'var(--red)'}}>{error}</p>}
+      <p style={{fontSize:12,color:'var(--text-secondary)'}}>活動資料會保存供核對。目前結帳的活動折扣需由老闆以「手動折讓」套用。</p>
       <div style={pm.header}>
         <div>
           <h2 style={pm.title}>促銷活動</h2>
@@ -193,7 +205,7 @@ export default function PromotionsPage({ store, session }) {
                     }}/>
                   </button>
                   <button className="btn-icon btn-sm" onClick={()=>startEdit(p)}>✏️</button>
-                  <button className="btn-icon btn-sm" style={{color:'var(--red)'}} onClick={()=>save(promotions.filter(x=>x.id!==p.id))}>
+                  <button className="btn-icon btn-sm" style={{color:'var(--red)'}} onClick={()=>save(promotions.filter(x=>x.id!==p.id)).catch(e=>setError(e.message))}>
                     <X size={14}/>
                   </button>
                 </div>

@@ -6,6 +6,7 @@ let mainWindow = null
 let db = null
 let orderServer = null
 let ipcSecurity = null
+let sharedStore = null
 const rendererPath = path.resolve(__dirname, '../dist/index.html')
 
 // 單一實例鎖定
@@ -76,6 +77,7 @@ app.whenReady().then(async () => {
   const initDatabase = require('./database')
   const dbPath = path.join(app.getPath('userData'), 'pos-data.db')
   db = initDatabase(dbPath)
+  sharedStore=require('./sharedStoreServer.cjs')({db,distRoot:path.resolve(__dirname,'../dist'),certificateRoot:path.join(app.getPath('userData'),'shared-store'),onChanged:()=>{if(mainWindow&&!mainWindow.isDestroyed())mainWindow.webContents.send('store:changed')}})
 
   // 啟動顧客點餐伺服器
   try {
@@ -95,6 +97,7 @@ app.whenReady().then(async () => {
 })
 
 app.on('window-all-closed', () => {
+  sharedStore?.stop().catch(()=>{})
   if (orderServer) orderServer.close()
   if (db) db.close()
   app.quit()
@@ -106,5 +109,5 @@ app.on('activate', () => {
 
 // ===== IPC Handlers =====
 function registerIpcHandlers() {
-  return require('./ipcHandlers.cjs')({ipcMain,db,ipcSecurity,getOrderServer:()=>orderServer,getLocalIP})
+  return require('./ipcHandlers.cjs')({ipcMain,db,ipcSecurity,getOrderServer:()=>orderServer,getLocalIP,sharedStore})
 }

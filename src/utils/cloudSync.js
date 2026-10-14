@@ -28,6 +28,7 @@ const TABLES = [
       totalSpent: Number(m.totalSpent) || 0, joinDate: m.joinDate || '',
       balance: Number(m.balance) || 0, birthday: m.birthday || '',
       lastBirthdayBonus: m.lastBirthdayBonus || '',
+      note:m.note||'',
     }),
   },
   {
@@ -73,6 +74,7 @@ const TABLES = [
       id: p.id, name: p.name || '', type: p.type || '',
       condition: p.condition || {}, enabled: !!p.enabled,
       startAt: p.startAt || '', endAt: p.endAt || '',
+      note:p.note||'',
     }),
   },
   {
@@ -124,7 +126,7 @@ const TABLES = [
   {
     localKey: 'pos2_topups', cloud: 'member_topups',
     pick: (t) => ({
-      id: t.id, memberId: t.memberId, amount: Number(t.amount) || 0,
+      id: t.id, memberId: t.memberId,shiftId:t.shiftId||'', amount: Number(t.amount) || 0,
       bonus: Number(t.bonus) || 0, payMethod: t.payMethod || 'cash',
       time: t.time, cashier: t.cashier || '', note: t.note || '',
     }),
@@ -154,6 +156,9 @@ async function readLocal() {
     const data = await window.electronAPI.db.exportData()
     return {
       _revision:data._revision,
+      _restaurantOrders:data.restaurantOrders||[],
+      _restaurantOperations:data.restaurantOperations||[],
+      _restaurantEnabled:JSON.parse(data.settings?.find(s=>s.key==='restaurantConfig')?.value||'{}').enabled===true,
       pos2_products: data.products || [],
       pos2_members: data.members || [],
       pos2_orders: data.orders || [],
@@ -172,7 +177,13 @@ async function readLocal() {
   }
   const all = {}
   for (const t of TABLES) all[t.localKey] = loadLS(t.localKey)
+  const data=readRecords().data,raw=data.pos_business_settings.find(s=>s.key==='restaurantConfig')?.value
+  all._restaurantOrders=data.pos_restaurant_orders;all._restaurantOperations=data.pos_restaurant_operations
+  all._restaurantEnabled=raw==null?false:JSON.parse(JSON.parse(raw)).enabled===true
   return all
+}
+function guardRestaurantCloud(data){
+  if(data._restaurantEnabled||data._restaurantOrders.length||data._restaurantOperations.length)throw Error('目前雲端快照不包含完整預訂與原料回執，已停止同步以保護資料。請使用完整 JSON 備份；手機共用店面可照常使用。')
 }
 
 // 寫本機（Electron 統一走 importData；Browser 走 localStorage）
@@ -209,6 +220,7 @@ export async function pushAll(onProgress = () => {}) {
   const auth=await sb.auth.getUser()
   if (auth.error || !auth.data?.user) throw new Error('請先登入雲端帳號；禁止匿名同步')
   const allLocal = await readLocal()
+  guardRestaurantCloud(allLocal)
   const report = []
 
   for (const t of TABLES) {
@@ -244,6 +256,7 @@ export async function pullAll(onProgress = () => {}) {
   const auth=await sb.auth.getUser()
   if (auth.error || !auth.data?.user) throw new Error('請先登入雲端帳號；禁止匿名同步')
   const before=await readLocal()
+  guardRestaurantCloud(before)
   const browserRevision=isElectron ? null : readRecords().revision
   const result = {}
   const report = []

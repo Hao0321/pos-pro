@@ -1,0 +1,11 @@
+import {beforeEach,afterEach,test,expect,vi} from 'vitest'
+import {DATA_KEYS,RECORD_KEY,readRecords,browserStorage,writeBusinessSettings,writeRecords} from '../../src/utils/browserStorage'
+import {setSettings,getSetting} from '../../src/utils/dataAccess'
+import {validateManualEntry} from '../../electron/manualJournalRules.mjs'
+let values
+beforeEach(()=>{values=new Map();vi.stubGlobal('localStorage',{getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,String(v)),removeItem:k=>values.delete(k)})})
+afterEach(()=>vi.unstubAllGlobals())
+test('legacy fourteen-collection records retain an explicitly disabled birthday bonus',async()=>{const data=Object.fromEntries(DATA_KEYS.filter(k=>k!=='pos_business_settings').map(k=>[k,[]]));values.set(RECORD_KEY,JSON.stringify({version:1,revision:1,data}));values.set('pos_settings_birthdayBonus',JSON.stringify('0'));expect(await getSetting('birthdayBonus')).toBe('0');expect(readRecords().data.pos_business_settings).toEqual([{key:'birthdayBonus',value:'"0"'}])})
+test('browser business rules save atomically and restore zero from the same backup record',async()=>{await setSettings({pointsEarnRate:'20',pointsRedeemRate:'2',birthdayBonus:'0'});const backup=structuredClone(readRecords().data);await setSettings({birthdayBonus:'100'});writeRecords(backup);expect(await getSetting('birthdayBonus')).toBe('0');expect(await getSetting('pointsEarnRate')).toBe('20')})
+test('quota failure cannot save only one of the new pricing rules',async()=>{await setSettings({pointsEarnRate:'10',pointsRedeemRate:'1'});const before=values.get(RECORD_KEY);localStorage.setItem=()=>{throw Error('fixture quota')};await expect(setSettings({pointsEarnRate:'20',pointsRedeemRate:'2'})).rejects.toThrow(/quota/);expect(values.get(RECORD_KEY)).toBe(before)})
+test('manual journal rejects unbalanced, negative and fraction-of-a-cent money',()=>{const entry={date:'2026-10-14',description:'fixture',lines:[{account:'5202',debit:100,credit:0},{account:'1101',debit:0,credit:100}]};expect(()=>validateManualEntry(entry)).not.toThrow();for(const amount of [99,-100,100.001])expect(()=>validateManualEntry({...entry,lines:[entry.lines[0],{...entry.lines[1],credit:amount}]})).toThrow()})

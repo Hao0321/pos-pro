@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "donburi-takeaway-v1",
+      "name": "丼飯外帶",
+      "description": "一般豬肉丼、牛肉丼與冬瓜茶，適合個人攤位的第一份菜單。",
+      "recipeStatus": "starting-example",
+      "products": [
+        { "key": "pork", "id": "tpl_donburi_v1_pork", "name": "日式豬肉丼", "category": "丼飯", "unit": "碗", "examplePrice": 95, "recipe": { "rice": 90, "pork": 120, "onion": 60, "sauce": 110, "scallion": 3, "box": 1 } },
+        { "key": "beef", "id": "tpl_donburi_v1_beef", "name": "日式牛肉丼", "category": "丼飯", "unit": "碗", "examplePrice": 115, "recipe": { "rice": 90, "beef": 120, "onion": 60, "sauce": 110, "scallion": 3, "box": 1 } },
+        { "key": "tea", "id": "tpl_donburi_v1_tea", "name": "自煮冬瓜茶 300ml", "category": "飲料", "unit": "杯", "examplePrice": 10, "recipe": { "tea": 300, "cup": 1 } }
+      ],
+      "operations": { "catalog": "implemented", "checkout": "existing-core", "ingredientReservation": "rehearsal-only", "preorders": "rehearsal-only", "kitchen": "rehearsal-only", "internetOrdering": "not-integrated" }
+    }
+  ]
+}

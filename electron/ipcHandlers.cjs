@@ -1,4 +1,4 @@
-module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrderServer, getLocalIP }) {
+module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrderServer, getLocalIP,sharedStore }) {
   const orderServer = getOrderServer()
   function handle(channel, handler) {
     ipcMain.handle(channel, (event, ...args) => {
@@ -12,8 +12,20 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   ipcMain.handle('auth:session', e => { ipcSecurity.trusted(e); return ipcSecurity.current() })
   ipcMain.handle('auth:logout', e => ipcSecurity.logout(e))
   handle('db:checkoutReceipt', (_e, id) => db.checkoutReceipt(id))
+  handle('db:getStoreSnapshot',()=>require('./storeSnapshot.cjs')(db,ipcSecurity.current()))
+  handle('db:getRestaurantState',()=>db.getRestaurantState())
+  handle('db:applyRestaurantOperation',(_e,input)=>db.applyRestaurantOperation(input,ipcSecurity.current()))
+  handle('shared:getStatus',()=>sharedStore?.status()||{running:false,addresses:[]})
+  handle('shared:start',(_e,input)=>sharedStore.start(input))
+  handle('shared:stop',()=>sharedStore.stop())
+  handle('shared:pair',()=>sharedStore.pair())
+  handle('shared:revoke',(_e,id)=>sharedStore.revoke(id))
+  handle('shared:certificate',()=>sharedStore.certificate())
   // ----- Products -----
   handle('db:getProducts', () => db.getProducts())
+  handle('db:applyInventoryOperation',(_e,input)=>db.applyInventoryOperation(input,ipcSecurity.current()))
+  handle('db:applyScenarioTemplate', (_e, input) => db.applyScenarioTemplate(input, ipcSecurity.current()))
+  handle('db:getScenarioTemplateReceipt', (_e, id) => db.getScenarioTemplateReceipt(id, ipcSecurity.current()))
   handle('db:addProduct', (_e, data) => db.addProduct(data))
   handle('db:updateProduct', (_e, id, data) => db.updateProduct(id, data))
   handle('db:deleteProduct', (_e, id) => db.deleteProduct(id))
@@ -99,6 +111,7 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   // ----- Settings -----
   handle('settings:get', (_e, key) => db.getSetting(key))
   handle('settings:set', (_e, key, value) => db.setSetting(key, value))
+  handle('settings:setMany',(_e,values)=>db.setSettings(values))
   handle('settings:getAll', () => db.getAllSettings())
 
   // ----- Migration -----

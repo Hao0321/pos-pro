@@ -35,6 +35,10 @@ app.whenReady().then(async()=>{
     const record=await js("JSON.parse(localStorage.getItem('pos_atomic_records_v1'))")
     assert.equal(record.data.pos2_products[0].stock,4);assert.equal(record.data.pos2_orders.length,1)
     pass('real browser checkout commits while network is disabled after an offline reload')
+    const rehearsalAssets=['scenarios/donburi/index.html','scenarios/donburi/app.mjs','scenarios/donburi/model.mjs','scenarios/donburi/style.css']
+    const cached=await js(`Promise.all(${JSON.stringify(rehearsalAssets)}.map(url=>fetch(url).then(r=>r.ok)))`)
+    assert.ok(cached.every(Boolean))
+    pass('all scenario rehearsal HTML, modules and styles remain available while the actual network is disabled')
     const session=await js("sessionStorage.getItem('pos_session')")
     w2=new BrowserWindow({show:false,width:1400,height:900,webPreferences:{sandbox:true,nodeIntegration:false,contextIsolation:true}})
     await w2.loadURL(base)

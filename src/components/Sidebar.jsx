@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
-import { ShoppingCart, Package, BarChart2, Users, BookOpen, Truck, ClipboardList, Tag, Settings, AlertTriangle, LogOut, Bell, LayoutDashboard, Clock, Trash2, Sparkles } from 'lucide-react'
+import { ShoppingCart, Package, BarChart2, Users, BookOpen, Truck, ClipboardList, Tag, Settings, AlertTriangle, LogOut, Bell, LayoutDashboard, Clock, Trash2, Sparkles, CheckCircle as CheckCircleIcon } from 'lucide-react'
 import { ROLES, hasPermission } from '../utils/security'
 import SyncStatusBadge from './SyncStatusBadge'
 
 const NAV = [
   { key:'dashboard',  label:'首頁',     Icon:LayoutDashboard, perm:'pos.use', accent:'gold' },
   { key:'pos',        label:'收銀台',   Icon:ShoppingCart,    perm:'pos.use', accent:'green' },
+  { key:'restaurant',label:'預訂出餐',Icon:ClipboardList,perm:'pos.use',accent:'green' },
   { key:'shifts',     label:'班別交班', Icon:Clock,           perm:'pos.use', accent:'teal' },
+  { key:'readiness',  label:'營業前檢查', Icon:CheckCircleIcon, perm:'pos.use', accent:'green' },
+  { key:'devices',label:'共用店面',Icon:Users,perm:'settings.edit',accent:'teal' },
   { key:'inventory',  label:'庫存管理', Icon:Package,         perm:'inventory.view', accent:'blue' },
   { key:'purchase',   label:'進貨管理', Icon:Truck,           perm:'purchase.view', accent:'purple' },
   { key:'waste',      label:'損耗管理', Icon:Trash2,          perm:'inventory.view', accent:'red' },
@@ -17,6 +20,7 @@ const NAV = [
   { key:'accounting', label:'會計帳務', Icon:BookOpen,        perm:'accounting.view', accent:'teal' },
   { key:'orders',     label:'顧客點餐', Icon:Bell,            perm:'pos.use', accent:'amber' },
   { key:'settings',   label:'設定',     Icon:Settings,        perm:'settings.view', accent:'gold' },
+  { key:'scenarios',  label:'情境模板', Icon:Sparkles,        perm:'settings.edit', accent:'green' },
 ]
 
 export default function Sidebar({ view, setView, session, lowStockCount, todayRevenue, todayOrders, onLogout, pendingOrders = 0, openShift = null }) {

@@ -18,13 +18,27 @@ function verifyPassword(password, stored) {
     return timingSafeEqual(pbkdf2Sync(password,Buffer.from(p.salt),p.iter,32,'sha256'),Buffer.from(p.hash))
   } catch { return false }
 }
-const staffChannels = new Set(['db:getProducts','db:addProduct','db:updateProduct','db:findByBarcode',
+const staffChannels = new Set(['db:getRestaurantState','db:applyRestaurantOperation','db:getStoreSnapshot','db:getProducts','db:addProduct','db:updateProduct','db:findByBarcode','db:applyInventoryOperation',
   'db:getMembers','db:addMember','db:updateMember','db:getOrders','db:getOrderItems','db:checkout','db:checkoutReceipt',
   'db:getCustomerOrders','db:updateOrderStatus','db:getSuppliers','db:getPurchases','db:getPromotions',
   'db:getHeldOrders','db:addHeldOrder','db:deleteHeldOrder','db:getShifts','db:getOpenShift','db:openShift','db:closeShift',
   'db:getCashLog','db:addCashLog','db:getWasteLog','db:addWaste','db:addTopup','db:getTopups','db:writeAuditLog',
   'printer:printReceipt','printer:openCashDrawer','printer:getStatus','barcode:generate','barcode:generateLabel',
-  'barcode:printLabels','server:getLocalIP','server:getStatus','settings:get'])
+  'barcode:printLabels','server:getLocalIP','server:getStatus','shared:getStatus','settings:get'])
+function authorizeActor(db,s,channel,args=[]){
+  if(!s||!['owner','staff'].includes(s.role))throw Error('請先登入，或重新驗證身份')
+  if(s.role!=='owner'&&!staffChannels.has(channel))throw Error('權限不足')
+  if(s.role!=='owner'&&channel==='settings:get'&&!['pointsEarnRate','pointsRedeemRate','birthdayBonus','dailySalesGoal'].includes(args[0]))throw Error('權限不足')
+  if(s.role!=='owner'&&['db:addMember','db:updateMember'].includes(channel)){
+    const input=channel==='db:addMember'?args[0]:args[1],old=channel==='db:updateMember'?db.getMembers().find(m=>m.id===args[0]):null
+    for(const key of ['balance','points','totalSpent','tier','lastBirthdayBonus'])if(input[key]!=null&&input[key]!==(old?.[key]??(key==='tier'?'normal':key==='lastBirthdayBonus'?'':0)))throw Error('會員點數、儲值與累計消費需經交易異動')
+  }
+  if(s.role!=='owner'&&channel==='db:checkout'){
+    const o=args[0];if(o?.manualDiscount||o?.items?.some(i=>i.price!==db.getProducts().find(p=>p.id===i.id)?.price))throw Error('員工沒有改價或手動折讓權限')
+  }
+  if(s.role!=='owner'&&channel==='db:addTopup'&&args[0]?.bonus>0)throw Error('員工沒有儲值贈額權限')
+  return s
+}
 function createIpcSecurity({db,getWindow,rendererPath,now=Date.now}) {
   let session = null, credential = null, failures = 0, lockedUntil = 0
   const expected = pathToFileURL(rendererPath).href
@@ -51,20 +65,7 @@ function createIpcSecurity({db,getWindow,rendererPath,now=Date.now}) {
   function authorize(event,channel,args=[]) {
     trusted(event)
     const s=current()
-    if (!s) throw new Error('請先登入，或重新驗證身份')
-    if (s.role!=='owner' && !staffChannels.has(channel)) throw new Error('權限不足')
-    if (s.role!=='owner' && channel==='settings:get' && !['pointsEarnRate','pointsRedeemRate','birthdayBonus','dailySalesGoal'].includes(args[0]))
-      throw new Error('權限不足')
-    if(s.role!=='owner' && ['db:addMember','db:updateMember'].includes(channel)){
-      const input=channel==='db:addMember'?args[0]:args[1],old=channel==='db:updateMember'?db.getMembers().find(m=>m.id===args[0]):null
-      for(const key of ['balance','points','totalSpent','tier','lastBirthdayBonus'])if(input[key]!=null&&input[key]!==(old?.[key]??(key==='tier'?'normal':key==='lastBirthdayBonus'?'':0)))throw new Error('會員點數、儲值與累計消費需經交易異動')
-    }
-    if (s.role!=='owner' && channel==='db:checkout') {
-      const o=args[0]
-      if (o?.manualDiscount || o?.items?.some(i=>i.price!==db.getProducts().find(p=>p.id===i.id)?.price))
-        throw new Error('員工沒有改價或手動折讓權限')
-    }
-    return s
+    return authorizeActor(db,s,channel,args)
   }
   return {
     trusted,authorize,current,
@@ -110,4 +111,4 @@ function createIpcSecurity({db,getWindow,rendererPath,now=Date.now}) {
     validateUser(data) { passwordRecord(data.password);if (!['owner','staff'].includes(data.role)||typeof data.username!=='string'||!data.username.trim()||data.username.length>100) throw new Error('帳號格式錯誤') },
   }
 }
-module.exports={createIpcSecurity,verifyPassword,passwordRecord}
+module.exports={createIpcSecurity,verifyPassword,passwordRecord,authorizeActor}

@@ -13,18 +13,21 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState([])
   const [filter, setFilter] = useState('pending')
   const [loading, setLoading] = useState(false)
+  const [error,setError]=useState('')
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
     try {
       const data = await loadCustomerOrders()
       setOrders(data || [])
-    } catch {}
+      setError('')
+    } catch(e) {setError(e.message)}
     setLoading(false)
   }, [])
 
   useEffect(() => {
     fetchOrders()
+    window.addEventListener('pos-data-refreshed',fetchOrders);return()=>window.removeEventListener('pos-data-refreshed',fetchOrders)
   }, [fetchOrders])
 
   // 監聽新訂單事件
@@ -39,18 +42,15 @@ export default function OrdersPage() {
   }, [])
 
   const handleAccept = async (orderId) => {
-    await updateOrderStatus(orderId, 'accepted')
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'accepted' } : o))
+    try{await updateOrderStatus(orderId, 'accepted');await fetchOrders()}catch(e){setError(e.message)}
   }
 
   const handleReject = async (orderId) => {
-    await updateOrderStatus(orderId, 'rejected')
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'rejected' } : o))
+    try{await updateOrderStatus(orderId, 'rejected');await fetchOrders()}catch(e){setError(e.message)}
   }
 
   const handleComplete = async (orderId) => {
-    await updateOrderStatus(orderId, 'completed')
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'completed' } : o))
+    try{await updateOrderStatus(orderId, 'completed');await fetchOrders()}catch(e){setError(e.message)}
   }
 
   const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter)
@@ -58,6 +58,7 @@ export default function OrdersPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
+      {error&&<p role="alert" style={{color:'var(--red)'}}>{error}</p>}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <Bell size={22} />
         <h2 style={{ flex: 1, fontSize: '1.3rem' }}>顧客點餐</h2>

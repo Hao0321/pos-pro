@@ -214,6 +214,7 @@ export function sanitize(str) {
 
 export function sanitizeObject(obj) {
   if (typeof obj !== 'object' || obj === null) return obj
+  if(Array.isArray(obj))return obj.map(value=>typeof value==='object'?sanitizeObject(value):typeof value==='string'?value.replace(DANGEROUS,'[BLOCKED]').trim():value)
   const result = {}
   for (const [key, val] of Object.entries(obj)) {
     if (typeof val === 'string') result[key] = val.replace(DANGEROUS, '[BLOCKED]').trim()

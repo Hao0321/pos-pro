@@ -46,13 +46,14 @@ try{
   })
   test('shift cash stays balanced across cumulative refunds',()=>{const result=db.closeShift('s',{closeCash:100});assert.equal(result.expected,100)})
   test('native topup is atomic, rejects malformed values and deduplicates its ID',()=>{
-    const t={id:'t',memberId:'m',amount:10,bonus:1,payMethod:'cash',time:new Date().toISOString(),cashier:''}
+    db.openShift({id:'deposit-shift',cashier:'fixture',openCash:0})
+    const t={id:'t',memberId:'m',amount:10,bonus:1,payMethod:'cash',shiftId:'deposit-shift',time:new Date().toISOString(),cashier:''}
     assert.equal(db.addTopup(t).success,true);assert.equal(db.addTopup(t).success,true);assert.equal(db.getMembers()[0].balance,111)
     for(const n of [-1,'10',Infinity])assert.equal(db.addTopup({...t,id:'invalid',amount:n}).success,false)
     assert.equal(db.getMembers()[0].balance,111)
   })
   test('a failed native waste mutation cannot insert a log or decrement stock',()=>{
-    const before=db.exportData()._revision;assert.throws(()=>db.addWaste({id:'w',productId:'p',qty:100,time:new Date().toISOString()}));assert.equal(db.exportData()._revision,before)
+    const before=db.exportData()._revision;assert.equal(db.addWaste({id:'w',productId:'p',qty:100,time:new Date().toISOString()}).success,false);assert.equal(db.exportData()._revision,before)
   })
   const time=new Date().toISOString()
   db.migrateFromLocalStorage({auditLog:Array.from({length:2105},(_,i)=>({id:'a'+i,timestamp:time,action:'fixture'})),
@@ -62,7 +63,7 @@ try{
     wasteLog:Array.from({length:1005},(_,i)=>({id:'bulk-w'+i,productId:'p',qty:1,time}))})
   const snapshot=db.exportData(),backup=db.createBackup('fixture','fixture')
   test('full native backup does not inherit UI limits for audit, shifts, cash, waste or topups',()=>{
-    assert.equal(snapshot.auditLog.length,2105);assert.equal(snapshot.shifts.length,206);assert.equal(snapshot.cashLog.length,505);assert.equal(snapshot.wasteLog.length,1005);assert.equal(snapshot.memberTopups.length,506)
+    assert.equal(snapshot.auditLog.length,2105);assert.equal(snapshot.shifts.length,207);assert.equal(snapshot.cashLog.length,505);assert.equal(snapshot.wasteLog.length,1005);assert.equal(snapshot.memberTopups.length,506)
     db.importData({auditLog:[],cashLog:[],wasteLog:[],memberTopups:[],shifts:[]});db.restoreBackup(backup.id)
     assert.equal(db.exportData().auditLog.length,2105);assert.equal(db.exportData().memberTopups.length,506)
   })

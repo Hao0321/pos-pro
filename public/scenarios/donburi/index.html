@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <title>丼飯工作台 · POS Pro 情境模板</title>
+  <link rel="stylesheet" href="./style.css"><script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="mark">丼</span><div>POS Pro<small>第一個情境模板</small></div></div>
+      <div class="space-label">一般丼飯外帶</div>
+      <nav aria-label="餐飲工作台"><button data-view="orders" class="nav-button active">接單與出餐</button><button data-view="prep" class="nav-button">備料清單</button><button data-view="stock" class="nav-button">原料與進價</button><button data-view="report" class="nav-button">收攤核對</button><button data-view="plan" class="nav-button">菜單與試賣設定</button></nav>
+      <div class="sidebar-note">所有店家<br>全部功能免費</div>
+    </aside>
+    <main>
+      <header class="topbar"><div><span class="eyebrow">讓一個人，也能顧好每一碗</span><h1 id="page-title">接單與出餐</h1></div><label class="date-control">試賣日<input type="date" id="day" aria-label="試賣日期"></label></header>
+      <div class="demo-banner"><span class="demo-pill">試賣演練</span><span>這是示範空間，紀錄與正式 POS 分開。請用測試資料體驗，設定都能調整。</span><button id="export" class="small-button">匯出演練紀錄</button></div>
+      <div id="message" role="status" class="message" hidden></div>
+      <section id="metrics" class="metrics" aria-label="今日概況"></section>
+      <section id="content"></section>
+      <footer>範例售價、份量與庫存供試跑；實際營業請換成自己的配方與進價。外部接單與金流尚未串接。</footer>
+    </main>
+  </div>
+  <dialog id="payment-dialog"><form id="payment-form"><h2>核對實際收到的款項</h2><p id="payment-description"></p><label>付款方式<select name="method"><option value="cash">現金</option><option value="transfer">轉帳（人工核對）</option><option value="electronic">電子付款（人工核對）</option></select></label><label>實收金額<input name="amount" type="number" min="0" step="0.01" required></label><p class="hint">轉帳與電子付款須先自行核對入帳，再按確認。</p><div class="dialog-actions"><button type="button" data-close="payment-dialog" class="secondary-button">返回</button><button class="primary-button">確認實收</button></div></form></dialog>
+  <dialog id="cancel-dialog"><form id="cancel-form"><h2>核對取消與退款</h2><p id="cancel-description"></p><div class="dialog-actions"><button type="button" data-close="cancel-dialog" class="secondary-button">返回</button><button class="danger-button" id="cancel-confirm">確認取消</button></div></form></dialog>
+</body>
+</html>

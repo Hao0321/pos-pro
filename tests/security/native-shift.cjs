@@ -1,0 +1,28 @@
+const path=require('node:path'),assert=require('node:assert/strict'),fs=require('node:fs')
+const init=require('../../electron/database.js'),{prepareCheckout}=require('../../electron/checkoutSafety.cjs'),Database=require('better-sqlite3')
+const root=process.env.POS_SECURITY_FIXTURE_ROOT;if(!root)throw Error('isolated fixture root required')
+const file=path.join(root,'shifts.db');let db=init(file),checks=0
+function pass(name){checks++;process.stdout.write('PASS '+name+'\n')}
+try{
+  db.addProduct({id:'p',name:'fixture bowl',price:50,cost:20,stock:10});db.openShift({id:'s',cashier:'fixture',openCash:200})
+  const plan=prepareCheckout({cart:[{id:'p',price:50,qty:2}],products:db.getProducts(),members:[],activeMember:null,pointsRule:{earn:10,redeem:1},birthdayBonus:100,openShift:db.getOpenShift(),payMethod:'mixed',paid:100,opts:{payments:[{method:'cash',amount:70},{method:'card',amount:30}]},id:'original',now:new Date()})
+  assert.equal(db.checkout(plan.order).success,true)
+  const request=(id)=>({id,refundOf:'original',items:[{id:'p',qty:1}],reason:'fixture',cashier:'fixture',shiftId:'s',time:new Date().toISOString()})
+  assert.equal(db.refundOrder('original',request('r1')).success,true);assert.equal(db.refundOrder('original',request('r2')).success,true)
+  assert.equal(db.getOrder('original').status,'refunded')
+  assert.deepEqual(db.closeShift('s',{closeCash:200,expected:9999,note:'fixture'}),{success:true,expected:200,diff:0})
+  let shift=db.getShifts().find(s=>s.id==='s');assert.equal(shift.cashSales,0);assert.equal(shift.cardSales,0);assert.equal(shift.orderCount,1);assert.equal(shift.refundCount,2);assert.equal(shift.refundAmount,100)
+  pass('real native close persists signed mixed refunds and ignores a forged client expected balance')
+  db.close();db=init(file)
+  const before=db.exportData()
+  assert.deepEqual(db.closeShift('s',{closeCash:200,note:'fixture'}),{success:true,expected:200,diff:0})
+  assert.throws(()=>db.closeShift('s',{closeCash:199,note:'fixture'}),/內容不同/);assert.deepEqual(db.exportData(),before)
+  pass('lost close reply can be replayed after SQLite restart, while changed close content is rejected')
+  db.openShift({id:'bad',cashier:'fixture',openCash:100});db.addOrder({id:'bad-mixed',shiftId:'bad',status:'completed',payMethod:'mixed',items:[{id:'p',name:'fixture bowl',price:50,qty:1}],subtotal:50,total:50,paid:50,time:new Date().toISOString(),payments:[{method:'cash',amount:1}]})
+  const badBefore=db.exportData();assert.throws(()=>db.closeShift('bad',{closeCash:100,note:''}),/合計/);assert.deepEqual(db.exportData(),badBefore)
+  pass('malformed persisted mixed payment cannot close a drawer or overwrite its original metadata')
+  const raw=new Database(file);raw.prepare('DELETE FROM order_items WHERE orderId=?').run('bad-mixed');raw.prepare('DELETE FROM orders WHERE id=?').run('bad-mixed');raw.exec("CREATE TRIGGER reject_close BEFORE UPDATE OF status ON shifts WHEN NEW.status='closed' BEGIN SELECT RAISE(ABORT,'fixture close failure'); END;");raw.close()
+  const failureBefore=db.exportData();assert.throws(()=>db.closeShift('bad',{closeCash:100,note:''}),/fixture close failure/);assert.deepEqual(db.exportData(),failureBefore)
+  pass('injected SQLite close failure rolls back the complete current store')
+  process.stdout.write(JSON.stringify({success:true,marker:'POS_SHIFT_PASS',tests:checks,electron:process.versions.electron})+'\n')
+}catch(error){process.stderr.write(error.stack+'\n');process.exitCode=1}finally{db.close()}

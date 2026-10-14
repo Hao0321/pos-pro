@@ -10,7 +10,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   // ----- Products -----
   db: {
+    getRestaurantState:()=>ipcRenderer.invoke('db:getRestaurantState'),
+    applyRestaurantOperation:input=>ipcRenderer.invoke('db:applyRestaurantOperation',input),
+    getStoreSnapshot:()=>ipcRenderer.invoke('db:getStoreSnapshot'),
     getProducts: () => ipcRenderer.invoke('db:getProducts'),
+    applyInventoryOperation:input=>ipcRenderer.invoke('db:applyInventoryOperation',input),
+    applyScenarioTemplate: input => ipcRenderer.invoke('db:applyScenarioTemplate', input),
+    getScenarioTemplateReceipt: id => ipcRenderer.invoke('db:getScenarioTemplateReceipt', id),
     addProduct: (data) => ipcRenderer.invoke('db:addProduct', data),
     updateProduct: (id, data) => ipcRenderer.invoke('db:updateProduct', id, data),
     deleteProduct: (id) => ipcRenderer.invoke('db:deleteProduct', id),
@@ -113,6 +119,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   settings: {
     get: (key) => ipcRenderer.invoke('settings:get', key),
     set: (key, value) => ipcRenderer.invoke('settings:set', key, value),
+    setMany: values => ipcRenderer.invoke('settings:setMany',values),
     getAll: () => ipcRenderer.invoke('settings:getAll'),
   },
 
@@ -123,6 +130,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // ----- Events -----
+  shared:{getStatus:()=>ipcRenderer.invoke('shared:getStatus'),start:input=>ipcRenderer.invoke('shared:start',input),stop:()=>ipcRenderer.invoke('shared:stop'),pair:()=>ipcRenderer.invoke('shared:pair'),revoke:id=>ipcRenderer.invoke('shared:revoke',id),certificate:()=>ipcRenderer.invoke('shared:certificate')},
+  onStoreChanged:callback=>{const handler=()=>callback();ipcRenderer.on('store:changed',handler);return()=>ipcRenderer.removeListener('store:changed',handler)},
   onNewOrder: (callback) => {
     const handler = (_e, order) => callback(order)
     ipcRenderer.on('customer-order:new', handler)

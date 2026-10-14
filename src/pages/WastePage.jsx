@@ -5,7 +5,7 @@ import { exportXLS } from '../utils/exportXLS'
 const REASONS = ['過期', '破損', '腐壞', '自用', '試吃樣品', '盤虧', '其他']
 
 export default function WastePage({ store, session }) {
-  const { products, wasteLog, recordWaste, removeWaste } = store
+  const { products, wasteLog, recordWaste } = store
   const [showAdd, setShowAdd] = useState(false)
   const [productId, setProductId] = useState('')
   const [qty, setQty] = useState('')
@@ -175,9 +175,7 @@ export default function WastePage({ store, session }) {
                   <td style={ws.td}><span className="badge badge-amber">{w.reason}</span></td>
                   <td style={ws.td}>{w.cashier}</td>
                   <td style={ws.td}>
-                    <button onClick={()=>{ if(confirm('確定刪除？')) removeWaste(w.id) }} style={{color:'var(--red)', padding:4}}>
-                      <Trash2 size={13}/>
-                    </button>
+                    <span style={{fontSize:11,color:'var(--text-tertiary)'}}>已入帳，保留紀錄</span>
                   </td>
                 </tr>
               ))}

@@ -6,6 +6,7 @@ import { executeFinancial, FINANCIAL_PENDING } from '../../src/utils/financialCo
 import { addTopup, openShift } from '../../src/utils/dataAccess'
 import { initAccounts } from '../../src/utils/accountBootstrap'
 import { createBackup, restoreBackup, getBackupList } from '../../src/utils/security'
+import {canonicalSignature} from '../../electron/operationRules.mjs'
 let map, failWrite
 const copy=x=>JSON.parse(JSON.stringify(x))
 beforeEach(()=>{
@@ -45,8 +46,13 @@ test('legacy records migrate without deleting the source or resetting account ve
   map.delete(RECORD_KEY);map.set('pos_users',JSON.stringify([{id:'custom',username:'自己的名字',password:'custom-hash',role:'owner'}]));map.set('pos_users_version','old')
   expect((await initAccounts())[0].id).toBe('custom');expect(map.get('pos_users_version')).toBe('old');expect(map.has('pos_users')).toBe(true)
 })
-test('all fourteen data collections restore atomically, including shifts, topups, held orders and audit',async()=>{
-  writeRecords(Object.fromEntries(DATA_KEYS.map(key=>[key,[{id:key}]])))
+test('all business collections restore atomically, including restaurant orders, receipts, shifts and audit',async()=>{
+  const data=Object.fromEntries(DATA_KEYS.map(key=>[key,[{id:key}]])),time='2026-10-14T01:00:00Z'
+  data.pos2_products=[{id:'pos2_products',name:'fixture',stock:1,price:95,cost:40}]
+  data.pos_business_settings=[{id:'pos_business_settings',key:'storeName',value:'"fixture"'}]
+  data.pos_restaurant_orders=[{id:'pos_restaurant_orders',version:1,status:'reserved',channel:'walkin',day:'2026-10-14',slot:'12:00',customer:'',contact:'',note:'',createdAt:time,startedAt:'',saleId:'',refundId:'',quantity:1,total:95,items:[{id:'pos2_products',name:'fixture',price:95,cost:40,qty:1}],allocations:[{id:'pos2_products',name:'fixture',qty:1,unitCost:40}]}]
+  data.pos_restaurant_operations=[{id:'pos_restaurant_operations',kind:'restaurant',action:'create',entityId:'pos_restaurant_orders',productIds:['pos2_products'],signature:canonicalSignature({id:'pos_restaurant_operations',kind:'restaurant',action:'create',time})}]
+  writeRecords(data)
   const backup=await createBackup({username:'測試'},'完整備份');expect(await getBackupList()).toHaveLength(1)
   writeRecords(Object.fromEntries(DATA_KEYS.map(key=>[key,[]])));await restoreBackup(backup.id,{username:'測試'})
   for(const key of DATA_KEYS)expect(readRecords().data[key].some(row=>row.id===key)).toBe(true)
@@ -73,7 +79,7 @@ test.each([-1,0,4,'1',NaN,1.0001])('invalid or excessive refund quantity %s cann
   expect(map.get(RECORD_KEY)).toBe(before)
 })
 test('topup updates the member and its accounting record together and deduplicates the same ID',async()=>{
-  const command={id:'topup-1',memberId:'m',amount:100,bonus:5,payMethod:'cash',time:'2026-10-06T00:00:00Z',cashier:''}
+  const command={id:'topup-1',memberId:'m',amount:100,bonus:5,payMethod:'cash',shiftId:'s',time:'2026-10-06T00:00:00Z',cashier:''}
   expect((await addTopup(command)).success).toBe(true);expect((await addTopup(command)).success).toBe(true)
   expect(readRecords().data.pos2_members[0].balance).toBe(205);expect(readRecords().data.pos2_topups).toHaveLength(1)
   const before=map.get(RECORD_KEY);failWrite=true;expect((await addTopup({...command,id:'another'})).success).toBe(false);expect(map.get(RECORD_KEY)).toBe(before)
@@ -83,7 +89,7 @@ test('a lost financial acknowledgement retries the original ID after module-leve
   await expect(executeFinancial('topup',input,async r=>{seen.push(r.id);throw new Error('reply lost')})).rejects.toThrow('尚未確認')
   expect(map.has(FINANCIAL_PENDING)).toBe(true)
   await expect(executeFinancial('topup',{...input,amount:20},async()=>({success:true}))).rejects.toThrow('尚未確認')
-  await executeFinancial('topup',input,async r=>{seen.push(r.id);return {success:true}})
+  await executeFinancial('topup',input,async r=>{seen.push(r.id);return {success:true,topup:r,member:{id:r.memberId}}})
   expect(seen[0]).toBe(seen[1]);expect(map.has(FINANCIAL_PENDING)).toBe(false)
 })
 test('an unsupported browser or a second editor cannot silently bypass concurrency protection',async()=>{

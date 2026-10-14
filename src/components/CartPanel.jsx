@@ -508,7 +508,7 @@ const cs = {
   },
   doneWrap:{
     flex:1, display:'flex', flexDirection:'column', alignItems:'center',
-    justifyContent:'center', padding:'40px 20px', textAlign:'center',
+    minHeight:0,overflowY:'auto',justifyContent:'flex-start', padding:'24px 20px', textAlign:'center',
   },
   doneCheck:{
     width:72, height:72, borderRadius:'50%',

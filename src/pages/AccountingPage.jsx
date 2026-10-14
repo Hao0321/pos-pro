@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo,useRef } from 'react'
 import {
   buildPnL, buildBalanceSheet, groupJournalByDate,
   exportJournalCSV, exportPnLCSV, downloadCSV,
@@ -221,7 +221,7 @@ function JournalView({ grouped, manualEntries, deleteManualEntry }) {
                       <span style={{...ac.typeBadge,...TYPE_STYLE[j.type]||TYPE_STYLE.manual}}>{TYPE_LABEL[j.type]||'手動'}</span>
                       <span style={{fontSize:13,fontWeight:500}}>{j.description}</span>
                       {manualIds.has(j.id) && (
-                        <button className="btn-icon btn-sm" style={{marginLeft:'auto',color:'var(--red)'}} onClick={()=>deleteManualEntry(j.id)}>
+                        <button className="btn-icon btn-sm" style={{marginLeft:'auto',color:'var(--red)'}} onClick={()=>deleteManualEntry(j.id).catch(e=>alert(e.message))}>
                           <Trash2 size={13}/>
                         </button>
                       )}
@@ -322,6 +322,7 @@ const EXPENSE_PRESETS = [
 ]
 
 function ExpenseView({ addManualEntry }) {
+  const saving=useRef(false),creationId=useRef('JM'+crypto.randomUUID())
   const today = new Date().toISOString().slice(0,10)
   const [form, setForm] = useState({ date:today, description:'', amount:'', expenseAccount:'5202', payAccount:'1101', note:'' })
   const [saved, setSaved] = useState(false)
@@ -330,14 +331,17 @@ function ExpenseView({ addManualEntry }) {
     setForm(f=>({...f,expenseAccount:preset.account,payAccount:preset.payAccount,description:preset.label}))
   }
 
-  function handleSave() {
+  async function handleSave() {
+    if(saving.current)return
     if (!form.amount || !form.description || isNaN(parseFloat(form.amount))) return
     const amount  = parseFloat(form.amount)
     const expAcc  = form.expenseAccount
     const payAcc  = form.payAccount
     const isInventory = expAcc === '1211' // 進貨記庫存，不記費用科目
 
-    addManualEntry({
+    saving.current=true
+    try{await addManualEntry({
+      _creationId:creationId.current,
       date: form.date,
       description: form.description,
       lines: isInventory
@@ -351,9 +355,10 @@ function ExpenseView({ addManualEntry }) {
           ],
     })
 
-    setSaved(true)
+    creationId.current='JM'+crypto.randomUUID();setSaved(true)
     setForm(f=>({...f,description:'',amount:'',note:''}))
     setTimeout(()=>setSaved(false), 2000)
+    }catch(e){alert('帳務未確認保存，請保留內容並核對：'+e.message)}finally{saving.current=false}
   }
 
   const EXPENSE_ACC = Object.entries(ACCOUNTS)

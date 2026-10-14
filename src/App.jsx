@@ -14,6 +14,10 @@ import PurchasePage from './pages/PurchasePage'
 import StocktakePage from './pages/StocktakePage'
 import PromotionsPage from './pages/PromotionsPage'
 import SettingsPage from './pages/SettingsPage'
+import ScenarioTemplatesPage from './pages/ScenarioTemplatesPage'
+import ReadinessPage from './pages/ReadinessPage'
+import SharedDevicesPage from './pages/SharedDevicesPage'
+import RestaurantPage from './pages/RestaurantPage'
 import OrdersPage from './pages/OrdersPage'
 import DashboardPage from './pages/DashboardPage'
 import ShiftPage from './pages/ShiftPage'
@@ -30,6 +34,10 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [pendingOrders, setPendingOrders] = useState(0)
   const [autoSync, setAutoSync] = useState(null) // 'syncing' | 'done' | 'failed' | null
+  const [backupIssue,setBackupIssue]=useState('')
+  const [sharedConnected,setSharedConnected]=useState(true)
+  useEffect(()=>{const changed=e=>setSharedConnected(e.detail.connected);window.addEventListener('pos-shared-connection',changed);return()=>window.removeEventListener('pos-shared-connection',changed)},[])
+  useEffect(()=>{const expired=()=>{destroySession();setSession(null)};window.addEventListener('pos-shared-auth-expired',expired);return()=>window.removeEventListener('pos-shared-auth-expired',expired)},[])
   const isMobile = useIsMobile()
 
   // 監聽顧客點餐通知
@@ -43,7 +51,7 @@ export default function App() {
 
   const handleLogout = useCallback(async () => {
     writeAuditLog('LOGOUT', session, {})
-    if(session?.role==='owner')try{await createBackup(session,'自動備份（登出）')}catch(e){console.error('登出備份未完成',e)}
+    if(session?.role==='owner')try{await createBackup(session,'自動備份（登出）');setBackupIssue('')}catch(e){setBackupIssue(e.message)}
     if(isElectron)window.electronAPI.auth.logout().catch(()=>{})
     destroySession()
     setSession(null)
@@ -53,10 +61,10 @@ export default function App() {
     setSession(newSession)
     if(newSession.role!=='owner')return
     let backups
-    try{backups=await getBackupList()}catch(e){console.error('備份清單讀取失敗',e);return}
+    try{backups=await getBackupList()}catch(e){setBackupIssue(e.message);return}
     const today = new Date().toDateString()
     const hasToday = backups.some(b => new Date(b.createdAt).toDateString() === today)
-    if(!hasToday)try{await createBackup(newSession,'自動備份（'+today+'）')}catch(e){console.error('自動備份未完成',e)}
+    if(!hasToday)try{await createBackup(newSession,'自動備份（'+today+'）');setBackupIssue('')}catch(e){setBackupIssue(e.message)}
 
     // Cloud replacement requires an explicit action in Settings; login never overwrites local sales.
 
@@ -83,10 +91,10 @@ export default function App() {
   const can = (perm) => hasPermission(session, perm)
 
   const NAV_LABELS = {
-    dashboard:'首頁', pos:'收銀台', shifts:'班別交班',
+    dashboard:'首頁', pos:'收銀台',restaurant:'預訂出餐', shifts:'班別交班', readiness:'營業前檢查',devices:'共用店面',
     inventory:'庫存管理', purchase:'進貨管理', waste:'損耗管理',
     stocktake:'每日盤點', promotions:'促銷活動', members:'會員',
-    reports:'報表分析', accounting:'會計帳務', orders:'顧客點餐', settings:'設定',
+    reports:'報表分析', accounting:'會計帳務', orders:'顧客點餐', settings:'設定', scenarios:'情境模板',
   }
 
   return (
@@ -111,22 +119,26 @@ export default function App() {
       )}
 
       <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column', minWidth:0 }}>
+        {!sharedConnected&&<div role="alert" style={{padding:12,background:'var(--red-dim)'}}>連不上店面電腦。請恢復店面 Wi-Fi；未確認的交易請沿用原單號核對。</div>}
+        {store.financialState.phase!=='idle'&&<div role="alert" style={{padding:12,background:'var(--gold-dim)'}}>{store.financialState.message} {store.financialState.id} {store.financialState.phase==='uncertain'&&<button onClick={()=>store.retryFinancial().catch(e=>alert(e.message))}>原編號重試保存異動</button>}</div>}
+        {backupIssue&&session.role==='owner'&&<div role="alert" style={{padding:10,background:'var(--amber-dim)'}}>自動備份未完成。<button onClick={()=>handleNavChange('readiness')}>查看與補做備份</button></div>}
         {store.checkoutState.phase !== 'idle' && <div role="alert" style={{padding:12,background:'var(--gold-dim)'}}>
           {store.checkoutState.message} {store.checkoutState.orderId}
           {store.checkoutState.phase === 'uncertain' && <><button onClick={()=>store.reconcileCheckout().catch(e=>alert(e.message))}>查詢原交易</button><button onClick={()=>store.retryCheckout().catch(e=>alert(e.message))}>原單號重試保存</button></>}
         </div>}
         {isMobile && (
           <div style={mob.topBar}>
-            <button onClick={() => setMenuOpen(v => !v)} style={mob.menuBtn}>
+            <button aria-label={menuOpen?'關閉功能選單':'開啟功能選單'} onClick={() => setMenuOpen(v => !v)} style={mob.menuBtn}>
               {menuOpen ? <X size={20}/> : <Menu size={20}/>}
             </button>
             <div style={mob.topTitle}>{NAV_LABELS[view] || 'POS'}</div>
             <div style={{ width: 36 }}/>
           </div>
         )}
-        <main inert={store.checkoutState.phase!=='idle'?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+        <main inert={store.checkoutState.phase!=='idle'||store.financialState.phase!=='idle'?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
           {view === 'dashboard'  && can('pos.use')         && <DashboardPage  store={store} session={session}/>}
           {view === 'pos'        && can('pos.use')         && <POSPage        store={store} session={session}/>}
+          {view === 'restaurant' && can('pos.use') && <RestaurantPage store={store} session={session}/>}
           {view === 'shifts'     && can('pos.use')         && <ShiftPage      store={store} session={session}/>}
           {view === 'inventory'  && can('inventory.view')  && <InventoryPage  store={store} session={session}/>}
           {view === 'waste'      && can('inventory.view')  && <WastePage      store={store} session={session}/>}
@@ -138,6 +150,9 @@ export default function App() {
           {view === 'promotions' && can('promotions.view') && <PromotionsPage store={store} session={session}/>}
           {view === 'orders'     && can('pos.use')         && <OrdersPage />}
           {view === 'settings'   && can('settings.view')   && <SettingsPage   session={session} onLogout={handleLogout} store={store}/>}
+          {view === 'scenarios'  && can('settings.edit')   && <ScenarioTemplatesPage session={session} store={store}/>}
+          {view === 'readiness' && can('pos.use') && <ReadinessPage store={store} session={session} backupIssue={backupIssue} onBackupVerified={()=>setBackupIssue('')}/>}
+          {view === 'devices' && can('settings.edit') && <SharedDevicesPage/>}
         </main>
       </div>
 

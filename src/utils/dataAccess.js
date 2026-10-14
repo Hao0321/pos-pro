@@ -1,7 +1,16 @@
-import { browserStorage, writeRecords, readRecords, withSalesLock } from './browserStorage'
+import './sharedBridge'
+import { browserStorage, writeRecords, readRecords, withSalesLock,writeBusinessSettings } from './browserStorage'
 import { commitBrowserSale, browserReceipt, commitBrowserRefund } from './browserSales'
+import { summarizeShift } from '../../electron/shiftReconciliation.mjs'
+import {moneyValue,quantityValue,operationHeader,sameCommand} from '../../electron/operationRules.mjs'
+import {commitBrowserInventory} from './browserInventory'
+import {commitBrowserRestaurant,browserRestaurantState} from './browserRestaurant'
 // 資料存取抽象層 — 自動判斷 Electron (SQLite) 或 瀏覽器 (localStorage)
 export const isElectron = !!(typeof window !== 'undefined' && window.electronAPI)
+export const isSharedStore = !!(typeof window !== 'undefined' && window.electronAPI?.sharedStore)
+export async function applyInventoryOperation(request,actor){return isElectron?window.electronAPI.db.applyInventoryOperation(request):commitBrowserInventory(request,actor)}
+export async function loadRestaurantState(){return isElectron?window.electronAPI.db.getRestaurantState():browserRestaurantState()}
+export async function applyRestaurantOperation(request,actor){return isElectron?window.electronAPI.db.applyRestaurantOperation(request):commitBrowserRestaurant(request,actor)}
 
 function loadLS(key, fallback) { const value=browserStorage.getItem(key);return value==null?fallback:JSON.parse(value) }
 
@@ -157,6 +166,7 @@ export async function loadAuditLogs(filters) {
   return loadLS('pos_audit_log', [])
 }
 export async function writeAuditLog(entry) {
+  if(String(entry.id||'').startsWith('stock-operation:')||entry.action==='INVENTORY_OPERATION'||String(entry.id||'').startsWith('scenario-template:')||entry.action==='SCENARIO_TEMPLATE_APPLY')throw Error('交易回執只能由正式异動流程建立')
   if (isElectron) return window.electronAPI.db.writeAuditLog(entry)
   // 瀏覽器模式: 寫入 localStorage
   const logs = loadLS('pos_audit_log', [])
@@ -193,6 +203,7 @@ export async function setSetting(key, value) {
   if (isElectron) return window.electronAPI.settings.set(key, value)
   saveLS('pos_settings_' + key, value)
 }
+export async function setSettings(values){if(isElectron)return window.electronAPI.settings.setMany(values);writeBusinessSettings(Object.fromEntries(Object.entries(values).map(([k,v])=>[k,JSON.stringify(v)])));return {success:true}}
 export async function getAllSettings() {
   if (isElectron) return window.electronAPI.settings.getAll()
   return {}
@@ -216,6 +227,7 @@ export async function checkAndMigrate() {
       promotions: loadLS('pos_promotions', []),
       heldOrders:loadLS('pos2_held_orders',[]),shifts:loadLS('pos2_shifts',[]),cashLog:loadLS('pos2_cash_log',[]),
       wasteLog:loadLS('pos2_waste',[]),memberTopups:loadLS('pos2_topups',[]),auditLog:loadLS('pos_audit_log',[]),
+      settings:loadLS('pos_business_settings',[]).map(s=>({key:s.key,value:String(JSON.parse(s.value))})),
     }
 
     const hasData = Object.values(data).some(arr => arr && arr.length > 0)
@@ -279,12 +291,19 @@ export async function openShift(data) {
 export async function closeShift(id, data) {
   if (isElectron) return window.electronAPI.db.closeShift(id, data)
   if(typeof data.closeCash!=='number'||!Number.isFinite(data.closeCash)||data.closeCash<0||data.closeCash>1e9)throw new Error('交班現金不正確')
-  const arr = loadLS('pos2_shifts', [])
-  const idx = arr.findIndex(s => s.id === id)
-  if(idx<0||arr[idx].status!=='open')throw new Error('班別已關閉或不存在')
-  arr[idx] = { ...arr[idx], ...data, status: 'closed' }
-  saveLS('pos2_shifts', arr)
-  return { success: true }
+  return withSalesLock(()=>{
+    const current=readRecords(),arr=current.data.pos2_shifts,shift=arr.find(s=>s.id===id)
+    if(!shift)throw new Error('班別不存在')
+    if(shift.status==='closed'){
+      if(shift.closeCash!==data.closeCash || shift.note!==(data.note||''))throw new Error('已交班內容不同，請核對原交班紀錄')
+      return {success:true,expected:shift.expectedCash,diff:shift.diff}
+    }
+    if(shift.status!=='open')throw new Error('班別狀態需要核對')
+    const stats=summarizeShift(shift,current.data.pos2_orders,current.data.pos2_cash_log,current.data.pos2_topups)
+    const closed={...shift,status:'closed',closeTime:new Date().toISOString(),closeCash:data.closeCash,note:data.note||'',expectedCash:stats.expected,diff:Math.round((data.closeCash-stats.expected)*100)/100,cashSales:stats.cash,cardSales:stats.card,orderCount:stats.orderCount,refundCount:stats.refundCount,refundAmount:stats.refundAmt}
+    writeRecords({pos2_shifts:arr.map(s=>s.id===id?closed:s)},current.revision)
+    return {success:true,expected:closed.expectedCash,diff:closed.diff}
+  })
 }
 export async function loadCashLog(shiftId) {
   if (isElectron) return window.electronAPI.db.getCashLog(shiftId)
@@ -292,8 +311,16 @@ export async function loadCashLog(shiftId) {
 }
 export async function addCashLog(data) {
   if (isElectron) return window.electronAPI.db.addCashLog(data)
-  const arr = loadLS('pos2_cash_log', [])
-  arr.unshift(data); saveLS('pos2_cash_log', arr)
+  return withSalesLock(()=>{
+    try{
+      operationHeader(data);const current=readRecords(),records=current.data,old=records.pos2_cash_log.find(l=>l.id===data.id)
+      if(old){if(!sameCommand(old,data,['shiftId','time','type','amount','reason','cashier']))throw Error('現金流水編號內容不一致');return {success:true,cashLog:old}}
+      moneyValue(data.amount,'現金流水',.01)
+      if(!['in','out'].includes(data.type)||records.pos2_shifts.find(s=>s.id===data.shiftId)?.status!=='open')throw Error('現金異動或班別不正確')
+      writeRecords({pos2_cash_log:[data,...records.pos2_cash_log]},current.revision)
+      return {success:true,cashLog:data}
+    }catch(error){return {success:false,committed:false,error:error.message}}
+  })
 }
 
 // ===== Waste 損耗 =====
@@ -304,17 +331,20 @@ export async function loadWasteLog() {
 export async function addWaste(data) {
   if (isElectron) return window.electronAPI.db.addWaste(data)
   return withSalesLock(()=>{
+    try{
     const current=readRecords(),records=current.data,p=records.pos2_products.find(p=>p.id===data.productId)
-    if(!p||typeof data.qty!=='number'||!Number.isFinite(data.qty)||data.qty<=0||data.qty>p.stock)throw new Error('損耗商品或數量不正確')
+    operationHeader(data);const old=records.pos2_waste.find(w=>w.id===data.id)
+    if(old){if(!sameCommand(old,data,['productId','qty','reason','time','cashier']))throw Error('損耗編號內容不一致');return {success:true,waste:old,product:p||null}}
+    quantityValue(data.qty,'損耗數量',.001)
+    if(!p||data.qty>p.stock)throw new Error('損耗商品或數量不正確')
     const product={...p,stock:p.stock-data.qty},waste={...data,productName:p.name,cost:p.cost||0}
     writeRecords({pos2_waste:[waste,...records.pos2_waste],pos2_products:records.pos2_products.map(x=>x.id===p.id?product:x)},current.revision)
     return {success:true,product,waste}
+    }catch(error){return {success:false,committed:false,error:error.message}}
   })
 }
 export async function deleteWaste(id) {
-  if (isElectron) return window.electronAPI.db.deleteWaste(id)
-  const arr = loadLS('pos2_waste', []).filter(w => w.id !== id)
-  saveLS('pos2_waste', arr)
+  throw Error('損耗已扣庫並入帳，紀錄須保留；請用盤點與會計更正，不能直接刪除')
 }
 
 // ===== Topups 會員儲值 =====
@@ -329,12 +359,15 @@ export async function addTopup(data) {
     try {
       const current=readRecords(),records=current.data,old=records.pos2_topups.find(t=>t.id===data.id)
       const member=records.pos2_members.find(m=>m.id===data.memberId)
-      if (!member) throw new Error('會員不存在')
       if (old) {
-        if(JSON.stringify(old)!==JSON.stringify(data)) throw new Error('儲值單號內容不一致')
-        return {success:true,member,topup:old}
+        if(!sameCommand(old,data,['memberId','amount','bonus','payMethod','time','cashier','note','shiftId']))throw new Error('儲值單號內容不一致')
+        return {success:true,member:member||null,topup:old}
       }
-      if ([data.amount,data.bonus].some(n=>typeof n!=='number'||!Number.isFinite(n)||n<0||n>1e9) || !['cash','card'].includes(data.payMethod)) throw new Error('儲值金額或付款方式不正確')
+      operationHeader(data);moneyValue(data.amount,'儲值金額',.01);moneyValue(data.bonus,'贈額')
+      if(!member)throw Error('會員不存在')
+      if(!['cash','card'].includes(data.payMethod))throw Error('儲值付款方式不正確')
+      if(records.pos2_shifts.find(s=>s.id===data.shiftId)?.status!=='open')throw Error('請先開班再收取儲值款項')
+      moneyValue((member.balance||0)+data.amount+data.bonus,'儲值餘額')
       const next={...member,balance:Math.round(((member.balance||0)+data.amount+data.bonus)*100)/100}
       writeRecords({pos2_topups:[data,...records.pos2_topups],pos2_members:records.pos2_members.map(m=>m.id===next.id?next:m)},current.revision)
       return {success:true,member:next,topup:data}

@@ -1,4 +1,5 @@
 // ═══════════════════════════════════════════════════════════
+import {localDate} from './checkoutSafety.mjs'
 // 會計引擎 — 複式記帳 + 科目表 + 報表生成
 // ═══════════════════════════════════════════════════════════
 
@@ -29,6 +30,7 @@ export const ACCOUNTS = {
   '5205': { name: '廣告費',       type: 'expense',  normal: 'debit',  group: '營業費用' },
   '5206': { name: '雜費',         type: 'expense',  normal: 'debit',  group: '營業費用' },
   '5207': { name: '促銷費用',     type: 'expense',  normal: 'debit',  group: '營業費用' },
+  '5208': { name: '庫存損耗',     type: 'expense',  normal: 'debit',  group: '營業費用' },
   '5301': { name: '折舊費用',     type: 'expense',  normal: 'debit',  group: '非現金項目' },
 }
 
@@ -45,7 +47,7 @@ export function orderToJournalEntries(order, products) {
   if(order.source==='customer' || order.payMethod==='pending' || (order.status && !['completed','refunded'].includes(order.status)))return []
   const entries = []
   const items = order.items || []
-  const date  = (order.time || '').slice(0, 10)
+  const date  = order.time&&Number.isFinite(Date.parse(order.time))?localDate(new Date(order.time)):''
   const disc  = order.discount || 0   // 會員點數折抵（退貨單為負）
 
   // 計算銷貨成本（退貨單 qty 為負 → cogs 為負，用來沖回成本與存貨）
@@ -54,7 +56,9 @@ export function orderToJournalEntries(order, products) {
     return sum + (order.itemCosts?.[item.id] ?? prod?.cost ?? 0) * item.qty
   }, 0)
 
-  const payAccount = order.payMethod === 'cash' ? '1101' : '1103'
+  let pays=typeof order.payments==='string'?JSON.parse(order.payments):order.payments
+  if(!Array.isArray(pays)||!pays.length){if(order.payMethod==='mixed')throw Error('混合付款缺少明細，請核對原紀錄');pays=[{method:order.payMethod||'cash',amount:order.total}]}
+  if(pays.some(p=>!['cash','card'].includes(p.method)||!Number.isFinite(p.amount))||Math.round(pays.reduce((n,p)=>n+p.amount,0)*100)!==Math.round(order.total*100))throw Error('付款流水與應收金額不一致，請核對原紀錄')
 
   // 分錄 1：確認收入。order.total 已是「折抵後實收淨額」，所以：
   //   現金/銀行 = 實收淨額 (order.total)
@@ -69,7 +73,7 @@ export function orderToJournalEntries(order, products) {
     description: `銷售收入 — ${order.id}`,
     type:        'auto_sale',
     lines: [
-      { account: payAccount, debit: order.total, credit: 0, note: order.payMethod === 'cash' ? '現金收款' : '電子支付' },
+      ...pays.map(p=>({account:p.method==='cash'?'1101':'1103',debit:p.amount,credit:0,note:p.method==='cash'?'現金收款':'電子支付'})),
       ...(disc !== 0 ? [{ account: '4191', debit: disc, credit: 0, note: '會員點數折抵' }] : []),
       { account: '4101', debit: 0, credit: order.total + disc, note: disc !== 0 ? '銷售收入（原價）' : '銷售收入' },
     ],
@@ -118,7 +122,7 @@ export function topupToJournalEntries(topup) {
   const amount = Number(topup.amount) || 0   // 實收現金/電子
   const bonus  = Number(topup.bonus) || 0    // 贈送額（促銷成本）
   if (amount === 0 && bonus === 0) return []
-  const date = (topup.time || '').slice(0, 10)
+  const date = topup.time&&Number.isFinite(Date.parse(topup.time))?localDate(new Date(topup.time)):''
   const payAccount = topup.payMethod === 'cash' ? '1101' : '1103'
   const lines = [
     { account: payAccount, debit: amount, credit: 0, note: topup.payMethod === 'cash' ? '現金儲值' : '電子儲值' },
@@ -135,6 +139,13 @@ export function topupToJournalEntries(topup) {
   }]
 }
 
+export function wasteToJournalEntries(waste){
+  const value=Math.round(Number(waste.cost||0)*Math.abs(Number(waste.qty))*100)
+  if(!Number.isSafeInteger(value)||value<0)throw Error('損耗成本需要核對')
+  if(!value)return []
+  const date=waste.time&&Number.isFinite(Date.parse(waste.time))?localDate(new Date(waste.time)):''
+  return [{id:'JW'+waste.id,orderId:waste.id,date,description:'庫存損耗 — '+(waste.productName||waste.id),type:'auto_waste',lines:[{account:'5208',debit:value/100,credit:0,note:waste.reason||''},{account:'1211',debit:0,credit:value/100,note:'已扣除的存貨'}]}]
+}
 // ── 損益表 ─────────────────────────────────────────────────
 export function buildPnL(journalEntries, from, to) {
   const inRange = journalEntries.filter(j => j.date >= from && j.date <= to)

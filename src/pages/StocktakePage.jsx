@@ -5,16 +5,18 @@ import { stringifyCSV } from '../utils/csv'
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
 
 export default function StocktakePage({ store, session }) {
-  const { products, updateProduct } = store
+  const { products, commitInventory } = store
   const [counts,    setCounts]    = useState({})   // productId -> counted qty
   const [search,    setSearch]    = useState('')
   const [category,  setCategory]  = useState('全部')
   const [stage,     setStage]     = useState('count')  // count | review | done
+  const [applied,setApplied]=useState(null)
   const [showOnly,  setShowOnly]  = useState('all')    // all | diff | missing
   const [showCamera, setShowCamera] = useState(false)
   const [scanFeedback, setScanFeedback] = useState('')
   const inputRefs = useRef({})
   const countsRef = useRef({})   // counts 的同步鏡像（source of truth）：掃描連加時讀最新值，避免在 setState updater 內製造副作用
+  const expected=useRef({}),busy=useRef(false),[saving,setSaving]=useState(false),[saveError,setSaveError]=useState('')
 
   function handleScannedCode(code) {
     const p = products.find(x => x.barcode === code)
@@ -26,6 +28,7 @@ export default function StocktakePage({ store, session }) {
     // 每掃一次 +1。用 countsRef 讀最新值、setCounts 傳「新物件」而非 updater，
     // 避免在 state updater 內呼叫 setScanFeedback（updater 必須是 pure，StrictMode 會重跑兩次）
     const next = (typeof countsRef.current[p.id] === 'number' ? countsRef.current[p.id] : 0) + 1
+    if(expected.current[p.id]===undefined)expected.current[p.id]=p.stock
     countsRef.current = { ...countsRef.current, [p.id]: next }
     setCounts(countsRef.current)
     setScanFeedback(`✓ ${p.name} +1（累計 ${next}）`)
@@ -47,13 +50,15 @@ export default function StocktakePage({ store, session }) {
 
   const counted   = Object.keys(counts).length
   const total     = products.length
-  const pct       = Math.round(counted / total * 100)
+  const pct       = total?Math.min(100,Math.round(counted / total * 100)):0
   const diffs     = products.filter(p => counts[p.id] !== undefined && counts[p.id] !== p.stock)
   const shortages = diffs.filter(p => (counts[p.id] ?? p.stock) < p.stock)
   const surpluses = diffs.filter(p => (counts[p.id] ?? p.stock) > p.stock)
 
   function setCount(id, val) {
-    const n = parseInt(val)
+    const n = val===''?NaN:Number(val)
+    if(val===''){delete expected.current[id];delete countsRef.current[id];setCounts({...countsRef.current});return}
+    if(expected.current[id]===undefined)expected.current[id]=products.find(p=>p.id===id)?.stock
     countsRef.current = { ...countsRef.current, [id]: isNaN(n) ? undefined : Math.max(0, n) }
     setCounts(countsRef.current)
   }
@@ -65,26 +70,29 @@ export default function StocktakePage({ store, session }) {
     }
   }
 
-  function applyAdjustments() {
-    diffs.forEach(p => {
-      updateProduct(p.id, { stock: counts[p.id] })
-    })
+  async function applyAdjustments() {
+    if(busy.current)return;busy.current=true;setSaving(true);setSaveError('')
+    try{
+    if(diffs.length)await commitInventory('stocktake',{counts:diffs.map(p=>({id:p.id,stock:counts[p.id],expectedStock:expected.current[p.id]??p.stock}))})
     writeAuditLog('STOCKTAKE_DONE', session, {
       total, counted, diffs: diffs.length,
       shortages: shortages.length, surpluses: surpluses.length,
     })
+    setApplied({products:structuredClone(products),counts:{...counts},counted,total,diffs:diffs.length})
     setStage('done')
+    }catch(e){setSaveError(e.message)}finally{busy.current=false;setSaving(false)}
   }
 
   function exportReport() {
     // 用共用 stringifyCSV 處理逗號/引號跳脫，避免各頁手刻 CSV 規則不一致
     const header = ['商品名稱', '分類', '系統庫存', '實盤數量', '差異']
-    const records = products.map(p => ({
+    const source=stage==='done'&&applied?applied:{products,counts}
+    const records = source.products.map(p => ({
       '商品名稱': p.name,
       '分類': p.category,
       '系統庫存': p.stock,
-      '實盤數量': counts[p.id] ?? '未盤',
-      '差異': counts[p.id] !== undefined ? counts[p.id] - p.stock : '—',
+      '實盤數量': source.counts[p.id] ?? '未盤',
+      '差異': source.counts[p.id] !== undefined ? source.counts[p.id] - p.stock : '—',
     }))
     const content = `盤點日期,${new Date().toLocaleDateString('zh-TW')}\n` + stringifyCSV(records, header)
     const BOM  = '\uFEFF'
@@ -103,12 +111,12 @@ export default function StocktakePage({ store, session }) {
         <div style={{fontFamily:'var(--font-serif)', fontSize:22, fontWeight:700}}>盤點完成</div>
         <div style={{display:'flex', gap:24, fontSize:13, color:'var(--text-secondary)'}}>
           <span>共盤 <strong style={{color:'var(--text-primary)'}}>{counted}</strong> 項</span>
-          <span>差異 <strong style={{color: diffs.length?'var(--amber)':'var(--green)'}}>{diffs.length}</strong> 項</span>
-          <span>已更正 <strong style={{color:'var(--green)'}}>{diffs.length}</strong> 項庫存</span>
+          <span>差異 <strong style={{color: applied?.diffs?'var(--amber)':'var(--green)'}}>{applied?.diffs??0}</strong> 項</span>
+          <span>已更正 <strong style={{color:'var(--green)'}}>{applied?.diffs??0}</strong> 項庫存</span>
         </div>
         <div style={{display:'flex', gap:10}}>
           <button className="btn btn-ghost" onClick={exportReport}><Download size={14}/>匯出報告</button>
-          <button className="btn btn-primary" onClick={()=>{setCounts({});setStage('count')}}>重新盤點</button>
+          <button className="btn btn-primary" onClick={()=>{countsRef.current={};expected.current={};setCounts({});setStage('count')}}>重新盤點</button>
         </div>
       </div>
     </div>
@@ -117,6 +125,7 @@ export default function StocktakePage({ store, session }) {
   if (stage === 'review') return (
     <div style={st.root}>
       <div style={st.header}>
+        {saveError&&<p role="alert" style={{color:'var(--red)'}}>{saveError}</p>}
         <div>
           <h2 style={st.title}>確認差異</h2>
           <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
@@ -124,9 +133,9 @@ export default function StocktakePage({ store, session }) {
           </div>
         </div>
         <div style={{display:'flex', gap:8}}>
-          <button className="btn btn-ghost btn-sm" onClick={()=>setStage('count')}>返回修改</button>
-          <button className="btn btn-primary btn-sm" onClick={applyAdjustments}>
-            <Check size={14}/>確認更新 {diffs.length} 項
+              <button disabled={saving} className="btn btn-ghost btn-sm" onClick={()=>setStage('count')}>返回修改</button>
+              <button disabled={saving} className="btn btn-primary btn-sm" onClick={applyAdjustments}>
+                <Check size={14}/>{saving?'保存中…':`確認更新 ${diffs.length} 項`}
           </button>
         </div>
       </div>
@@ -135,7 +144,7 @@ export default function StocktakePage({ store, session }) {
         <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:12}}>
           <div style={{fontSize:36}}>🎉</div>
           <div style={{color:'var(--green)', fontSize:16, fontWeight:600}}>庫存完全吻合，無需調整</div>
-          <button className="btn btn-primary" onClick={applyAdjustments}>完成盤點</button>
+                  <button disabled={saving} className="btn btn-primary" onClick={applyAdjustments}>完成盤點</button>
         </div>
       ) : (
         <div style={{flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:8}}>
@@ -193,7 +202,7 @@ export default function StocktakePage({ store, session }) {
           <button className="btn btn-ghost btn-sm" onClick={()=>setShowCamera(true)}>
             <Camera size={14}/>掃條碼
           </button>
-          <button className="btn btn-ghost btn-sm" onClick={()=>setCounts({})}>清除</button>
+          <button className="btn btn-ghost btn-sm" onClick={()=>{countsRef.current={};expected.current={};setCounts({});setSaveError('')}}>清除</button>
           <button className="btn btn-primary btn-sm" onClick={()=>setStage('review')}>
             審核差異 →
           </button>
@@ -262,7 +271,7 @@ export default function StocktakePage({ store, session }) {
                 <div style={{display:'flex', justifyContent:'flex-end'}}>
                   <input
                     ref={el=>{ if (el) inputRefs.current[p.id]=el; else delete inputRefs.current[p.id] }}
-                    type="number" min={0}
+                    type="number" min={0} step="0.001" aria-label={'實盤數量 '+p.name}
                     value={cnt ?? ''}
                     onChange={e=>setCount(p.id, e.target.value)}
                     onKeyDown={e=>handleKeyDown(e,idx)}

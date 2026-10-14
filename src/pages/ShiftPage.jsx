@@ -1,10 +1,12 @@
 import { browserStorage } from '../utils/browserStorage'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Clock, Plus, Minus, LogIn, LogOut, FileText, AlertCircle } from 'lucide-react'
 import { loadShifts, loadCashLog } from '../utils/dataAccess'
+import { summarizeShift } from '../../electron/shiftReconciliation.mjs'
+import useVisibleViewport from '../hooks/useVisibleViewport'
 
 export default function ShiftPage({ store, session }) {
-  const { openShift, startShift, endShift, logCash, orders } = store
+  const { openShift, startShift, endShift, logCash, orders,topups } = store
   const [shifts, setShifts] = useState([])
   const [cashLog, setCashLog] = useState([])
   const [showOpen, setShowOpen] = useState(false)
@@ -16,75 +18,66 @@ export default function ShiftPage({ store, session }) {
   const [cashAmount, setCashAmount] = useState('')
   const [cashType, setCashType] = useState('in')
   const [cashReason, setCashReason] = useState('')
+  const [loading,setLoading]=useState(true)
+  const [loadError,setLoadError]=useState('')
+  const [saving,setSaving]=useState(false),[actionError,setActionError]=useState(''),[actionMessage,setActionMessage]=useState('')
+  const actionBusy=useRef(false)
 
   useEffect(() => { reload() }, [openShift?.id])
+  useEffect(()=>{const handler=()=>reload();window.addEventListener('pos-cash-operation',handler);window.addEventListener('pos-data-refreshed',handler);return()=>{window.removeEventListener('pos-cash-operation',handler);window.removeEventListener('pos-data-refreshed',handler)}},[openShift?.id])
 
   async function reload() {
-    const [s, c] = await Promise.all([
-      loadShifts().catch(()=>[]),
-      loadCashLog(openShift?.id).catch(()=>[]),
-    ])
-    setShifts(s || [])
-    setCashLog((c || []).filter(x => !openShift || x.shiftId === openShift.id))
+    setLoading(true);setLoadError('')
+    try{
+      const [s,c]=await Promise.all([loadShifts(),loadCashLog(openShift?.id)])
+      if(!Array.isArray(s)||!Array.isArray(c))throw Error('班別／現金流水回覆不完整')
+      setShifts(s);setCashLog(c.filter(x=>!openShift||x.shiftId===openShift.id))
+    }catch(e){setLoadError(e.message)}finally{setLoading(false)}
   }
 
   // 即時統計這班
   const shiftStats = (() => {
     if (!openShift) return null
-    const shiftOrders = orders.filter(o => o.shiftId === openShift.id)
-    // 排除完整退貨配對（兩邊都不算進現金流）
-    const valid = shiftOrders.filter(o => o.status !== 'refunded' && !(o.refundOf && o.fullRefund))
-    const refunds = shiftOrders.filter(o => o.refundOf)
-    let cash = 0, card = 0
-    for (const o of valid) {
-      if (o.payMethod === 'mixed' && Array.isArray(o.payments)) {
-        for (const p of o.payments) {
-          if (p.method === 'cash') cash += p.amount
-          else card += p.amount
-        }
-      } else if (o.payMethod === 'cash') cash += o.total
-      else card += o.total
-    }
-    const cashIn = cashLog.filter(c => c.type==='in').reduce((s,c)=>s+c.amount, 0)
-    const cashOut = cashLog.filter(c => c.type==='out').reduce((s,c)=>s+c.amount, 0)
-    const expected = (openShift.openCash || 0) + cash + cashIn - cashOut
-    return {
-      orderCount: valid.filter(o => !o.refundOf).length,
-      cash, card,
-      refundCount: refunds.length,
-      refundAmt: refunds.reduce((s,o)=>s+Math.abs(o.total),0),
-      cashIn, cashOut, expected,
-    }
+    try { return summarizeShift(openShift, orders, cashLog,topups) }
+    catch(error) { return {error:error.message} }
   })()
 
+  if(loading)return <div role="status" style={{padding:24}}>讀取班別與現金流水…</div>
+  if(loadError||shiftStats?.error)return <div role="alert" style={{padding:24}}><h2>交班紀錄需要核對</h2><p>{loadError||shiftStats.error}</p><button className="btn" onClick={reload}>重新讀取</button></div>
+
   async function handleOpen() {
-    const cash = parseFloat(openCash) || 0
-    await startShift(session?.username || '', cash, session?.id || '')
-    setShowOpen(false)
-    setOpenCash('')
+    await runAction(async()=>{
+      const cash=Number(openCash)
+      await startShift(session?.username||'',cash,session?.id||'')
+      setShowOpen(false);setOpenCash('');setActionMessage('開班已保存。')
+    })
   }
 
   async function handleClose() {
-    const cash = parseFloat(closeCash) || 0
-    const r = await endShift(cash, closeNote)
-    setShowClose(false); setCloseCash(''); setCloseNote('')
-    if (r) {
-      const diff = (r.diff != null ? r.diff : (cash - shiftStats.expected))
-      alert(`交班完成\n預期現金：NT$ ${shiftStats.expected.toLocaleString()}\n實際現金：NT$ ${cash.toLocaleString()}\n差額：${diff >= 0 ? '+' : ''}${diff.toLocaleString()}`)
-    }
-    reload()
+    await runAction(async()=>{
+      if(closeCash.trim()==='')throw Error('請先點算並填寫實際現金。')
+      const cash=Number(closeCash),r=await endShift(cash,closeNote)
+      if(!r)throw Error('交班保存尚未確認，請核對原班別。')
+      setShowClose(false);setCloseCash('');setCloseNote('')
+      setActionMessage(`交班已保存。預期現金 NT$ ${r.expected.toLocaleString()}；實際現金 NT$ ${cash.toLocaleString()}；差額 NT$ ${r.diff.toLocaleString()}。`)
+      await reload()
+    })
   }
 
   async function handleCash() {
-    const amt = parseFloat(cashAmount) || 0
-    if (!amt || !cashReason) return
-    await logCash(cashType, amt, cashReason, session?.username || '')
-    setShowCash(false); setCashAmount(''); setCashReason(''); setCashType('in')
-    reload()
+    await runAction(async()=>{
+      const amt=Number(cashAmount)
+      if(!amt||!cashReason.trim())throw Error('請填金額與現金進出原因。')
+      await logCash(cashType,amt,cashReason,session?.username||'')
+      setShowCash(false);setCashAmount('');setCashReason('');setCashType('in');setActionMessage('現金流水已保存。');await reload()
+    })
   }
+  async function runAction(work){if(actionBusy.current)return;actionBusy.current=true;setSaving(true);setActionError('');setActionMessage('');try{await work()}catch(e){setActionError(e.message||'保存尚未確認，請核對原紀錄。')}finally{actionBusy.current=false;setSaving(false)}}
 
   return (
     <div style={sh.root}>
+      {actionError&&<p role="alert" style={{color:'var(--red)',marginBottom:12}}>{actionError}</p>}
+      {actionMessage&&<p role="status" style={{marginBottom:12}}>{actionMessage}</p>}
       <div style={sh.header}>
         <div>
           <h2 style={{fontSize:20, fontWeight:600}}>班別管理</h2>
@@ -126,6 +119,8 @@ export default function ShiftPage({ store, session }) {
             <KPI label="開班現金" value={`NT$ ${(openShift.openCash||0).toLocaleString()}`}/>
             <KPI label="現金銷售" value={`NT$ ${(shiftStats?.cash||0).toLocaleString()}`} accent="green"/>
             <KPI label="電子支付" value={`NT$ ${(shiftStats?.card||0).toLocaleString()}`} accent="blue"/>
+            <KPI label="現金儲值收入" value={`+NT$ ${(shiftStats?.cashTopups||0).toLocaleString()}`}/>
+            <KPI label="電子儲值收入" value={`NT$ ${(shiftStats?.cardTopups||0).toLocaleString()}`}/>
             <KPI label="現金進" value={`+NT$ ${(shiftStats?.cashIn||0).toLocaleString()}`}/>
             <KPI label="現金出" value={`-NT$ ${(shiftStats?.cashOut||0).toLocaleString()}`}/>
             <KPI label="退貨" value={`${shiftStats?.refundCount||0} 筆 / NT$ ${(shiftStats?.refundAmt||0).toLocaleString()}`} accent="red"/>
@@ -205,17 +200,17 @@ export default function ShiftPage({ store, session }) {
       </div>
 
       {showOpen && (
-        <Modal title="開班" onClose={()=>setShowOpen(false)}>
+        <Modal title="開班" saving={saving} error={actionError} onClose={()=>setShowOpen(false)}>
           <Field label="收銀員"><div style={{padding:'10px 14px', fontSize:14}}>{session?.username}</div></Field>
           <Field label="開班零用金">
             <input className="field" type="number" value={openCash} onChange={e=>setOpenCash(e.target.value)} placeholder="0" autoFocus/>
           </Field>
-          <button className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleOpen}>確認開班</button>
+          <button disabled={saving} className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleOpen}>{saving?'保存中…':'確認開班'}</button>
         </Modal>
       )}
 
       {showClose && (
-        <Modal title="交班" onClose={()=>setShowClose(false)}>
+        <Modal title="交班" saving={saving} error={actionError} onClose={()=>setShowClose(false)}>
           <div style={{background:'var(--bg-overlay)', padding:'12px 14px', borderRadius:8, marginBottom:12}}>
             <div style={{display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4}}>
               <span style={{color:'var(--text-secondary)'}}>預期現金</span>
@@ -223,7 +218,7 @@ export default function ShiftPage({ store, session }) {
             </div>
           </div>
           <Field label="實際現金">
-            <input className="field" type="number" value={closeCash} onChange={e=>setCloseCash(e.target.value)} autoFocus/>
+            <input aria-label="實際交班現金" className="field" type="number" min="0" step="0.01" value={closeCash} onChange={e=>setCloseCash(e.target.value)} autoFocus/>
           </Field>
           {closeCash !== '' && (
             <div style={{padding:'8px 14px', borderRadius:8,
@@ -237,12 +232,12 @@ export default function ShiftPage({ store, session }) {
           <Field label="備註">
             <input className="field" value={closeNote} onChange={e=>setCloseNote(e.target.value)} placeholder="差額原因..."/>
           </Field>
-          <button className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleClose}>確認交班</button>
+          <button disabled={saving} className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleClose}>{saving?'保存中…':'確認交班'}</button>
         </Modal>
       )}
 
       {showCash && (
-        <Modal title="現金進出" onClose={()=>setShowCash(false)}>
+        <Modal title="現金進出" saving={saving} error={actionError} onClose={()=>setShowCash(false)}>
           <Field label="類型">
             <div style={{display:'flex', gap:8}}>
               {[['in','現金進'],['out','現金出']].map(([k,l]) => (
@@ -261,7 +256,7 @@ export default function ShiftPage({ store, session }) {
           <Field label="說明">
             <input className="field" value={cashReason} onChange={e=>setCashReason(e.target.value)} placeholder="補零、付水電、貨款..."/>
           </Field>
-          <button className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleCash}>記錄</button>
+          <button disabled={saving} className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleCash}>{saving?'保存中…':'記錄'}</button>
         </Modal>
       )}
     </div>
@@ -286,16 +281,17 @@ function Field({ label, children }) {
   )
 }
 
-function Modal({ title, onClose, children }) {
+function Modal({ title, onClose, children, saving, error }) {
+  const viewport=useVisibleViewport()
   return (
     <>
-      <div style={mod.overlay} onClick={onClose}/>
-      <div style={mod.box}>
+      <div style={mod.overlay} onClick={()=>!saving&&onClose()}/>
+      <div style={{...mod.box,top:viewport.top+viewport.height/2,maxHeight:viewport.height*.9}}>
         <div style={mod.head}>
           <span style={{fontSize:15, fontWeight:600}}>{title}</span>
-          <button onClick={onClose} style={{padding:4}}>✕</button>
+          <button disabled={saving} onClick={onClose} style={{padding:10,minWidth:44,minHeight:44}}>✕</button>
         </div>
-        <div style={{padding:'16px 18px'}}>{children}</div>
+        <div style={{padding:'16px 18px'}}>{error&&<p role="alert" style={{color:'var(--red)',marginBottom:10}}>{error}</p>}{children}</div>
       </div>
     </>
   )
@@ -303,7 +299,7 @@ function Modal({ title, onClose, children }) {
 
 const sh = {
   root: { flex:1, overflowY:'auto', padding:'20px 24px', background:'var(--bg-base)' },
-  header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 },
+  header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16,flexWrap:'wrap',gap:12 },
   card: {
     background:'var(--bg-raised)', border:'1px solid var(--border-dim)',
     borderRadius:12, padding:'18px 20px', boxShadow:'var(--shadow-sm)',
@@ -320,7 +316,7 @@ const mod = {
   box:{
     position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
     background:'var(--bg-raised)', borderRadius:12, width:380, maxWidth:'90vw',
-    boxShadow:'var(--shadow-lg)', zIndex:999, overflow:'hidden',
+    boxShadow:'var(--shadow-lg)', zIndex:999, overflowY:'auto',
   },
   head:{
     display:'flex', justifyContent:'space-between', alignItems:'center',

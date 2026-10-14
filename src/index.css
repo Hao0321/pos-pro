@@ -391,3 +391,7 @@ h1{font-size:28px} h2{font-size:22px} h3{font-size:18px} h4{font-size:15px}
   letter-spacing:.08em; text-transform:uppercase;
   margin-bottom:8px;
 }
+@media (max-width:700px){
+  .restaurant-page .field{font-size:16px;min-height:44px;}
+  .restaurant-page .btn{min-height:44px;}
+}

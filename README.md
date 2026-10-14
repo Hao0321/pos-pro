@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-2.6.1-b8895a">
+  <img alt="version" src="https://img.shields.io/badge/version-2.7.0-b8895a">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20PWA-555">
   <img alt="tests" src="https://img.shields.io/badge/tests-vitest%20%2B%20native-3f9c5e">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
@@ -20,7 +20,7 @@
 
 ## 這是什麼
 
-目前版本：v2.6.1。包含本機交易、帳號與權限、點餐服務及離線保存的安全修正；Windows 安裝檔目前未簽章。
+目前版本：v2.7.0。加入正式預訂出餐、原料預留與手機／電腦共用店面，並修正收款回執、交班、進貨、盤點、備份與帳務問題。Windows 安裝檔未簽章；本機安裝包與 GitHub Release 的交付範圍見 [2.7.0 安裝說明](docs/INSTALLER_2_7_0.md)。
 
 POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模與店型，不設訂閱或進階功能解鎖費。資料預設存在本機（桌面版走 SQLite、瀏覽器版走 localStorage），雲端同步是選用。
 
@@ -31,12 +31,18 @@ POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模�
 - [全功能免費產品規格](docs/FREE_POS_PRODUCT_SPEC.md)：免費政策、各店型流程、離線與資料保存要求。
 - [開發與驗收清單](docs/FREE_POS_BACKLOG.md)：先確保交易保存與復原，再完成各店型起步及接單能力。
 - [order-linebot 學習紀錄](docs/ORDER_LINEBOT_LEARNING.md)：來源版本、可採用設計、實驗結果與第三方成本查核。
+- [第一個情境模板：丼飯外帶](docs/SCENARIO_TEMPLATES.md)：套用菜單、正式接單與獨立試賣演練。
+- [正式預訂與出餐](docs/RESTAURANT_WORKFLOW.md)：原料／包材預留、產能、取餐號、收款、交付、取消退款與完整復原。
+- [營業可靠性驗收](docs/OPERATING_READINESS.md)：已執行範圍、實機待驗項目及使用限制。
+- [手機與電腦共用店面](docs/SHARED_STORE.md)：電腦資料庫、私人區網 HTTPS、一次性配對、帳號權限與斷線核對。
 
-上述文件描述後續實作方向；新模式與 LINE 串接尚未完成。
+正式預訂可由店員登記預訂、現場或外送單；LINE 自動接單與外部外送平台串接仍在後續規劃。
 
 ## ✨ 功能
 
 - 🧾 **收銀** — 條碼掃描、混合付款、找零、退貨（自動沖庫存/點數）、掛單、收據
+- 🍚 **預訂出餐** — 成品或配方原料預留、分時產能、每日取餐號、出餐狀態、全額收款與取消退款
+- 📱 **共用店面** — 私人區網 HTTPS 配對，手機與電腦使用同一個 SQLite 資料庫
 - 📦 **庫存** — 即時扣庫、安全庫存提醒、批量改價、CSV 匯入匯出、商品變動歷史、過期警示
 - 👥 **會員** — 點數、分級、儲值卡、生日贈點、RFM 自動分群
 - 🚚 **進貨訂貨** — 廠商管理、依供應商一鍵建單、AI 智慧補貨建議、歷史單價
@@ -57,7 +63,7 @@ POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模�
 
 首次啟動由你建立管理員名稱與至少 8 字元密碼。既有帳號會保留；舊的短密碼必須在驗證後更換，登入流程不再重建預設帳號。
 
-最新版的本機產物、更新方式與封包資訊見 [2.6.1 安裝檔說明](docs/INSTALLER_2_6_1.md)。
+最新版的本機產物與更新方式見 [2.7.0 安裝檔說明](docs/INSTALLER_2_7_0.md)；[2.6.1 安裝檔紀錄](docs/INSTALLER_2_6_1.md)保留為歷史資料。
 
 ### 自行編譯 / 開發
 
@@ -75,7 +81,9 @@ npm run test:desktop   # 隱藏測試視窗，驗證實際 preload／IPC／收�
 
 ## ☁️ 雲端同步（選用）
 
-讓手機 / 平板 / 多台電腦共用同一份資料。申請免費 Supabase 後，依 [SETUP_SUPABASE.md](SETUP_SUPABASE.md) 設定。
+現有雲端功能提供手動上傳／下載資料快照；需依 [SETUP_SUPABASE.md](SETUP_SUPABASE.md) 設定 Auth 與權限後另外驗收。這不是共同交易來源。開發版的「共用店面」讓配對手機直接使用電腦的資料庫，無須訂閱雲端服務；一般獨立瀏覽器入口仍各自保存資料。已有 Supabase 專案需重跑更新後的 schema，保留儲值班別與會員／活動備註欄位。
+
+手機入口、營業前檢查、本輪可靠性修正與實機驗收邊界見 [營業可靠性與手機操作](docs/OPERATING_READINESS.md)。
 
 ## ⚠️ 安全須知
 

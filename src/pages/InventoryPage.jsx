@@ -56,6 +56,7 @@ export default function InventoryPage({ store }) {
   const [purchases, setPurchases] = useState([])
   const [showHistory, setShowHistory] = useState(false)
   const csvFileRef = useRef(null)
+  const savingRef=useRef(false)
 
   useEffect(() => { loadSuppliers([]).then(s => setSuppliers(Array.isArray(s) ? s : [])) }, [])
   useEffect(() => { loadPurchases([]).then(p => setPurchases(Array.isArray(p) ? p : [])) }, [])
@@ -115,20 +116,25 @@ export default function InventoryPage({ store }) {
     if (csvFileRef.current) csvFileRef.current.value = ''
   }
 
-  function confirmCSVImport() {
-    if (!csvImport) return
-    csvImport.toAdd.forEach(({ data }) => {
+  async function confirmCSVImport() {
+    if (!csvImport||savingRef.current) return
+    savingRef.current=true
+    const additions=[...csvImport.toAdd],updates=[...csvImport.toUpdate]
+    try{
+    while(additions.length){const {data}=additions[0]
       const { id, supplierName, ...rest } = data
-      addProduct(rest)
-    })
-    csvImport.toUpdate.forEach(({ id, data }) => {
+      data._creationId ||= 'p'+crypto.randomUUID()
+      await addProduct({...rest,_creationId:data._creationId});additions.shift()
+    }
+    while(updates.length){const {id,data}=updates[0]
       // 更新既有商品時不覆蓋 stock —— 庫存應由結帳/進貨/盤點管理，避免 CSV 把期間異動倒回
       const { id: _, supplierName, stock, ...rest } = data
-      updateProduct(id, rest)
-    })
+      await updateProduct(id, rest);updates.shift()
+    }
     const total = csvImport.toAdd.length + csvImport.toUpdate.length
     setCsvImport(null)
     alert(`✓ 匯入完成：新增 ${csvImport.toAdd.length}、更新 ${csvImport.toUpdate.length}（共 ${total}）\n※ 更新既有商品不會改動庫存`)
+    }catch(e){setCsvImport({...csvImport,toAdd:additions,toUpdate:updates});alert('匯入停止，已保存的項目會保留；剩餘項目可重試：'+e.message)}finally{savingRef.current=false}
   }
 
   function toggleAll(visibleIds, checked) {
@@ -140,7 +146,9 @@ export default function InventoryPage({ store }) {
     })
   }
 
-  function applyBatch() {
+  async function applyBatch() {
+    if(savingRef.current)return;savingRef.current=true
+    try{
     const ids = Array.from(selectedIds)
     if (ids.length === 0) { setShowBatch(false); return }
     const { action, value, supplierId, category } = batchForm
@@ -166,11 +174,12 @@ export default function InventoryPage({ store }) {
       } else if (action === 'category' && category) {
         update.category = category
       }
-      if (Object.keys(update).length) updateProduct(id, update)
+      if (Object.keys(update).length) {await updateProduct(id, update);setSelectedIds(previous=>{const next=new Set(previous);next.delete(id);return next})}
     }
     setShowBatch(false)
     setBatchForm({ action: 'price', value: '', supplierId: '', category: '' })
     setSelectedIds(new Set())
+    }catch(e){alert('批次更新停止，剩餘項目保留：'+e.message)}finally{savingRef.current=false}
   }
 
   function handleCameraScan(code) {
@@ -192,7 +201,7 @@ export default function InventoryPage({ store }) {
       setBarcodePreview({ product, barcodeText: result.barcodeText })
       // 如果商品沒有條碼，自動儲存產生的條碼
       if (!product.barcode && result.barcodeText) {
-        updateProduct(product.id, { barcode: result.barcodeText })
+        await updateProduct(product.id, { barcode: result.barcodeText })
       }
     }
   }
@@ -278,26 +287,29 @@ export default function InventoryPage({ store }) {
     return list.map(p => ({ type: 'product', p }))
   }, [filtered, sortMode, sortKey, sortAsc])
 
-  function startNew()  { setEditing('new'); setForm(EMPTY) }
-  function startEdit(p){ setEditing(p.id);  setForm({...p}) }
+  function startNew()  { setEditing('new'); setForm({...EMPTY,_creationId:'p'+crypto.randomUUID()}) }
+  function startEdit(p){ setEditing(p.id);  setForm({...p,_expectedStock:p.stock}) }
 
-  function save() {
+  async function save() {
+    if(savingRef.current)return
     if (!form.name || !form.price) return
     const data = {
       ...form,
       price: parseFloat(form.price) || 0,
       cost:  parseFloat(form.cost)  || 0,
-      stock: parseInt(form.stock)   || 0,
+      stock: Number(form.stock)   || 0,
       reorderLevel: parseInt(form.reorderLevel) || 0,
       noBarcode: !form.barcode || form.noBarcode,
     }
-    if (editing === 'new') addProduct(data)
-    else updateProduct(editing, data)
-    setEditing(null)
+    savingRef.current=true
+    try{if (editing === 'new') await addProduct(data)
+    else await updateProduct(editing, data)
+    setEditing(null)}catch(e){alert('商品未確認保存，請保留內容並核對：'+e.message)}finally{savingRef.current=false}
   }
 
-  function handleDelete(id) {
-    deleteProduct(id); setConfirmDel(null)
+  async function handleDelete(id) {
+    if(savingRef.current)return;savingRef.current=true
+    try{await deleteProduct(id); setConfirmDel(null)}catch(e){alert(e.message)}finally{savingRef.current=false}
   }
 
   const lowCount    = products.filter(isLowStock).length

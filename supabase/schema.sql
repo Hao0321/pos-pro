@@ -190,6 +190,10 @@ create table if not exists member_topups (
 );
 
 -- ===== 稽核日誌 =====
+-- Re-run this file for existing cloud stores before syncing this version.
+alter table members add column if not exists "note" text default '';
+alter table member_topups add column if not exists "shiftId" text default '';
+alter table promotions add column if not exists "note" text default '';
 create table if not exists audit_log (
   "id" text primary key,
   "timestamp" text not null,

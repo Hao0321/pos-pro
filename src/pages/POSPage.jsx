@@ -6,6 +6,7 @@ import HeldOrdersModal from '../components/HeldOrdersModal'
 import PriceLookupModal from '../components/PriceLookupModal'
 import { CATEGORY_META } from '../utils/categories'
 import useIsMobile from '../hooks/useIsMobile'
+import useVisibleViewport from '../hooks/useVisibleViewport'
 // lazy load html5-qrcode (~340KB) — 只在點相機掃描才載入
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
 
@@ -33,6 +34,8 @@ export default function POSPage({ store, session }) {
   const scanRef = useRef(null)
   const searchRef = useRef(null)
   const isMobile = useIsMobile()
+  const visibleViewport=useVisibleViewport()
+  const mobileAction=isMobile?{padding:10,minWidth:44,minHeight:44,flexShrink:0}:{}
 
   // memo + 把 toLowerCase 抽出迴圈：避免每次 resize/feedback/scanMode 重渲染都重掃全部商品
   const filtered = useMemo(() => {
@@ -134,6 +137,7 @@ export default function POSPage({ store, session }) {
             onClick={quickOpen}>
             {opening ? '開班中...' : '一鍵開班，開始收銀'}
           </button>
+          <button className="btn btn-ghost btn-sm" onClick={()=>setView('readiness')}>營業前檢查</button>
           <button className="btn btn-ghost btn-sm" onClick={()=>setView('shifts')}>
             查看班別管理（現金流水 / 歷史班別）
           </button>
@@ -145,10 +149,10 @@ export default function POSPage({ store, session }) {
   return (
     <div style={ps.root} tabIndex={0} onKeyDown={handleKeyDown}>
       <div style={ps.left}>
-        <div style={ps.topBar}>
+        <div style={{...ps.topBar,...(isMobile?{padding:'10px 12px',gap:8}:{})}}>
           <div style={ps.searchWrap}>
             <Search size={16} color="var(--text-tertiary)"/>
-            <input ref={searchRef} style={ps.searchInput} value={search}
+            <input ref={searchRef} style={{...ps.searchInput,fontSize:isMobile?16:14}} value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder={isMobile ? "搜尋商品..." : "搜尋商品名稱 / 條碼 / 分類    (按 / 快速聚焦)"}/>
             {search && (
@@ -160,12 +164,12 @@ export default function POSPage({ store, session }) {
               <kbd style={{...ps.kbd, fontSize:10}}>/</kbd>
             )}
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={()=>setShowLookup(true)} title="查價 (F1)" style={{display:'flex', alignItems:'center', gap:4}}>
+          <button className="btn btn-ghost btn-sm" aria-label="查價" onClick={()=>setShowLookup(true)} title="查價 (F1)" style={{display:'flex', alignItems:'center', gap:4,...mobileAction}}>
             <Eye size={14}/>{!isMobile && <span>查價</span>}
             {!isMobile && <kbd style={ps.kbd}>F1</kbd>}
           </button>
           {heldOrders.length > 0 && (
-            <button className="btn btn-ghost btn-sm" onClick={()=>setShowHeld(true)} style={{display:'flex', alignItems:'center', gap:4, color:'var(--gold)'}}>
+            <button className="btn btn-ghost btn-sm" aria-label="取回掛單" onClick={()=>setShowHeld(true)} style={{display:'flex', alignItems:'center', gap:4, color:'var(--gold)',...mobileAction}}>
               <Pause size={14}/>{!isMobile && <span>掛單</span>}
               <span className="badge badge-gold" style={{marginLeft:2}}>{heldOrders.length}</span>
             </button>
@@ -183,9 +187,10 @@ export default function POSPage({ store, session }) {
           )}
           {/* 手機/PWA 相機掃描 */}
           <button className="btn btn-ghost btn-sm" onClick={() => setShowCamera(true)}
+            aria-label="相機掃描"
             style={{
               gap:6, border:'1px solid var(--border-subtle)',
-              color:'var(--text-secondary)', background:'var(--bg-raised)',
+              color:'var(--text-secondary)', background:'var(--bg-raised)',...mobileAction,
             }}
             title="用手機相機掃條碼">
             <Camera size={15}/>
@@ -257,7 +262,7 @@ export default function POSPage({ store, session }) {
       )}
 
       {isMobile && cartCount > 0 && !showCart && (
-        <button onClick={() => setShowCart(true)} style={ps.fab}>
+        <button aria-label="開啟購物車" onClick={() => setShowCart(true)} style={ps.fab}>
           <ShoppingCart size={20} color="#fff"/>
           <span style={ps.fabBadge}>{cartCount}</span>
         </button>
@@ -266,14 +271,14 @@ export default function POSPage({ store, session }) {
       {isMobile && showCart && (
         <>
           <div style={ps.mobileOverlay} onClick={() => setShowCart(false)}/>
-          <div style={ps.mobileCart}>
+          <div style={{...ps.mobileCart,height:Math.min(700,visibleViewport.height*.9),bottom:visibleViewport.bottom}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',borderBottom:'1px solid var(--border-dim)'}}>
               <span style={{fontWeight:600,fontSize:15}}>購物車</span>
-              <button onClick={() => setShowCart(false)} style={{padding:4}}>
+              <button aria-label="關閉購物車" onClick={() => setShowCart(false)} style={{padding:10,minWidth:44,minHeight:44}}>
                 <X size={18} color="var(--text-secondary)"/>
               </button>
             </div>
-            <div style={{flex:1,overflow:'auto'}}>
+            <div style={{flex:1,minHeight:0,overflow:'hidden'}}>
               <CartPanel cart={cart} cartSubtotal={cartSubtotal} activeMember={activeMember}
                 onUpdateQty={updateCartQty} onRemove={removeFromCart} onClear={clearCart}
                 onCheckout={handleCheckout}
@@ -377,12 +382,13 @@ const ps = {
   },
   searchWrap:{
     flex:1, display:'flex', alignItems:'center', gap:10,
+    minWidth:0,
     background:'var(--bg-base)',
     border:'1.5px solid var(--border-subtle)',
     borderRadius:'var(--r2)', padding:'10px 14px',
     transition:'border-color var(--t2), box-shadow var(--t2)',
   },
-  searchInput:{ flex:1, background:'none', fontSize:14, color:'var(--text-primary)', fontWeight:500 },
+  searchInput:{ flex:1, minWidth:0, width:'100%', background:'none', fontSize:14, color:'var(--text-primary)', fontWeight:500 },
   kbd:{
     fontFamily:'var(--font-mono)', fontSize:10, fontWeight:600,
     padding:'2px 6px', borderRadius:'var(--r1)',
@@ -470,7 +476,7 @@ const ps = {
   },
   mobileCart:{
     position:'fixed', bottom:0, left:0, right:0, zIndex:201,
-    maxHeight:'82vh', background:'var(--bg-raised)',
+    maxHeight:'100dvh', background:'var(--bg-raised)',
     borderRadius:'var(--r5) var(--r5) 0 0',
     boxShadow:'var(--shadow-xl)',
     display:'flex', flexDirection:'column',

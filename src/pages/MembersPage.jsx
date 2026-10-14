@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo,useRef } from 'react'
 import { Plus, Pencil, Trash2, X, Check, Gift, TrendingUp, Phone, Wallet, RotateCcw, Cake } from 'lucide-react'
 import RefundModal from '../components/RefundModal'
 import { computeMemberRFM } from '../utils/analytics'
@@ -23,6 +23,7 @@ export default function MembersPage({ store, session }) {
   const [topupBonus, setTopupBonus] = useState('')
   const [topupMethod,setTopupMethod] = useState('cash')
   const [refundOrder,setRefundOrder] = useState(null)
+  const saving=useRef(false)
 
   // 重新從 list 取最新資料（避免顯示過期）
   const selectedLive = selected ? members.find(m => m.id === selected.id) || selected : null
@@ -42,23 +43,26 @@ export default function MembersPage({ store, session }) {
     return okSearch && okTier
   })
 
-  function startNew()  { setEditing('new');  setForm(EMPTY_FORM) }
+  function startNew()  { setEditing('new');  setForm({...EMPTY_FORM,_creationId:'m'+crypto.randomUUID()}) }
   function startEdit(m){ setEditing(m.id);   setForm({name:m.name, phone:m.phone, note:m.note||'', birthday:m.birthday||''}) }
 
-  function save() {
+  async function save() {
+    if(saving.current)return
     if (!form.name || !form.phone) return
-    if (editing === 'new') addMember(form)
-    else updateMember(editing, form)
-    setEditing(null)
+    saving.current=true
+    try{if (editing === 'new') await addMember(form)
+    else await updateMember(editing, form)
+    setEditing(null)}catch(e){alert('會員未確認保存，請保留內容並核對：'+e.message)}finally{saving.current=false}
   }
 
   async function handleTopup() {
-    if (!selectedLive) return
+    if (!selectedLive||saving.current) return
     const amt = parseFloat(topupAmt) || 0
-    const bonus = parseFloat(topupBonus) || 0
+    const bonus = session?.role==='owner'?(parseFloat(topupBonus) || 0):0
     if (amt <= 0) return
-    await topupMember(selectedLive.id, amt, bonus, topupMethod, session?.username || '')
-    setShowTopup(false); setTopupAmt(''); setTopupBonus(''); setTopupMethod('cash')
+    saving.current=true
+    try{await topupMember(selectedLive.id, amt, bonus, topupMethod, session?.username || '')
+    setShowTopup(false); setTopupAmt(''); setTopupBonus(''); setTopupMethod('cash')}catch(e){alert(e.message)}finally{saving.current=false}
   }
 
   async function handleRefund(origOrder, refundItems, opts) {
@@ -282,7 +286,7 @@ export default function MembersPage({ store, session }) {
             <FieldLabel>儲值金額 *</FieldLabel>
             <input className="field" type="number" value={topupAmt} onChange={e=>setTopupAmt(e.target.value)} placeholder="1000" autoFocus style={{marginBottom:12}}/>
             <FieldLabel>贈送金額（選填）</FieldLabel>
-            <input className="field" type="number" value={topupBonus} onChange={e=>setTopupBonus(e.target.value)} placeholder="例：儲千送百" style={{marginBottom:12}}/>
+            <input className="field" type="number" disabled={session?.role!=='owner'} value={topupBonus} onChange={e=>setTopupBonus(e.target.value)} placeholder={session?.role==='owner'?'例：儲千送百':'贈額需由老闆設定'} style={{marginBottom:12}}/>
             <FieldLabel>付款方式</FieldLabel>
             <div style={{display:'flex', gap:8, marginBottom:18}}>
               {[['cash','現金'],['card','電子']].map(([k,l]) => (
@@ -340,7 +344,7 @@ export default function MembersPage({ store, session }) {
               <div style={{fontSize:13, color:'var(--text-secondary)'}}>點數與歷史訂單關聯將一併移除</div>
             </div>
             <div style={{display:'flex', gap:10}}>
-              <button className="btn btn-danger" style={{flex:1}} onClick={()=>{deleteMember(confirmDel);setConfirmDel(null);setSelected(null)}}>確認刪除</button>
+              <button className="btn btn-danger" style={{flex:1}} onClick={async()=>{if(saving.current)return;saving.current=true;try{await deleteMember(confirmDel);setConfirmDel(null);setSelected(null)}catch(e){alert(e.message)}finally{saving.current=false}}}>確認刪除</button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setConfirmDel(null)}>取消</button>
             </div>
           </div>

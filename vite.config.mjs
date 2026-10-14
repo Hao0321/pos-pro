@@ -9,8 +9,11 @@ function offlineShell() {
   return {name:'pos-offline-shell',apply:'build',closeBundle(){
     const root=process.cwd(),output=path.join(root,'dist')
     const assets=fs.readdirSync(path.join(output,'assets')).filter(name=>/\.(js|css)$/.test(name)).sort()
-    const version=hash(Buffer.concat(assets.map(name=>fs.readFileSync(path.join(output,'assets',name)))))
-    const core=['./','./index.html','./manifest.webmanifest','./apple-touch-icon.png',...assets.map(name=>'./assets/'+name)]
+    const scenariosDir=path.join(output,'scenarios','donburi')
+    const scenarioFiles=fs.existsSync(scenariosDir)?fs.readdirSync(scenariosDir).filter(name=>/\.(html|css|mjs)$/.test(name)).sort().map(name=>'scenarios/donburi/'+name):[]
+    const bundleFiles=[...assets.map(name=>'assets/'+name),...scenarioFiles]
+    const version=hash(Buffer.concat(bundleFiles.flatMap(name=>[Buffer.from(name),fs.readFileSync(path.join(output,name))])))
+    const core=['./','./index.html','./manifest.webmanifest','./apple-touch-icon.png',...bundleFiles.map(name=>'./'+name)]
     const worker=fs.readFileSync(path.join(root,'public/sw.js'),'utf8').replace("'__BUILD_VERSION__'",JSON.stringify('pos-pro-'+version)).replace(/const CORE = .*\n/, 'const CORE = '+JSON.stringify(core)+'\n')
     fs.writeFileSync(path.join(output,'sw.js'),worker)
     const evidence=path.join(root,'.rd/build');fs.mkdirSync(evidence,{recursive:true})
