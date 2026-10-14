@@ -1,4 +1,5 @@
 import { useState, useMemo,useRef } from 'react'
+import { localDate } from '../utils/checkoutSafety.mjs'
 import {
   buildPnL, buildBalanceSheet, groupJournalByDate,
   exportJournalCSV, exportPnLCSV, downloadCSV,
@@ -29,7 +30,7 @@ export default function AccountingPage({ store }) {
   const y     = now.getFullYear()
   const m     = String(now.getMonth()+1).padStart(2,'0')
   const [from, setFrom] = useState(`${y}-${m}-01`)
-  const [to,   setTo]   = useState(now.toISOString().slice(0,10))
+  const [to,   setTo]   = useState(localDate(now))
 
   const pnl     = useMemo(() => buildPnL(allJournal, from, to), [allJournal, from, to])
   const balance = useMemo(() => buildBalanceSheet(allJournal, to), [allJournal, to])
@@ -323,7 +324,7 @@ const EXPENSE_PRESETS = [
 
 function ExpenseView({ addManualEntry }) {
   const saving=useRef(false),creationId=useRef('JM'+crypto.randomUUID())
-  const today = new Date().toISOString().slice(0,10)
+  const today = localDate()
   const [form, setForm] = useState({ date:today, description:'', amount:'', expenseAccount:'5202', payAccount:'1101', note:'' })
   const [saved, setSaved] = useState(false)
 

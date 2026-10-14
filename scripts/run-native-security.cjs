@@ -1,5 +1,6 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--operations-ui':['native-operations-ui.cjs','POS_OPERATIONS_UI_PASS',true],
   '--restaurant':['native-restaurant.cjs','POS_RESTAURANT_PASS',false],
   '--restaurant-ui':['native-restaurant-ui.cjs','POS_RESTAURANT_UI_PASS',true],
   '--pwa':['native-pwa.cjs','POS_PWA_PASS',true],

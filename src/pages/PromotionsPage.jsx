@@ -3,6 +3,16 @@ import { useState, useEffect,useRef } from 'react'
 import { Plus, X, Check, Tag, Clock, Percent, Gift } from 'lucide-react'
 import { writeAuditLog, sanitizeObject } from '../utils/security'
 import { isElectron, loadPromotions,dbAddPromotion,dbUpdatePromotion,dbDeletePromotion } from '../utils/dataAccess'
+import { localDate } from '../utils/checkoutSafety.mjs'
+
+function activeAt(p,now=Date.now()) {
+  const start=Date.parse(p.startAt),end=Date.parse(p.endAt)
+  return p.enabled&&Number.isFinite(start)&&Number.isFinite(end)&&start<=now&&end>=now
+}
+function dateInput(value=new Date()) {
+  const date=new Date(value)
+  return Number.isFinite(date.getTime())?`${localDate(date)}T${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`:''
+}
 
 export const PROMO_TYPES = {
   threshold:  { label:'滿額折扣',    icon:'💰', desc:'消費滿 X 元折 Y 元' },
@@ -13,8 +23,8 @@ export const PROMO_TYPES = {
 
 // Apply all active promotions to cart, return discount amount + descriptions
 export function applyPromotions(cart, promotions, subtotal) {
-  const now    = new Date().toISOString()
-  const active = promotions.filter(p => p.enabled && p.startAt <= now && p.endAt >= now)
+  const now = Date.now()
+  const active = promotions.filter(p => activeAt(p,now))
   let   totalDiscount = 0
   const applied = []
 
@@ -110,20 +120,22 @@ export default function PromotionsPage({ store, session }) {
     setEditing('new')
     setForm({
       name:'', type, enabled:true, note:'',
-      startAt: new Date().toISOString().slice(0,16),
-      endAt:   new Date(Date.now()+30*864e5).toISOString().slice(0,16),
+      startAt: dateInput(),
+      endAt: dateInput(new Date(Date.now()+30*864e5)),
       condition: defaults[type],
     })
   }
 
   function startEdit(p) {
     setEditing(p.id)
-    setForm({...p, startAt:p.startAt.slice(0,16), endAt:p.endAt.slice(0,16)})
+    setForm({...p,startAt:dateInput(p.startAt),endAt:dateInput(p.endAt)})
   }
 
   async function saveForm() {
-    if (!form.name) return
-    const clean = { ...sanitizeObject(form), startAt:form.startAt+':00', endAt:form.endAt+':00' }
+    if (!form.name||saving.current) return
+    const start=Date.parse(form.startAt),end=Date.parse(form.endAt)
+    if(!Number.isFinite(start)||!Number.isFinite(end)||end<start){setError('請填寫有效的活動時間，結束時間不能早於開始時間');return}
+    const clean={...sanitizeObject(form),startAt:new Date(start).toISOString(),endAt:new Date(end).toISOString()}
     try{if (editing==='new') {
       const n = { ...clean, id:newId.current }
       await save([...promotions.filter(p=>p.id!==n.id), n])
@@ -135,8 +147,8 @@ export default function PromotionsPage({ store, session }) {
     }catch(e){setError(e.message)}
   }
 
-  const now    = new Date().toISOString()
-  const active = promotions.filter(p=>p.enabled && p.startAt<=now && p.endAt>=now)
+  const now=Date.now()
+  const active=promotions.filter(p=>activeAt(p,now))
 
   return (
     <div style={pm.root}>
@@ -166,7 +178,7 @@ export default function PromotionsPage({ store, session }) {
           <div style={{textAlign:'center', padding:'48px', color:'var(--text-tertiary)', fontSize:13}}>尚未建立任何促銷活動</div>
         )}
         {promotions.map(p => {
-          const isActive = p.enabled && p.startAt<=now && p.endAt>=now
+          const isActive=activeAt(p,now)
           const isExpired = p.endAt < now
           const info = PROMO_TYPES[p.type]
           return (
@@ -185,7 +197,7 @@ export default function PromotionsPage({ store, session }) {
                     {describeCondition(p)}
                   </div>
                   <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:3, fontFamily:'var(--font-mono)'}}>
-                    {p.startAt.slice(0,10)} ~ {p.endAt.slice(0,10)}
+                    {dateInput(p.startAt).slice(0,10)||'日期待核對'} ~ {dateInput(p.endAt).slice(0,10)||'日期待核對'}
                   </div>
                 </div>
                 <div style={{display:'flex', gap:6, alignItems:'center', flexShrink:0}}>

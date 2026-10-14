@@ -1,6 +1,6 @@
 # 營業可靠性與手機操作
 
-更新：2026-10-14，版本 2.7.0。所有店家、全部功能免費。本輪已修正量測中發現的問題；「已驗證範圍沒有尚未修正的可重現缺陷」不等於所有裝置、設備與外部服務永遠零 Bug。
+更新：2026-10-14，版本 2.7.1。所有店家、全部功能免費。本輪已修正量測中發現的問題；「已驗證範圍沒有尚未修正的可重現缺陷」不等於所有裝置、設備與外部服務永遠零 Bug。
 
 ## 共用店面與正式出餐
 
@@ -16,20 +16,22 @@
 - 混合付款的現金、非現金分別入帳；已製作取消的損耗按凍結單位成本計算，銷售退款後仍保留實際費用。已扣庫、入帳損耗不可直接刪除。
 - 備份保留所有資料集合、營業設定、明確零值、原時間、預訂與操作回執。相同時間的紀錄排序不再讓內容版本誤判改變；異常還原全數回滾。
 - 硬體偏好整批原子保存，失敗保留輸入並恢復按鈕；下載或列印指令送出要求實際確認，不顯示未取得的完成證明。
+- 損耗支援最多三位小數的原料數量，拒絕零值、負值及超過庫存；重複點擊只送一筆。保存失敗保留輸入，原編號重試確認後關閉原表單，避免再次扣庫。
+- 損耗月份、帳務起迄、費用及進貨日期按本地日曆一致處理；促銷日期輸入保留本地時間，保存成明確時間點，拒絕倒置期間，兼容舊本地時間紀錄。
 - 共用頁面返回與重新可見後恢復同步；電腦網路位址變更時更正選擇或要求重新啟動配對。營業前檢查按原料判斷可接量。
 - 出餐工作單優先顯示，接單表單按需展開；手機輸入、收款及取消面板跟隨可見視窗。
 
 ## 測量結果與範圍
 
-502 項專案測試通過：Vitest 384；原生 SQLite 12、交班 4、營業／進貨 10、共用 HTTPS 16、桌面 UI 5、PWA 離線 4、情境模板 SQLite 6、情境模板 UI 9、手機尺寸 UI 6、共用店面 UI 17、正式預訂 SQLite 19、正式預訂 UI 10。
+534 項專案測試通過：Vitest 407；原生 SQLite 12、交班 4、營業／進貨 10、共用 HTTPS 16、桌面 UI 5、PWA 離線 4、情境模板 SQLite 6、情境模板 UI 9、手機尺寸 UI 6、共用店面 UI 17、正式預訂 SQLite 19、正式預訂 UI 10、損耗與跨月營業 UI 9。
 
 實際 Electron／Chromium 使用正式前端、preload、IPC、HTTPS 及 SQLite，涵蓋 17 個桌面與手機路由、9 個設定面板、並行最後庫存、版本衝突、回覆遺失、空間拒絕、中途失敗、重啟、全量備份及退款損益。手機尺寸為 390px，另有收銀 360px／480px 可見視窗。所有資料庫、瀏覽器設定檔與憑證均為隔離測試。
 
-Code Cleanup 的 31 項通用正負控制另行計數；npm 查核為零已知 advisory。JavaScript 靜態圖另解析 150 個檔案、309 條依賴，未找到缺失引用或循環；唯一非字面載入是隔離列印測試的 mock，動態載入及第三方原生依賴仍須以實際執行驗證。這些結果不是全產品或部署資安認證。
+Code Cleanup 的 35 項通用正負控制另行計數；npm 查核為零已知 advisory。JavaScript 靜態圖另解析 150 個檔案、309 條依賴，未找到缺失引用或循環；唯一非字面載入是隔離列印測試的 mock，動態載入及第三方原生依賴仍須以實際執行驗證。這些結果不是全產品或部署資安認證。
 
 三個超過 1000 行的檔案已依責任拆分，維持原量尺。一般長度 REVIEW、通用工具未解析的完整跨語言圖及未配置的私公同步範圍保留原狀態；版本／tag 與交付另行核對，不以測試數蓋過缺口。
 
-原始資料、失敗重現、來源／程式雜湊、child exit、成功 marker、安裝包與 GitHub 交付收據保存在 `.rd/zero-known-bugs-20261014/`。前輪 453 項結果保存在 `.rd/full-verification-20261014/`，作為歷史量測。
+本輪跨月與原料損耗的失敗重現、來源／程式雜湊、child exit、成功 marker、安裝包與 GitHub 交付收據保存在 `.rd/operations-hardening-20261014/`。前輪 502 項結果保存在 `.rd/zero-known-bugs-20261014/`，453 項結果保存在 `.rd/full-verification-20261014/`，作為歷史量測。
 
 ## 使用限制與試賣前實機驗收
 
@@ -37,6 +39,6 @@ Code Cleanup 的 31 項通用正負控制另行計數；npm 查核為零已知 a
 - **獨立瀏覽器資料仍各自保存。** 獨立 PWA 可單機離線；要手機／電腦共用，須使用共用店面的配對入口，不會自動合併不同瀏覽器的 localStorage。
 - **正式預訂採全額收款與全單取消。** 部分預付、部分取消、加料組合、LINE 自動接單與外送平台串接仍未實作。促銷頁目前保存活動資料，結帳折扣由老闆手動套用。
 - **預訂使用完整 JSON 備份。** 既有雲端快照尚未涵蓋全部預訂與回執，啟用正式預訂後會拒絕不完整同步；部署中的 Supabase／LINE 等服務未驗收。共用店面不依賴雲端服務。
-- **安裝包未簽章、採人工更新。** 本機檔案與 GitHub Release 需分開核對，見 [2.7.0 安裝說明](INSTALLER_2_7_0.md)。原店面資料未被測試修改；未替使用者啟動防火牆、公網隧道、自動啟動或安裝憑證。
+- **安裝包未簽章、採人工更新。** 本機檔案與 GitHub Release 需分開核對，見 [2.7.1 安裝說明](INSTALLER_2_7_1.md)。原店面資料未被測試修改；未替使用者啟動防火牆、公網隧道、自動啟動或安裝憑證。
 
-開發者使用 Node 24，可執行 `npm test`、`npm run test:native`、`npm run test:desktop`、`npm run test:offline`、`npm run test:mobile`、`npm run test:shifts`、`npm run test:scenarios`、`npm run test:scenario-ui`、`npm run test:business`、`npm run test:shared`、`npm run test:shared-ui`、`npm run test:restaurant`、`npm run test:restaurant-ui`。原生 runner 要求真實 child exit 與成功 marker。
+開發者使用 Node 24，可執行 `npm test`、`npm run test:native`、`npm run test:desktop`、`npm run test:offline`、`npm run test:mobile`、`npm run test:shifts`、`npm run test:scenarios`、`npm run test:scenario-ui`、`npm run test:business`、`npm run test:shared`、`npm run test:shared-ui`、`npm run test:restaurant`、`npm run test:restaurant-ui`、`npm run test:operations-ui`。原生 runner 要求真實 child exit 與成功 marker。

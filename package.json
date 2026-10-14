@@ -1,6 +1,6 @@
 {
   "name": "pos-system",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "private": true,
   "description": "POS Pro — 零售收銀、庫存、會員、訂貨與複式記帳一體化系統",
   "author": "Chroma Street Studio <chromastreetstudio@gmail.com>",
@@ -24,6 +24,7 @@
     "test:shared-ui": "npm run build && node scripts/run-native-security.cjs --shared-ui",
     "test:restaurant": "node scripts/run-native-security.cjs --restaurant",
     "test:restaurant-ui": "npm run build && node scripts/run-native-security.cjs --restaurant-ui",
+    "test:operations-ui": "npm run build && node scripts/run-native-security.cjs --operations-ui",
     "test:scenarios": "node scripts/run-native-security.cjs --scenarios",
     "test:scenario-ui": "npm run build && node scripts/run-native-security.cjs --scenario-ui",
     "postinstall": "electron-builder install-app-deps"

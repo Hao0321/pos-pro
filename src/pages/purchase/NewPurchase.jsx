@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, lazy, Suspense } from "react"
 import { Plus, Check, X, ChevronRight, Zap, Camera } from "lucide-react"
 import { DEFAULT_CATEGORIES, CATEGORY_META, groupByCategory } from "../../utils/categories"
 import { computeSalesVelocity, suggestReorderQty } from "../../utils/analytics"
+import { localDate } from "../../utils/checkoutSafety.mjs"
 import { FL, ps } from "./controls.jsx"
 
 export const BarcodeScannerModal = lazy(() => import('../../components/BarcodeScannerModal'))
@@ -11,7 +12,7 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
   // AI: 近 30 天每日銷售速度
   const salesVelocity = useMemo(() => computeSalesVelocity(orders, 30), [orders])
   const [supplierId, setSupplierId] = useState('')
-  const [date,       setDate]       = useState(new Date().toISOString().slice(0,10))
+  const [date,       setDate]       = useState(() => localDate())
   const [items,      setItems]      = useState([])
   const [note,       setNote]       = useState('')
   const [addProdId,  setAddProdId]  = useState('')

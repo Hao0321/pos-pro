@@ -12,6 +12,7 @@ release/
 *.blockmap
 
 # local data & logs
+.rd/
 *.log
 pos-data.db
 pos-data.db-shm

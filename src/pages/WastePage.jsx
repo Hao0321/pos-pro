@@ -1,64 +1,86 @@
-import { useState, useMemo } from 'react'
-import { Trash2, Plus, AlertTriangle, Calendar, Package } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { Plus, AlertTriangle, Package } from 'lucide-react'
 import { exportXLS } from '../utils/exportXLS'
+import { localDate } from '../utils/checkoutSafety.mjs'
+import { quantityValue } from '../../electron/operationRules.mjs'
+import useVisibleViewport from '../hooks/useVisibleViewport'
 
 const REASONS = ['過期', '破損', '腐壞', '自用', '試吃樣品', '盤虧', '其他']
 
 export default function WastePage({ store, session }) {
-  const { products, wasteLog, recordWaste } = store
+  const { products, wasteLog, recordWaste, financialState } = store
+  const viewport = useVisibleViewport()
+  const busy = useRef(false), active = useRef(false), pendingId = useRef(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(''), [message, setMessage] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [productId, setProductId] = useState('')
   const [qty, setQty] = useState('')
   const [reason, setReason] = useState(REASONS[0])
   const [search, setSearch] = useState('')
-  const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0,7))
+  const [filterMonth, setFilterMonth] = useState(() => localDate().slice(0,7))
+
+  function confirmed(recovered=false) {
+    active.current=false;pendingId.current=null
+    setShowAdd(false);setProductId('');setQty('');setReason(REASONS[0]);setError('')
+    setMessage(recovered?'原編號損耗已確認保存，請勿再次記錄。':'損耗已保存並扣除庫存。')
+  }
+  useEffect(() => {
+    if(!active.current)return
+    if(financialState?.kind==='waste'&&financialState.phase!=='idle')pendingId.current=financialState.id
+    if(financialState?.phase==='idle'&&pendingId.current){
+      if(wasteLog.some(w=>w.id===pendingId.current))confirmed(true)
+      else {active.current=false;pendingId.current=null}
+    }
+  }, [financialState, wasteLog])
 
   const filtered = useMemo(() => {
     return wasteLog.filter(w => {
-      const okMonth = !filterMonth || w.time.startsWith(filterMonth)
+      const okMonth = !filterMonth || localDate(new Date(w.time)).startsWith(filterMonth)
       const okSearch = !search || w.productName?.includes(search) || w.reason?.includes(search)
       return okMonth && okSearch
     })
   }, [wasteLog, filterMonth, search])
 
-  const totalLoss = filtered.reduce((s,w) => s + (w.cost || 0) * Math.abs(w.qty), 0)
+  const loss = w => Math.round((w.cost || 0) * Math.abs(w.qty) * 100) / 100
+  const totalLoss = Math.round(filtered.reduce((s,w) => s + loss(w), 0)*100)/100
   const totalQty = filtered.reduce((s,w) => s + Math.abs(w.qty), 0)
 
   // 即期商品
   const expiringSoon = useMemo(() => {
-    const today0 = new Date(); today0.setHours(0,0,0,0)
+    const today0 = Date.parse(localDate()+'T00:00:00Z')
     return products.filter(p => {
-      if (!p.expiryDate) return false
-      const exp = new Date(p.expiryDate)
+      if (!p.expiryDate || !(p.stock > 0)) return false
+      const exp = Date.parse(p.expiryDate+'T00:00:00Z')
       const days = Math.floor((exp - today0) / 86400000)
       return days <= 7
     }).map(p => ({
       ...p,
-      daysLeft: Math.floor((new Date(p.expiryDate) - today0) / 86400000),
+      daysLeft: Math.floor((Date.parse(p.expiryDate+'T00:00:00Z') - today0) / 86400000),
     })).sort((a,b) => a.daysLeft - b.daysLeft)
   }, [products])
 
+  async function saveLoss(p, quantity, cause) {
+    if(busy.current)return
+    busy.current=true;setSaving(true);setError('');setMessage('')
+    try{
+      if(!p)throw Error('請選擇損耗商品')
+      quantityValue(quantity,'損耗數量',.001)
+      if(quantity>p.stock)throw Error('損耗數量超過目前可用庫存，請先核對')
+      active.current=true
+      const result=await recordWaste({productId:p.id,productName:p.name,qty:quantity,cost:p.cost||0,reason:cause,cashier:session?.username||''})
+      if(typeof result?.id!=='string'||!result.id)throw Error('損耗保存回覆不完整，請核對原編號')
+      confirmed()
+    }catch(e){setError(e.message||'損耗保存尚未確認，請保留內容並核對原編號')}
+    finally{busy.current=false;setSaving(false)}
+  }
   async function handleAdd() {
-    const p = products.find(x => x.id === productId)
-    if (!p || !qty) return
-    await recordWaste({
-      productId: p.id,
-      productName: p.name,
-      qty: parseInt(qty) || 0,
-      cost: p.cost || 0,
-      reason,
-      cashier: session?.username || '',
-    })
-    setShowAdd(false); setProductId(''); setQty(''); setReason(REASONS[0])
+    await saveLoss(products.find(x=>x.id===productId),Number(qty),reason)
   }
 
   async function handleQuickAdd(p) {
-    if (!confirm(`記錄 1 件「${p.name}」過期？`)) return
-    await recordWaste({
-      productId: p.id, productName: p.name, qty: 1,
-      cost: p.cost || 0, reason: '過期',
-      cashier: session?.username || '',
-    })
+    if (busy.current || !confirm(`記錄「${p.name}」1 個庫存單位過期？`)) return
+    await saveLoss(p,1,'過期')
   }
 
   function exportExcel() {
@@ -71,7 +93,7 @@ export default function WastePage({ store, session }) {
         w.productName,
         Math.abs(w.qty),
         w.cost || 0,
-        (w.cost || 0) * Math.abs(w.qty),
+        loss(w),
         w.reason,
         w.cashier || '',
       ])
@@ -82,6 +104,8 @@ export default function WastePage({ store, session }) {
 
   return (
     <div style={ws.root}>
+      {!showAdd&&error&&<p role="alert" style={{color:'var(--red)',marginBottom:12}}>{error}</p>}
+      {message&&<p role="status" style={{marginBottom:12}}>{message}</p>}
       <div style={ws.header}>
         <div>
           <h2 style={{fontSize:20, fontWeight:600}}>損耗管理</h2>
@@ -89,7 +113,7 @@ export default function WastePage({ store, session }) {
             記錄過期、破損、自用等庫存損耗
           </div>
         </div>
-        <button className="btn btn-primary" onClick={()=>setShowAdd(true)} style={{display:'flex',alignItems:'center',gap:6}}>
+        <button disabled={saving} className="btn btn-primary" onClick={()=>{setError('');setMessage('');setShowAdd(true)}} style={{display:'flex',alignItems:'center',gap:6}}>
           <Plus size={16}/> 新增損耗
         </button>
       </div>
@@ -109,7 +133,7 @@ export default function WastePage({ store, session }) {
               }}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4}}>
                   <div style={{fontSize:13, fontWeight:500, flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name}</div>
-                  <button onClick={()=>handleQuickAdd(p)} style={{padding:'2px 8px', fontSize:10, color:'var(--red)', background:'none', border:'1px solid var(--red)', borderRadius:4}}>報廢</button>
+                  <button disabled={saving} onClick={()=>handleQuickAdd(p)} style={{padding:8,minWidth:44,minHeight:44,fontSize:12,color:'var(--red)',background:'none',border:'1px solid var(--red)',borderRadius:4}}>報廢</button>
                 </div>
                 <div style={{fontSize:11, color:'var(--text-secondary)'}}>
                   庫存 {p.stock} · 到期 {p.expiryDate}
@@ -151,7 +175,7 @@ export default function WastePage({ store, session }) {
             <div>無損耗紀錄</div>
           </div>
         ) : (
-          <table style={{width:'100%', fontSize:13, borderCollapse:'collapse'}}>
+          <div style={{overflowX:'auto'}}><table style={{width:'100%',minWidth:650,fontSize:13,borderCollapse:'collapse'}}>
             <thead>
               <tr>
                 <th style={ws.th}>時間</th>
@@ -171,7 +195,7 @@ export default function WastePage({ store, session }) {
                   <td style={ws.td}>{w.productName}</td>
                   <td style={{...ws.td, textAlign:'right', fontFamily:'var(--font-mono)'}}>{Math.abs(w.qty)}</td>
                   <td style={{...ws.td, textAlign:'right', fontFamily:'var(--font-mono)', color:'var(--text-secondary)'}}>{(w.cost||0).toLocaleString()}</td>
-                  <td style={{...ws.td, textAlign:'right', fontFamily:'var(--font-mono)', color:'var(--red)', fontWeight:500}}>{((w.cost||0)*Math.abs(w.qty)).toLocaleString()}</td>
+                  <td style={{...ws.td, textAlign:'right', fontFamily:'var(--font-mono)', color:'var(--red)', fontWeight:500}}>{loss(w).toLocaleString()}</td>
                   <td style={ws.td}><span className="badge badge-amber">{w.reason}</span></td>
                   <td style={ws.td}>{w.cashier}</td>
                   <td style={ws.td}>
@@ -180,33 +204,34 @@ export default function WastePage({ store, session }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 
       {showAdd && (
         <>
-          <div style={{position:'fixed',inset:0,background:'rgba(23,37,60,0.40)',zIndex:998}} onClick={()=>setShowAdd(false)}/>
-          <div style={{position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', background:'var(--bg-raised)', borderRadius:12, width:420, maxWidth:'90vw', boxShadow:'var(--shadow-lg)', zIndex:999}}>
-            <div style={{padding:'14px 18px', borderBottom:'1px solid var(--border-dim)', fontSize:15, fontWeight:600}}>記錄損耗</div>
+          <div style={{position:'fixed',inset:0,background:'rgba(23,37,60,0.40)',zIndex:998}} onClick={()=>!saving&&setShowAdd(false)}/>
+          <div role="dialog" aria-modal="true" aria-labelledby="waste-dialog-title" style={{position:'fixed',top:viewport.top+viewport.height/2,left:'50%',transform:'translate(-50%,-50%)',background:'var(--bg-raised)',borderRadius:12,width:420,maxWidth:'90vw',maxHeight:viewport.height*.9,overflowY:'auto',boxShadow:'var(--shadow-lg)',zIndex:999}}>
+            <div style={{padding:'10px 18px',borderBottom:'1px solid var(--border-dim)',display:'flex',alignItems:'center',justifyContent:'space-between',fontSize:15,fontWeight:600}}><span id="waste-dialog-title">記錄損耗</span><button aria-label="關閉損耗表單" disabled={saving} onClick={()=>setShowAdd(false)} style={{minWidth:44,minHeight:44}}>✕</button></div>
             <div style={{padding:18}}>
+              {error&&<p role="alert" style={{color:'var(--red)',marginBottom:12}}>{error}</p>}
               <div style={{marginBottom:10}}>
-                <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>商品</div>
-                <select className="field" value={productId} onChange={e=>setProductId(e.target.value)} autoFocus>
+                <label htmlFor="waste-product" style={{fontSize:12,color:'var(--text-tertiary)'}}>商品</label>
+                <select id="waste-product" disabled={saving} className="field" style={{fontSize:16,minHeight:44}} value={productId} onChange={e=>setProductId(e.target.value)} autoFocus>
                   <option value="">— 請選擇 —</option>
                   {products.map(p => <option key={p.id} value={p.id}>{p.name} (庫存 {p.stock})</option>)}
                 </select>
               </div>
               <div style={{marginBottom:10}}>
-                <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>數量</div>
-                <input className="field" type="number" value={qty} onChange={e=>setQty(e.target.value)} placeholder="0"/>
+                <label htmlFor="waste-quantity" style={{fontSize:12,color:'var(--text-tertiary)'}}>數量（與庫存相同單位，最多三位小數）</label>
+                <input id="waste-quantity" disabled={saving} className="field" style={{fontSize:16,minHeight:44}} type="number" inputMode="decimal" min="0.001" step="0.001" value={qty} onChange={e=>setQty(e.target.value)} placeholder="0"/>
               </div>
               <div style={{marginBottom:10}}>
                 <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>原因</div>
                 <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:6}}>
                   {REASONS.map(r => (
-                    <button key={r} onClick={()=>setReason(r)} style={{
-                      padding:'8px 4px', fontSize:12, borderRadius:6,
+                    <button disabled={saving} key={r} onClick={()=>setReason(r)} style={{
+                      padding:'8px 4px',minHeight:44,fontSize:12,borderRadius:6,
                       background: reason===r?'var(--gold)':'var(--bg-overlay)',
                       color: reason===r?'#fff':'var(--text-secondary)',
                       border:`1px solid ${reason===r?'var(--gold)':'var(--border-subtle)'}`,
@@ -214,7 +239,7 @@ export default function WastePage({ store, session }) {
                   ))}
                 </div>
               </div>
-              <button className="btn btn-primary" style={{width:'100%', padding:12, marginTop:8}} disabled={!productId || !qty} onClick={handleAdd}>記錄</button>
+              <button className="btn btn-primary" style={{width:'100%',padding:12,minHeight:44,marginTop:8}} disabled={saving||!productId||qty===''} onClick={handleAdd}>{saving?'保存中…':'記錄'}</button>
             </div>
           </div>
         </>
@@ -225,7 +250,7 @@ export default function WastePage({ store, session }) {
 
 const ws = {
   root: { flex:1, overflowY:'auto', padding:'20px 24px', background:'var(--bg-base)' },
-  header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 },
+  header: { display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16,flexWrap:'wrap',gap:12 },
   card: {
     background:'var(--bg-raised)', border:'1px solid var(--border-dim)',
     borderRadius:12, padding:'18px 20px', boxShadow:'var(--shadow-sm)',

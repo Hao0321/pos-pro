@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react"
 import { writeAuditLog } from "../utils/security"
 import { isElectron, loadSuppliers, loadPurchases, dbAddPurchase, dbUpdatePurchase } from "../utils/dataAccess"
 import { canonicalSignature } from "../../electron/operationRules.mjs"
+import { localDate } from "../utils/checkoutSafety.mjs"
 import { poItemKey, ps } from "./purchase/controls.jsx"
 import { PurchaseList, ReceiveModal } from "./purchase/PurchaseList.jsx"
 import { NewPurchase } from "./purchase/NewPurchase.jsx"
@@ -89,7 +90,7 @@ export default function PurchasePage({ store, session }) {
         const target = purchases.find(p => p.id === id)
         if (!target) return
         // 保底：部分到貨不改 status（否則「補收到貨」按鈕會消失、貨永遠收不齊）
-        const updatedPo = { ...target, paidDate: new Date().toISOString().slice(0,10), status: target.status === 'partial' ? 'partial' : 'paid' }
+        const updatedPo = { ...target, paidDate: localDate(), status: target.status === 'partial' ? 'partial' : 'paid' }
         const updated = purchases.map(p => p.id === id ? updatedPo : p)
         try {await persistPurchase(updatedPo);savePurchases(updated)}catch {return}
         writeAuditLog('PURCHASE_PAY', session, { poId:id })

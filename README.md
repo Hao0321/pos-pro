@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-2.7.0-b8895a">
+  <img alt="version" src="https://img.shields.io/badge/version-2.7.1-b8895a">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20PWA-555">
   <img alt="tests" src="https://img.shields.io/badge/tests-vitest%20%2B%20native-3f9c5e">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
@@ -20,7 +20,7 @@
 
 ## 這是什麼
 
-目前版本：v2.7.0。加入正式預訂出餐、原料預留與手機／電腦共用店面，並修正收款回執、交班、進貨、盤點、備份與帳務問題。Windows 安裝檔未簽章；本機安裝包與 GitHub Release 的交付範圍見 [2.7.0 安裝說明](docs/INSTALLER_2_7_0.md)。
+目前版本：v2.7.1。正式預訂出餐、原料預留與手機／電腦共用店面，加入小數原料損耗、保存失敗與原編號復原、跨日／跨月帳務及活動時間修正。Windows 安裝檔未簽章；本機安裝包與 GitHub Release 的交付範圍見 [2.7.1 安裝說明](docs/INSTALLER_2_7_1.md)。
 
 POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模與店型，不設訂閱或進階功能解鎖費。資料預設存在本機（桌面版走 SQLite、瀏覽器版走 localStorage），雲端同步是選用。
 
