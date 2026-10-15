@@ -3,6 +3,12 @@
   "protocol": "pos-document-draft/v1",
   "portableProtocol": "business-document/v1",
   "portableSchema": "/agent/business-document-v1.schema.json",
+  "exchangeProfiles": [
+    {"protocol":"business-party/v1","schema":"/agent/business-party-v1.schema.json","purpose":"share a store identifier and display name; not identity authentication"},
+    {"protocol":"business-catalogue/v1","schema":"/agent/business-catalogue-v1.schema.json","purpose":"public reference prices, not an order"},
+    {"protocol":"business-quote/v1","schema":"/agent/business-quote-v1.schema.json","purpose":"recipient-specific immutable quotation; human-reviewed purchase import"}
+  ],
+  "publicCatalogue": {"path":"/api/catalogue","surface":"existing customer ordering server when started; no automatic publication","prices":"TWD reference prices; no costs or other customers' quotes"},
   "schema": "/agent/document-draft-v1.schema.json",
   "guide": "/llms.txt",
   "context": {"surface": "authenticated application browser or desktop preload", "method": "window.electronAPI.db.getAgentContext()", "authentication": "existing login and paired-device session; no credentials in drafts"},

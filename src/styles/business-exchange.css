@@ -1,0 +1,30 @@
+.exchange-page{overflow:auto;height:100%;scroll-behavior:smooth}
+.exchange-container{max-width:1000px;margin:0 auto;padding:clamp(14px,3vw,32px);display:grid;gap:20px}
+.exchange-page h1{font-size:clamp(30px,4vw,48px);margin:4px 0 12px}
+.exchange-page h2{font-size:23px;margin:0 0 12px}.exchange-page h3{font-size:21px;margin:26px 0 14px}
+.exchange-page p{line-height:1.65}.exchange-eyebrow{font-size:12px;letter-spacing:.16em;color:var(--blue)}
+.exchange-page .card{padding:clamp(16px,3vw,26px);min-width:0}
+.exchange-intro,.exchange-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.exchange-page .btn,.exchange-page summary{min-height:48px;white-space:normal;line-height:1.4}
+.exchange-page .field{width:100%;min-height:48px;font-size:18px;min-width:0}
+.exchange-page textarea.field{min-height:90px}
+.exchange-page label{display:grid;gap:7px;line-height:1.6;margin:10px 0;font-size:17px}
+.exchange-page fieldset{border:0;min-width:0;padding:0;margin:0}
+.exchange-hint{font-size:15px;color:var(--text-secondary)}
+.exchange-id{overflow-wrap:anywhere;font-size:13px;font-family:var(--font-mono)}
+.exchange-products{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+.exchange-products button{text-align:left;display:grid;gap:6px;padding:12px;overflow-wrap:anywhere}
+.exchange-products button span,.exchange-line strong span{display:block;font-size:14px;color:var(--text-secondary)}
+.exchange-line{display:grid;grid-template-columns:minmax(130px,1fr) 110px 140px auto;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--border)}
+.exchange-check{display:flex!important;align-items:center;gap:12px!important;padding:8px 0;min-height:48px}
+.exchange-check input{width:24px;height:24px;flex:none;accent-color:var(--blue)}
+.exchange-confirm{margin-top:20px;display:flex;gap:20px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.exchange-total{font-size:clamp(28px,4vw,38px);color:var(--text-primary);overflow-wrap:anywhere}
+.exchange-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.exchange-error{background:var(--red-dim);color:var(--red);padding:14px;border-radius:8px}
+.exchange-history-row{padding:16px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.exchange-history-row>div{flex:1;min-width:160px}.exchange-history-row p{margin:5px 0}
+.exchange-page summary{cursor:pointer;font-size:19px;display:list-item;padding:10px 0}
+.exchange-packet textarea.field{min-height:180px;font-family:var(--font-mono);font-size:14px}
+.exchange-catalogue-list{max-height:350px;overflow:auto}
+@media(max-width:680px){.exchange-intro,.exchange-columns{grid-template-columns:1fr}.exchange-products{grid-template-columns:1fr 1fr}.exchange-line{grid-template-columns:1fr 1fr}.exchange-line>strong{grid-column:1/-1}.exchange-line>.btn{grid-column:1/-1}.exchange-confirm{display:grid}.exchange-confirm>.btn{width:100%}.exchange-page label{font-size:18px}.exchange-page .btn{font-size:17px}.exchange-actions{display:grid;grid-template-columns:1fr}.exchange-page .field{font-size:18px}}

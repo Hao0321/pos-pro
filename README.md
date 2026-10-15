@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-2.11.0-2b20f4">
+  <img alt="version" src="https://img.shields.io/badge/version-2.12.0-2b20f4">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20PWA-555">
   <img alt="tests" src="https://img.shields.io/badge/tests-vitest%20%2B%20native-3f9c5e">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
@@ -23,7 +23,7 @@
 
 ## 這是什麼
 
-目前版本：v2.11.0。產品以 **POS Pro｜ERP・點餐・CRM** 呈現，採用鈷藍、黑、米白的全新介面與桌面／手機 Logo；從收銀延伸到採購與應付、庫存會計、顧客點餐與預訂出餐、會員經營。Agent 回覆貼上就能核對單價與數量，缺少資料會引導補填；離開或重新載入後可接回同一張未完成草稿。完整 ERP 與 CRM **持續開發中**，銷售應收、多倉批次、關帳稅務、人事薪資、企業客戶與商機管理等仍有未完成能力，見 [完整目標清單](product-capabilities.json)。本機交付與限制見 [2.11.0 安裝說明](docs/INSTALLER_2_11_0.md)。
+目前版本：v2.12.0。產品以 **POS Pro｜ERP・點餐・CRM** 呈現，採用鈷藍、黑、米白的全新介面與桌面／手機 Logo；從收銀延伸到採購與應付、庫存會計、顧客點餐與預訂出餐、會員經營。Agent 回覆貼上就能核對單價與數量，缺少資料會引導補填；離開或重新載入後可接回同一張未完成草稿。完整 ERP 與 CRM **持續開發中**，銷售應收、多倉批次、關帳稅務、人事薪資、企業客戶與商機管理等仍有未完成能力，見 [完整目標清單](product-capabilities.json)。本機交付與限制見 [2.12.0 安裝說明](docs/INSTALLER_2_12_0.md)。
 
 | 整合範圍 | 目前提供的主要流程 |
 | --- | --- |
@@ -32,6 +32,8 @@
 | 會員 CRM | 會員檔案、點數與分級、儲值、生日提醒、RFM 客群分析 |
 
 新增可切換的 **明亮簡約** 與原有 **海報風格**。登入前即可選繁體中文、English、日本語、简体中文；偏好依裝置保存。切換會保留購物車、Agent 草稿與未完成輸入，商品名稱、售價、TWD 幣別和帳本不改寫。翻譯仍待母語者校對，詳見 [語言與外觀](docs/LANGUAGE_AND_STYLE.md)。
+
+2.12.0 新增「報價與價目表」：三步開立客戶專屬報價、各客戶單價分開記住、保留修訂歷史，並可下載勾選商品的一般售價目錄。收到報價後由買方核對建立採購，不自動入庫或付款。格式公開，可由其他 ERP／Agent 使用；檔案沒有身份簽章或加密，詳見 [使用流程與協議](docs/BUSINESS_EXCHANGE.md)。
 
 ![明亮簡約英文工作區](docs/bright-workspace-2.11.png)
 

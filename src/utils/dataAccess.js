@@ -7,10 +7,13 @@ import {commitBrowserInventory} from './browserInventory'
 import {commitBrowserRestaurant,browserRestaurantState} from './browserRestaurant'
 import {makeAgentContext} from '../../electron/agentDraftRules.mjs'
 import {readAgentMappings,mergeAgentMappings} from '../../electron/businessDocument.mjs'
+import {retainAuditLogs} from './auditRetention'
 // 資料存取抽象層 — 自動判斷 Electron (SQLite) 或 瀏覽器 (localStorage)
 export const isElectron = !!(typeof window !== 'undefined' && window.electronAPI)
 export const isSharedStore = !!(typeof window !== 'undefined' && window.electronAPI?.sharedStore)
 export async function applyInventoryOperation(request,actor){return isElectron?window.electronAPI.db.applyInventoryOperation(request):commitBrowserInventory(request,actor)}
+export async function getExchangeContext(actor){return isElectron?window.electronAPI.db.getExchangeContext():(await import('./browserExchange')).getBrowserExchangeContext(actor)}
+export async function applyExchangeOperation(request,actor){return isElectron?window.electronAPI.db.applyExchangeOperation(request):(await import('./browserExchange')).commitBrowserExchange(request,actor)}
 export async function loadRestaurantState(){return isElectron?window.electronAPI.db.getRestaurantState():browserRestaurantState()}
 export async function applyRestaurantOperation(request,actor){return isElectron?window.electronAPI.db.applyRestaurantOperation(request):commitBrowserRestaurant(request,actor)}
 export async function getAgentContext(actor){
@@ -178,13 +181,13 @@ export async function loadAuditLogs(filters) {
   return loadLS('pos_audit_log', [])
 }
 export async function writeAuditLog(entry) {
+  if(String(entry?.id||'').startsWith('exchange:')||entry?.action==='business-quote')throw Error('報價回執只能由正式報價流程建立')
   if(String(entry.id||'').startsWith('stock-operation:')||entry.action==='INVENTORY_OPERATION'||String(entry.id||'').startsWith('scenario-template:')||entry.action==='SCENARIO_TEMPLATE_APPLY')throw Error('交易回執只能由正式异動流程建立')
   if (isElectron) return window.electronAPI.db.writeAuditLog(entry)
   // 瀏覽器模式: 寫入 localStorage
   const logs = loadLS('pos_audit_log', [])
   logs.unshift(entry)
-  if (logs.length > 2000) logs.length = 2000
-  saveLS('pos_audit_log', logs)
+  saveLS('pos_audit_log', retainAuditLogs(logs,2000))
 }
 
 // ===== Backups =====
@@ -212,10 +215,11 @@ export async function getSetting(key) {
   return loadLS('pos_settings_' + key, null)
 }
 export async function setSetting(key, value) {
+  if(key==='businessExchangeV1')throw Error('報價歷史只能由正式報價或還原流程保存')
   if (isElectron) return window.electronAPI.settings.set(key, value)
   saveLS('pos_settings_' + key, value)
 }
-export async function setSettings(values){if(isElectron)return window.electronAPI.settings.setMany(values);writeBusinessSettings(Object.fromEntries(Object.entries(values).map(([k,v])=>[k,JSON.stringify(v)])));return {success:true}}
+export async function setSettings(values){if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');if(isElectron)return window.electronAPI.settings.setMany(values);writeBusinessSettings(Object.fromEntries(Object.entries(values).map(([k,v])=>[k,JSON.stringify(v)])));return {success:true}}
 export async function getAllSettings() {
   if (isElectron) return window.electronAPI.settings.getAll()
   return {}

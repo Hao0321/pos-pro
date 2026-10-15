@@ -23,6 +23,8 @@ if(sharedStoreMode&&!window.electronAPI){
   async function rpc(method,...args){await(boot||=initialize().catch(e=>{boot=null;throw e}));const response=await post('rpc',{method,args});if(method==='auth:session'&&!response.result)signal('pos-shared-auth-expired');return response.result}
   const dbMethods=['rememberAgentMappings','getAgentContext','getProducts','addProduct','updateProduct','deleteProduct','findByBarcode','getMembers','addMember','updateMember','deleteMember','getOrders','getOrderItems','checkout','checkoutReceipt','refundOrder','getCustomerOrders','updateOrderStatus','getSuppliers','addSupplier','updateSupplier','deleteSupplier','getPurchases','addPurchase','updatePurchase','deletePurchase','getPromotions','addPromotion','updatePromotion','deletePromotion','getManualJournal','addManualEntry','deleteManualEntry','getAuditLogs','writeAuditLog','getHeldOrders','addHeldOrder','deleteHeldOrder','getShifts','getOpenShift','openShift','closeShift','getCashLog','addCashLog','getWasteLog','addWaste','getTopups','addTopup','applyInventoryOperation','applyScenarioTemplate','getScenarioTemplateReceipt','getBackups','createBackup','exportData','getStoreSnapshot']
   const db=Object.fromEntries(dbMethods.map(method=>[method,(...args)=>rpc('db:'+method,...args)]))
+  db.getExchangeContext=()=>rpc('db:getExchangeContext')
+  db.applyExchangeOperation=input=>rpc('db:applyExchangeOperation',input)
   db.getRestaurantState=()=>rpc('db:getRestaurantState')
   db.applyRestaurantOperation=input=>rpc('db:applyRestaurantOperation',input)
   for(const method of ['migrateFromLocalStorage','importData','restoreBackup','deleteWaste','addOrder','getUsers','addUser','updateUser','deleteUser'])db[method]=async()=>{throw Error('此項管理操作請在店面電腦執行')}

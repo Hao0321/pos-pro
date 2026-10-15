@@ -17,6 +17,7 @@ const NAV = [
   { key:'devices',label:'共用店面',Icon:Users,perm:'settings.edit',accent:'teal' },
   { key:'inventory',  label:'庫存管理', Icon:Package,         perm:'inventory.view', accent:'blue' },
   { key:'purchase',   label:'進貨管理', Icon:Truck,           perm:'purchase.view', accent:'purple' },
+  { key:'exchange',label:'報價與價目表',Icon:ClipboardList,perm:'purchase.edit',accent:'blue' },
   { key:'waste',      label:'損耗管理', Icon:Trash2,          perm:'inventory.view', accent:'red' },
   { key:'stocktake',  label:'每日盤點', Icon:ClipboardList,   perm:'stocktake.view', accent:'amber' },
   { key:'promotions', label:'促銷活動', Icon:Tag,             perm:'promotions.view', accent:'pink' },

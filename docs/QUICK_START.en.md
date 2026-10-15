@@ -18,4 +18,12 @@ To share a store with a phone, start **Shared store** in the Windows app. Use th
 
 Language does not change currency or tax jurisdiction. This version retains the store's existing TWD/NT$ accounting rules. Your product names and notes stay exactly as entered. Full ERP and enterprise CRM remain in development. Translations still need native-speaker review.
 
-The current Windows build is unsigned and uses manual updates. Back up before updating. See the [installer notes](INSTALLER_2_11_0.md) and [language/style details](LANGUAGE_AND_STYLE.md).
+The current Windows build is unsigned and uses manual updates. Back up before updating. See the [installer notes](INSTALLER_2_12_0.md) and [language/style details](LANGUAGE_AND_STYLE.md).
+
+## Quotes and catalogues
+
+Search for **quote** on Home. In **Quotes & catalogues**, paste the buyer's store card, choose products and their prices, then confirm the all-inclusive TWD total and expiry date. Save the quote, then copy or download it to send yourself. Previous revisions stay available, and each customer's suggested prices are remembered separately.
+
+To buy, share **Copy my store card** with your supplier. Paste their quotation in **Quick entry**, check the product mapping, supplier, date and total, then confirm the purchase. Receiving goods and paying remain separate actions.
+
+The catalogue download contains only selected products and reference prices. A store card or recipient ID does not authenticate a company or encrypt the file. Verify the sender and recipient through your agreed channel. Third-party ERP/Agent support is available through the public JSON schemas; independent interoperability and native-speaker review remain open.

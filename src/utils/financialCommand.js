@@ -1,8 +1,9 @@
 import { browserStorage } from './browserStorage'
 import {PROCUREMENT_KINDS,isProcurement,procurementEvent,validateProcurement} from '../../electron/procurementRules.mjs'
 import {operationHeader} from '../../electron/operationRules.mjs'
+import {assertExchangeReceipt} from '../../electron/businessExchange.mjs'
 export const FINANCIAL_PENDING='pos_pending_financial_v1'
-const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt'}
+const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt'}
 for(const kind of PROCUREMENT_KINDS)fields[kind]='receipt'
 let running=false
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value
@@ -19,6 +20,7 @@ function assertReceipt(kind,request,result){
   finiteTree(result)
   const row=result?.[fields[kind]]
   if(result?.success!==true||row?.id!==request.id)throw Error('保存結果尚未確認：回覆缺少正確的異動編號')
+  if(kind==='exchange')assertExchangeReceipt(request,result)
   if(kind==='topup'&&(['memberId','amount','bonus','payMethod','shiftId'].some(k=>(row[k]??'')!==(request[k]??''))||result.member?.id!==request.memberId))throw Error('儲值保存結果尚未確認：回覆內容不符')
   if(kind==='refund'&&(row.refundOf!==request.refundOf||result.original?.id!==request.refundOf))throw Error('退款保存結果尚未確認：原單不符')
   if(kind==='cashlog'&&['shiftId','type','amount','reason'].some(k=>(row[k]??'')!==(request[k]??'')))throw Error('現金流水保存結果尚未確認：回覆內容不符')
@@ -39,6 +41,7 @@ function assertReceipt(kind,request,result){
       const po=result.purchase
       if(!isProcurement(po)||po.id!==(kind==='purchase-create'?request.purchase.id:request.purchaseId)||row.purchaseId!==po.id||!Number.isSafeInteger(row.purchaseVersion)||po.procurement.revision<row.purchaseVersion)throw Error('採購回覆缺少原進貨單或保存版本')
       validateProcurement(po)
+      if(kind==='purchase-create'&&JSON.stringify(canonical(po.procurement.sourceQuote??null))!==JSON.stringify(canonical(request.sourceQuote??null)))throw Error('採購回覆缺少正確的報價來源')
       if(JSON.stringify(canonical(procurementEvent(po,request)))!==JSON.stringify(canonical(row.document)))throw Error('採購回覆缺少正確的保存文件')
       if(kind==='purchase-return'){
         const expected=[...new Set(po.items.filter((_,i)=>request.quantities?.[i]>0).map(item=>item.productId))]
@@ -71,7 +74,7 @@ export async function executeFinancial(kind, input, persist,onState=()=>{},ident
   }
   notify('saving','保存中，請勿重複異動')
   let result
-  try {result=await persist(pending.request)} catch {throw new Error('保存結果尚未確認。請以原內容重試；系統會沿用原單號，勿重複付款或退款。')}
+  try {result=await persist(pending.request)} catch {throw new Error(kind==='exchange'?'報價保存結果尚未確認。請用原編號確認，先不要再開一張。':'保存結果尚未確認。請以原內容重試；系統會沿用原單號，勿重複付款或退款。')}
   if (result?.success===false && result.committed===false) {
     clearOriginal(pending)
     pending=null;notify('idle')
@@ -82,7 +85,7 @@ export async function executeFinancial(kind, input, persist,onState=()=>{},ident
   notify('idle')
   return result
   }catch(error){
-    if(browserStorage.getItem(FINANCIAL_PENDING))notify('uncertain','異動結果尚未確認，請以原編號核對或重試；不要重新收款或扣庫存')
+    if(browserStorage.getItem(FINANCIAL_PENDING))notify('uncertain',kind==='exchange'?'報價保存結果尚未確認。請用原編號確認，先不要再開一張。':'異動結果尚未確認，請以原編號核對或重試；不要重新收款或扣庫存')
     else notify('idle')
     throw error
   }finally{running=false}

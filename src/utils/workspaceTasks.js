@@ -7,6 +7,7 @@ export const WORKSPACE_TASKS=[
   {id:'quick',title:'幫我建單',detail:'點商品、貼內容，或交給 Agent。',view:'quick',perm:'pos.use',words:'開單 匯入 agent AI'},
   {id:'restaurant',title:'接預訂、準備出餐',detail:'預訂、現場與外送放在一起看。',view:'restaurant',perm:'pos.use',words:'丼飯 餐飲 交付 取餐'},
   {id:'purchase',title:'進貨、退貨、付款',detail:'從叫貨到收到貨、付清款項。',view:'purchase',perm:'purchase.view',words:'供應商 請款 應付 退款'},
+  {id:'exchange',title:'報價給客戶、分享價目表',detail:'選客戶與商品，保存報價，再交給對方。',view:'exchange',perm:'purchase.edit',words:'客戶價格 公開目錄 供應商 agent catalogue quote pricing'},
   {id:'shifts',title:'開始營業、收攤',detail:'確認零用金與這班實際現金。',view:'shifts',perm:'pos.use',words:'開班 交班 日結 關店'},
   {id:'inventory',title:'商品、庫存',detail:'新增商品，查看剩多少。',view:'inventory',perm:'inventory.view',words:'品項 售價 成本 缺貨'},
   {id:'readiness',title:'營業前檢查、備份',detail:'確認資料保存與手機連線。',view:'readiness',perm:'pos.use',words:'下載 安全 還原 離線'},
@@ -22,8 +23,8 @@ export const WORKSPACE_TASKS=[
   {id:'scenarios',title:'套用情境模板',detail:'先在演練空間試跑，再設定店面。',view:'scenarios',perm:'settings.edit',words:'丼飯 新手 試賣'},
 ]
 export const WORKSPACE_AREAS=[
-  {id:'crm',title:'顧客與點餐',code:'CRM',intro:'幫你照顧客人',detail:'會員、點數、儲值、點餐與預訂。',description:'會員、點數、儲值、點餐和預訂，讓接單與經營回頭客更方便。',taskIds:['members','orders','restaurant','quick','sale','promotions','reports']},
-  {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['sale','quick','inventory','purchase','shifts','stocktake','waste','accounting','reports','readiness','devices','settings','scenarios']},
+  {id:'crm',title:'顧客與點餐',code:'CRM',intro:'幫你照顧客人',detail:'會員、點數、儲值、點餐與預訂。',description:'會員、點數、儲值、點餐和預訂，讓接單與經營回頭客更方便。',taskIds:['members','orders','restaurant','exchange','quick','sale','promotions','reports']},
+  {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['sale','quick','exchange','inventory','purchase','shifts','stocktake','waste','accounting','reports','readiness','devices','settings','scenarios']},
 ]
 export function workspaceTasks(session,query='',area='all'){
   const terms=query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)

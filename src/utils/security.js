@@ -1,4 +1,5 @@
 import { browserStorage, DATA_KEYS, writeRecords } from './browserStorage'
+import {retainAuditLogs} from './auditRetention'
 // ═══════════════════════════════════════════════════════════════════
 // 資安核心模組 — POS Pro Security Layer
 // ═══════════════════════════════════════════════════════════════════
@@ -183,7 +184,7 @@ export function writeAuditLog(action, session, detail = {}) {
       // 瀏覽器: 寫入 localStorage
       const logs = readAuditLogs()
       logs.unshift(entry)
-      const trimmed = logs.slice(0, AUDIT_MAX)
+      const trimmed = retainAuditLogs(logs,AUDIT_MAX)
       browserStorage.setItem(AUDIT_KEY, JSON.stringify(trimmed))
     }
     return entry

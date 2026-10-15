@@ -2,6 +2,7 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
   // ===== Migration =====
   const migrateTx = db.transaction((data) => {
     require('./procurementRules.mjs').validateProcurementRecords(data.purchases||[],data.cashLog||[])
+    require('./businessExchange.mjs').validateExchangeSettings(data.settings||[],data.purchases||[],data.auditLog||[])
     const restaurantConfig=data.settings?.find(s=>s.key==='restaurantConfig')
     if(restaurantConfig)require('./restaurantRules.mjs').readRestaurantConfig(restaurantConfig.value,data.products||[])
     if(data.restaurantOrders||data.restaurantOperations){

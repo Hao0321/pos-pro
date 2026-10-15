@@ -19,6 +19,7 @@ import {
   addTopup, loadTopups,
   getSetting, setSetting,setSettings,
   applyInventoryOperation,
+  applyExchangeOperation,
   applyRestaurantOperation,
   loadRestaurantState,
 } from '../utils/dataAccess'
@@ -341,6 +342,13 @@ export function useStore(session){
     const result=await executeFinancial(kind,{...input,kind},request=>applyInventoryOperation(request,session),setFinancialState,identity)
     return applyInventoryResult(result)
   }
+  async function commitExchange(input){
+    if(dataError)throw Error(dataError)
+    if(checkoutRef.current.getState().phase!=='idle')throw Error('請先確認原收款交易')
+    const result=await executeFinancial('exchange',{...input,kind:'exchange'},request=>applyExchangeOperation(request,session),setFinancialState)
+    window.dispatchEvent(new CustomEvent('pos-exchange-operation',{detail:result}))
+    return result
+  }
   async function commitRestaurant(input,identity=null){
     if(dataError)throw Error(dataError)
     if(checkoutRef.current.getState().phase!=='idle')throw Error('請先確認原收款交易')
@@ -351,6 +359,7 @@ export function useStore(session){
   async function retryFinancial(){
     const pending=readPendingFinancial();if(!pending)return
     const ports={restaurant:r=>applyRestaurantOperation(r,session),refund:r=>dbRefund(r.refundOf,r),topup:addTopup,waste:addWaste,cashlog:addCashLog,stocktake:r=>applyInventoryOperation(r,session),receive:r=>applyInventoryOperation(r,session)}
+    ports.exchange=r=>applyExchangeOperation(r,session)
     for(const kind of PROCUREMENT_KINDS)ports[kind]=r=>applyInventoryOperation(r,session)
     const result=await executeFinancial(pending.kind,JSON.parse(pending.signature).input,ports[pending.kind],setFinancialState)
     if(pending.kind==='topup'){setMembers(p=>p.map(m=>m.id===result.member.id?result.member:m));setTopups(p=>[result.topup,...p.filter(t=>t.id!==result.topup.id)])}
@@ -359,6 +368,7 @@ export function useStore(session){
     if(['stocktake','receive',...PROCUREMENT_KINDS].includes(pending.kind))applyInventoryResult(result)
     if(pending.kind==='cashlog')window.dispatchEvent(new Event('pos-cash-operation'))
     if(pending.kind==='restaurant')await applyRestaurantResult(result)
+    if(pending.kind==='exchange')window.dispatchEvent(new CustomEvent('pos-exchange-operation',{detail:result}))
     return result
   }
 
@@ -469,7 +479,7 @@ export function useStore(session){
   const todayProfit= todayOrders.reduce((sum,o)=>sum+netSale(o)-orderCost(o,products),0)
 
   return {
-    products,members,orders,purchases,cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitInventory,commitRestaurant,restaurantConfig,
+    products,members,orders,purchases,cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitInventory,commitRestaurant,commitExchange,restaurantConfig,
     activeMember,setActiveMember:value=>{ensureCartEditable();setActiveMember(value)},
     addToCart,removeFromCart,updateCartQty,updateCartItemPrice,clearCart,stageQuickSale,
     cartSubtotal,cartCount,checkout,refund,

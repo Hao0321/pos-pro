@@ -1,12 +1,13 @@
 import {readRecords,writeRecords,withSalesLock} from './browserStorage'
 import {planInventory,inventoryReceipt,INVENTORY_PREFIX,INVENTORY_ACTION} from '../../electron/inventoryOperations.mjs'
+import {readExchangeTextSetting} from '../../electron/businessExchange.mjs'
 export function commitBrowserInventory(request,actor){
   if(!actor||!['owner','staff'].includes(actor.role)||request.kind!=='stocktake'&&actor.role!=='owner')throw Error('權限不足')
   return withSalesLock(()=>{
     let replay=false,historyChecked=false
     try{
       const saved=readRecords(),r=saved.data,key=INVENTORY_PREFIX+request.id
-      const data={products:r.pos2_products,purchases:r.pos_purchases,suppliers:r.pos_suppliers,openShift:r.pos2_shifts.find(s=>s.status==='open'),cashLogs:r.pos2_cash_log}
+      const data={products:r.pos2_products,purchases:r.pos_purchases,suppliers:r.pos_suppliers,openShift:r.pos2_shifts.find(s=>s.status==='open'),cashLogs:r.pos2_cash_log,storeId:readExchangeTextSetting(r.pos_business_settings,'sharedStoreId')}
       const old=r.pos_audit_log.find(l=>l.id===key)
       replay=!!old;historyChecked=true
       if(old){if(old.action!==INVENTORY_ACTION)throw Error('庫存回執需要核對');return inventoryReceipt(request,typeof old.detail==='string'?JSON.parse(old.detail):old.detail,data)}

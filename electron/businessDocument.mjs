@@ -14,7 +14,7 @@ export function mergeAgentMappings(old,input,products,actor){
   return readAgentMappings({...readAgentMappings(old),[sender]:{...own(readAgentMappings(old),sender),...input.entries}})
 }
 const sourceKey=row=>row.sku?'sku:'+row.sku:row.barcode?'barcode:'+row.barcode:'name:'+row.name
-export async function prepareBusinessDocument(doc,context,overrides={}){
+export async function prepareBusinessDocument(doc,context,overrides={},{skuIsLocal=true}={}){
   only(doc,['protocol','id','createdAt','sender','recipientStoreId','intent','currency','items','total','fulfilment','note'],'交換單據')
   if(doc.protocol!==BUSINESS_PROTOCOL||!['sale','restaurant','purchase'].includes(doc.intent))throw Error('交換協議版本或單據用途不支援')
   const externalId=text(doc.id,'外部單號',128);only(doc.sender,['id','name'],'來源公司');const senderId=text(doc.sender.id,'來源公司代碼',128)
@@ -30,9 +30,9 @@ export async function prepareBusinessDocument(doc,context,overrides={}){
     for(const key of ['sku','barcode','name'])if(row[key]!==undefined)text(row[key],'對方品項'+key,200)
     quantityValue(row.qty,'交換數量',.001);const unit=text(row.unit,'品項單位',30),key=sourceKey(row),override=own(overrides,key),remembered=own(mappings,key)
     let product=(override||remembered)?context.products.find(p=>p.id===(override||remembered)):null
-    const identified=context.products.filter(p=>row.sku&&(p.id===row.sku||p.sku===row.sku)||row.barcode&&p.barcode===row.barcode)
+    const identified=context.products.filter(p=>skuIsLocal&&row.sku&&(p.id===row.sku||p.sku===row.sku)||row.barcode&&p.barcode===row.barcode)
     if(identified.length>1||product&&identified.some(p=>p.id!==product.id))throw Error('品項代碼、條碼或已記住的對照互相矛盾，請先核對')
-    if(!product){const matches=context.products.filter(p=>row.sku&&(p.id===row.sku||p.sku===row.sku)||row.barcode&&p.barcode===row.barcode);if(matches.length===1)product=matches[0];else if(!matches.length&&row.name){const names=context.products.filter(p=>p.name===row.name);if(names.length===1)product=names[0]}}
+    if(!product){const matches=identified;if(matches.length===1)product=matches[0];else if(!matches.length&&row.name){const names=context.products.filter(p=>p.name===row.name);if(names.length===1)product=names[0]}}
     if(!product){unresolved.push({index,key,name:row.name||row.sku||row.barcode,unit,qty:row.qty});continue}
     if(unit!==product.unit)throw Error('品項「'+(row.name||row.sku)+'」單位為 '+unit+'，本店為 '+product.unit+'；請先核對，系統不會自動換算')
     if(seen.has(product.id))throw Error('多個外部品項對到同一商品，請合併數量或修正對照')

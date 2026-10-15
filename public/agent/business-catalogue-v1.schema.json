@@ -1,0 +1,19 @@
+{
+  "$schema":"http://json-schema.org/draft-07/schema#",
+  "title":"Public business catalogue v1",
+  "description":"Reference prices, not an order or agreement. Costs, exact stock quantities, recipes and private customer prices are excluded.",
+  "type":"object","additionalProperties":false,"required":["protocol","revision","generatedAt","sender","currency","pricing","items"],
+  "properties":{
+    "protocol":{"const":"business-catalogue/v1"},
+    "revision":{"type":"string","pattern":"^[a-f0-9]{64}$"},
+    "generatedAt":{"type":"string","format":"date-time"},
+    "sender":{"type":"object","additionalProperties":false,"required":["id","name"],"properties":{"id":{"type":"string","pattern":"^[A-Za-z0-9:_-]{1,128}$"},"name":{"type":"string","minLength":1,"maxLength":100}}},
+    "currency":{"const":"TWD"},"pricing":{"const":"reference-unit-price"},
+    "items":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["sku","name","unit","unitPrice"],"properties":{
+      "sku":{"type":"string","pattern":"^[A-Za-z0-9:_-]{1,128}$"},
+      "name":{"type":"string","minLength":1,"maxLength":200},
+      "unit":{"type":"string","minLength":1,"maxLength":40},
+      "unitPrice":{"type":"number","minimum":0,"maximum":1000000000,"multipleOf":0.01}
+    }}}
+  }
+}

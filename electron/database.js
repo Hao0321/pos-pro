@@ -159,6 +159,7 @@ module.exports = function initDatabase(dbPath) {
     ...require('./restaurantOperations.cjs')(db,stmts,readOrder,orderInsertParams),
     ...require('./scenarioTemplates.cjs')(db, stmts),
     ...require('./inventoryOperations.cjs')(db,stmts,supplierParams),
+    ...require('./exchangeOperations.cjs')(db,stmts),
     // Products
     getProducts() {
       return stmts.getAllProducts.all().map(p => ({ ...p, noBarcode: !!p.noBarcode }))
@@ -454,6 +455,7 @@ module.exports = function initDatabase(dbPath) {
       return db.prepare(sql).all(...params)
     },
     writeAuditLog(entry) {
+      if(String(entry?.id||'').startsWith('exchange:')||entry?.action==='business-quote')throw Error('報價回執只能由正式報價流程建立')
       if(String(entry?.id||'').startsWith('scenario-template:')||entry?.action==='SCENARIO_TEMPLATE_APPLY'||String(entry?.id||'').startsWith('stock-operation:')||entry?.action==='INVENTORY_OPERATION')throw Error('情境模板或庫存回執只能由正式異動流程建立')
       stmts.insertAuditLog.run({
         id: entry.id || 'a' + Date.now() + Math.random().toString(36).slice(2, 6),
@@ -574,10 +576,11 @@ module.exports = function initDatabase(dbPath) {
       return row ? row.value : null
     },
     setSetting(key, value) {
+      if(key==='businessExchangeV1')throw Error('報價歷史只能由正式報價或還原流程保存')
       stmts.setSetting.run(key, value)
       return { success: true }
     },
-    setSettings(values){db.transaction(()=>{for(const [key,value]of Object.entries(values))stmts.setSetting.run(key,String(value))})();return {success:true}},
+    setSettings(values){if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');db.transaction(()=>{for(const [key,value]of Object.entries(values))stmts.setSetting.run(key,String(value))})();return {success:true}},
     getAllSettings() {
       const rows = stmts.getAllSettings.all()
       const result = {}

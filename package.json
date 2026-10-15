@@ -1,6 +1,6 @@
 {
   "name": "pos-system",
-  "version": "2.11.0",
+  "version": "2.12.0",
   "private": true,
   "description": "POS Pro — 全部功能免費、離線優先的 ERP、點餐與會員 CRM 整合營運系統",
   "author": "Chroma Street Studio <chromastreetstudio@gmail.com>",
@@ -30,6 +30,8 @@
     "test:procurement-returns": "node scripts/run-native-security.cjs --procurement-returns",
     "test:procurement-ui": "npm run build && node scripts/run-native-security.cjs --procurement-ui",
     "test:agent-ui": "npm run build && node scripts/run-native-security.cjs --agent-ui",
+    "test:exchange": "node scripts/run-native-security.cjs --exchange",
+    "test:exchange-ui": "npm run build && node scripts/run-native-security.cjs --exchange-ui",
     "test:scenarios": "node scripts/run-native-security.cjs --scenarios",
     "test:scenario-ui": "npm run build && node scripts/run-native-security.cjs --scenario-ui",
     "postinstall": "electron-builder install-app-deps",

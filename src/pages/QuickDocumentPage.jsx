@@ -2,7 +2,9 @@ import {tr,trMessage} from "../i18n"
 import {useEffect,useRef,useState} from 'react'
 import {getAgentContext,rememberAgentMappings} from '../utils/dataAccess'
 import {AGENT_PROTOCOL,draftFromText,validateAgentDraft,agentCommand,agentBusinessDay} from '../../electron/agentDraftRules.mjs'
-import {BUSINESS_PROTOCOL,prepareBusinessDocument} from '../../electron/businessDocument.mjs'
+import {BUSINESS_PROTOCOL} from '../../electron/businessDocument.mjs'
+import {QUOTE_PROTOCOL,CATALOGUE_PROTOCOL} from '../../electron/businessExchange.mjs'
+import {prepareExternalDocument,validateExternalDraft,quotePurchaseSource} from '../../electron/quoteImport.mjs'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
 import {isAgentDocumentText,parseAgentDocument,makeAgentHandoff} from '../../electron/agentHandoff.mjs'
 import {quickDraftScope,readQuickDraft,writeQuickDraft} from '../utils/quickDraftCache'
@@ -47,7 +49,7 @@ export default function QuickDocumentPage({store,session,incoming='',onIncomingC
     ;(async()=>{
       const saved=readQuickDraft(localStorage,scope)
       if(!saved){if(changed){setDraft(null);setExternal(null);setText('');setKind('sale')}return}
-      const recovered=saved.external?await prepareBusinessDocument(saved.external.document,context,saved.external.overrides):null
+      const recovered=saved.external?await prepareExternalDocument(saved.external.document,context,saved.external.overrides):null
       if(cancelled||sequence!==importSequence.current)return
       setText(saved.text);setDraft(saved.draft);setExternal(saved.external?{...saved.external,...recovered}:null);setKind(saved.kind);setDone('');setCacheNotice('已接回這個裝置上還沒完成的草稿。')
     })().catch(e=>{if(!cancelled){brokenCache.current=true;setCacheWarning(e.message)}}).finally(()=>{if(!cancelled)setCacheReady(cacheKey)})
@@ -84,14 +86,15 @@ export default function QuickDocumentPage({store,session,incoming='',onIncomingC
     finished.current=false;brokenCache.current=false;const sequence=++importSequence.current;setDraft(null);setExternal(null)
     try{
     const d=parseAgentDocument(raw)
+    if(d.protocol===CATALOGUE_PROTOCOL)throw Error('這是價目目錄，請讓 Agent 加上數量整理成叫貨單，或取得對方報價')
     const activeContext=await getAgentContext(session);if(sequence!==importSequence.current)return;setContext(activeContext)
-    if(d?.protocol===BUSINESS_PROTOCOL){const result=await prepareBusinessDocument(d,activeContext);if(sequence!==importSequence.current)return;setExternal({document:d,overrides:{},...result});setEditMappings(false);setDraft(result.draft);setKind(d.intent)}
+    if([BUSINESS_PROTOCOL,QUOTE_PROTOCOL].includes(d?.protocol)){const result=await prepareExternalDocument(d,activeContext);if(sequence!==importSequence.current)return;setExternal({document:d,overrides:{},...result});setEditMappings(false);setDraft(result.draft);setKind(d.protocol===QUOTE_PROTOCOL?'purchase':d.intent)}
     else{validateAgentDraft(d,activeContext,Date.now(),true);setExternal(null);setDraft(d);setKind(d.kind)}
     setText('');setDone('');setError('')
     }catch(error){if(sequence===importSequence.current)throw error}
   }
   async function organize(){setError('');setDone('');setDraft(null);setExternal(null);try{if(isAgentDocumentText(text))await readDocument(text);else{importSequence.current++;const d=draftFromText(text,context,kind);setExternal(null);setDraft(d);setKind(d.kind)}}catch(e){setError(e.message)}}
-  async function mapItem(key,productId){const sequence=++importSequence.current;try{const overrides={...external.overrides,[key]:productId},result=await prepareBusinessDocument(external.document,context,overrides);if(sequence!==importSequence.current)return;setExternal({...external,overrides,...result});setDraft(result.draft);setError('')}catch(e){if(sequence===importSequence.current){setDraft(null);setError(e.message)}}}
+  async function mapItem(key,productId){const sequence=++importSequence.current;try{const overrides={...external.overrides,[key]:productId},result=await prepareExternalDocument(external.document,context,overrides);if(sequence!==importSequence.current)return;setExternal({...external,overrides,...result});setDraft(result.draft);setError('')}catch(e){if(sequence===importSequence.current){setDraft(null);setError(e.message)}}}
   async function readFile(file){if(!file)return;takeControl();const sequence=++importSequence.current;let activeSequence=sequence;setDraft(null);setExternal(null);setDone('');setError('');try{if(file.size>32768)throw Error('單據太大，請分批匯入（每次最多 32 KB）');const raw=await file.text();if(sequence===importSequence.current){setText(raw);const pending=readDocument(raw);activeSequence=importSequence.current;await pending}}catch(e){if(activeSequence===importSequence.current)setError(e.message)}}
   function pasteReply(e){
     const raw=e.clipboardData.getData('text/plain'),field=e.currentTarget
@@ -99,9 +102,9 @@ export default function QuickDocumentPage({store,session,incoming='',onIncomingC
     e.preventDefault();takeControl();setText(raw);setDone('');setError('');readDocument(raw).catch(e=>setError(e.message))
   }
   let preview=null,issue=''
-  if(draft&&context)try{preview=validateAgentDraft(draft,context)}catch(e){issue=e.message}
+  if(draft&&context)try{preview=validateExternalDraft(draft,context,external?.document)}catch(e){issue=e.message}
   const question=draft&&context?nextQuickQuestion(draft,context):null
-  if(!preview&&question)try{preview=validateAgentDraft(draft,context,Date.now(),true)}catch{}
+  if(!preview&&question)try{preview=validateExternalDraft(draft,context,external?.document,Date.now(),true)}catch{}
   const matching=context?.products.filter(p=>[p.name,p.barcode,p.sku].some(value=>String(value||'').normalize('NFKC').toLowerCase().includes(query.trim().normalize('NFKC').toLowerCase())))||[]
   function focusProducts(){const list=document.querySelector('[data-quick-products]');if(list)list.open=true;const input=list?.querySelector('input[type="search"]');input?.scrollIntoView?.({block:'center'});input?.focus()}
   async function retry(){
@@ -112,8 +115,9 @@ export default function QuickDocumentPage({store,session,incoming='',onIncomingC
     if(running.current||financialPending)return;running.current=true;setBusy(true);setError('')
     try{
       const fresh=await getAgentContext(session)
-      if(external){const normalized=await prepareBusinessDocument(external.document,fresh,external.overrides);if(!normalized.draft||canonicalSignature(normalized.draft.items)!==canonicalSignature(draft.items))throw Error('外部單據明細有變更，請重新核對來源單據');if(remember&&session.role==='owner'){const r=await rememberAgentMappings({senderId:normalized.senderId,entries:normalized.chosen},session);if(r?.success!==true)throw Error('品項對照尚未保存，請重試');fresh.mappings=r.mappings}}
-      const verified=validateAgentDraft(draft,fresh),command=agentCommand(verified)
+      if(external){const normalized=await prepareExternalDocument(external.document,fresh,external.overrides);if(!normalized.draft||canonicalSignature(normalized.draft.items)!==canonicalSignature(draft.items)||normalized.draft.id!==draft.id)throw Error('外部單據明細有變更，請重新核對來源單據');if(remember&&session.role==='owner'){const r=await rememberAgentMappings({senderId:normalized.senderId,entries:normalized.chosen},session);if(r?.success!==true)throw Error('品項對照尚未保存，請重試');fresh.mappings=r.mappings}}
+      const verified=validateExternalDraft(draft,fresh,external?.document),command=agentCommand(verified)
+      if(external?.document.protocol===QUOTE_PROTOCOL)command.input.sourceQuote=quotePurchaseSource(external.document,external.chosen)
       if(command.kind==='sale'){store.stageQuickSale(command.items);clearCache();return}
       if(command.kind==='restaurant')await store.commitRestaurant(command.input,command.identity)
       else await store.commitInventory(command.kind,command.input,command.identity)
@@ -142,7 +146,8 @@ export default function QuickDocumentPage({store,session,incoming='',onIncomingC
       {!external&&<details data-quick-products open={!draft}><summary style={{padding:'12px 0',cursor:'pointer'}}>{tr("直接點商品也可以")}</summary><input aria-label={tr("找建單商品")} className="field" type="search" style={{...field,marginBottom:12}} placeholder={tr("找商品名稱或條碼")} value={query} onChange={e=>setQuery(e.target.value)}/><div className="quick-product-grid">{matching.slice(0,24).map(p=><button key={p.id} className="btn btn-ghost" style={{...button,textAlign:'left',whiteSpace:'normal'}} onClick={()=>choose(p)}>{p.name}<br/>{money(kind==='purchase'?p.unitCost||0:p.price)}／{p.unit}</button>)}</div>{!matching.length&&<p role="status">{tr("找不到這個商品。試試其他名稱或條碼。")}</p>}{matching.length>24&&<p className="quick-hint">{tr("先顯示前 24 項。輸入品名或條碼就能找到其他商品。")}</p>}</details>}
       {external&&<div className="card" style={{padding:16,marginTop:12}}><strong>{tr("來自 ")}{external.document.sender.name||external.senderId}{tr(" 的單據")}</strong><p>{external.document.id}</p>{external.document.items.map((row,index)=>{const key=row.sku?'sku:'+row.sku:row.barcode?'barcode:'+row.barcode:'name:'+row.name,name=row.name||row.sku||row.barcode,p=context.products.find(p=>p.id===external.chosen[key]);return editMappings||external.unresolved.some(r=>r.index===index)?<label key={key} style={{display:'block',marginTop:12}}>「{name}{tr("」是店內哪個商品？")}<select className="field" style={field} aria-label={tr("對照 {0}", {0: name})} value={external.overrides[key]||external.chosen[key]||''} onChange={e=>mapItem(key,e.target.value)}><option value="">{tr("請選商品")}</option>{context.products.map(p=><option key={p.id} value={p.id}>{p.name}（{p.unit}）</option>)}</select></label>:<p key={key}>{name} → {p?.name} · {row.qty} {row.unit}</p>})}{!external.unresolved.length&&<button className="btn btn-ghost" style={button} onClick={()=>setEditMappings(v=>!v)}>{editMappings?tr("完成對照"):tr("調整品項對照")}</button>}{session.role==='owner'&&<label style={{display:'flex',gap:10,alignItems:'center',marginTop:12}}><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/>{tr("記住這家公司的品項對照")}</label>}</div>}
       </fieldset>
-      {draft&&<QuickDocumentReview draft={draft} context={context} preview={preview} issue={issue} question={question} external={!!external} busy={busy} pending={pending} sectionRef={previewRef} onChange={update} onBuild={build} onRetry={retry} onProducts={focusProducts} onSuppliers={()=>store.setView('purchase')}/>}
+      {external?.document.protocol===QUOTE_PROTOCOL&&<p className="card" style={{padding:16}}>{tr('專屬報價：第 {0} 版',{0:external.document.revision})}<br/>{tr('有效至 {0}',{0:new Date(external.document.validUntil).toLocaleString()})}<br/>{tr('本單單價已含全部費用。確認只建立採購，尚未收貨或付款。')}</p>}
+      {draft&&<QuickDocumentReview draft={draft} context={context} preview={preview} issue={issue} question={question} external={!!external} quoted={external?.document.protocol===QUOTE_PROTOCOL} busy={busy} pending={pending} sectionRef={previewRef} onChange={update} onBuild={build} onRetry={retry} onProducts={focusProducts} onSuppliers={()=>store.setView('purchase')}/>}
       <section className="card" style={{padding:16,marginTop:24}} aria-label={tr("交給 Agent")}><h3>{tr("交給你的 Agent")}</h3><p>{tr("只帶走這次建單需要的資料。貼給你選用的 Agent，再把完整回覆貼回上方。")}</p><button className="btn btn-primary" style={{...button,width:'100%'}} disabled={pending} onClick={prepareHandoff}>{tr("複製建單資料給 Agent")}</button>{copyMessage&&<p role="status">{trMessage(copyMessage)}</p>}{handoff&&<details open={manualCopy}><summary style={{padding:'12px 0'}}>{tr("需要手動複製時，展開這裡")}</summary><textarea aria-label={tr("給 Agent 的建單資料")} className="field" readOnly style={{...field,minHeight:150}} value={handoff} onFocus={e=>e.target.select()}/></details>}</section>
       <details style={{marginTop:24}}><summary style={{cursor:'pointer',padding:'12px 0'}}>{tr("開發者與進階設定")}</summary><a href="./llms.txt" target="_blank" rel="noreferrer">{tr("建單指南")}</a> · <a href="./agent/manifest.json" target="_blank" rel="noreferrer">{tr("協議")}</a><button className="btn btn-ghost" style={{...button,display:'block',marginTop:12}} onClick={exportPacket}>{tr("取得店內資料包")}</button>{packet&&<textarea aria-label={tr("Agent 店內資料包")} readOnly className="field" style={{...field,minHeight:140}} value={packet} onFocus={e=>e.target.select()}/>}</details>
     </>}

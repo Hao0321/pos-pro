@@ -7,7 +7,7 @@ module.exports=function(db,stmts,supplierParams){
     let replay=false,historyChecked=false
     try{return db.transaction(()=>{
       const key=INVENTORY_PREFIX+request.id,old=db.prepare('SELECT * FROM audit_log WHERE id=?').get(key)
-      replay=!!old;historyChecked=true;const data=current()
+      replay=!!old;historyChecked=true;const data={...current(),storeId:stmts.getSetting.get('sharedStoreId')?.value}
       if(old){if(old.action!==INVENTORY_ACTION)throw Error('庫存回執需要核對');return inventoryReceipt(request,JSON.parse(old.detail),data)}
       const plan=planInventory(request,data,actor)
       for(const p of plan.products){

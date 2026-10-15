@@ -5,7 +5,7 @@ function validState(state,scope){
   if(!object(state)||!['sale','restaurant','purchase'].includes(state.kind)||scope.role!=='owner'&&state.kind==='purchase'||typeof state.text!=='string'||state.text.length>32768)return false
   const d=state.draft
   if(d!==null&&(!object(d)||Object.keys(d).some(k=>k!=='items'&&!strings.includes(k))||strings.some(k=>d[k]!==undefined&&typeof d[k]!=='string')||d.storeId!==scope.storeId||d.kind!==state.kind||d.protocol!=='pos-document-draft/v1'||!Array.isArray(d.items)||d.items.length>100||d.items.some(i=>!object(i)||Object.keys(i).some(k=>!['productId','qty','unitCost'].includes(k))||typeof i.productId!=='string'||!Number.isFinite(i.qty)||i.unitCost!==undefined&&!Number.isFinite(i.unitCost))))return false
-  if(state.external!==null&&(!object(state.external)||!object(state.external.document)||state.external.document.protocol!=='business-document/v1'||!object(state.external.overrides)||Object.entries(state.external.overrides).some(([k,v])=>k.length>300||typeof v!=='string'||v.length>128)))return false
+  if(state.external!==null&&(!object(state.external)||!object(state.external.document)||!['business-document/v1','business-quote/v1'].includes(state.external.document.protocol)||!object(state.external.overrides)||Object.entries(state.external.overrides).some(([k,v])=>k.length>300||typeof v!=='string'||v.length>128)))return false
   return true
 }
 export function quickDraftScope(context,session){

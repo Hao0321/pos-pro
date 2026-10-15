@@ -1,6 +1,6 @@
 import {tr,trMessage} from "./i18n"
 import { browserStorage } from './utils/browserStorage'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { Menu, X, Cloud } from 'lucide-react'
 import { useStore } from './store/useStore'
 import { getSession, destroySession, writeAuditLog, startIdleTimer, hasPermission, createBackup, getBackupList } from './utils/security'
@@ -20,6 +20,7 @@ import ReadinessPage from './pages/ReadinessPage'
 import SharedDevicesPage from './pages/SharedDevicesPage'
 import RestaurantPage from './pages/RestaurantPage'
 import QuickDocumentPage from './pages/QuickDocumentPage'
+const BusinessExchangePage=lazy(()=>import('./pages/BusinessExchangePage'))
 import OrdersPage from './pages/OrdersPage'
 import DashboardPage from './pages/DashboardPage'
 import SimpleHomePage from './pages/SimpleHomePage'
@@ -43,6 +44,7 @@ export default function App() {
   useEffect(()=>{setWorkspaceArea('all')},[session?.userId,session?.role])
   const store = useStore(session)
   const { view, setView, lowStockCount, todayRevenue, todayOrders } = store
+  useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='exchange'&&store.financialState.phase==='uncertain')setView('exchange')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
   useEffect(()=>{document.documentElement.dataset.largeText=String(largeText);try{localStorage.setItem('pos_large_text_v1',String(largeText))}catch{}},[largeText])
   useEffect(()=>{document.documentElement.dataset.simpleMode=String(simpleMode);try{localStorage.setItem('pos_simple_mode_v1',String(simpleMode))}catch{}},[simpleMode])
   useEffect(()=>{
@@ -109,7 +111,7 @@ export default function App() {
 
   const NAV_LABELS = {
     dashboard:'首頁',overview:'營運總覽',quick:'快速建單', pos:'收銀台',restaurant:'預訂出餐', shifts:'班別交班', readiness:'營業前檢查',devices:'共用店面',
-    inventory:'庫存管理', purchase:'進貨管理', waste:'損耗管理',
+    inventory:'庫存管理', purchase:'進貨管理',exchange:'報價與價目表', waste:'損耗管理',
     stocktake:'每日盤點', promotions:'促銷活動', members:'會員',
     reports:'報表分析', accounting:'會計帳務', orders:'顧客點餐', settings:'設定', scenarios:'情境模板',
   }
@@ -154,10 +156,11 @@ export default function App() {
           </div>
         )}
         {/* Quick entry locks its fields while retaining the same-document recovery action. */}
-        <main className="workspace-content" data-view={view} inert={store.checkoutState.phase!=='idle'||store.financialState.phase!=='idle'&&view!=='quick'?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+        <main className="workspace-content" data-view={view} inert={store.checkoutState.phase!=='idle'||store.financialState.phase!=='idle'&&!['quick','exchange'].includes(view)?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
           {view === 'dashboard' && can('pos.use') && (simpleMode?<SimpleHomePage store={store} session={session} area={workspaceArea} onAreaChange={setWorkspaceArea}/>:<DashboardPage store={store} session={session}/>)}
           {view === 'overview' && can('reports.view') && <DashboardPage store={store} session={session}/>}
           {view === 'quick' && can('pos.use') && <QuickDocumentPage key={session.userId+':'+session.role} store={store} session={session} incoming={incomingDraft} onIncomingConsumed={consumeIncoming}/>}
+          {view === 'exchange' && can('purchase.edit') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><BusinessExchangePage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
           {view === 'pos'        && can('pos.use')         && <POSPage        store={store} session={session}/>}
           {view === 'restaurant' && can('pos.use') && <RestaurantPage store={store} session={session}/>}
           {view === 'shifts'     && can('pos.use')         && <ShiftPage      store={store} session={session}/>}

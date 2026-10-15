@@ -5,7 +5,7 @@ export const quickButton={minHeight:48,fontSize:18}
 export const quickField={minHeight:48,fontSize:18,width:'100%'}
 export const quickMoney=n=>'NT$ '+n.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2})
 const labels={sale:'賣東西',restaurant:'預訂餐點',purchase:'叫貨進貨'}
-export default function QuickDocumentReview({draft,context,preview,issue,question,external,busy,pending,sectionRef,onChange,onBuild,onRetry,onProducts,onSuppliers}){
+export default function QuickDocumentReview({draft,context,preview,issue,question,external,quoted=false,busy,pending,sectionRef,onChange,onBuild,onRetry,onProducts,onSuppliers}){
   function next(){
     if(!question)return onBuild()
     if(question.field==='products')return onProducts()
@@ -35,7 +35,7 @@ export default function QuickDocumentReview({draft,context,preview,issue,questio
         <label>{tr("怎麼稱呼客人？（可不填）")}<input aria-label={tr("快速客人稱呼")} className="field" style={quickField} maxLength={100} value={draft.customer||''} onChange={e=>onChange('customer',e.target.value)}/></label>
         <label>{tr("聯絡電話或方式")}{draft.channel==='walkin'?tr("（可不填）"):''}<input data-quick-field="contact" aria-label={tr("快速聯絡方式")} className="field" style={quickField} maxLength={100} value={draft.contact||''} onChange={e=>onChange('contact',e.target.value)}/></label>
       </>}
-      <label>{draft.channel==='delivery'?tr("地址與備註"):tr("備註（可不填）")}<textarea data-quick-field="note" aria-label={tr("快速單據備註")} className="field" style={quickField} maxLength={1000} value={draft.note||''} onChange={e=>onChange('note',e.target.value)}/></label>
+      <label>{draft.channel==='delivery'?tr("地址與備註"):tr("備註（可不填）")}<textarea data-quick-field="note" aria-label={tr("快速單據備註")} readOnly={quoted} className="field" style={quickField} maxLength={1000} value={draft.note||''} onChange={e=>onChange('note',e.target.value)}/></label>
     </fieldset>
     <div className="quick-confirm">
       {preview&&<strong className="quick-total">{tr("合計 ")}{quickMoney(preview.total)}</strong>}
