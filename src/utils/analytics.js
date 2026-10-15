@@ -7,6 +7,16 @@ import {reportLineRevenue} from './businessReports'
 const DAY_MS = 86400000
 const now = () => Date.now()
 
+// Include the item crossing a boundary in that priority band. A single SKU
+// with all positive revenue must be A, rather than C because its share is 100%.
+export function classifyProductRevenue(items=[]){
+  const sorted=[...items].sort((a,b)=>b.revenue-a.revenue||(String(a.id)<String(b.id)?-1:String(a.id)>String(b.id)?1:0))
+  const cents=row=>Math.max(0,Math.round(row.revenue*100)),totalCents=sorted.reduce((sum,row)=>sum+cents(row),0)
+  let covered=0
+  const classified=sorted.map(row=>{const amount=cents(row),cls=amount>0?(covered*100<totalCents*70?'A':covered*100<totalCents*90?'B':'C'):'C';covered+=amount;return {...row,cls,cumPct:totalCents?covered/totalCents*100:0}})
+  return {items:classified,a:classified.filter(row=>row.cls==='A'),b:classified.filter(row=>row.cls==='B'),c:classified.filter(row=>row.cls==='C'),total:totalCents/100}
+}
+
 // ===== 過濾出「有效訂單」（排除完整退貨配對）=====
 export function effectiveOrders(orders = []) {
   return settledOrders(orders)

@@ -1,4 +1,7 @@
 const rows={
+ 'A 類（優先商品）':['Class A (priority products)','A 分類（優先商品）','A 类（优先商品）'],
+ 'B 類（定期留意）':['Class B (review regularly)','B 分類（定期確認）','B 类（定期留意）'],
+ 'C 類（其餘商品）':['Class C (remaining products)','C 分類（その他の商品）','C 类（其余商品）'],
  '已顯示 {0} / {1} 筆紀錄':['Showing {0} of {1} entries','{1} 件中 {0} 件を表示','已显示 {0} / {1} 笔纪录'],
  '顯示更早的紀錄':['Show earlier entries','以前の記録を表示','显示更早的纪录'],
  '這份草稿已經保存，已為你開啟原紀錄。':['This draft was already saved. Its original record is open.','この下書きは保存済みです。元の記録を開きました。','这份草稿已经保存，已为你开启原纪录。'],

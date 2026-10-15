@@ -3,7 +3,7 @@ import { settledOrders, netSale, orderCost } from '../utils/orderLedger'
 import { useMemo, useState } from 'react'
 import { TrendingUp, ShoppingCart, Users, Package, ArrowUp, ArrowDown, Download, Zap, AlertTriangle, Trophy } from 'lucide-react'
 import { exportXLS } from '../utils/exportXLS'
-import { productPerformance } from '../utils/analytics'
+import { productPerformance,classifyProductRevenue } from '../utils/analytics'
 import {businessReportRows,businessCashFlows,reportDay,reportLineRevenue} from '../utils/businessReports'
 import {salesDate,salesSummary} from '../../electron/salesRules.mjs'
 
@@ -112,28 +112,13 @@ export default function ReportsPage({ store }) {
 
   // ABC 分析（依累計營收佔比分類）
   const abcAnalysis = useMemo(() => {
-    const map = {}
+    const map = new Map()
     filtered.forEach(o => o.items.forEach(i => {
-      if (!map[i.id]) map[i.id] = { id:i.id, name:i.name, qty:0, revenue:0 }
-      map[i.id].qty += i.qty
-      map[i.id].revenue += reportLineRevenue(i)
+      if (!map.has(i.id)) map.set(i.id,{ id:i.id, name:i.name, qty:0, revenue:0 })
+      map.get(i.id).qty += i.qty
+      map.get(i.id).revenue += reportLineRevenue(i)
     }))
-    const sorted = Object.values(map).sort((a,b) => b.revenue - a.revenue)
-    const total = sorted.reduce((s,p) => s + p.revenue, 0) || 1
-    let cum = 0
-    const classified = sorted.map(p => {
-      cum += p.revenue
-      const pct = cum / total * 100
-      const cls = pct <= 70 ? 'A' : pct <= 90 ? 'B' : 'C'
-      return { ...p, cumPct: pct, cls }
-    })
-    return {
-      items: classified,
-      a: classified.filter(p => p.cls === 'A'),
-      b: classified.filter(p => p.cls === 'B'),
-      c: classified.filter(p => p.cls === 'C'),
-      total,
-    }
+    return classifyProductRevenue([...map.values()])
   }, [filtered])
 
   function exportReport() {
@@ -160,7 +145,7 @@ export default function ReportsPage({ store }) {
       ['商品', '銷量', '營收', '營收佔比%', '累計%', '類別'],
       ...abcAnalysis.items.map(p => [
         p.name, p.qty, p.revenue,
-        ((p.revenue/abcAnalysis.total)*100).toFixed(2),
+        (abcAnalysis.total>0?Math.max(0,p.revenue)/abcAnalysis.total*100:0).toFixed(2),
         p.cumPct.toFixed(2),
         p.cls,
       ]),
@@ -284,13 +269,13 @@ export default function ReportsPage({ store }) {
           </div>
           <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginTop:12}}>
             {[
-              { cls:'A', label:'A 類（佔 70%）', color:'var(--green)', items:abcAnalysis.a, desc:'核心商品，重點維護庫存' },
-              { cls:'B', label:'B 類（佔 90%）', color:'var(--gold)', items:abcAnalysis.b, desc:'次要商品，定期檢視' },
-              { cls:'C', label:'C 類（佔 10%）', color:'var(--text-tertiary)', items:abcAnalysis.c, desc:'長尾商品，可考慮汰除' },
+              { cls:'A', label:'A 類（優先商品）', color:'var(--green)', items:abcAnalysis.a, desc:'核心商品，重點維護庫存' },
+              { cls:'B', label:'B 類（定期留意）', color:'var(--gold)', items:abcAnalysis.b, desc:'次要商品，定期檢視' },
+              { cls:'C', label:'C 類（其餘商品）', color:'var(--text-tertiary)', items:abcAnalysis.c, desc:'長尾商品，可考慮汰除' },
             ].map(g => (
-              <div key={g.cls} style={{padding:'12px 14px', background:'var(--bg-overlay)', borderRadius:8, borderTop:`2px solid ${g.color}`}}>
+              <div key={g.cls} data-abc-group={g.cls} style={{padding:'12px 14px', background:'var(--bg-overlay)', borderRadius:8, borderTop:`2px solid ${g.color}`}}>
                 <div style={{fontSize:12, fontWeight:600, color:g.color, marginBottom:6}}>{tr(g.label)}</div>
-                <div style={{fontSize:20, fontWeight:600, fontFamily:'var(--font-mono)'}}>{g.items.length} <span style={{fontSize:11, color:'var(--text-tertiary)', fontWeight:400}}>{tr("項")}</span></div>
+                <div data-abc-count style={{fontSize:20, fontWeight:600, fontFamily:'var(--font-mono)'}}>{g.items.length} <span style={{fontSize:11, color:'var(--text-tertiary)', fontWeight:400}}>{tr("項")}</span></div>
                 <div style={{fontSize:10, color:'var(--text-tertiary)', marginTop:4}}>{tr(g.desc)}</div>
               </div>
             ))}

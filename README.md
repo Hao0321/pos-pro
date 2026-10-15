@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-2.15.0-2b20f4">
+  <img alt="version" src="https://img.shields.io/badge/version-2.15.1-2b20f4">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20PWA-555">
   <img alt="tests" src="https://img.shields.io/badge/tests-vitest%20%2B%20native-3f9c5e">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
@@ -23,7 +23,9 @@
 
 ## 這是什麼
 
-目前版本：v2.15.0。產品以 **POS Pro｜ERP・點餐・CRM** 呈現，從收銀延伸到採購與應付、庫存會計、顧客點餐與預訂出餐、會員經營。保留海報風格，也可切換明亮簡約與四語介面。Agent 回覆貼上就能核對單價與數量，缺少資料會引導補填；離開或重新載入後可接回同一張未完成草稿。完整 ERP 與 CRM **持續開發中**，多倉批次、關帳稅務、人事薪資、完整商機管理等仍有未完成能力，見 [完整目標清單](product-capabilities.json)。本機交付與限制見 [2.15.0 安裝說明](docs/INSTALLER_2_15_0.md)。
+目前版本：v2.15.1。產品以 **POS Pro｜ERP・點餐・CRM** 呈現，從收銀延伸到採購與應付、庫存會計、顧客點餐與預訂出餐、會員經營。保留海報風格，也可切換明亮簡約與四語介面。Agent 回覆貼上就能核對單價與數量，缺少資料會引導補填；離開或重新載入後可接回同一張未完成草稿。完整 ERP 與 CRM **持續開發中**，多倉批次、關帳稅務、人事薪資、完整商機管理等仍有未完成能力，見 [完整目標清單](product-capabilities.json)。本機交付與限制見 [2.15.1 安裝說明](docs/INSTALLER_2_15_1.md)。
+
+2.15.1 修正單一熱賣商品被誤歸到低優先類的報表問題，並提供四語分級說明。
 
 2.15.0 新增「客戶與款項」：客戶只建一次，可先收款、保留餘額，再把同一筆款項抵付多張交付請款。部分解除、原方式退款及更正都保留原紀錄，桌面和配對手機共用同一份帳本。Agent 可以先填收款草稿，仍由店主確認實際款項；回覆中斷時保留原編號，避免舊草稿變成第二筆收款。見 [簡單操作指南](docs/CUSTOMER_GUIDE.md)。
 
@@ -117,7 +119,7 @@ POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模�
 
 首次啟動由你建立管理員名稱與至少 8 字元密碼。既有帳號會保留；舊的短密碼必須在驗證後更換，登入流程不再重建預設帳號。
 
-最新版的本機產物與更新方式見 [2.15.0 安裝檔說明](docs/INSTALLER_2_15_0.md)；[2.14.1 安裝檔紀錄](docs/INSTALLER_2_14_1.md)保留供升級前回退。桌面安裝及資料目錄沿用 POS Pro，既有店面不因品牌更新而切換資料目錄。
+最新版的本機產物與更新方式見 [2.15.1 安裝檔說明](docs/INSTALLER_2_15_1.md)；[2.14.1 安裝檔紀錄](docs/INSTALLER_2_14_1.md)保留供升級前回退。桌面安裝及資料目錄沿用 POS Pro，既有店面不因品牌更新而切換資料目錄。
 
 ### 自行編譯 / 開發
 

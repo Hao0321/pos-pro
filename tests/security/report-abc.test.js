@@ -1,0 +1,6 @@
+import {test,expect} from 'vitest'
+import {classifyProductRevenue} from '../../src/utils/analytics'
+test('a single product contributing all revenue is a priority A product',()=>{const result=classifyProductRevenue([{id:'only',revenue:400}]);expect(result.a.map(row=>row.id)).toEqual(['only']);expect(result.c).toEqual([]);expect(result.items[0].cumPct).toBe(100)})
+test('exact 70/20/10 shares cross the A/B/C boundaries without putting the leading item in B',()=>{expect(classifyProductRevenue([{id:'c',revenue:10},{id:'a',revenue:70},{id:'b',revenue:20}]).items.map(row=>[row.id,row.cls,row.cumPct])).toEqual([['a','A',70],['b','B',90],['c','C',100]])})
+test('an indivisible threshold-crossing item remains in its priority band and ties are deterministic',()=>{const input=[{id:'b',revenue:50},{id:'a',revenue:50}],original=structuredClone(input);expect(classifyProductRevenue(input).items.map(row=>[row.id,row.cls])).toEqual([['a','A'],['b','A']]);expect(input).toEqual(original)})
+test('zero and negative net revenue never creates a priority product or a fabricated positive denominator',()=>{const result=classifyProductRevenue([{id:'zero',revenue:0},{id:'returned',revenue:-25}]);expect(result.total).toBe(0);expect(result.a).toEqual([]);expect(result.b).toEqual([]);expect(result.c).toHaveLength(2);expect(result.items.every(row=>row.cumPct===0)).toBe(true)})
