@@ -1,4 +1,4 @@
-import {tr} from "../i18n"
+import {tr,getLocale} from "../i18n"
 import { useState, useMemo } from 'react'
 import { X, RotateCcw } from 'lucide-react'
 
@@ -72,7 +72,7 @@ export default function RefundModal({ order, onClose, onRefund, session, priorRe
             <span style={{fontFamily:'var(--font-mono)', fontWeight:500}}>NT$ {order.total.toLocaleString()}</span>
           </div>
           <div style={{display:'flex', justifyContent:'space-between', marginTop:4, fontSize:12}}>
-            <span style={{color:'var(--text-tertiary)'}}>{new Date(order.time).toLocaleString('zh-TW')}</span>
+            <span style={{color:'var(--text-tertiary)'}}>{new Date(order.time).toLocaleString(getLocale())}</span>
             <span style={{color:'var(--text-tertiary)'}}>{order.payMethod === 'cash' ? tr("現金") : order.payMethod === 'card' ? tr("電子支付") : tr("混合")}</span>
           </div>
         </div>

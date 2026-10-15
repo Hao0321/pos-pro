@@ -193,7 +193,7 @@ export default function PromotionsPage({ store, session }) {
                     </span>
                     <span style={{fontSize:10, color:'var(--text-tertiary)'}}>{tr(info.label)}</span>
                   </div>
-                  <div style={{fontSize:12, color:'var(--text-secondary)'}}>
+                  <div data-promotion-condition style={{fontSize:12, color:'var(--text-secondary)'}}>
                     {describeCondition(p)}
                   </div>
                   <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:3, fontFamily:'var(--font-mono)'}}>
@@ -232,7 +232,7 @@ export default function PromotionsPage({ store, session }) {
         <div style={pm.overlay}>
           <div style={pm.modal} className="animate-scale">
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18}}>
-              <span style={{fontWeight:700, fontSize:15}}>{editing==='new'?tr("新增{0}", {0: PROMO_TYPES[form.type].label}):tr("編輯促銷")}</span>
+              <span style={{fontWeight:700, fontSize:15}}>{editing==='new'?tr("新增{0}", {0: tr(PROMO_TYPES[form.type].label)}):tr("編輯促銷")}</span>
               <button className="btn-icon" onClick={()=>{setEditing(null);setForm(null)}}><X size={16}/></button>
             </div>
 
@@ -282,10 +282,10 @@ export default function PromotionsPage({ store, session }) {
 }
 
 function describeCondition(p) {
-  if (p.type==='threshold') return `消費滿 NT$${p.condition.threshold} 折抵 NT$${p.condition.discount}`
-  if (p.type==='percent')   return `全館 ${Math.round(p.condition.rate*10)} 折（${Math.round((1-p.condition.rate)*100)}% off）`
-  if (p.type==='buyget')    return `買 ${p.condition.buy} 件送 ${p.condition.get} 件（最低價商品免費）`
-  if (p.type==='fixed')     return `指定商品每件折 NT$${p.condition.discount}`
+  if (p.type==='threshold') return tr('消費滿 NT${0} 折抵 NT${1}',{0:p.condition.threshold,1:p.condition.discount})
+  if (p.type==='percent')   return tr('全館 {0} 折（{1}% off）',{0:Math.round(p.condition.rate*10),1:Math.round((1-p.condition.rate)*100)})
+  if (p.type==='buyget')    return tr('買 {0} 件送 {1} 件（最低價商品免費）',{0:p.condition.buy,1:p.condition.get})
+  if (p.type==='fixed')     return tr('指定商品每件折 NT${0}',{0:p.condition.discount})
   return ''
 }
 

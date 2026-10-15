@@ -1,4 +1,4 @@
-import {tr,trMessage} from "../i18n"
+import {tr,trMessage,getLocale} from "../i18n"
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Plus, AlertTriangle, Package } from 'lucide-react'
 import { exportXLS } from '../utils/exportXLS'
@@ -188,7 +188,7 @@ export default function WastePage({ store, session }) {
             <tbody>
               {filtered.map(w => (
                 <tr key={w.id} style={{borderBottom:'1px solid var(--border-dim)'}}>
-                  <td style={ws.td}>{new Date(w.time).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+                  <td style={ws.td}>{new Date(w.time).toLocaleString(getLocale(),{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
                   <td style={ws.td}>{w.productName}</td>
                   <td style={{...ws.td, textAlign:'right', fontFamily:'var(--font-mono)'}}>{Math.abs(w.qty)}</td>
                   <td style={{...ws.td, textAlign:'right', fontFamily:'var(--font-mono)', color:'var(--text-secondary)'}}>{(w.cost||0).toLocaleString()}</td>

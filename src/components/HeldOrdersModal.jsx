@@ -1,4 +1,4 @@
-import {tr} from "../i18n"
+import {tr,getLocale} from "../i18n"
 import { Pause, Trash2, X, ShoppingCart } from 'lucide-react'
 
 export default function HeldOrdersModal({ heldOrders, members, onRecall, onRemove, onClose }) {
@@ -32,7 +32,7 @@ export default function HeldOrdersModal({ heldOrders, members, onRecall, onRemov
                     {member && <span className="badge badge-gold">{member.name}</span>}
                   </div>
                   <div style={{fontSize:11, color:'var(--text-tertiary)'}}>
-                    {new Date(h.createdAt).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}
+                    {new Date(h.createdAt).toLocaleString(getLocale(),{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}
                     {' · '}{items}{tr(" 件 / NT$ ")}{total.toLocaleString()}
                   </div>
                   <div style={{fontSize:11, color:'var(--text-secondary)', marginTop:4, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>

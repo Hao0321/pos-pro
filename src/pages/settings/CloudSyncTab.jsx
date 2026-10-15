@@ -1,4 +1,4 @@
-import {tr,trMessage} from "../../i18n"
+import {tr,trMessage,getLocale} from "../../i18n"
 import { browserStorage } from "../../utils/browserStorage"
 import { useState } from "react"
 import { X, Check, RefreshCw, Wifi, Cloud, ArrowUp, ArrowDown, AlertTriangle } from "lucide-react"
@@ -111,7 +111,7 @@ export function CloudSyncTab({ session }) {
             </div>
             <div style={{fontSize:12, color:'var(--text-secondary)', marginTop:2}}>
               {enabled
-                ? tr("上次同步：{0}", {0: lastSync ? new Date(lastSync).toLocaleString('zh-TW') : '尚未同步'})
+                ? tr("上次同步：{0}", {0: lastSync ? new Date(lastSync).toLocaleString(getLocale()) : tr('尚未同步')})
                 : tr("在下方輸入 Supabase URL 和 anon key，啟用跨裝置同步")}
             </div>
           </div>

@@ -1,4 +1,4 @@
-import {tr} from "../../i18n"
+import {tr,getLocale} from "../../i18n"
 import { useState } from "react"
 import { RefreshCw } from "lucide-react"
 import { readAuditLogs } from "../../utils/security"
@@ -48,7 +48,7 @@ export function AuditTab({ session }) {
             return (
               <div key={l.id} style={{display:'grid',gridTemplateColumns:'140px 70px 70px 1fr 1fr',gap:8,padding:'9px 14px',borderBottom:'1px solid var(--border-dim)',fontSize:12,alignItems:'center'}}>
                 <span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--text-tertiary)',whiteSpace:'nowrap'}}>
-                  {new Date(l.timestamp).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+                  {new Date(l.timestamp).toLocaleString(getLocale(),{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})}
                 </span>
                 <span style={{fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.username}</span>
                 <span>

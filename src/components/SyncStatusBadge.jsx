@@ -6,14 +6,14 @@ import { isCloudEnabled } from '../utils/supabaseClient'
 import { pushAll, pullAll } from '../utils/cloudSync'
 
 function formatAgo(iso) {
-  if (!iso) return '尚未同步'
-  const diff = Date.now() - new Date(iso).getTime()
-  if (diff < 60_000) return '剛剛'
+  if (!iso||!Number.isFinite(Date.parse(iso))) return tr('尚未同步')
+  const diff = Math.max(0,Date.now() - new Date(iso).getTime())
+  if (diff < 60_000) return tr('剛剛')
   const mins = Math.floor(diff / 60_000)
-  if (mins < 60) return `${mins} 分鐘前`
+  if (mins < 60) return tr('{0} 分鐘前',{0:mins})
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} 小時前`
-  return `${Math.floor(hours / 24)} 天前`
+  if (hours < 24) return tr('{0} 小時前',{0:hours})
+  return tr('{0} 天前',{0:Math.floor(hours / 24)})
 }
 
 export default function SyncStatusBadge({ onGoToSettings }) {

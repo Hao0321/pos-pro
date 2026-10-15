@@ -1,5 +1,5 @@
-import {tr,trMessage} from "../i18n"
-import { useState, useMemo,useRef } from 'react'
+import {tr,trMessage,getLocale} from "../i18n"
+import { useState, useMemo,useRef,useEffect } from 'react'
 import { Plus, Pencil, Trash2, X, Check, Gift, TrendingUp, Phone, Wallet, RotateCcw, Cake } from 'lucide-react'
 import RefundModal from '../components/RefundModal'
 import { computeMemberRFM } from '../utils/analytics'
@@ -25,9 +25,14 @@ export default function MembersPage({ store, session }) {
   const [topupMethod,setTopupMethod] = useState('cash')
   const [refundOrder,setRefundOrder] = useState(null)
   const saving=useRef(false)
+  const memberTrigger=useRef(null),detailClose=useRef(null)
 
   // 重新從 list 取最新資料（避免顯示過期）
   const selectedLive = selected ? members.find(m => m.id === selected.id) || selected : null
+  useEffect(()=>{
+    if(selectedLive)detailClose.current?.focus({preventScroll:true})
+    else memberTrigger.current?.focus({preventScroll:true})
+  },[selectedLive?.id])
 
   // 預先計算每位會員的 RFM 標籤
   const rfmMap = useMemo(() => {
@@ -89,8 +94,8 @@ export default function MembersPage({ store, session }) {
   }
 
   return (
-    <div style={ms.root}>
-      <div style={ms.left}>
+    <div style={ms.root} className={'members-page'+(selectedLive?' has-member-detail':'')}>
+      <div style={ms.left} className="member-list-panel">
         <div style={ms.header}>
           <div>
             <h2 className="page-title" style={ms.title}>{tr("會員管理")}</h2>
@@ -126,7 +131,7 @@ export default function MembersPage({ store, session }) {
             const active = selected?.id === m.id
             const rfm = rfmMap.get(m.id)
             return (
-              <button key={m.id} onClick={()=>setSelected(active?null:m)} style={{
+              <button key={m.id} data-member-card={m.id} onClick={event=>{memberTrigger.current=event.currentTarget;setSelected(active?null:m)}} style={{
                 ...ms.memberCard,
                 background: active ? 'var(--bg-active)' : 'var(--bg-raised)',
                 border: `1px solid ${active ? 'var(--border-mid)' : 'var(--border-dim)'}`,
@@ -142,7 +147,7 @@ export default function MembersPage({ store, session }) {
                     </span>
                     {rfm && (
                       <span style={{fontSize:10, padding:'1px 7px', borderRadius:20, background:'var(--bg-overlay)', color:rfm.tagColor, fontWeight:600, border:`1px solid ${rfm.tagColor}`}}>
-                        {rfm.tag}
+                        {tr(rfm.tag)}
                       </span>
                     )}
                   </div>
@@ -163,7 +168,7 @@ export default function MembersPage({ store, session }) {
                   {m.tier !== 'gold' && (
                     <div style={{marginTop:8}}>
                       <div style={{display:'flex', justifyContent:'space-between', fontSize:10, color:'var(--text-tertiary)', marginBottom:3}}>
-                        <span>{tr("升級")}{m.tier==='normal'?tr("銀卡"):tr("金卡")}{tr("進度")}</span>
+                        <span>{tr('升級{0}進度',{0:m.tier==='normal'?tr('銀卡'):tr('金卡')})}</span>
                         <span className="mono">{Math.round(pct)}%</span>
                       </div>
                       <div style={{height:3, background:'var(--border-dim)', borderRadius:2}}>
@@ -187,7 +192,7 @@ export default function MembersPage({ store, session }) {
 
       {/* Member detail panel */}
       {selectedLive && (
-        <div style={ms.detail} className="animate-in">
+        <div style={ms.detail} className="member-detail animate-in" role="region" aria-label={tr('會員詳情')}>
           <div style={ms.detailHeader}>
             <div style={{...ms.avatarLg, background:TIER[selectedLive.tier].bg, color:TIER[selectedLive.tier].color}}>
               {selectedLive.name[0]}
@@ -204,14 +209,14 @@ export default function MembersPage({ store, session }) {
                 {selectedLive.birthday && tr(" · 生日 {0}", {0: selectedLive.birthday})}
               </div>
             </div>
-            <button className="btn-icon" style={{marginLeft:'auto'}} onClick={()=>setSelected(null)}><X size={16}/></button>
+            <button ref={detailClose} className="btn-icon" data-member-close aria-label={tr('關閉會員詳情')} style={{marginLeft:'auto'}} onClick={()=>setSelected(null)}><X size={16}/></button>
           </div>
 
-          <div style={ms.statsGrid}>
-            <StatCard label={tr("累積點數")} value={`${selectedLive.points.toLocaleString()} 點`} color="var(--gold-bright)" />
+          <div style={ms.statsGrid} className="member-stats">
+            <StatCard label={tr("累積點數")} value={tr('{0} 點',{0:selectedLive.points.toLocaleString(getLocale())})} color="var(--gold-bright)" />
             <StatCard label={tr("累計消費")} value={`NT$ ${selectedLive.totalSpent.toLocaleString()}`} color="var(--blue)" />
             <StatCard label={tr("儲值餘額")} value={`NT$ ${(selectedLive.balance||0).toLocaleString()}`} color="var(--teal)" />
-            <StatCard label={tr("歷史訂單")} value={`${memberOrders.length} 筆`} color="var(--text-secondary)" />
+            <StatCard label={tr("歷史訂單")} value={tr('{0} 筆',{0:memberOrders.length.toLocaleString(getLocale())})} color="var(--text-secondary)" />
           </div>
 
           <div style={{display:'flex', gap:8, marginBottom:16}}>
@@ -237,7 +242,7 @@ export default function MembersPage({ store, session }) {
                       </span>
                     </div>
                     <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:2}}>
-                      {new Date(o.time).toLocaleString('zh-TW', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+                      {new Date(o.time).toLocaleString(getLocale(), {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}
                       {o.pointsEarned>0 && <span style={{color:'var(--gold)', marginLeft:8}}>+{o.pointsEarned}{tr("點")}</span>}
                     </div>
                   </div>
@@ -348,7 +353,7 @@ export default function MembersPage({ store, session }) {
 
 function StatCard({ label, value, color }) {
   return (
-    <div style={{background:'var(--bg-overlay)', border:'1px solid var(--border-dim)', borderRadius:10, padding:'12px 14px'}}>
+    <div className="member-stat" style={{background:'var(--bg-overlay)', border:'1px solid var(--border-dim)', borderRadius:10, padding:'12px 14px',minWidth:0,overflowWrap:'anywhere'}}>
       <div style={{fontSize:10, color:'var(--text-tertiary)', letterSpacing:'.06em', textTransform:'uppercase', marginBottom:4}}>{tr(label)}</div>
       <div style={{fontFamily:'var(--font-mono)', fontSize:16, fontWeight:500, color}}>{value}</div>
     </div>
@@ -379,7 +384,7 @@ const ms = {
     padding:'20px', gap:14, overflow:'hidden',
   },
   detailHeader:{ display:'flex', gap:14, alignItems:'flex-start', flexShrink:0 },
-  statsGrid:{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, flexShrink:0 },
+  statsGrid:{ display:'grid', gridTemplateColumns:'repeat(2,minmax(0,1fr))', gap:8, flexShrink:0 },
   sectionTitle:{ fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.08em', textTransform:'uppercase', flexShrink:0 },
   orderRow:{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid var(--border-dim)' },
   overlay:{ position:'fixed', inset:0, background:'rgba(23,37,60,0.30)',backdropFilter:'blur(2px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100 },

@@ -1,4 +1,4 @@
-import {tr,trMessage} from "../i18n"
+import {tr,trMessage,getLocale} from "../i18n"
 import { useState, useRef, useEffect, useMemo, lazy, Suspense } from 'react'
 import { Plus, Pencil, Trash2, X, Check, AlertTriangle, ChevronUp, ChevronDown, Barcode, Printer, Tag, Truck, Camera, Upload, Download, FileText, Search, MoreHorizontal, CheckSquare } from 'lucide-react'
 import JsBarcode from 'jsbarcode'
@@ -690,7 +690,7 @@ export default function InventoryPage({ store }) {
                                 <span style={{color:'var(--text-tertiary)', fontSize:11}}>{h.note}</span>
                               </div>
                               <div style={{fontSize:10, color:'var(--text-tertiary)', marginTop:2, fontFamily:'var(--font-mono)'}}>
-                                {new Date(h.time).toLocaleString('zh-TW',{ month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit' })}
+                                {new Date(h.time).toLocaleString(getLocale(),{ month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit' })}
                                 {h.unitPrice ? ` · @$${h.unitPrice}` : ''}
                               </div>
                             </div>

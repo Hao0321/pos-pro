@@ -1,4 +1,4 @@
-import {tr,trMessage} from "../i18n"
+import {tr,trMessage,getLocale} from "../i18n"
 import { useState, useEffect, useCallback } from 'react'
 import { Bell, Check, X, Clock, ChefHat, RefreshCw } from 'lucide-react'
 import { isElectron, loadCustomerOrders, updateOrderStatus } from '../utils/dataAccess'
@@ -119,8 +119,8 @@ export default function OrdersPage() {
           const st = STATUS_MAP[order.status] || STATUS_MAP.pending
           const StIcon = st.icon
           const time = new Date(order.time)
-          const timeStr = time.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
-          const dateStr = time.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })
+          const timeStr = time.toLocaleTimeString(getLocale(), { hour: '2-digit', minute: '2-digit' })
+          const dateStr = time.toLocaleDateString(getLocale(), { month: 'short', day: 'numeric' })
 
           return (
             <div key={order.id} className="card" style={{ padding: 16 }}>
