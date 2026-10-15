@@ -1,0 +1,7 @@
+const fs=require('node:fs'),path=require('node:path')
+const {inside}=require('./files.cjs')
+const root=path.resolve(__dirname,'../..'),input=inside(path.join(root,'.rd'),path.resolve(process.argv[2]||''))
+const current=JSON.parse(fs.readFileSync(input,'utf8'))
+inside(path.join(root,'.rd'),current.run);inside(current.run,current.payload);inside(current.run,current.report)
+if(current.root!==root)throw Error('runtime verification project mismatch')
+require('./runtime-journey.cjs')(current).catch(error=>{console.error(error.stack);process.exitCode=1})

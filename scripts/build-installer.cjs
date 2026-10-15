@@ -2,6 +2,8 @@ const fs = require('node:fs'), path = require('node:path'), crypto = require('no
 const { spawnSync, execFileSync } = require('node:child_process')
 const { build, Platform } = require('electron-builder'), { Arch } = require('builder-util')
 const asar = require('@electron/asar')
+const {delivery,sourceInputs,frontendInputs}=require('./delivery/pipeline.cjs')
+const {outputPath,claim}=require('./delivery/build-state.cjs')
 const root = path.resolve(__dirname, '..'), hash = data => crypto.createHash('sha256').update(data).digest('hex')
 function filesIn(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
@@ -23,17 +25,19 @@ function archiveFiles(directory, prefix = '') {
 async function main() {
   if (Number(process.versions.node.split('.')[0]) < 24) throw new Error('Installer builds require Node.js 24 or newer')
   process.env.PATH = path.dirname(process.execPath) + path.delimiter + process.env.PATH
-  const outputFlag = process.argv.indexOf('--out')
-  const output = path.resolve(root, outputFlag === -1 ? 'release' : process.argv[outputFlag + 1] || '')
-  if (!output.startsWith(root + path.sep) || output === root) throw new Error('Installer output must be inside this project')
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
+  const args=process.argv.slice(2)
+  if(args.length&&!(args.length===2&&args[0]==='--out'&&args[1]))throw Error('Usage: build-installer.cjs [--out release/<fresh-generation>]')
+  const output = outputPath(root,args[1]||null,pkg.version)
+  const state=claim(root)
+  let completed,primaryFailure
+  try{
   const result = spawnSync(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), 'build'], { cwd: root, stdio: 'inherit', windowsHide: true })
   if (result.error || result.status !== 0) throw new Error('Frontend build failed')
-  const sourceFiles = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], { cwd: root }).toString('utf8').split('\0').filter(file => file && fs.existsSync(path.join(root, file)))
-  const inputs = sourceFiles.sort().map(file => identity(path.join(root, file)))
-  const frontend = filesIn(path.join(root, 'dist')).sort().map(file => identity(file))
+  const inputs = sourceInputs(root)
+  const frontend = frontendInputs(root)
   const sourceRevision = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root }).toString().trim()
   const dirty = !!execFileSync('git', ['status', '--porcelain'], { cwd: root }).toString().trim()
-  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
   const artifacts = await build({ targets: Platform.WINDOWS.createTarget(['nsis'], Arch.x64), publish: 'never', config: {
     directories: { output }, electronDist: path.join(root, 'node_modules/electron/dist'),
     afterPack: async context => {
@@ -72,11 +76,17 @@ async function main() {
         outputs: packagedOutputs, signing: 'unsigned', updatePolicy: 'manual; no trusted automatic update channel' })
     },
   } })
-  const evidence = path.join(root, '.rd/build'); fs.mkdirSync(evidence, { recursive: true })
-  write(path.join(evidence, 'installer-build-receipt.json'), { schemaVersion: 1, inputs,
+  const installers=artifacts.filter(file=>file.toLowerCase().endsWith('.exe'));if(installers.length!==1)throw Error('Exactly one installer envelope is required')
+  const verification=await delivery({root,output,installer:installers[0],inputs,frontend,sourceRevision,version:pkg.version,electronVersion:require('electron/package.json').version,automatic:true})
+  const receipt={ schemaVersion: 1, inputs,
     outputs: filesIn(output).sort().map(file => identity(file)),
     artifacts: artifacts.map(file => identity(file)), nodeExecutable: identity(process.execPath, path.dirname(process.execPath)),
-    sourceRevision, sourceDirty: dirty, version: pkg.version, completedAt: new Date().toISOString() })
-  process.stdout.write(JSON.stringify({ success: true, marker: 'POS_INSTALLER_BUILT', version: pkg.version, artifacts: artifacts.map(file => path.relative(root, file)) }) + '\n')
+    sourceRevision, sourceDirty: dirty, version: pkg.version, completedAt: new Date().toISOString(),delivery:{status:'PASS',automatic:true,run:verification.run,contract:verification.contractPath,deliveredTests:verification.report.runtime.tests,negativeControls:verification.report.calibration.negativeControls.length} }
+  write(path.join(state.invocation,'installer-build-receipt.json'),receipt)
+  const latest=path.join(root,'.rd/build/installer-build-receipt.json'),staged=path.join(state.invocation,'latest-receipt.json');write(staged,receipt);fs.renameSync(staged,latest)
+  completed={ success: true, marker: 'POS_INSTALLER_BUILT', version: pkg.version, artifacts: artifacts.map(file => path.relative(root, file)),delivery:receipt.delivery }
+  }catch(error){primaryFailure=error;try{write(path.join(state.invocation,'failure.json'),{schemaVersion:1,status:'FAIL',error:error.stack,output,completedAt:new Date().toISOString()})}catch(secondary){console.error('Failure receipt unavailable:',secondary.message)}throw error}
+  finally{try{state.release()}catch(secondary){if(primaryFailure)console.error('Build lock cleanup failed:',secondary.message);else throw secondary}}
+  process.stdout.write(JSON.stringify(completed)+'\n')
 }
 main().catch(error => { fs.writeSync(2, error.stack + '\n'); process.exit(1) })
