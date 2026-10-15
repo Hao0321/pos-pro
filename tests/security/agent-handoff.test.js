@@ -1,0 +1,10 @@
+import {expect,test} from 'vitest'
+import {makeAgentHandoff,parseAgentDocument,isAgentDocumentText} from '../../electron/agentHandoff.mjs'
+import {makeAgentContext,validateAgentDraft} from '../../electron/agentDraftRules.mjs'
+
+const context=()=>makeAgentContext({storeId:'fixture-store',role:'staff',products:[{id:'rice',name:'牛丼',unit:'碗',price:95,stock:2,cost:40}],restaurantConfig:{enabled:false}})
+test('one copied packet includes instructions, role-minimized store data and a valid sale example',async()=>{const c=await context(),kit=makeAgentHandoff(c);expect(kit.protocol).toBe('pos-agent-handoff/v1');expect(kit.instructions.join(' ')).toContain('保留原編號');expect(kit.context.products[0].unitCost).toBeUndefined();expect(validateAgentDraft(kit.example,c).total).toBe(95);expect(c).not.toHaveProperty('instructions')})
+test('one JSON code fence and UTF-8 BOM are accepted without changing the original document ID',async()=>{const kit=makeAgentHandoff(await context()),raw=JSON.stringify(kit.example);for(const input of [raw,'\uFEFF'+raw,'```json\n'+raw+'\n```','```\r\n'+raw+'\r\n```']){expect(isAgentDocumentText(input)).toBe(true);expect(parseAgentDocument(input)).toEqual(kit.example)}})
+test('multiple fences, surrounding prose, arrays, malformed JSON and oversized UTF-8 documents are rejected',()=>{for(const raw of ['說明\n```json\n{}\n```','```json\n{}\n```\n額外說明','```json\n{}\n```\n```json\n{}\n```','[]','{broken','{"x":"'+'飯'.repeat(11000)+'"}'])expect(()=>parseAgentDocument(raw)).toThrow()})
+test('transport tolerance cannot bypass store, permission, expiry or unknown-field validation',async()=>{const c=await context(),kit=makeAgentHandoff(c);for(const change of [{storeId:'other'},{kind:'purchase'},{issuedAt:'2020-01-01T00:00:00Z'},{charge:true}]){const d=parseAgentDocument('```json\n'+JSON.stringify({...kit.example,...change})+'\n```');expect(()=>validateAgentDraft(d,c)).toThrow()}})
+test('empty stores and unauthorized handoff kinds return actionable errors',async()=>{const c=await context();expect(()=>makeAgentHandoff({...c,products:[]})).toThrow(/新增商品/);expect(()=>makeAgentHandoff(c,'purchase')).toThrow(/帳號/)})

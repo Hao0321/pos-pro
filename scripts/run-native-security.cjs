@@ -1,5 +1,6 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--procurement-returns':['native-procurement-returns.cjs','POS_PROCUREMENT_RETURNS_PASS',false],
   '--agent-ui':['native-agent-ui.cjs','POS_AGENT_UI_PASS',true],
   '--procurement':['native-procurement.cjs','POS_PROCUREMENT_PASS',false],
   '--procurement-ui':['native-procurement-ui.cjs','POS_PROCUREMENT_UI_PASS',true],

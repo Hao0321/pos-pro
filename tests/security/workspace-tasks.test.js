@@ -1,0 +1,5 @@
+import {expect,test} from 'vitest'
+import {workspaceTasks,workspaceReminders} from '../../src/utils/workspaceTasks'
+
+test('every task uses current permissions and everyday-language searches reach the existing workflow',()=>{expect(workspaceTasks({role:'owner'},'手機').map(t=>t.view)).toContain('devices');expect(workspaceTasks({role:'owner'},'退款').map(t=>t.view)).toContain('purchase');expect(workspaceTasks({role:'staff'},'會計')).toEqual([]);expect(workspaceTasks(null)).toEqual([]);expect(workspaceTasks({role:'owner'},'完全不存在')).toEqual([])})
+test('reminders are derived without writing or changing the cart and stale UI cannot authorize a payment',()=>{const store={products:[],cart:[{id:'p',qty:1}],purchases:[],openShift:null},before=structuredClone(store);expect(workspaceReminders(store,{role:'owner'}).map(r=>r.id)).toEqual(['first-product','open-shift','cart']);expect(store).toEqual(before);expect(workspaceReminders({...store,products:[{id:'p'}],cart:[],openShift:{id:'shift'}},{role:'staff'})).toEqual([])})

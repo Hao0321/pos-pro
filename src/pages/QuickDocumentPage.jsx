@@ -3,11 +3,12 @@ import {getAgentContext,rememberAgentMappings} from '../utils/dataAccess'
 import {AGENT_PROTOCOL,draftFromText,validateAgentDraft,agentCommand,agentBusinessDay} from '../../electron/agentDraftRules.mjs'
 import {BUSINESS_PROTOCOL,prepareBusinessDocument} from '../../electron/businessDocument.mjs'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
+import {isAgentDocumentText,parseAgentDocument,makeAgentHandoff} from '../../electron/agentHandoff.mjs'
 
 const button={minHeight:48,fontSize:18},field={minHeight:48,fontSize:18,width:'100%'}
 const labels={sale:'賣東西',restaurant:'預訂餐點',purchase:'叫貨進貨'}
 const money=n=>'NT$ '+n.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2})
-export default function QuickDocumentPage({store,session,incoming=''}){
+export default function QuickDocumentPage({store,session,incoming='',onIncomingConsumed}){
   const [context,setContext]=useState(null),[text,setText]=useState(incoming),[kind,setKind]=useState('sale'),[draft,setDraft]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[done,setDone]=useState(''),[packet,setPacket]=useState('')
   const running=useRef(false)
   const imported=useRef('')
@@ -15,10 +16,12 @@ export default function QuickDocumentPage({store,session,incoming=''}){
   const [external,setExternal]=useState(null),[remember,setRemember]=useState(session.role==='owner')
   const [editMappings,setEditMappings]=useState(false)
   const statusRef=useRef(null)
+  const importSequence=useRef(0)
+  const [handoff,setHandoff]=useState(''),[copyMessage,setCopyMessage]=useState('')
   useEffect(()=>{if(done)statusRef.current?.scrollIntoView?.({block:'nearest'})},[done])
   useEffect(()=>{let cancelled=false;getAgentContext(session).then(c=>{if(!cancelled)setContext(c)}).catch(e=>setError(e.message));return()=>{cancelled=true}},[session.userId])
   useEffect(()=>{if(incoming){setText(incoming);setDraft(null);setDone('')}},[incoming])
-  useEffect(()=>{if(incoming&&context&&imported.current!==incoming){imported.current=incoming;readDocument(incoming).catch(e=>setError(e.message))}},[incoming,context])
+  useEffect(()=>{if(incoming&&context&&imported.current!==incoming){imported.current=incoming;readDocument(incoming).catch(e=>setError(e.message));onIncomingConsumed?.(incoming)}},[incoming,context,onIncomingConsumed])
   useEffect(()=>{if(draft)previewRef.current?.scrollIntoView?.({block:'nearest'})},[draft?.id])
   useEffect(()=>{
     const committed=e=>{if(draft&&e.detail?.receipt?.id==='agent-'+draft.id){running.current=false;setBusy(false);setError('');setDone(draft.kind==='purchase'?'採購單已建立':'預訂已建立，尚未收款');setDraft(null);setExternal(null);setText('')}}
@@ -28,18 +31,19 @@ export default function QuickDocumentPage({store,session,incoming=''}){
   useEffect(()=>{const refresh=()=>getAgentContext(session).then(setContext).catch(e=>setError(e.message));window.addEventListener('pos-data-refreshed',refresh);return()=>window.removeEventListener('pos-data-refreshed',refresh)},[session.userId])
   function update(key,value){setDraft(d=>({...d,[key]:value}));setError('')}
   function baseDraft(){return {protocol:AGENT_PROTOCOL,id:crypto.randomUUID(),issuedAt:new Date().toISOString(),storeId:context.storeId,catalogueRevision:context.catalogueRevision,kind,items:[],note:'',...(kind==='purchase'?{supplierId:'',date:agentBusinessDay(context)}:{}),...(kind==='restaurant'?{channel:'preorder',day:agentBusinessDay(context),slot:'',customer:'',contact:''}:{})}}
-  function choose(product){setError('');setDone('');setDraft(previous=>{const d=previous||baseDraft(),found=d.items.find(i=>i.productId===product.id);return {...d,items:found?d.items.map(i=>i===found?{...i,qty:Number(i.qty)+1}:i):[...d.items,{productId:product.id,qty:1}]}})}
+  function takeControl(){importSequence.current++;if(incoming){imported.current=incoming;onIncomingConsumed?.(incoming)}}
+  function choose(product){takeControl();setError('');setDone('');setDraft(previous=>{const d=previous||baseDraft(),found=d.items.find(i=>i.productId===product.id);return {...d,items:found?d.items.map(i=>i===found?{...i,qty:Number(i.qty)+1}:i):[...d.items,{productId:product.id,qty:1}]}})}
   async function readDocument(raw){
-    if(raw.length>32768)throw Error('單據太大，請分批匯入（每次最多 32 KB）')
-    const d=JSON.parse(raw)
-    const activeContext=await getAgentContext(session);setContext(activeContext)
-    if(d?.protocol===BUSINESS_PROTOCOL){const result=await prepareBusinessDocument(d,activeContext);setExternal({document:d,overrides:{},...result});setEditMappings(false);setDraft(result.draft);setKind(d.intent)}
+    const sequence=++importSequence.current;setDraft(null);setExternal(null)
+    const d=parseAgentDocument(raw)
+    const activeContext=await getAgentContext(session);if(sequence!==importSequence.current)return;setContext(activeContext)
+    if(d?.protocol===BUSINESS_PROTOCOL){const result=await prepareBusinessDocument(d,activeContext);if(sequence!==importSequence.current)return;setExternal({document:d,overrides:{},...result});setEditMappings(false);setDraft(result.draft);setKind(d.intent)}
     else{validateAgentDraft(d,activeContext,Date.now(),true);setExternal(null);setDraft(d);setKind(d.kind)}
     setText('');setDone('');setError('')
   }
-  async function organize(){setError('');setDone('');try{if(text.trim().startsWith('{'))await readDocument(text);else{const d=draftFromText(text,context,kind);setExternal(null);setDraft(d);setKind(d.kind)}}catch(e){setError(e.message)}}
-  async function mapItem(key,productId){try{const overrides={...external.overrides,[key]:productId},result=await prepareBusinessDocument(external.document,context,overrides);setExternal({...external,overrides,...result});setDraft(result.draft);setError('')}catch(e){setDraft(null);setError(e.message)}}
-  async function readFile(file){if(!file)return;try{if(file.size>32768)throw Error('單據太大，請分批匯入（每次最多 32 KB）');await readDocument(await file.text())}catch(e){setError(e.message)}}
+  async function organize(){setError('');setDone('');setDraft(null);setExternal(null);try{if(isAgentDocumentText(text))await readDocument(text);else{importSequence.current++;const d=draftFromText(text,context,kind);setExternal(null);setDraft(d);setKind(d.kind)}}catch(e){setError(e.message)}}
+  async function mapItem(key,productId){const sequence=++importSequence.current;try{const overrides={...external.overrides,[key]:productId},result=await prepareBusinessDocument(external.document,context,overrides);if(sequence!==importSequence.current)return;setExternal({...external,overrides,...result});setDraft(result.draft);setError('')}catch(e){if(sequence===importSequence.current){setDraft(null);setError(e.message)}}}
+  async function readFile(file){if(!file)return;const sequence=++importSequence.current;let activeSequence=sequence;setDraft(null);setExternal(null);try{if(file.size>32768)throw Error('單據太大，請分批匯入（每次最多 32 KB）');const raw=await file.text();if(sequence===importSequence.current){const pending=readDocument(raw);activeSequence=importSequence.current;await pending}}catch(e){if(activeSequence===importSequence.current)setError(e.message)}}
   let preview=null,issue=''
   if(draft&&context)try{preview=validateAgentDraft(draft,context)}catch(e){issue=e.message}
   async function build(){
@@ -55,12 +59,14 @@ export default function QuickDocumentPage({store,session,incoming=''}){
     }catch(e){setError(e.message)}finally{running.current=false;setBusy(false)}
   }
   async function exportPacket(){try{const c=await getAgentContext(session);setContext(c);setPacket(JSON.stringify(c,null,2))}catch(e){setError(e.message)}}
+  async function prepareHandoff(){try{setError('');const c=await getAgentContext(session),text=JSON.stringify(makeAgentHandoff(c,kind),null,2);setContext(c);setHandoff(text);try{await navigator.clipboard.writeText(text);setCopyMessage('已複製。貼給你的 Agent，再把它回覆的單據貼回上方。')}catch{setCopyMessage('資料已準備好。選取下方內容並複製給你的 Agent。')}}catch(e){setError(e.message)}}
   return <div style={{flex:1,overflowY:'auto',padding:16,fontSize:18}}><div style={{maxWidth:800,margin:'0 auto',paddingBottom:40}}>
     <h2 style={{fontSize:26}}>快速建單</h2><p>說要什麼，或點商品。看一下，就能建好。</p>
     {done&&<div ref={statusRef} role="status" className="card" style={{padding:16,marginTop:12}}><strong>{done}</strong><button className="btn btn-primary" style={{...button,display:'block',marginTop:12}} onClick={()=>store.setView(kind==='purchase'?'purchase':'restaurant')}>查看單據</button></div>}
-    <div style={{display:'flex',gap:8,flexWrap:'wrap',margin:'16px 0'}}>{Object.entries(labels).filter(([k])=>k!=='purchase'||session.role==='owner').map(([k,label])=><button key={k} style={button} className={'btn '+(kind===k?'btn-primary':'btn-ghost')} aria-pressed={kind===k} onClick={()=>{setKind(k);setDraft(null);setExternal(null);setDone('');setError('')}}>{label}</button>)}</div>
+    <fieldset disabled={busy} style={{border:0,padding:0,minWidth:0}}>
+    <div style={{display:'flex',gap:8,flexWrap:'wrap',margin:'16px 0'}}>{Object.entries(labels).filter(([k])=>k!=='purchase'||session.role==='owner').map(([k,label])=><button key={k} style={button} className={'btn '+(kind===k?'btn-primary':'btn-ghost')} aria-pressed={kind===k} onClick={()=>{takeControl();setKind(k);setDraft(null);setExternal(null);setDone('');setError('')}}>{label}</button>)}</div>
     {!context?<p role="status">正在讀取店內品項…</p>:<>
-      <label>你要開什麼單？<textarea aria-label="建單內容" className="field" style={{...field,minHeight:110}} maxLength={32768} value={text} onDrop={e=>{if(e.dataTransfer.files.length){e.preventDefault();readFile(e.dataTransfer.files[0])}}} onDragOver={e=>e.preventDefault()} onChange={e=>{setText(e.target.value);setDone('')}} placeholder={`${context.products[0]?.name||'牛丼'} 2，${context.products[1]?.name||'紅茶'} 1；也可以貼上 Agent 草稿`}/></label>
+      <label>你要開什麼單？<textarea aria-label="建單內容" className="field" style={{...field,minHeight:110}} maxLength={32768} value={text} onDrop={e=>{if(e.dataTransfer.files.length){e.preventDefault();readFile(e.dataTransfer.files[0])}}} onDragOver={e=>e.preventDefault()} onChange={e=>{takeControl();setText(e.target.value);setDraft(null);setExternal(null);setDone('');setError('')}} placeholder={`${context.products[0]?.name||'牛丼'} 2，${context.products[1]?.name||'紅茶'} 1；也可以貼上 Agent 草稿`}/></label>
       <input ref={fileRef} type="file" accept=".json,application/json" aria-label="公司單據檔案" style={{display:'none'}} onChange={e=>{readFile(e.target.files?.[0]);e.target.value=''}}/>
       <button className="btn btn-ghost" style={{...button,width:'100%',marginTop:12}} onClick={()=>fileRef.current?.click()}>匯入公司單據</button>
       <button className="btn btn-primary" style={{...button,width:'100%',margin:'12px 0'}} onClick={organize} disabled={!text.trim()}>幫我整理</button>
@@ -76,8 +82,10 @@ export default function QuickDocumentPage({store,session,incoming=''}){
         <button className="btn btn-primary" style={{...button,width:'100%',marginTop:12}} disabled={!preview||busy} onClick={build}>{busy?'正在建單…':draft.kind==='sale'?'帶入收銀台':draft.kind==='restaurant'?'確認建立預訂':'確認建立採購'}</button>
         <p style={{fontSize:16}}>{draft.kind==='sale'?'帶入後再確認收款。':draft.kind==='restaurant'?'建單會預留庫存；尚未收款。':'建單後再確認收貨與付款。'}</p>
       </section>}
-      <details style={{marginTop:24}}><summary style={{cursor:'pointer',padding:'12px 0'}}>讓我的 Agent 幫忙</summary><p>讓 Agent 讀取建單指南和店內資料包，再把草稿貼回上方。</p><a href="./llms.txt" target="_blank" rel="noreferrer">建單指南</a> · <a href="./agent/manifest.json" target="_blank" rel="noreferrer">協議</a><button className="btn btn-ghost" style={{...button,display:'block',marginTop:12}} onClick={exportPacket}>取得店內資料包</button>{packet&&<textarea aria-label="Agent 店內資料包" readOnly className="field" style={{...field,minHeight:140}} value={packet} onFocus={e=>e.target.select()}/>}</details>
+      <section className="card" style={{padding:16,marginTop:24}} aria-label="交給 Agent"><h3>交給你的 Agent</h3><p>一次帶走建單說明和店內品項。把 Agent 回覆貼回上方，看一下就能建單。</p><button className="btn btn-primary" style={{...button,width:'100%'}} onClick={prepareHandoff}>複製建單資料給 Agent</button>{copyMessage&&<p role="status">{copyMessage}</p>}{handoff&&<details open><summary style={{padding:'12px 0'}}>查看可複製的內容</summary><textarea aria-label="給 Agent 的建單資料" className="field" readOnly style={{...field,minHeight:150}} value={handoff} onFocus={e=>e.target.select()}/></details>}</section>
+      <details style={{marginTop:24}}><summary style={{cursor:'pointer',padding:'12px 0'}}>開發者與進階設定</summary><a href="./llms.txt" target="_blank" rel="noreferrer">建單指南</a> · <a href="./agent/manifest.json" target="_blank" rel="noreferrer">協議</a><button className="btn btn-ghost" style={{...button,display:'block',marginTop:12}} onClick={exportPacket}>取得店內資料包</button>{packet&&<textarea aria-label="Agent 店內資料包" readOnly className="field" style={{...field,minHeight:140}} value={packet} onFocus={e=>e.target.select()}/>}</details>
     </>}
+    </fieldset>
     {error&&<p role="alert" style={{color:'var(--red)',padding:12}}>{error}{store.cart.length>0&&<button className="btn btn-ghost" style={button} onClick={()=>store.setView('pos')}>回收銀台查看原購物車</button>}</p>}
   </div></div>
 }

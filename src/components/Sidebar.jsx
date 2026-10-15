@@ -5,6 +5,7 @@ import SyncStatusBadge from './SyncStatusBadge'
 
 const NAV = [
   { key:'dashboard',  label:'首頁',     Icon:LayoutDashboard, perm:'pos.use', accent:'gold' },
+  { key:'overview',label:'營運總覽',Icon:BarChart2,perm:'reports.view',accent:'gold' },
   { key:'quick',label:'快速建單',Icon:Sparkles,perm:'pos.use',accent:'green' },
   { key:'pos',        label:'收銀台',   Icon:ShoppingCart,    perm:'pos.use', accent:'green' },
   { key:'restaurant',label:'預訂出餐',Icon:ClipboardList,perm:'pos.use',accent:'green' },
@@ -24,8 +25,11 @@ const NAV = [
   { key:'scenarios',  label:'情境模板', Icon:Sparkles,        perm:'settings.edit', accent:'green' },
 ]
 
-export default function Sidebar({ view, setView, session, lowStockCount, todayRevenue, todayOrders, onLogout, pendingOrders = 0, openShift = null,largeText=false,toggleLargeText }) {
+export default function Sidebar({ view, setView, session, lowStockCount, todayRevenue, todayOrders, onLogout, pendingOrders = 0, openShift = null,largeText=false,toggleLargeText,simpleMode=false,toggleSimpleMode }) {
   const [now, setNow] = useState(new Date())
+  const [showMore,setShowMore]=useState(false)
+  const common=new Set(['dashboard','quick','pos','restaurant','shifts','readiness','inventory','purchase'])
+  useEffect(()=>{if(!common.has(view))setShowMore(true)},[view])
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
@@ -44,12 +48,13 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
         </div>
         <div>
           <div style={s.logoName}>POS<span style={{background:'var(--accent-grad)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text'}}>Pro</span></div>
-          <div style={s.logoSub}>智慧雜貨店系統</div>
+          <div style={s.logoSub}>免費 POS・ERP</div>
         </div>
       </div>
 
       {/* 今日營收卡 */}
       <button className="btn btn-ghost" aria-label="切換大字模式（選單）" aria-pressed={largeText} onClick={toggleLargeText} style={{minHeight:48,fontSize:16,margin:'0 12px 8px'}}>大字好按 {largeText?'✓':''}</button>
+      <button className="btn btn-ghost" aria-label="切換簡易操作" aria-pressed={simpleMode} onClick={toggleSimpleMode} style={{minHeight:48,fontSize:16,margin:'0 12px 8px'}}>{simpleMode?'簡易操作 ✓':'切換簡易操作'}</button>
       <div style={s.todayCard} className="animate-up">
         <div style={s.todayTop}>
           <div>
@@ -82,6 +87,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
             <button key={key} onClick={() => setView(key)}
               style={{
                 ...s.navItem,
+                display:simpleMode&&!showMore&&!common.has(key)&&view!==key?'none':'flex',
                 background: active ? 'var(--bg-raised)' : 'transparent',
                 color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
                 fontWeight: active ? 600 : 500,
@@ -107,6 +113,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
             </button>
           )
         })}
+        {simpleMode&&<button className="btn btn-ghost" aria-label="展開全部功能" aria-expanded={showMore} style={{minHeight:48,fontSize:16,marginTop:6}} onClick={()=>setShowMore(v=>!v)}>{showMore?'收起更多功能':'全部功能'}</button>}
       </nav>
 
       {/* 底部 - 警示 + 用戶 */}

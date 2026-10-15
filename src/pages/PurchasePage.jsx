@@ -14,6 +14,7 @@ import {isProcurement,procurementSummary} from '../../electron/procurementRules.
 
 export default function PurchasePage({ store, session }) {
   const { products, commitInventory, orders = [] } = store
+  const canEdit=session?.role==='owner'
   const [suppliers,  setSuppliers]  = useState([])
   const [purchases,  setPurchases]  = useState([])
   const [tab,        setTab]        = useState('list')
@@ -78,18 +79,19 @@ export default function PurchasePage({ store, session }) {
             {pending.length} 張待處理 · 待付款 NT$ {totalOwed.toLocaleString()}
           </div>
         </div>
-        <div style={{display:'flex', gap:8}}>
-          {[['list','進貨單'],['new','+ 新增'],['suppliers','供應商'],['payable','應付帳款']].map(([k,l])=>(
+        <div style={{display:'flex', gap:8,flexWrap:'wrap',minWidth:0}}>
+          {[['list','進貨單'],...(canEdit?[['new','+ 新增'],['suppliers','供應商']]:[]),['payable','應付帳款']].map(([k,l])=>(
             <button key={k} onClick={()=>{setTab(k);setSelected(null)}} className={`btn btn-sm ${tab===k?'btn-primary':'btn-ghost'}`}>{l}</button>
           ))}
         </div>
       </div>
 
-      {tab === 'list'      && <PurchaseList purchases={purchases} selected={selected} onSelect={setSelected} onReceive={setReceiving} renderProcurement={po=><ProcurementPanel key={po.id} po={po} onCommand={commitInventory} openShift={store.openShift}/>}/>}
+      {tab === 'list'      && <PurchaseList purchases={purchases} selected={selected} onSelect={setSelected} onReceive={canEdit?setReceiving:null} renderProcurement={po=><ProcurementPanel key={po.id} po={po} onCommand={commitInventory} openShift={store.openShift} readOnly={!canEdit}/>}/>}
       {saveError&&!receiving&&<p role="alert" style={{color:'var(--red)'}}>{saveError}</p>}
       {tab === 'new'       && <NewPurchase  products={products} suppliers={suppliers} purchases={purchases} orders={orders} onSave={async po=>{creatingId.current=po.id;const r=await commitInventory('purchase-create',{purchase:po});setSelected(r.purchase);setTab('list')}}/>}
       {tab === 'suppliers' && <SupplierList suppliers={suppliers} products={products} purchases={purchases} onSave={saveSuppliers} onGoInventory={()=>store.setView?.('inventory')}/>}
-      {tab === 'payable'   && <PayableTab purchases={purchases} suppliers={suppliers} onOpen={po=>{setSelected(po);setTab('list')}} onMarkPaid={async(id)=>{
+      {tab === 'payable'   && <PayableTab purchases={purchases} suppliers={suppliers} readOnly={!canEdit} onOpen={po=>{setSelected(po);setTab('list')}} onMarkPaid={async(id)=>{
+        if(!canEdit)return
         const target = purchases.find(p => p.id === id)
         if (!target) return
         // 保底：部分到貨不改 status（否則「補收到貨」按鈕會消失、貨永遠收不齊）

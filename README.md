@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-2.8.0-b8895a">
+  <img alt="version" src="https://img.shields.io/badge/version-2.9.0-b8895a">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20PWA-555">
   <img alt="tests" src="https://img.shields.io/badge/tests-vitest%20%2B%20native-3f9c5e">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
@@ -20,7 +20,7 @@
 
 ## 這是什麼
 
-目前版本：v2.8.0。新增免費 ERP 採購基礎、Agent／跨公司快速建單與大字模式：分批收貨、採購／收貨／請款核對、分次付款、付款沖銷、班次現金連動與自動分錄。手機與電腦使用同一店面資料；舊單保留歷史模式。Windows 安裝檔未簽章；本機安裝包與 GitHub Release 的交付範圍見 [2.8.0 安裝說明](docs/INSTALLER_2_8_0.md)。
+目前版本：v2.9.0。加入預設簡易工作台、白話搜尋、一鍵 Agent 建單資料包，以及採購部分退貨、供應商待退、分次退款與更正。沿用分批收貨、請款核對、分次付款、班次現金與自動分錄。完整 ERP 和真人易用性仍有未完成能力，見 [完整目標清單](product-capabilities.json)。本機安裝包與 GitHub Release 的交付範圍見 [2.9.0 安裝說明](docs/INSTALLER_2_9_0.md)。
 
 POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模與店型，不設訂閱或進階功能解鎖費。資料預設存在本機（桌面版走 SQLite、瀏覽器版走 localStorage），雲端同步是選用。
 
@@ -34,6 +34,7 @@ POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模�
 - [第一個情境模板：丼飯外帶](docs/SCENARIO_TEMPLATES.md)：套用菜單、正式接單與獨立試賣演練。
 - [正式預訂與出餐](docs/RESTAURANT_WORKFLOW.md)：原料／包材預留、產能、取餐號、收款、交付、取消退款與完整復原。
 - [營業可靠性驗收](docs/OPERATING_READINESS.md)：已執行範圍、實機待驗項目及使用限制。
+- [簡易工作台與完整 ERP 目標](docs/EASY_WORKSPACE.md)：從要做的事開始、一鍵交給 Agent，以及尚未完成的全產品能力。
 - [手機與電腦共用店面](docs/SHARED_STORE.md)：電腦資料庫、私人區網 HTTPS、一次性配對、帳號權限與斷線核對。
 - [ERP 採購到付款](docs/ERP-FOUNDATION.md)：分批收貨、請款核對、分次付款、沖銷與帳務；保留免費政策及已驗證能力界線。
 - [Agent 快速建單協議](docs/AGENT_DOCUMENT_PROTOCOL.md)：同一入口支援文字、點選商品與 Agent 草稿，預覽後一次建單。
@@ -48,8 +49,9 @@ POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模�
 - 📱 **共用店面** — 私人區網 HTTPS 配對，手機與電腦使用同一個 SQLite 資料庫
 - 📦 **庫存** — 即時扣庫、安全庫存提醒、批量改價、CSV 匯入匯出、商品變動歷史、過期警示
 - 👥 **會員** — 點數、分級、儲值卡、生日贈點、RFM 自動分群
-- 🚚 **進貨訂貨** — 廠商管理、依供應商一鍵建單、AI 智慧補貨建議、歷史單價
+- 🚚 **進貨訂貨** — 廠商管理、依供應商一鍵建單、依歷史銷售與庫存提出補貨建議、歷史單價
 - 📒 **採購帳務** — 不超收的分批收貨、供應商請款、到期與欠款、銀行／班次現金分次付款、原付款沖銷
+- ↩️ **採購退貨** — 未請款／已請款部分退貨、供應商待退、分次退款與保留歷史的更正
 - ✨ **快速建單** — 文字／商品大按鈕、Agent 草稿、跨公司 JSON 匯入、品項對照、大字模式；銷售先帶入購物車，預訂與採購一次建立
 - 🧮 **複式記帳** — 銷售/成本/儲值自動入帳、損益表、資產負債表、日記帳、CSV 匯出
 - 📊 **報表** — 每日營收、毛利、熱賣滯銷、客單價、員工績效
@@ -68,7 +70,7 @@ POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模�
 
 首次啟動由你建立管理員名稱與至少 8 字元密碼。既有帳號會保留；舊的短密碼必須在驗證後更換，登入流程不再重建預設帳號。
 
-最新版的本機產物與更新方式見 [2.8.0 安裝檔說明](docs/INSTALLER_2_8_0.md)；[2.7.1 安裝檔紀錄](docs/INSTALLER_2_7_1.md)保留為歷史資料。
+最新版的本機產物與更新方式見 [2.9.0 安裝檔說明](docs/INSTALLER_2_9_0.md)；[2.8.0 安裝檔紀錄](docs/INSTALLER_2_8_0.md)保留為歷史資料。
 
 ### 自行編譯 / 開發
 

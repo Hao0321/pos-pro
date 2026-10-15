@@ -1,6 +1,6 @@
 import {isProcurement,procurementSummary} from '../../../electron/procurementRules.mjs'
 
-export function PayableTab({ purchases, suppliers, onMarkPaid,onOpen }) {
+export function PayableTab({ purchases, suppliers, onMarkPaid,onOpen,readOnly=false }) {
   const managed=purchases.filter(isProcurement),legacy=purchases.filter(p=>!isProcurement(p))
   // 已到貨（含部分到貨）且未付款 = 應付帳款
   const unpaid = legacy.filter(p => (p.status === 'received' || p.status === 'partial') && !p.paidDate)
@@ -24,7 +24,7 @@ export function PayableTab({ purchases, suppliers, onMarkPaid,onOpen }) {
 
   return (
     <div style={{flex:1, overflowY:'auto', padding:'4px 0'}}>
-      {managed.length>0&&<div className="card" style={{padding:16,marginBottom:16}}><h3>採購請款與付款</h3><p>應付餘額 NT$ {managed.reduce((n,p)=>n+procurementSummary(p).owed,0).toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>{managed.map(po=>{const s=procurementSummary(po);return <button className="btn btn-ghost" key={po.id} style={{display:'flex',width:'100%',justifyContent:'space-between',minHeight:44,gap:12,flexWrap:'wrap',marginTop:6}} onClick={()=>onOpen(po)}><span>{po.supplierName} · {po.id}</span><span>未付 {s.owed.toFixed(2)} · 待請款 {s.unbilled.toFixed(2)}{s.overdue>0?' · 已逾期':''}</span></button>})}</div>}
+      {managed.length>0&&<div className="card" style={{padding:16,marginBottom:16}}><h3>採購請款與付款</h3><p>應付餘額 NT$ {managed.reduce((n,p)=>n+procurementSummary(p).owed,0).toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>{managed.map(po=>{const s=procurementSummary(po);return <button className="btn btn-ghost" key={po.id} style={{display:'flex',width:'100%',justifyContent:'space-between',minHeight:44,gap:12,flexWrap:'wrap',marginTop:6}} onClick={()=>onOpen(po)}><span>{po.supplierName} · {po.id}</span><span>未付 {s.owed.toFixed(2)} · 待請款 {s.unbilled.toFixed(2)}{s.credit>0?' · 供應商待退 '+s.credit.toFixed(2):''}{s.overdue>0?' · 已逾期':''}</span></button>})}</div>}
       {managed.length>0&&legacy.length>0&&<h3>歷史進貨單（保留原帳）</h3>}
       <div className="card" style={{padding:'18px 20px', marginBottom:14, borderTop:'2px solid var(--red)'}}>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline'}}>
@@ -68,7 +68,7 @@ export function PayableTab({ purchases, suppliers, onMarkPaid,onOpen }) {
                     {p.status === 'partial' ? (
                       // 先不開放付款：付了會把狀態鎖死、也容易多付 — 貨到齊再結一次
                       <span style={{fontSize:11, color:'var(--text-tertiary)'}}>貨到齊再付</span>
-                    ) : (
+                    ) : !readOnly&&(
                       <button className="btn btn-primary btn-sm" onClick={()=>{ if(confirm(`確認 ${p.id} 已付款？`)) onMarkPaid(p.id) }}>標記已付</button>
                     )}
                   </td>

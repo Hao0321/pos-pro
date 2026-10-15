@@ -50,7 +50,15 @@ export function planInventory(request,data,actor){
     const full=items.every(i=>i.received>=i.qty)
     purchase=recordProcurementReceipt(original,{...original,items,status:full?(isProcurement(original)?'received':original.paidDate?'paid':'received'):'partial',receivedDate:procurementDate(request.time)},request)
   }else if(PROCUREMENT_KINDS.includes(request.kind)){
-    ;({purchase,cashLog}=planProcurement(request,data,actor))
+    const plan=planProcurement(request,data,actor)
+    ;({purchase,cashLog}=plan)
+    for(const delta of plan.stockDeltas||[]){
+      const product=products.get(delta.productId)
+      if(!product)throw Error('退貨商品不存在，請核對原收貨紀錄')
+      const remaining=Math.round(quantityValue(product.stock,'商品庫存')*1000)+Math.round(delta.qty*1000)
+      if(remaining<0)throw Error('現有庫存不足，已售出或耗用的商品不能退回供應商')
+      product.stock=quantityValue(remaining/1000,'退貨後庫存');changed.add(product.id)
+    }
   }else throw Error('庫存異動類型不正確')
   const receipt={id:request.id,kind:request.kind,signature:canonicalSignature(request),productIds:[...changed],purchaseId:purchase?.id||null,supplierId:supplier?.id||null,time:request.time}
   if(isProcurement(purchase)){receipt.purchaseVersion=purchase.procurement.revision;receipt.document=procurementEvent(purchase,request)}
@@ -64,6 +72,10 @@ export function inventoryReceipt(request,row,data){
   if(products.some(p=>!p))throw Error('原異動商品已不存在，請先核對')
   if(row.purchaseId&&!data.purchases.some(p=>p.id===row.purchaseId)||row.supplierId&&!data.suppliers.some(s=>s.id===row.supplierId))throw Error('原異動進貨單或供應商已不存在，請先核對')
   const purchase=row.purchaseId?data.purchases.find(p=>p.id===row.purchaseId):null
+  if(request.kind==='purchase-return'){
+    const expected=[...new Set(purchase?.items.filter((_,i)=>request.quantities?.[i]>0).map(item=>item.productId))]
+    if(!expected.length||expected.length!==row.productIds.length||expected.some(id=>!id||!row.productIds.includes(id)))throw Error('原退貨庫存回執不完整，請保留原編號核對')
+  }
   if(row.document){validateProcurement(purchase);if(!isProcurement(purchase)||purchase.procurement.revision<row.purchaseVersion||canonicalSignature(procurementEvent(purchase,request))!==canonicalSignature(row.document))throw Error('採購歷史文件缺失，請保留原編號核對')}
   const cashLog=row.cashLogId?data.cashLogs?.find(l=>l.id===row.cashLogId):null
   if(row.cashLogId&&!cashLog)throw Error('原付款現金流水已不存在，請保留原編號核對')

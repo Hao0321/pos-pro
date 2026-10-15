@@ -469,7 +469,7 @@ export function useStore(session){
   const todayProfit= todayOrders.reduce((sum,o)=>sum+netSale(o)-orderCost(o,products),0)
 
   return {
-    products,members,orders,cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitInventory,commitRestaurant,restaurantConfig,
+    products,members,orders,purchases,cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitInventory,commitRestaurant,restaurantConfig,
     activeMember,setActiveMember:value=>{ensureCartEditable();setActiveMember(value)},
     addToCart,removeFromCart,updateCartQty,updateCartItemPrice,clearCart,stageQuickSale,
     cartSubtotal,cartCount,checkout,refund,

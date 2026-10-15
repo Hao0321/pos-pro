@@ -55,7 +55,7 @@ export function PurchaseList({ purchases, selected, onSelect, onReceive,renderPr
                 </div>
               </div>
             </div>
-            {(selected.status === 'ordered' || selected.status === 'partial') && (
+            {onReceive&&(selected.status === 'ordered' || selected.status === 'partial') && (
               <button className="btn btn-primary btn-sm" onClick={()=>onReceive(selected)}>
                 <Truck size={14}/>{selected.status === 'partial' ? '補收到貨' : '確認到貨'}
               </button>

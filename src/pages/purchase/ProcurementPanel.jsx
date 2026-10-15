@@ -3,11 +3,13 @@ import {canonicalSignature} from '../../../electron/operationRules.mjs'
 import {isProcurement,procurementSummary,procurementQuantities,procurementLineCents} from '../../../electron/procurementRules.mjs'
 import {localDate} from '../../utils/checkoutSafety.mjs'
 import {ps} from './controls.jsx'
+import ProcurementReturns from './ProcurementReturns.jsx'
+import {availableForReturn,quoteProcurementAllocation} from '../../../electron/procurementValuation.mjs'
 
 const money=value=>'NT$ '+value.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2})
 const fieldStyle={minHeight:44,fontSize:16,width:'100%'}
 const actionStyle={minHeight:44}
-export function ProcurementPanel({po,onCommand,openShift}){
+export function ProcurementPanel({po,onCommand,openShift,readOnly=false}){
   const [dialog,setDialog]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false)
   const saving=useRef(false)
   useEffect(()=>{
@@ -17,7 +19,7 @@ export function ProcurementPanel({po,onCommand,openShift}){
   },[dialog,po.id])
   if(!isProcurement(po))return <p style={{fontSize:12,color:'var(--text-secondary)'}}>歷史進貨單保留原帳。新增採購使用收貨、請款、分次付款與自動分錄流程。</p>
   const summary=procurementSummary(po),p=po.procurement,billed=procurementQuantities(po,'bills')
-  const billable=po.items.map((item,i)=>Math.round((item.received-billed[i])*1000)/1000)
+  const billable=availableForReturn(po).quantities
   const open=(kind,extra={})=>{setError('');setDialog({kind,expectedPurchase:canonicalSignature(po),quantities:billable.map(String),reference:'',dueDate:localDate(),method:'bank',amount:'',note:'',reason:'',...extra})}
   const update=(key,value)=>setDialog(d=>({...d,[key]:value}))
   async function submit(event){
@@ -34,27 +36,29 @@ export function ProcurementPanel({po,onCommand,openShift}){
   }
   const title=dialog&&({'purchase-bill':'登錄供應商請款','purchase-pay':'記錄供應商付款','purchase-reverse':'沖銷付款','purchase-cancel':'取消採購'}[dialog.kind])
   let billPreview=0
-  if(dialog?.kind==='purchase-bill')try{billPreview=po.items.reduce((n,item,i)=>n+procurementLineCents(Math.round((billed[i]+Number(dialog.quantities[i]))*1000)/1000,item.unitCost)-procurementLineCents(billed[i],item.unitCost),0)/100}catch{billPreview=0}
-  return <section aria-label="採購帳務流程" style={{marginTop:16,paddingBottom:24}}>
+  if(dialog?.kind==='purchase-bill')try{billPreview=p.valuation?quoteProcurementAllocation(po,dialog.quantities.map(Number)):po.items.reduce((n,item,i)=>n+procurementLineCents(Math.round((billed[i]+Number(dialog.quantities[i]))*1000)/1000,item.unitCost)-procurementLineCents(billed[i],item.unitCost),0)/100}catch{billPreview=0}
+  return <section className="procurement-flow" aria-label="採購帳務流程" style={{marginTop:16,paddingBottom:24}}>
     <h3 style={{fontSize:16}}>採購帳務流程</h3>
+    <p style={{fontSize:16,lineHeight:1.6}}>{readOnly?'目前為查看模式，請由老闆確認收貨與帳款。':p.cancel?'這張採購已取消。':billable.some(q=>q>0)?'接著：核對供應商單據，登錄已收到的貨款。':summary.owed>0?'接著：實際付款後，在請款單下方記錄付款。':summary.credit>0?'接著：核對供應商是否已退回款項。':po.status==='received'?'這張採購的收貨與帳款已核對。':'接著：貨到了，再按「確認到貨」。'}</p>
     <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:8,margin:'12px 0'}}>
       {[['已收貨',summary.received],['待請款',summary.unbilled],['已付淨額',summary.paid],['應付餘額',summary.owed],['逾期未付',summary.overdue]].map(([label,value])=><div key={label} className="card" style={{padding:12}}><div style={{fontSize:12}}>{label}</div><strong>{money(value)}</strong></div>)}
     </div>
     <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
-      {!p.cancel&&billable.some(q=>q>0)&&<button className="btn btn-primary" style={actionStyle} onClick={()=>open('purchase-bill')}>登錄請款</button>}
-      {!p.cancel&&!p.receipts.length&&<button className="btn btn-ghost" style={actionStyle} onClick={()=>open('purchase-cancel')}>取消採購</button>}
+      {!readOnly&&!p.cancel&&billable.some(q=>q>0)&&<button className="btn btn-primary" style={actionStyle} onClick={()=>open('purchase-bill')}>登錄請款</button>}
+      {!readOnly&&!p.cancel&&!p.receipts.length&&<button className="btn btn-ghost" style={actionStyle} onClick={()=>open('purchase-cancel')}>取消採購</button>}
     </div>
     {p.cancel&&<p role="status">已取消：{p.cancel.reason}</p>}
     {summary.bills.map(b=><div key={b.id} className="card" style={{padding:14,marginBottom:8}}>
-      <strong>請款單 {b.reference}</strong><div style={{fontSize:12,margin:'6px 0'}}>到期 {b.dueDate} · 請款 {money(b.amount)} · 未付 {money(b.balance)}{b.overdue?' · 已逾期':''}</div>
-      {b.balance>0&&<button className="btn btn-primary" style={actionStyle} onClick={()=>open('purchase-pay',{invoiceId:b.id,reference:b.reference,amount:String(b.balance)})}>記錄付款</button>}
+      <strong>請款單 {b.reference}</strong><div style={{fontSize:12,margin:'6px 0'}}>到期 {b.dueDate} · 請款 {money(b.amount)} · 未付 {money(Math.max(0,b.balance))}{b.credit>0?' · 供應商待退 '+money(b.credit):''}{b.overdue?' · 已逾期':''}</div>
+      {!readOnly&&b.balance>0&&<button className="btn btn-primary" style={actionStyle} onClick={()=>open('purchase-pay',{invoiceId:b.id,reference:b.reference,amount:String(b.balance)})}>記錄付款</button>}
     </div>)}
     {p.payments.length>0&&<div style={{margin:'16px 0'}}><h4>付款與沖銷紀錄</h4>{p.payments.map(pay=>{
       const reverse=p.reversals.find(r=>r.paymentId===pay.id),bill=p.bills.find(b=>b.id===pay.invoiceId)
       return <div key={pay.id} className="card" style={{padding:12,marginTop:8}}><div>{pay.date} · {pay.method==='cash'?'現金':'銀行'} · {money(pay.amount)}</div><div style={{fontSize:12,overflowWrap:'anywhere'}}>請款 {bill.reference} · {pay.id}{pay.note?' · '+pay.note:''}</div>
-        {reverse?<p style={{fontSize:12}}>已沖銷 {reverse.date}：{reverse.reason}</p>:<button className="btn btn-ghost" style={actionStyle} onClick={()=>open('purchase-reverse',{paymentId:pay.id,method:pay.method})}>沖銷此付款</button>}</div>
+        {reverse?<p style={{fontSize:12}}>已沖銷 {reverse.date}：{reverse.reason}</p>:!readOnly&&<button className="btn btn-ghost" style={actionStyle} onClick={()=>open('purchase-reverse',{paymentId:pay.id,method:pay.method})}>沖銷此付款</button>}</div>
     })}</div>}
     <details><summary style={{cursor:'pointer',padding:'12px 0'}}>收貨憑證（{p.receipts.length} 筆）</summary>{p.receipts.map(r=><div key={r.id} style={{fontSize:12,padding:8,overflowWrap:'anywhere'}}>{r.date} · {money(r.amount)} · {r.id}<div>{r.quantities.map((q,i)=>q>0?`${po.items[i].name} ${q} ${po.items[i].unit||'個'}`:'').filter(Boolean).join('、')}</div></div>)}</details>
+    <ProcurementReturns po={po} onCommand={onCommand} openShift={openShift} readOnly={readOnly}/>
     <p style={{fontSize:12,color:'var(--text-secondary)'}}>請款僅可登錄已收貨部分；付款與收貨各自追蹤。付款記錄須與實際付款核對。</p>
     {dialog&&<div style={ps.overlay}><form role="dialog" aria-modal="true" aria-label={title} onSubmit={submit} style={ps.modal}>
       <h3 style={{marginBottom:12}}>{title}</h3>

@@ -1,6 +1,6 @@
 # 營業可靠性與手機操作
 
-更新：2026-10-15，版本 2.8.0。所有店家、全部功能免費。本輪加入 ERP 採購、收貨、請款與付款核對；「已驗證範圍沒有尚未修正的可重現缺陷」不等於所有裝置、設備與外部服務永遠零 Bug，也不代表 Oracle／Odoo 全面功能或合規標準的對等認證。
+更新：2026-10-15，版本 2.9.0。所有店家、全部功能免費。本輪加入簡易工作台、一鍵 Agent 資料包及採購退貨退款，沿用採購、收貨、請款與付款核對；「已驗證範圍沒有尚未修正的可重現缺陷」不等於所有裝置、設備與外部服務永遠零 Bug，也不代表 Oracle／Odoo 全面功能或合規標準的對等認證。
 
 ## 共用店面與正式出餐
 
@@ -23,19 +23,21 @@
 
 ## 測量結果與範圍
 
-628 項專案測試：Vitest 462；原生 SQLite 12、交班 4、營業／進貨 10、共用 HTTPS 16、桌面 UI 5、PWA 離線 4、情境模板 SQLite 6、情境模板 UI 9、手機尺寸 UI 6、共用店面 UI 17、正式預訂 SQLite 19、正式預訂 UI 10、損耗與跨月營業 UI 9；另含 ERP 採購 SQLite 18、ERP 電腦與配對手機 UI 9、Agent／跨公司建單 UI 12。完整通過紀錄須與目前來源及前端雜湊相符，保存在本輪私有 `.rd/` 收據中。
+679 項專案測試：Vitest 490；原生 SQLite 12、交班 4、營業／進貨 10、共用 HTTPS 16、桌面 UI 5、PWA 離線 4、情境模板 SQLite 6、情境模板 UI 9、手機尺寸 UI 6、共用店面 UI 17、正式預訂 SQLite 19、正式預訂 UI 10、損耗與跨月營業 UI 9、ERP 採購 SQLite 18、退貨退款 SQLite 14、採購電腦與配對手機 UI 13、Agent／簡易工作台 UI 17。通過紀錄綁定目前來源、前端、測試檔案、child exit 及成功 marker，保存在 `.rd/erp-easy-20261015/`。
+
+新增驗收涵蓋已請款／未請款與已付款的部分退貨、後續收貨與請款的尾差、供應商待退、分次現金／銀行退款與更正、庫存回覆不完整時保留原編號，以及簡易首頁、白話搜尋、一鍵 Agent 資料包與 JSON 區塊導入。修正晚到的 Agent 草稿覆蓋手動選擇、已處理連結重開及修改內容後仍可提交舊預覽的問題。
 
 新增採購驗收涵蓋千分數量、累計金額尾差、訂購／實收／請款核對、分次付款、逾期餘額、原付款沖銷、班次現金、回覆遺失與原編號復原、整庫回滾、重啟與完整備份。歷史單不補造分錄；FIFO 成本、正式稅務／電子發票及會計關帳仍未實作，見 [ERP 能力與界線](ERP-FOUNDATION.md)。
 
 新增快速建單涵蓋確定性品名／數量辨識、錯店／改價／欄位／權限驗證、原購物車保留、Agent 草稿固定身份、回覆遺失後原編號恢復、跨公司品項第一次對照與手機接續套用、大字模式與 360px 短視窗。公司 Agent 的真實互通及老人、兒童真人試用仍未驗收；內建辨識不宣稱通用自然語言 AI。
 
-實際 Electron／Chromium 使用正式前端、preload、IPC、HTTPS 及 SQLite，涵蓋 17 個桌面與手機路由、9 個設定面板、並行最後庫存、版本衝突、回覆遺失、空間拒絕、中途失敗、重啟、全量備份及退款損益。手機尺寸為 390px，另有收銀 360px／480px 可見視窗。所有資料庫、瀏覽器設定檔與憑證均為隔離測試。
+實際 Electron／Chromium 使用正式前端、preload、IPC、HTTPS 及 SQLite，涵蓋主要桌面與手機流程、9 個設定面板、並行最後庫存、版本衝突、回覆遺失、空間拒絕、中途失敗、重啟、全量備份及退款損益。手機尺寸為 390px，另有收銀 360px／480px 可見視窗。所有資料庫、瀏覽器設定檔與憑證均為隔離測試。
 
-Code Cleanup 的 35 項通用正負控制另行計數；npm 查核為零已知 advisory。JavaScript 靜態圖另解析 154 個檔案、325 條依賴，未找到缺失引用或循環；唯一非字面載入是隔離列印測試的 mock，動態載入及第三方原生依賴仍須以實際執行驗證。這些結果不是全產品或部署資安認證。
+Code Cleanup 是獨立唯讀檢查，通用控制及歷史依賴查核不加進本輪產品通過數。未解析的完整跨語言圖、可信更新與真人品質驗收保持缺口；零已知 advisory 或靜態圖沒有缺失引用，都不能當成全產品資安認證。
 
 三個超過 1000 行的檔案已依責任拆分，維持原量尺。一般長度 REVIEW、通用工具未解析的完整跨語言圖及未配置的私公同步範圍保留原狀態；版本／tag 與交付另行核對，不以測試數蓋過缺口。
 
-本輪跨月與原料損耗的失敗重現、來源／程式雜湊、child exit、成功 marker、安裝包與 GitHub 交付收據保存在 `.rd/operations-hardening-20261014/`。前輪 502 項結果保存在 `.rd/zero-known-bugs-20261014/`，453 項結果保存在 `.rd/full-verification-20261014/`，作為歷史量測。
+本輪的正負控制、失敗嘗試、來源及程式雜湊、成功 marker、UI 圖片與交付收據保存在 `.rd/erp-easy-20261015/`。前版 2.8.0 的 628 項結果保存在 `.rd/erp-procurement-20261015/`，其他 `.rd/` 紀錄保留為歷史量測。完整目標清單見根目錄 `product-capabilities.json`，不能用單次測試數宣告完整 ERP 已完成。
 
 ## 使用限制與試賣前實機驗收
 
@@ -43,6 +45,6 @@ Code Cleanup 的 35 項通用正負控制另行計數；npm 查核為零已知 a
 - **獨立瀏覽器資料仍各自保存。** 獨立 PWA 可單機離線；要手機／電腦共用，須使用共用店面的配對入口，不會自動合併不同瀏覽器的 localStorage。
 - **正式預訂採全額收款與全單取消。** 部分預付、部分取消、加料組合、LINE 自動接單與外送平台串接仍未實作。促銷頁目前保存活動資料，結帳折扣由老闆手動套用。
 - **預訂使用完整 JSON 備份。** 既有雲端快照尚未涵蓋全部預訂與回執，啟用正式預訂後會拒絕不完整同步；部署中的 Supabase／LINE 等服務未驗收。共用店面不依賴雲端服務。
-- **安裝包未簽章、採人工更新。** 本機檔案與 GitHub Release 需分開核對，見 [2.8.0 安裝說明](INSTALLER_2_8_0.md)。原店面資料未被測試修改；未替使用者啟動防火牆、公網隧道、自動啟動或安裝憑證。
+- **安裝包未簽章、採人工更新。** 本機檔案與 GitHub Release 需分開核對，見 [2.9.0 安裝說明](INSTALLER_2_9_0.md)。原店面資料未被測試修改；未替使用者啟動防火牆、公網隧道、自動啟動或安裝憑證。
 
-開發者使用 Node 24，可執行 `npm test`、`npm run test:native`、`npm run test:desktop`、`npm run test:offline`、`npm run test:mobile`、`npm run test:shifts`、`npm run test:scenarios`、`npm run test:scenario-ui`、`npm run test:business`、`npm run test:shared`、`npm run test:shared-ui`、`npm run test:restaurant`、`npm run test:restaurant-ui`、`npm run test:operations-ui`。原生 runner 要求真實 child exit 與成功 marker。
+開發者使用 Node 24，可執行 `npm test`、`npm run test:native`、`npm run test:desktop`、`npm run test:offline`、`npm run test:mobile`、`npm run test:shifts`、`npm run test:scenarios`、`npm run test:scenario-ui`、`npm run test:business`、`npm run test:shared`、`npm run test:shared-ui`、`npm run test:restaurant`、`npm run test:restaurant-ui`、`npm run test:operations-ui`、`npm run test:procurement`、`npm run test:procurement-returns`、`npm run test:procurement-ui`、`npm run test:agent-ui`。原生 runner 要求真實 child exit 與成功 marker。

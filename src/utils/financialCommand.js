@@ -40,6 +40,10 @@ function assertReceipt(kind,request,result){
       if(!isProcurement(po)||po.id!==(kind==='purchase-create'?request.purchase.id:request.purchaseId)||row.purchaseId!==po.id||!Number.isSafeInteger(row.purchaseVersion)||po.procurement.revision<row.purchaseVersion)throw Error('採購回覆缺少原進貨單或保存版本')
       validateProcurement(po)
       if(JSON.stringify(canonical(procurementEvent(po,request)))!==JSON.stringify(canonical(row.document)))throw Error('採購回覆缺少正確的保存文件')
+      if(kind==='purchase-return'){
+        const expected=[...new Set(po.items.filter((_,i)=>request.quantities?.[i]>0).map(item=>item.productId))]
+        if(!expected.length||expected.length!==row.productIds.length||expected.some(id=>!id||!row.productIds.includes(id))||result.products.some(p=>!Number.isFinite(p.stock)||p.stock<0))throw Error('退貨回覆缺少完整的庫存結果，請保留原編號核對')
+      }
       if(row.cashLogId&&result.cashLog?.id!==row.cashLogId)throw Error('採購回覆缺少現金流水')
     }
   }

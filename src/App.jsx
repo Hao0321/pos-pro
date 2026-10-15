@@ -21,6 +21,8 @@ import RestaurantPage from './pages/RestaurantPage'
 import QuickDocumentPage from './pages/QuickDocumentPage'
 import OrdersPage from './pages/OrdersPage'
 import DashboardPage from './pages/DashboardPage'
+import SimpleHomePage from './pages/SimpleHomePage'
+import './styles/easy-workspace.css'
 import ShiftPage from './pages/ShiftPage'
 import WastePage from './pages/WastePage'
 import { isElectron } from './utils/dataAccess'
@@ -30,10 +32,13 @@ import useIsMobile from './hooks/useIsMobile'
 export default function App() {
   const [session, setSession] = useState(() => isElectron ? null : getSession())
   const [incomingDraft,setIncomingDraft]=useState('')
+  const consumeIncoming=useCallback(raw=>setIncomingDraft(current=>current===raw?'':current),[])
   const [largeText,setLargeText]=useState(()=>{try{return localStorage.getItem('pos_large_text_v1')==='true'}catch{return false}})
+  const [simpleMode,setSimpleMode]=useState(()=>{try{return localStorage.getItem('pos_simple_mode_v1')!=='false'}catch{return true}})
   const store = useStore(session)
   const { view, setView, lowStockCount, todayRevenue, todayOrders } = store
   useEffect(()=>{document.documentElement.dataset.largeText=String(largeText);try{localStorage.setItem('pos_large_text_v1',String(largeText))}catch{}},[largeText])
+  useEffect(()=>{document.documentElement.dataset.simpleMode=String(simpleMode);try{localStorage.setItem('pos_simple_mode_v1',String(simpleMode))}catch{}},[simpleMode])
   useEffect(()=>{
     function read(){const params=new URLSearchParams(location.hash.slice(1)),raw=params.get('agentDraft');if(raw&&!params.has('pair')){history.replaceState(null,'',location.pathname+location.search);if(raw.length<=32768){setIncomingDraft(raw);setView('quick')}}}
     read();window.addEventListener('hashchange',read);return()=>window.removeEventListener('hashchange',read)
@@ -99,7 +104,7 @@ export default function App() {
   const can = (perm) => hasPermission(session, perm)
 
   const NAV_LABELS = {
-    dashboard:'首頁',quick:'快速建單', pos:'收銀台',restaurant:'預訂出餐', shifts:'班別交班', readiness:'營業前檢查',devices:'共用店面',
+    dashboard:'首頁',overview:'營運總覽',quick:'快速建單', pos:'收銀台',restaurant:'預訂出餐', shifts:'班別交班', readiness:'營業前檢查',devices:'共用店面',
     inventory:'庫存管理', purchase:'進貨管理', waste:'損耗管理',
     stocktake:'每日盤點', promotions:'促銷活動', members:'會員',
     reports:'報表分析', accounting:'會計帳務', orders:'顧客點餐', settings:'設定', scenarios:'情境模板',
@@ -111,7 +116,7 @@ export default function App() {
         <Sidebar view={view} setView={setView} session={session}
           lowStockCount={lowStockCount} todayRevenue={todayRevenue}
           todayOrders={todayOrders} onLogout={handleLogout}
-          pendingOrders={pendingOrders} openShift={store.openShift} largeText={largeText} toggleLargeText={()=>setLargeText(v=>!v)}/>
+          pendingOrders={pendingOrders} openShift={store.openShift} largeText={largeText} toggleLargeText={()=>setLargeText(v=>!v)} simpleMode={simpleMode} toggleSimpleMode={()=>setSimpleMode(v=>!v)}/>
       )}
 
       {isMobile && menuOpen && (
@@ -122,7 +127,7 @@ export default function App() {
           <Sidebar view={view} setView={handleNavChange} session={session}
             lowStockCount={lowStockCount} todayRevenue={todayRevenue}
             todayOrders={todayOrders} onLogout={handleLogout}
-            pendingOrders={pendingOrders} openShift={store.openShift} largeText={largeText} toggleLargeText={()=>setLargeText(v=>!v)}/>
+            pendingOrders={pendingOrders} openShift={store.openShift} largeText={largeText} toggleLargeText={()=>setLargeText(v=>!v)} simpleMode={simpleMode} toggleSimpleMode={()=>setSimpleMode(v=>!v)}/>
         </div>
       )}
 
@@ -139,13 +144,15 @@ export default function App() {
             <button aria-label={menuOpen?'關閉功能選單':'開啟功能選單'} onClick={() => setMenuOpen(v => !v)} style={mob.menuBtn}>
               {menuOpen ? <X size={20}/> : <Menu size={20}/>}
             </button>
-            <div style={mob.topTitle}>{NAV_LABELS[view] || 'POS'}</div>
+            {view==='dashboard'?<div style={mob.topTitle}>首頁</div>:<button className="btn btn-ghost" style={{minHeight:48}} onClick={()=>handleNavChange('dashboard')}>回首頁</button>}
+            {view!=='dashboard'&&<span style={{...mob.topTitle,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{NAV_LABELS[view]||'POS'}</span>}
             <button className="btn btn-ghost" aria-label="切換大字模式" aria-pressed={largeText} onClick={()=>setLargeText(v=>!v)} style={{minHeight:48,minWidth:48,fontSize:16}}>大字</button>
           </div>
         )}
         <main inert={store.checkoutState.phase!=='idle'||store.financialState.phase!=='idle'?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
-          {view === 'dashboard'  && can('pos.use')         && <DashboardPage  store={store} session={session}/>}
-          {view === 'quick' && can('pos.use') && <QuickDocumentPage store={store} session={session} incoming={incomingDraft}/>}
+          {view === 'dashboard' && can('pos.use') && (simpleMode?<SimpleHomePage store={store} session={session}/>:<DashboardPage store={store} session={session}/>)}
+          {view === 'overview' && can('reports.view') && <DashboardPage store={store} session={session}/>}
+          {view === 'quick' && can('pos.use') && <QuickDocumentPage store={store} session={session} incoming={incomingDraft} onIncomingConsumed={consumeIncoming}/>}
           {view === 'pos'        && can('pos.use')         && <POSPage        store={store} session={session}/>}
           {view === 'restaurant' && can('pos.use') && <RestaurantPage store={store} session={session}/>}
           {view === 'shifts'     && can('pos.use')         && <ShiftPage      store={store} session={session}/>}
