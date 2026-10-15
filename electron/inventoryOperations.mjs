@@ -24,7 +24,7 @@ export function planInventory(request,data,actor){
     const links=[]
     const items=original.items.map((item,index)=>{
       const qty=request.quantities[index];quantityValue(qty,'本次到貨量');quantityValue(item.qty,'叫貨量',.001);quantityValue(item.received??0,'已到貨量');moneyValue(item.unitCost,'進貨單價')
-      if(Math.round(qty*1000)>Math.round(item.qty*1000)-Math.round((item.received||0)*1000))throw Error('本次到貨超過可接收數量，請核對進貨單')
+      if(qty>0&&Math.round(qty*1000)>Math.max(0,Math.round(item.qty*1000)-Math.round((item.received||0)*1000)))throw Error('本次到貨超過可接收數量，請核對進貨單')
       let id=item.productId
       if(qty>0){
         if(id){
