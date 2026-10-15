@@ -2,7 +2,11 @@ const fs=require('node:fs'),path=require('node:path'),{createHash}=require('node
 const sha=data=>createHash('sha256').update(data).digest('hex')
 function noLinks(file){
   let item=path.resolve(file)
-  for(;;){if(fs.existsSync(item))assert.ok(!fs.lstatSync(item).isSymbolicLink(),'linked delivery path: '+item);const parent=path.dirname(item);if(parent===item)break;item=parent}
+  for(;;){
+    let entry;try{entry=fs.lstatSync(item)}catch(error){if(error.code!=='ENOENT')throw error}
+    if(entry)assert.ok(!entry.isSymbolicLink(),'linked delivery path: '+item)
+    const parent=path.dirname(item);if(parent===item)break;item=parent
+  }
 }
 function inside(root,file){
   root=path.resolve(root);file=path.resolve(file)

@@ -11,6 +11,12 @@ test('archive paths reject traversal, Windows devices, alternate streams and amb
  for(const p of ['../a','/root','C:/a','a//b','a/../b','CON.log','a/NUL','a:b','name.','name ','a\u0000b'])expect(()=>files.safePath(p)).toThrow()
  expect(files.safePath('$PLUGINSDIR\\app-64.7z')).toBe('$PLUGINSDIR/app-64.7z')
 })
+test('a dangling junction is refused even when existsSync follows it and returns false',()=>{
+ const root=fixture(),link=path.join(root,'dangling'),target=path.join(root,'missing-target')
+ fs.symlinkSync(target,link,'junction');expect(fs.existsSync(link)).toBe(false);expect(fs.lstatSync(link).isSymbolicLink()).toBe(true)
+ expect(()=>files.noLinks(link)).toThrow(/linked delivery path/)
+ expect(()=>files.noLinks(path.join(link,'future-file'))).toThrow(/linked delivery path/)
+})
 test('archive preflight refuses case duplicates, links, collision and expanded-size abuse',()=>{
  for(const rows of [[{Path:'a'},{Path:'A'}],[{Path:'a','Symbolic Link':'outside'}],[{Path:'a'},{Path:'a/b'}],[{Path:'a',Size:String(1024**3+1)}]])expect(()=>files.validateEntries(rows)).toThrow()
  expect(files.validateEntries([{Path:'a',Folder:'+'},{Path:'a/b',Size:'4'}])).toHaveLength(2)
