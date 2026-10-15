@@ -1,4 +1,4 @@
-const fs=require('node:fs'),path=require('node:path'),net=require('node:net'),assert=require('node:assert/strict'),{spawn}=require('node:child_process')
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{spawn}=require('node:child_process')
 module.exports=async function deliveredJourney(current){
 const expectedVersion=current.version,expectedReceipt=JSON.parse(fs.readFileSync(path.join(current.payload,'resources/build-receipt.json'),'utf8'))
 const runtimeAuthority=require('./runtime-authority.cjs'),payload=current.payload,executable=path.join(payload,'POS Pro.exe'),freshProfile=path.join(current.run,'isolated-profile-'+require('node:crypto').randomUUID())
@@ -6,7 +6,6 @@ const hashFile=file=>require('./files.cjs').identity(file,path.dirname(file)).sh
 assert.equal(typeof pinnedExe,'string');assert.equal(hashFile(executable),pinnedExe,'exact previously extracted executable required before launch')
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));let passed=0
 function pass(name){passed++;console.log('PASS '+name)}
-async function freePort(){return await new Promise((resolve,reject)=>{const server=net.createServer();server.on('error',reject);server.listen(0,'127.0.0.1',()=>{const p=server.address().port;server.close(()=>resolve(p))})})}
 async function connect(url){
   const socket=new WebSocket(url),pending=new Map(),events=[];let next=0
   await new Promise((resolve,reject)=>{socket.onopen=resolve;socket.onerror=reject})
@@ -18,7 +17,8 @@ async function connect(url){
 async function launch(first,profile=freshProfile,upgrade=false){
   runtimeAuthority.authority(current,executable);runtimeAuthority.profile(current.run,profile,first)
   assert.equal(hashFile(executable),pinnedExe,'executable identity before every launch')
-  const inspectorPort=await freePort(),rendererPort=await freePort(),env={...process.env};delete env.ELECTRON_RUN_AS_NODE
+  const inspectorPort=await runtimeAuthority.freePort(),rendererPort=await runtimeAuthority.freePort([inspectorPort]),env={...process.env};delete env.ELECTRON_RUN_AS_NODE
+  const fixtureServerPort=await runtimeAuthority.freePort([inspectorPort,rendererPort])
   const child=spawn(executable,['--user-data-dir='+profile,'--inspect-brk=127.0.0.1:'+inspectorPort,'--remote-debugging-address=127.0.0.1','--remote-debugging-port='+rendererPort],{env,windowsHide:true,stdio:['ignore','pipe','pipe']})
   let output='',errors='',ended=false;child.stdout.on('data',d=>output+=d);child.stderr.on('data',d=>errors+=d);const exit=new Promise(resolve=>child.once('exit',(code,signal)=>{ended=true;resolve({code,signal})}));child.on('error',e=>errors+=e.stack)
   let inspector,renderer;const watchdog=setTimeout(()=>{if(!ended)child.kill()},60000)
@@ -26,12 +26,12 @@ async function launch(first,profile=freshProfile,upgrade=false){
     const deadline=Date.now()+12000;while(!errors.match(/ws:\/\/127\.0\.0\.1:\d+\/[^\s]+/)&&Date.now()<deadline&&!ended)await sleep(40)
     const url=errors.match(/ws:\/\/127\.0\.0\.1:\d+\/[^\s]+/)?.[0];assert.ok(url,'main inspector missing; '+errors)
     inspector=await connect(url);await inspector.send('Debugger.enable');await inspector.send('Runtime.runIfWaitingForDebugger');const pause=await inspector.event('Debugger.paused')
-    const setup=`(()=>{const e=require('electron');globalThis.__posInstallerTestElectron=e;globalThis.__posInstallerTestRequire=require;if(e.app.getPath('userData')!==${JSON.stringify(profile)})throw Error('profile isolation failed');e.app.disableHardwareAcceleration();for(const name of ['window-all-closed','before-quit','will-quit'])e.app.on(name,()=>console.log('DELIVERED_SHUTDOWN '+name));e.app.on('browser-window-created',(_event,w)=>{w.hide();w.on('show',()=>w.hide());w.webContents.session.webRequest.onBeforeRequest({urls:['http://*/*','https://*/*']},(_details,cb)=>cb({cancel:true}))});const init=require(${JSON.stringify(path.join(payload,'resources/app.asar/electron/database.js'))});const fixture=init(${JSON.stringify(path.join(profile,'pos-data.db'))});fixture.setSetting('serverPort','0');fixture.close();return {userData:e.app.getPath('userData'),packaged:e.app.isPackaged,version:e.app.getVersion(),electron:process.versions.electron,buildReceipt:JSON.parse(require('node:fs').readFileSync(require('node:path').join(e.app.getPath('exe'),'../resources/build-receipt.json'),'utf8'))}})()`
+    const setup=`(()=>{const e=require('electron');globalThis.__posInstallerTestElectron=e;globalThis.__posInstallerTestRequire=require;if(e.app.getPath('userData')!==${JSON.stringify(profile)})throw Error('profile isolation failed');e.app.disableHardwareAcceleration();for(const name of ['window-all-closed','before-quit','will-quit'])e.app.on(name,()=>console.log('DELIVERED_SHUTDOWN '+name));e.app.on('browser-window-created',(_event,w)=>{w.hide();w.on('show',()=>w.hide());w.webContents.session.webRequest.onBeforeRequest({urls:['http://*/*','https://*/*']},(_details,cb)=>cb({cancel:true}))});const init=require(${JSON.stringify(path.join(payload,'resources/app.asar/electron/database.js'))});const fixture=init(${JSON.stringify(path.join(profile,'pos-data.db'))});fixture.setSetting('serverPort',${JSON.stringify(String(fixtureServerPort))});fixture.close();return {userData:e.app.getPath('userData'),packaged:e.app.isPackaged,version:e.app.getVersion(),electron:process.versions.electron,buildReceipt:JSON.parse(require('node:fs').readFileSync(require('node:path').join(e.app.getPath('exe'),'../resources/build-receipt.json'),'utf8'))}})()`
     fs.mkdirSync(profile,{recursive:true})
     const result=await inspector.send('Debugger.evaluateOnCallFrame',{callFrameId:pause.callFrames[0].callFrameId,expression:setup,returnByValue:true});assert.ok(!result.exceptionDetails,JSON.stringify(result.exceptionDetails));assert.equal(result.result.value.userData,profile);assert.equal(result.result.value.packaged,true);assert.equal(result.result.value.version,expectedVersion);assert.equal(result.result.value.electron,'44.6.0');runtimeAuthority.semantic(expectedReceipt,result.result.value.buildReceipt)
     await inspector.send('Debugger.resume')
-    let targets;const ready=Date.now()+15000;while(Date.now()<ready&&!ended){try{targets=await (await fetch('http://127.0.0.1:'+rendererPort+'/json/list')).json();if(targets.find(t=>t.type==='page'&&t.url.includes('app.asar')))break}catch{}await sleep(70)}
-    const page=targets?.find(t=>t.type==='page'&&t.url.includes('app.asar'));assert.ok(page,'packaged renderer missing; '+errors);assert.ok(decodeURIComponent(page.url).replaceAll('/','\\').includes(path.join(payload,'resources/app.asar/dist/index.html')))
+    let targets,discoveryError;const ready=Date.now()+15000;while(Date.now()<ready&&!ended){try{targets=await (await fetch('http://127.0.0.1:'+rendererPort+'/json/list')).json();discoveryError=null;if(targets.find(t=>t.type==='page'&&t.url.includes('app.asar')))break}catch(error){discoveryError={message:error.message,cause:error.cause?.message}}await sleep(70)}
+    const page=targets?.find(t=>t.type==='page'&&t.url.includes('app.asar'));assert.ok(page,'packaged renderer missing; '+JSON.stringify(discoveryError)+' '+errors);assert.ok(decodeURIComponent(page.url).replaceAll('/','\\').includes(path.join(payload,'resources/app.asar/dist/index.html')))
     renderer=await connect(page.webSocketDebuggerUrl);await renderer.send('Runtime.enable')
     async function js(expression){const r=await renderer.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value}
     async function wait(expression,label){const d=Date.now()+12000;while(Date.now()<d){if(await js(expression))return;await sleep(50)}throw Error('timeout '+label+' '+(await js('document.body.innerText')).slice(0,600))}
@@ -127,7 +127,13 @@ async function launch(first,profile=freshProfile,upgrade=false){
     renderer.socket.close();inspector.socket.close();const finished=await Promise.race([exit,sleep(30000).then(()=>{throw Error('application exit timeout')})]);assert.equal(finished.code,0);assert.equal(finished.signal,null);console.log('DELIVERED_CLEAN_EXIT '+JSON.stringify({profile,upgrade,elapsedMs:Date.now()-closingAt,code:finished.code,events:output.match(/DELIVERED_SHUTDOWN[^\r\n]*/g)||[]}))
     assert.equal(hashFile(executable),pinnedExe,'executable identity after every launch')
     fs.writeFileSync(path.join(current.run,first?'fresh-runtime.log':upgrade?'upgrade-'+upgrade+'-runtime.log':'restart-runtime.log'),output+'\n'+errors)
-  }catch(error){if(!ended)child.kill();throw Error(error.stack+'\nAPP STDERR: '+errors+'\nAPP STDOUT: '+output)}finally{clearTimeout(watchdog);renderer?.socket.close();inspector?.socket.close();if(!ended)child.kill()}
+  }catch(error){
+    let diagnostic
+    try{if(inspector&&!ended){const result=await inspector.send('Runtime.evaluate',{expression:"(()=>{const e=globalThis.__posInstallerTestElectron;return {pid:process.pid,ready:e?.app.isReady(),singleInstance:e?.app.hasSingleInstanceLock(),windows:e?.BrowserWindow.getAllWindows().map(w=>({id:w.id,destroyed:w.isDestroyed(),loading:w.webContents.isLoading(),url:w.webContents.getURL()})),handles:process._getActiveHandles().map(h=>h.constructor.name)}})()",returnByValue:true});diagnostic=result.result?.value}}
+    catch(secondary){diagnostic={unavailable:secondary.message}}
+    if(!ended)child.kill()
+    throw Error(error.stack+'\nAPP DIAGNOSTIC: '+JSON.stringify(diagnostic)+'\nAPP STDERR: '+errors+'\nAPP STDOUT: '+output)
+  }finally{clearTimeout(watchdog);renderer?.socket.close();inspector?.socket.close();if(!ended)child.kill()}
 }
 await launch(true);await launch(false);
 const upgradeSources=[]

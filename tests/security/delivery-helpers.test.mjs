@@ -51,3 +51,10 @@ test('only one live canonical build owns the workspace and releases only its own
  const second=claim(root),file=path.join(root,'.rd/build/canonical-build.lock'),saved=JSON.parse(fs.readFileSync(file));fs.writeFileSync(file,JSON.stringify({...saved,token:'changed'}))
  expect(()=>second.release()).toThrow(/changed/);fs.writeFileSync(file,JSON.stringify(saved));second.release()
 })
+test('debugging ports use a free dynamic port that Node fetch can actually reach',async()=>{
+ const {freePort}=require('../../scripts/delivery/runtime-authority.cjs'),http=require('node:http'),first=await freePort(),port=await freePort([first])
+ expect(port).not.toBe(first);expect(port).toBeGreaterThanOrEqual(49152);expect(port).toBeLessThanOrEqual(65535)
+ const server=http.createServer((_request,response)=>response.end('owned high-port fixture'))
+ await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve)})
+ try{const response=await fetch('http://127.0.0.1:'+port);expect(await response.text()).toBe('owned high-port fixture')}finally{await new Promise(resolve=>server.close(resolve))}
+})
