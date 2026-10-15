@@ -2,6 +2,8 @@ import { test, expect, vi } from 'vitest'
 import fs from 'node:fs'
 import { JSDOM } from 'jsdom'
 import { exportXLS, exportMultiSheetXLS } from '../../src/utils/exportXLS.js'
+import {tr,trMessage} from '../../public/i18n/core.mjs'
+import {getDisplayPreferences,setDisplayPreferences,subscribeDisplayPreferences,initDisplayPreferences} from '../../public/i18n/preferences.mjs'
 
 test('actual menu renders special identifiers as data and keeps search and cart actions working', async () => {
   const dom = new JSDOM(fs.readFileSync('public/menu/index.html', 'utf8'), { url: 'https://store.invalid/menu/', runScripts: 'outside-only' })
@@ -12,7 +14,14 @@ test('actual menu renders special identifiers as data and keeps search and cart 
     products: [{ id: malicious, name, price: 10, stock: 5, unit: '個', category: '餐點' }],
   }) }))
   try {
-    window.eval(fs.readFileSync('public/menu/app.js', 'utf8'))
+    // JSDOM outside-only has no ESM loader. Bind the real imported modules;
+    // native-display-ui.cjs separately verifies browser module loading over HTTP.
+    vi.stubGlobal('document',window.document)
+    Object.assign(window,{tr,trMessage,getDisplayPreferences,setDisplayPreferences,subscribeDisplayPreferences,initDisplayPreferences})
+    const source=fs.readFileSync('public/menu/app.js','utf8')
+      .replace(/^import \{tr,trMessage\} from '\.\.\/i18n\/core\.mjs'\r?\n/m,'')
+      .replace(/^import \{getDisplayPreferences,setDisplayPreferences,subscribeDisplayPreferences,initDisplayPreferences\} from '\.\.\/i18n\/preferences\.mjs'\r?\n/m,'')
+    window.eval(source)
     await new Promise(resolve => setTimeout(resolve, 0))
     const document = window.document, button = document.querySelector('.add-btn')
     expect(button.dataset.pid).toBe(malicious); expect(button.hasAttribute('data-action')).toBe(false)
@@ -28,7 +37,7 @@ test('actual menu renders special identifiers as data and keeps search and cart 
     expect(document.querySelectorAll('.product-card').length).toBe(0)
     search.value = '商品'; search.dispatchEvent(new window.Event('input')); expect(document.querySelectorAll('.product-card').length).toBe(1)
     expect([...document.querySelectorAll('*')].flatMap(node => [...node.attributes]).some(attribute => /^on[a-z]+$/.test(attribute.name))).toBe(false)
-  } finally { window.close() }
+  } finally { vi.unstubAllGlobals();window.close() }
 })
 
 test('multi-sheet export escapes attribute names and cell markup with string types', async () => {

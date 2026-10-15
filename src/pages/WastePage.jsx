@@ -1,3 +1,4 @@
+import {tr,trMessage} from "../i18n"
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Plus, AlertTriangle, Package } from 'lucide-react'
 import { exportXLS } from '../utils/exportXLS'
@@ -79,7 +80,7 @@ export default function WastePage({ store, session }) {
   }
 
   async function handleQuickAdd(p) {
-    if (busy.current || !confirm(`記錄「${p.name}」1 個庫存單位過期？`)) return
+    if (busy.current || !confirm(tr("記錄「{0}」1 個庫存單位過期？", {0: p.name}))) return
     await saveLoss(p,1,'過期')
   }
 
@@ -104,25 +105,22 @@ export default function WastePage({ store, session }) {
 
   return (
     <div style={ws.root}>
-      {!showAdd&&error&&<p role="alert" style={{color:'var(--red)',marginBottom:12}}>{error}</p>}
-      {message&&<p role="status" style={{marginBottom:12}}>{message}</p>}
+      {!showAdd&&error&&<p role="alert" style={{color:'var(--red)',marginBottom:12}}>{trMessage(error)}</p>}
+      {message&&<p role="status" style={{marginBottom:12}}>{trMessage(message)}</p>}
       <div style={ws.header}>
         <div>
-          <h2 className="page-title" style={{fontSize:20, fontWeight:600}}>損耗管理</h2>
-          <div style={{fontSize:13, color:'var(--text-tertiary)', marginTop:4}}>
-            記錄過期、破損、自用等庫存損耗
-          </div>
+          <h2 className="page-title" style={{fontSize:20, fontWeight:600}}>{tr("損耗管理")}</h2>
+          <div style={{fontSize:13, color:'var(--text-tertiary)', marginTop:4}}>{tr("記錄過期、破損、自用等庫存損耗")}</div>
         </div>
         <button disabled={saving} className="btn btn-primary" onClick={()=>{setError('');setMessage('');setShowAdd(true)}} style={{display:'flex',alignItems:'center',gap:6}}>
-          <Plus size={16}/> 新增損耗
-        </button>
+          <Plus size={16}/>{tr(" 新增損耗")}</button>
       </div>
 
       {expiringSoon.length > 0 && (
         <div style={ws.card}>
           <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:12}}>
             <AlertTriangle size={16} color="var(--amber)"/>
-            <span style={{fontWeight:600}}>近 7 天到期 ({expiringSoon.length})</span>
+            <span style={{fontWeight:600}}>{tr("近 7 天到期 (")}{expiringSoon.length})</span>
           </div>
           <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:8}}>
             {expiringSoon.map(p => (
@@ -133,13 +131,12 @@ export default function WastePage({ store, session }) {
               }}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4}}>
                   <div style={{fontSize:13, fontWeight:500, flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name}</div>
-                  <button disabled={saving} onClick={()=>handleQuickAdd(p)} style={{padding:8,minWidth:44,minHeight:44,fontSize:12,color:'var(--red)',background:'none',border:'1px solid var(--red)',borderRadius:4}}>報廢</button>
+                  <button disabled={saving} onClick={()=>handleQuickAdd(p)} style={{padding:8,minWidth:44,minHeight:44,fontSize:12,color:'var(--red)',background:'none',border:'1px solid var(--red)',borderRadius:4}}>{tr("報廢")}</button>
                 </div>
-                <div style={{fontSize:11, color:'var(--text-secondary)'}}>
-                  庫存 {p.stock} · 到期 {p.expiryDate}
+                <div style={{fontSize:11, color:'var(--text-secondary)'}}>{tr("庫存 ")}{p.stock}{tr(" · 到期 ")}{p.expiryDate}
                 </div>
                 <div style={{fontSize:11, color: p.daysLeft <= 0 ? 'var(--red)' : 'var(--amber)', fontWeight:600, marginTop:2}}>
-                  {p.daysLeft <= 0 ? `已過期 ${-p.daysLeft} 天` : `剩 ${p.daysLeft} 天`}
+                  {p.daysLeft <= 0 ? tr("已過期 {0} 天", {0: -p.daysLeft}) : tr("剩 {0} 天", {0: p.daysLeft})}
                 </div>
               </div>
             ))}
@@ -150,21 +147,21 @@ export default function WastePage({ store, session }) {
       <div style={ws.card}>
         <div style={{display:'flex', gap:10, marginBottom:14, flexWrap:'wrap', alignItems:'center'}}>
           <input className="field" type="month" value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} style={{width:160}}/>
-          <input className="field" placeholder="搜尋商品/原因" value={search} onChange={e=>setSearch(e.target.value)} style={{flex:1, minWidth:200}}/>
-          <button className="btn btn-ghost btn-sm" onClick={exportExcel}>匯出 Excel</button>
+          <input className="field" placeholder={tr("搜尋商品/原因")} value={search} onChange={e=>setSearch(e.target.value)} style={{flex:1, minWidth:200}}/>
+          <button className="btn btn-ghost btn-sm" onClick={exportExcel}>{tr("匯出 Excel")}</button>
         </div>
 
         <div style={{display:'flex', gap:12, marginBottom:14}}>
           <div style={ws.statBox}>
-            <div style={{fontSize:11, color:'var(--text-tertiary)'}}>合計筆數</div>
+            <div style={{fontSize:11, color:'var(--text-tertiary)'}}>{tr("合計筆數")}</div>
             <div style={{fontSize:20, fontWeight:600, fontFamily:'var(--font-mono)'}}>{filtered.length}</div>
           </div>
           <div style={ws.statBox}>
-            <div style={{fontSize:11, color:'var(--text-tertiary)'}}>合計件數</div>
+            <div style={{fontSize:11, color:'var(--text-tertiary)'}}>{tr("合計件數")}</div>
             <div style={{fontSize:20, fontWeight:600, fontFamily:'var(--font-mono)'}}>{totalQty}</div>
           </div>
           <div style={ws.statBox}>
-            <div style={{fontSize:11, color:'var(--text-tertiary)'}}>合計損失</div>
+            <div style={{fontSize:11, color:'var(--text-tertiary)'}}>{tr("合計損失")}</div>
             <div style={{fontSize:20, fontWeight:600, fontFamily:'var(--font-mono)', color:'var(--red)'}}>NT$ {totalLoss.toLocaleString()}</div>
           </div>
         </div>
@@ -172,19 +169,19 @@ export default function WastePage({ store, session }) {
         {filtered.length === 0 ? (
           <div style={{textAlign:'center', color:'var(--text-tertiary)', padding:'40px 0', fontSize:13}}>
             <Package size={32} color="var(--text-tertiary)" style={{margin:'0 auto 12px', opacity:0.5}}/>
-            <div>無損耗紀錄</div>
+            <div>{tr("無損耗紀錄")}</div>
           </div>
         ) : (
           <div style={{overflowX:'auto'}}><table style={{width:'100%',minWidth:650,fontSize:13,borderCollapse:'collapse'}}>
             <thead>
               <tr>
-                <th style={ws.th}>時間</th>
-                <th style={ws.th}>商品</th>
-                <th style={{...ws.th, textAlign:'right'}}>數量</th>
-                <th style={{...ws.th, textAlign:'right'}}>單位成本</th>
-                <th style={{...ws.th, textAlign:'right'}}>損失</th>
-                <th style={ws.th}>原因</th>
-                <th style={ws.th}>記錄者</th>
+                <th style={ws.th}>{tr("時間")}</th>
+                <th style={ws.th}>{tr("商品")}</th>
+                <th style={{...ws.th, textAlign:'right'}}>{tr("數量")}</th>
+                <th style={{...ws.th, textAlign:'right'}}>{tr("單位成本")}</th>
+                <th style={{...ws.th, textAlign:'right'}}>{tr("損失")}</th>
+                <th style={ws.th}>{tr("原因")}</th>
+                <th style={ws.th}>{tr("記錄者")}</th>
                 <th style={ws.th}></th>
               </tr>
             </thead>
@@ -199,7 +196,7 @@ export default function WastePage({ store, session }) {
                   <td style={ws.td}><span className="badge badge-amber">{w.reason}</span></td>
                   <td style={ws.td}>{w.cashier}</td>
                   <td style={ws.td}>
-                    <span style={{fontSize:11,color:'var(--text-tertiary)'}}>已入帳，保留紀錄</span>
+                    <span style={{fontSize:11,color:'var(--text-tertiary)'}}>{tr("已入帳，保留紀錄")}</span>
                   </td>
                 </tr>
               ))}
@@ -212,22 +209,22 @@ export default function WastePage({ store, session }) {
         <>
           <div style={{position:'fixed',inset:0,background:'rgba(23,37,60,0.40)',zIndex:998}} onClick={()=>!saving&&setShowAdd(false)}/>
           <div role="dialog" aria-modal="true" aria-labelledby="waste-dialog-title" style={{position:'fixed',top:viewport.top+viewport.height/2,left:'50%',transform:'translate(-50%,-50%)',background:'var(--bg-raised)',borderRadius:12,width:420,maxWidth:'90vw',maxHeight:viewport.height*.9,overflowY:'auto',boxShadow:'var(--shadow-lg)',zIndex:999}}>
-            <div style={{padding:'10px 18px',borderBottom:'1px solid var(--border-dim)',display:'flex',alignItems:'center',justifyContent:'space-between',fontSize:15,fontWeight:600}}><span id="waste-dialog-title">記錄損耗</span><button aria-label="關閉損耗表單" disabled={saving} onClick={()=>setShowAdd(false)} style={{minWidth:44,minHeight:44}}>✕</button></div>
+            <div style={{padding:'10px 18px',borderBottom:'1px solid var(--border-dim)',display:'flex',alignItems:'center',justifyContent:'space-between',fontSize:15,fontWeight:600}}><span id="waste-dialog-title">{tr("記錄損耗")}</span><button aria-label={tr("關閉損耗表單")} disabled={saving} onClick={()=>setShowAdd(false)} style={{minWidth:44,minHeight:44}}>✕</button></div>
             <div style={{padding:18}}>
-              {error&&<p role="alert" style={{color:'var(--red)',marginBottom:12}}>{error}</p>}
+              {error&&<p role="alert" style={{color:'var(--red)',marginBottom:12}}>{trMessage(error)}</p>}
               <div style={{marginBottom:10}}>
-                <label htmlFor="waste-product" style={{fontSize:12,color:'var(--text-tertiary)'}}>商品</label>
+                <label htmlFor="waste-product" style={{fontSize:12,color:'var(--text-tertiary)'}}>{tr("商品")}</label>
                 <select id="waste-product" disabled={saving} className="field" style={{fontSize:16,minHeight:44}} value={productId} onChange={e=>setProductId(e.target.value)} autoFocus>
-                  <option value="">— 請選擇 —</option>
-                  {products.map(p => <option key={p.id} value={p.id}>{p.name} (庫存 {p.stock})</option>)}
+                  <option value="">{tr("— 請選擇 —")}</option>
+                  {products.map(p => <option key={p.id} value={p.id}>{p.name}{tr(" (庫存 ")}{p.stock})</option>)}
                 </select>
               </div>
               <div style={{marginBottom:10}}>
-                <label htmlFor="waste-quantity" style={{fontSize:12,color:'var(--text-tertiary)'}}>數量（與庫存相同單位，最多三位小數）</label>
+                <label htmlFor="waste-quantity" style={{fontSize:12,color:'var(--text-tertiary)'}}>{tr("數量（與庫存相同單位，最多三位小數）")}</label>
                 <input id="waste-quantity" disabled={saving} className="field" style={{fontSize:16,minHeight:44}} type="number" inputMode="decimal" min="0.001" step="0.001" value={qty} onChange={e=>setQty(e.target.value)} placeholder="0"/>
               </div>
               <div style={{marginBottom:10}}>
-                <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>原因</div>
+                <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>{tr("原因")}</div>
                 <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:6}}>
                   {REASONS.map(r => (
                     <button disabled={saving} key={r} onClick={()=>setReason(r)} style={{
@@ -239,7 +236,7 @@ export default function WastePage({ store, session }) {
                   ))}
                 </div>
               </div>
-              <button className="btn btn-primary" style={{width:'100%',padding:12,minHeight:44,marginTop:8}} disabled={saving||!productId||qty===''} onClick={handleAdd}>{saving?'保存中…':'記錄'}</button>
+              <button className="btn btn-primary" style={{width:'100%',padding:12,minHeight:44,marginTop:8}} disabled={saving||!productId||qty===''} onClick={handleAdd}>{saving?tr("保存中…"):tr("記錄")}</button>
             </div>
           </div>
         </>

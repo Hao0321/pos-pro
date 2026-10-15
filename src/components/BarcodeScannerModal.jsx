@@ -1,3 +1,4 @@
+import {tr,trMessage} from "../i18n"
 import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { X, Camera, RefreshCw, AlertTriangle } from 'lucide-react'
@@ -75,7 +76,7 @@ export default function BarcodeScannerModal({ onScan, onClose, title = '掃描�
         <div style={styles.header}>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             <Camera size={16} style={{color:'var(--gold)'}}/>
-            <span style={{fontWeight:600, fontSize:15}}>{title}</span>
+            <span style={{fontWeight:600, fontSize:15}}>{tr(title)}</span>
           </div>
           <button className="btn-icon" onClick={onClose}><X size={18}/></button>
         </div>
@@ -83,33 +84,29 @@ export default function BarcodeScannerModal({ onScan, onClose, title = '掃描�
         {status === 'error' ? (
           <div style={styles.errorBox}>
             <AlertTriangle size={32} style={{color:'var(--red)', marginBottom:10}}/>
-            <div style={{fontWeight:600, marginBottom:6}}>無法開啟相機</div>
+            <div style={{fontWeight:600, marginBottom:6}}>{tr("無法開啟相機")}</div>
             <div style={{fontSize:13, color:'var(--text-secondary)', lineHeight:1.5}}>
-              {error}
+              {trMessage(error)}
             </div>
-            <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:12, lineHeight:1.6}}>
-              · iOS Safari：需手動到 設定 → Safari → 相機 允許<br/>
-              · 必須是 HTTPS 網站（PWA 部署時自動 HTTPS）<br/>
-              · 桌機 Electron：請改用 USB 條碼槍
-            </div>
+            <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:12, lineHeight:1.6}}>{tr("· iOS Safari：需手動到 設定 → Safari → 相機 允許")}<br/>{tr("· 必須是 HTTPS 網站（PWA 部署時自動 HTTPS）")}<br/>{tr("· 桌機 Electron：請改用 USB 條碼槍")}</div>
           </div>
         ) : (
           <>
             <div ref={containerRef} style={styles.reader}/>
             <div style={styles.statusBar}>
               {status === 'initializing' ? (
-                <span><RefreshCw size={12} className="spin" style={{verticalAlign:-1}}/> 啟動相機中...</span>
+                <span><RefreshCw size={12} className="spin" style={{verticalAlign:-1}}/>{tr(" 啟動相機中...")}</span>
               ) : lastCode ? (
-                <span style={{color:'var(--green)'}}>✓ 已掃到 {lastCode}</span>
+                <span style={{color:'var(--green)'}}>{tr("✓ 已掃到 ")}{lastCode}</span>
               ) : (
-                <span>請對準條碼或 QR Code</span>
+                <span>{tr("請對準條碼或 QR Code")}</span>
               )}
             </div>
           </>
         )}
 
         <div style={{padding:'12px 16px', display:'flex', gap:8}}>
-          <button className="btn btn-ghost" style={{flex:1}} onClick={onClose}>關閉</button>
+          <button className="btn btn-ghost" style={{flex:1}} onClick={onClose}>{tr("關閉")}</button>
         </div>
       </div>
     </div>

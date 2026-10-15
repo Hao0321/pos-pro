@@ -1,4 +1,6 @@
-import { browserStorage } from '../utils/browserStorage'
+import {tr} from "../i18n"
+import DisplayPreferences from './DisplayPreferences'
+import {subscribeDisplayPreferences} from '../../public/i18n/preferences.mjs'
 import React from 'react'
 
 export default class ErrorBoundary extends React.Component {
@@ -10,6 +12,9 @@ export default class ErrorBoundary extends React.Component {
   static getDerivedStateFromError(error) {
     return { hasError: true, error }
   }
+
+  componentDidMount(){this.stopDisplay=subscribeDisplayPreferences(()=>this.forceUpdate())}
+  componentWillUnmount(){this.stopDisplay?.()}
 
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo })
@@ -27,7 +32,8 @@ export default class ErrorBoundary extends React.Component {
           minHeight: '100vh',
           overflow: 'auto',
         }}>
-          <h2 style={{ color: 'var(--red)', marginBottom: 16 }}>應用程式發生錯誤</h2>
+          <DisplayPreferences/>
+          <h2 style={{ color: 'var(--red)', marginBottom: 16 }}>{tr("應用程式發生錯誤")}</h2>
           <pre style={{
             background: 'var(--bg-raised)',
             padding: 16,
@@ -42,7 +48,7 @@ export default class ErrorBoundary extends React.Component {
             {this.state.error?.stack}
           </pre>
           <details style={{ marginTop: 16, color: 'var(--text-secondary)' }}>
-            <summary style={{ cursor: 'pointer' }}>元件堆疊</summary>
+            <summary style={{ cursor: 'pointer' }}>{tr("元件堆疊")}</summary>
             <pre style={{ fontSize: 11, marginTop: 8 }}>
               {this.state.errorInfo?.componentStack}
             </pre>
@@ -56,21 +62,8 @@ export default class ErrorBoundary extends React.Component {
               borderRadius: 8,
               cursor: 'pointer',
               fontSize: 14,
-            }}>重新載入</button>
-            <button onClick={() => {
-              if (confirm('清除所有本地資料？只清 localStorage，SQLite 資料保留')) {
-                browserStorage.clear()
-                location.reload()
-              }
-            }} style={{
-              padding: '10px 24px',
-              background: 'transparent',
-              color: 'var(--red)',
-              border: '1px solid var(--red)',
-              borderRadius: 8,
-              cursor: 'pointer',
-              fontSize: 14,
-            }}>清除快取重啟</button>
+            }}>{tr("重新載入")}</button>
+
           </div>
         </div>
       )

@@ -1,3 +1,4 @@
+import {tr,trMessage} from "../i18n"
 import { useState, useRef, useEffect, useMemo, lazy, Suspense } from 'react'
 import { Plus, Pencil, Trash2, X, Check, AlertTriangle, ChevronUp, ChevronDown, Barcode, Printer, Tag, Truck, Camera, Upload, Download, FileText, Search, MoreHorizontal, CheckSquare } from 'lucide-react'
 import JsBarcode from 'jsbarcode'
@@ -111,7 +112,7 @@ export default function InventoryPage({ store }) {
 
       setCsvImport({ records, toAdd, toUpdate, errors })
     } catch (err) {
-      alert('讀取 CSV 失敗：' + (err.message || err))
+      alert(tr("讀取 CSV 失敗：{0}", {0: err.message || err}))
     }
     if (csvFileRef.current) csvFileRef.current.value = ''
   }
@@ -133,8 +134,8 @@ export default function InventoryPage({ store }) {
     }
     const total = csvImport.toAdd.length + csvImport.toUpdate.length
     setCsvImport(null)
-    alert(`✓ 匯入完成：新增 ${csvImport.toAdd.length}、更新 ${csvImport.toUpdate.length}（共 ${total}）\n※ 更新既有商品不會改動庫存`)
-    }catch(e){setCsvImport({...csvImport,toAdd:additions,toUpdate:updates});alert('匯入停止，已保存的項目會保留；剩餘項目可重試：'+e.message)}finally{savingRef.current=false}
+    alert(tr("✓ 匯入完成：新增 {0}、更新 {1}（共 {2}）\n※ 更新既有商品不會改動庫存", {0: csvImport.toAdd.length, 1: csvImport.toUpdate.length, 2: total}))
+    }catch(e){setCsvImport({...csvImport,toAdd:additions,toUpdate:updates});alert(tr("匯入停止，已保存的項目會保留；剩餘項目可重試：{0}", {0: e.message}))}finally{savingRef.current=false}
   }
 
   function toggleAll(visibleIds, checked) {
@@ -179,7 +180,7 @@ export default function InventoryPage({ store }) {
     setShowBatch(false)
     setBatchForm({ action: 'price', value: '', supplierId: '', category: '' })
     setSelectedIds(new Set())
-    }catch(e){alert('批次更新停止，剩餘項目保留：'+e.message)}finally{savingRef.current=false}
+    }catch(e){alert(tr("批次更新停止，剩餘項目保留：{0}", {0: e.message}))}finally{savingRef.current=false}
   }
 
   function handleCameraScan(code) {
@@ -280,7 +281,7 @@ export default function InventoryPage({ store }) {
     } else {
       // 分類分組（預設）：組間依預設分類順序、組內依名稱
       return groupByCategory(list).flatMap(g => [
-        { type: 'header', category: g.category, count: g.products.length },
+        { type: 'header', category: g.category, count: g.products.length, fallback:g.products.every(p=>!p.category) },
         ...g.products.slice().sort(byName).map(p => ({ type: 'product', p })),
       ])
     }
@@ -304,12 +305,12 @@ export default function InventoryPage({ store }) {
     savingRef.current=true
     try{if (editing === 'new') await addProduct(data)
     else await updateProduct(editing, data)
-    setEditing(null)}catch(e){alert('商品未確認保存，請保留內容並核對：'+e.message)}finally{savingRef.current=false}
+    setEditing(null)}catch(e){alert(tr("商品未確認保存，請保留內容並核對：{0}", {0: e.message}))}finally{savingRef.current=false}
   }
 
   async function handleDelete(id) {
     if(savingRef.current)return;savingRef.current=true
-    try{await deleteProduct(id); setConfirmDel(null)}catch(e){alert(e.message)}finally{savingRef.current=false}
+    try{await deleteProduct(id); setConfirmDel(null)}catch(e){alert(trMessage(e.message))}finally{savingRef.current=false}
   }
 
   const lowCount    = products.filter(isLowStock).length
@@ -327,7 +328,7 @@ export default function InventoryPage({ store }) {
 
   // 分類 chips：只列出商品中實際存在的分類（依預設分類順序），附數量
   const catChips = useMemo(
-    () => groupByCategory(products).map(g => ({ cat: g.category, count: g.products.length })),
+    () => groupByCategory(products).map(g => ({ cat: g.category, count: g.products.length, fallback:g.products.every(p=>!p.category) })),
     [products]
   )
 
@@ -348,54 +349,47 @@ export default function InventoryPage({ store }) {
     <div style={iv.root}>
       <div style={iv.header}>
         <div>
-          <h2 className="page-title" style={iv.title}>庫存管理</h2>
+          <h2 className="page-title" style={iv.title}>{tr("庫存管理")}</h2>
           <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
             {filtersActive
-              ? <>顯示 {filtered.length} / {products.length} 項</>
-              : <>共 {products.length} 種商品</>}
+              ? <>{tr("顯示 ")}{filtered.length} / {products.length}{tr(" 項")}</>
+              : <>{tr("共 ")}{products.length}{tr(" 種商品")}</>}
             {(lowCount + zeroCount) > 0 && (
               <span style={{color:'var(--amber)', marginLeft:8}}>
-                · {lowCount + zeroCount} 項需補貨
-              </span>
+                · {lowCount + zeroCount}{tr(" 項需補貨")}</span>
             )}
           </div>
         </div>
         <div style={{display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
-          <button className="btn btn-ghost" style={{minHeight:44, padding:'8px 16px'}} onClick={()=>setShowCamera(true)} title="用相機掃條碼快速找/新增商品">
-            <Camera size={15}/>掃條碼
-          </button>
+          <button className="btn btn-ghost" style={{minHeight:44, padding:'8px 16px'}} onClick={()=>setShowCamera(true)} title={tr("用相機掃條碼快速找/新增商品")}>
+            <Camera size={15}/>{tr("掃條碼")}</button>
           <div style={{position:'relative'}}>
-            <button className="btn btn-ghost" style={{minHeight:44, padding:'8px 16px'}} onClick={()=>setShowTools(v=>!v)} title="CSV 匯入匯出、範本、批量操作">
-              <MoreHorizontal size={15}/>更多工具
-            </button>
+            <button className="btn btn-ghost" style={{minHeight:44, padding:'8px 16px'}} onClick={()=>setShowTools(v=>!v)} title={tr("CSV 匯入匯出、範本、批量操作")}>
+              <MoreHorizontal size={15}/>{tr("更多工具")}</button>
             {showTools && (
               <>
                 {/* 透明 backdrop：點外面關閉 */}
                 <div style={{position:'fixed', inset:0, zIndex:90}} onClick={()=>setShowTools(false)}/>
                 <div style={iv.toolsMenu}>
-                  <button style={iv.toolsItem} onClick={()=>{ setShowTools(false); csvFileRef.current?.click() }} title="從 CSV 批量匯入（新增 + 更新）">
-                    <Upload size={14}/>匯入 CSV
-                  </button>
-                  <button style={iv.toolsItem} onClick={()=>{ setShowTools(false); handleExportCSV() }} title="匯出全部商品為 CSV">
-                    <Download size={14}/>匯出 CSV
-                  </button>
-                  <button style={iv.toolsItem} onClick={()=>{ setShowTools(false); handleDownloadTemplate() }} title="下載 CSV 範本">
-                    <FileText size={14}/>下載範本
-                  </button>
+                  <button style={iv.toolsItem} onClick={()=>{ setShowTools(false); csvFileRef.current?.click() }} title={tr("從 CSV 批量匯入（新增 + 更新）")}>
+                    <Upload size={14}/>{tr("匯入 CSV")}</button>
+                  <button style={iv.toolsItem} onClick={()=>{ setShowTools(false); handleExportCSV() }} title={tr("匯出全部商品為 CSV")}>
+                    <Download size={14}/>{tr("匯出 CSV")}</button>
+                  <button style={iv.toolsItem} onClick={()=>{ setShowTools(false); handleDownloadTemplate() }} title={tr("下載 CSV 範本")}>
+                    <FileText size={14}/>{tr("下載範本")}</button>
                   <button
                     style={{...iv.toolsItem, color: batchMode ? 'var(--accent)' : 'var(--text-primary)'}}
                     onClick={()=>{ setShowTools(false); if (batchMode) setSelectedIds(new Set()); setBatchMode(!batchMode) }}
-                    title="開啟後可勾選多項商品批量編輯 / 列印標籤"
+                    title={tr("開啟後可勾選多項商品批量編輯 / 列印標籤")}
                   >
-                    <CheckSquare size={14}/>{batchMode ? '結束批量操作' : '批量操作'}
+                    <CheckSquare size={14}/>{batchMode ? tr("結束批量操作") : tr("批量操作")}
                   </button>
                 </div>
               </>
             )}
           </div>
           <button className="btn btn-primary" style={{minHeight:44, padding:'8px 18px'}} onClick={startNew}>
-            <Plus size={15}/>新增商品
-          </button>
+            <Plus size={15}/>{tr("新增商品")}</button>
         </div>
       </div>
 
@@ -407,23 +401,22 @@ export default function InventoryPage({ store }) {
             className="field"
             value={search}
             onChange={e=>setSearch(e.target.value)}
-            placeholder="搜尋商品名稱 / 條碼 / 分類…"
+            placeholder={tr("搜尋商品名稱 / 條碼 / 分類…")}
             style={{minHeight:44, fontSize:15, paddingLeft:40, paddingRight:46}}
           />
           {search && (
-            <button onClick={()=>setSearch('')} title="清除搜尋" style={iv.searchClear}>
+            <button onClick={()=>setSearch('')} title={tr("清除搜尋")} style={iv.searchClear}>
               <X size={16}/>
             </button>
           )}
         </div>
 
         <div style={iv.chipRow}>
-          <button onClick={()=>setCatFilter('all')} style={{...iv.chip, ...(catFilter==='all' ? iv.chipOn : {})}}>
-            全部 <span style={iv.chipCount}>{products.length}</span>
+          <button onClick={()=>setCatFilter('all')} style={{...iv.chip, ...(catFilter==='all' ? iv.chipOn : {})}}>{tr("全部 ")}<span style={iv.chipCount}>{products.length}</span>
           </button>
-          {catChips.map(({ cat, count }) => (
+          {catChips.map(({ cat, count, fallback }) => (
             <button key={cat} onClick={()=>setCatFilter(catFilter===cat ? 'all' : cat)} style={{...iv.chip, ...(catFilter===cat ? iv.chipOn : {})}}>
-              {CATEGORY_META[cat]?.icon || '📦'} {cat} <span style={iv.chipCount}>{count}</span>
+              {CATEGORY_META[cat]?.icon || '📦'} {fallback?tr('未分類'):cat} <span style={iv.chipCount}>{count}</span>
             </button>
           ))}
         </div>
@@ -431,7 +424,7 @@ export default function InventoryPage({ store }) {
         <div style={{display:'flex', gap:6, alignItems:'center', flexWrap:'wrap'}}>
           {QUICK_FILTERS.map(([k, l, n]) => (
             <button key={k} onClick={()=>setFilter(filter===k ? 'all' : k)} style={{...iv.chip, ...(filter===k ? iv.chipOn : {})}}>
-              {l} <span style={iv.chipCount}>{n}</span>
+              {tr(l)} <span style={iv.chipCount}>{n}</span>
             </button>
           ))}
           <div style={{flex:1}}/>
@@ -439,15 +432,15 @@ export default function InventoryPage({ store }) {
             className="field"
             value={sortMode}
             onChange={e=>setSortMode(e.target.value)}
-            title="排序方式"
+            title={tr("排序方式")}
             style={{width:'auto', minHeight:40, padding:'6px 12px', fontSize:13, cursor:'pointer'}}
           >
-            <option value="category">排序：分類（預設）</option>
-            <option value="name">排序：名稱</option>
-            <option value="stockAsc">排序：庫存 少→多</option>
-            <option value="stockDesc">排序：庫存 多→少</option>
-            <option value="priceDesc">排序：價格 高→低</option>
-            {sortMode === 'column' && <option value="column">排序：欄位（點表頭）</option>}
+            <option value="category">{tr("排序：分類（預設）")}</option>
+            <option value="name">{tr("排序：名稱")}</option>
+            <option value="stockAsc">{tr("排序：庫存 少→多")}</option>
+            <option value="stockDesc">{tr("排序：庫存 多→少")}</option>
+            <option value="priceDesc">{tr("排序：價格 高→低")}</option>
+            {sortMode === 'column' && <option value="column">{tr("排序：欄位（點表頭）")}</option>}
           </select>
         </div>
 
@@ -463,17 +456,17 @@ export default function InventoryPage({ store }) {
               type="checkbox"
               checked={filtered.length > 0 && filtered.every(p => selectedIds.has(p.id))}
               onChange={e => toggleAll(filtered.map(p=>p.id), e.target.checked)}
-              title="全選"
+              title={tr("全選")}
               style={{cursor:'pointer', accentColor:'var(--gold)'}}
             />
           )}
           {COLS.map(col => (
             <button key={col.key} onClick={()=>handleSort(col.key)} style={{...iv.colHead, justifyContent: col.align==='right' ? 'flex-end' : 'flex-start'}}>
-              {col.label}
+              {tr(col.label)}
               {sortMode==='column' && sortKey===col.key && (sortAsc ? <ChevronUp size={11}/> : <ChevronDown size={11}/>)}
             </button>
           ))}
-          <span style={{...iv.colHead, fontSize:11}}>操作</span>
+          <span style={{...iv.colHead, fontSize:11}}>{tr("操作")}</span>
         </div>
 
         {/* Rows */}
@@ -482,7 +475,7 @@ export default function InventoryPage({ store }) {
             <div style={iv.empty}>
               {search.trim() ? (
                 <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:14}}>
-                  <div>找不到「{search.trim()}」— 檢查一下關鍵字，或直接新增</div>
+                  <div>{tr("找不到「")}{search.trim()}{tr("」— 檢查一下關鍵字，或直接新增")}</div>
                   <button
                     className="btn btn-primary"
                     style={{minHeight:44}}
@@ -493,10 +486,9 @@ export default function InventoryPage({ store }) {
                       setForm(/^\d{6,}$/.test(q) ? { ...EMPTY, barcode:q, noBarcode:false } : { ...EMPTY, name:q })
                     }}
                   >
-                    <Plus size={15}/>新增商品
-                  </button>
+                    <Plus size={15}/>{tr("新增商品")}</button>
                 </div>
-              ) : '沒有符合條件的商品'}
+              ) : tr("沒有符合條件的商品")}
             </div>
           ) : rows.map(r => {
             if (r.type === 'header') return (
@@ -520,14 +512,14 @@ export default function InventoryPage({ store }) {
                   />
                 )}
                 <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
-                  {p.noBarcode && <span style={{fontSize:9, border:'1px solid var(--border-mid)', color:'var(--text-tertiary)', borderRadius:4, padding:'1px 5px', flexShrink:0}}>自包</span>}
+                  {p.noBarcode && <span style={{fontSize:9, border:'1px solid var(--border-mid)', color:'var(--text-tertiary)', borderRadius:4, padding:'1px 5px', flexShrink:0}}>{tr("自包")}</span>}
                   <span style={{fontWeight:600, fontSize:14}}>{p.name}</span>
                   {expiredIds.has(p.id) && (
-                    <span style={{fontSize:9, background:'var(--red-dim)', color:'var(--red)', borderRadius:4, padding:'1px 5px', fontWeight:600}}>已過期</span>
+                    <span style={{fontSize:9, background:'var(--red-dim)', color:'var(--red)', borderRadius:4, padding:'1px 5px', fontWeight:600}}>{tr("已過期")}</span>
                   )}
                   {!expiredIds.has(p.id) && expiringIds.has(p.id) && (() => {
                     const day = soon.find(s => s.id === p.id)?.daysLeft
-                    return <span style={{fontSize:9, background:'var(--amber-dim)', color:'var(--amber)', borderRadius:4, padding:'1px 5px', fontWeight:600}}>{day}天到期</span>
+                    return <span style={{fontSize:9, background:'var(--amber-dim)', color:'var(--amber)', borderRadius:4, padding:'1px 5px', fontWeight:600}}>{day}{tr("天到期")}</span>
                   })()}
                 </div>
                 <span style={{fontSize:12, color:'var(--text-secondary)'}}>{p.category}</span>
@@ -553,7 +545,7 @@ export default function InventoryPage({ store }) {
                 </span>
                 <div style={{display:'flex', gap:4, justifyContent:'flex-end'}}>
                   {window.electronAPI && (
-                    <button className="btn-icon btn-sm" title="產生條碼" onClick={()=>handleGenerateBarcode(p)} style={{color:'var(--teal)'}}><Barcode size={13}/></button>
+                    <button className="btn-icon btn-sm" title={tr("產生條碼")} onClick={()=>handleGenerateBarcode(p)} style={{color:'var(--teal)'}}><Barcode size={13}/></button>
                   )}
                   <button className="btn-icon btn-sm" onClick={()=>startEdit(p)}><Pencil size={13}/></button>
                   <button className="btn-icon btn-sm" style={{color:'var(--red)'}} onClick={()=>setConfirmDel(p.id)}><Trash2 size={13}/></button>
@@ -569,17 +561,17 @@ export default function InventoryPage({ store }) {
         <div style={iv.overlay}>
           <div style={iv.drawer} className="animate-scale">
             <div style={iv.drawerHeader}>
-              <span style={{fontWeight:600, fontSize:15}}>{editing==='new'?'新增商品':'編輯商品'}</span>
+              <span style={{fontWeight:600, fontSize:15}}>{editing==='new'?tr("新增商品"):tr("編輯商品")}</span>
               <button className="btn-icon" onClick={()=>setEditing(null)}><X size={16}/></button>
             </div>
             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14}}>
               <div style={{gridColumn:'1/-1'}}>
-                <FieldLabel>商品名稱 *</FieldLabel>
-                <input className="field" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="例：花生糖"/>
+                <FieldLabel>{tr("商品名稱 *")}</FieldLabel>
+                <input className="field" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder={tr("例：花生糖")}/>
               </div>
               <div>
-                <FieldLabel>分類</FieldLabel>
-                <input className="field" value={form.category} list="cat-list" onChange={e=>setForm(f=>({...f,category:e.target.value}))} placeholder="例：雜貨、生鮮、調味料..."/>
+                <FieldLabel>{tr("分類")}</FieldLabel>
+                <input className="field" value={form.category} list="cat-list" onChange={e=>setForm(f=>({...f,category:e.target.value}))} placeholder={tr("例：雜貨、生鮮、調味料...")}/>
                 <datalist id="cat-list">{mergeCategories(categories).map(c=><option key={c} value={c}/>)}</datalist>
                 {/* 預設分類快捷鍵 */}
                 <div style={{display:'flex', flexWrap:'wrap', gap:4, marginTop:6}}>
@@ -601,58 +593,56 @@ export default function InventoryPage({ store }) {
                 </div>
               </div>
               <div>
-                <FieldLabel>單位</FieldLabel>
-                <input className="field" value={form.unit} onChange={e=>setForm(f=>({...f,unit:e.target.value}))} placeholder="包 / 瓶 / kg"/>
+                <FieldLabel>{tr("單位")}</FieldLabel>
+                <input className="field" value={form.unit} onChange={e=>setForm(f=>({...f,unit:e.target.value}))} placeholder={tr("包 / 瓶 / kg")}/>
               </div>
               <div>
-                <FieldLabel>售價 (NT$) *</FieldLabel>
+                <FieldLabel>{tr("售價 (NT$) *")}</FieldLabel>
                 <input className="field" type="number" value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} placeholder="0"/>
               </div>
               <div>
-                <FieldLabel>成本 (NT$)</FieldLabel>
+                <FieldLabel>{tr("成本 (NT$)")}</FieldLabel>
                 <input className="field" type="number" value={form.cost} onChange={e=>setForm(f=>({...f,cost:e.target.value}))} placeholder="0"/>
               </div>
               <div>
-                <FieldLabel>庫存數量</FieldLabel>
+                <FieldLabel>{tr("庫存數量")}</FieldLabel>
                 <input className="field" type="number" value={form.stock} onChange={e=>setForm(f=>({...f,stock:e.target.value}))} placeholder="0"/>
               </div>
               <div>
-                <FieldLabel>安全庫存（低於此值提醒補貨）</FieldLabel>
-                <input className="field" type="number" value={form.reorderLevel} onChange={e=>setForm(f=>({...f,reorderLevel:e.target.value}))} placeholder="例：10"/>
+                <FieldLabel>{tr("安全庫存（低於此值提醒補貨）")}</FieldLabel>
+                <input className="field" type="number" value={form.reorderLevel} onChange={e=>setForm(f=>({...f,reorderLevel:e.target.value}))} placeholder={tr("例：10")}/>
               </div>
               <div style={{gridColumn:'1/-1'}}>
-                <FieldLabel><Truck size={11} style={{verticalAlign:'-1px',marginRight:4}}/>主要供應商</FieldLabel>
+                <FieldLabel><Truck size={11} style={{verticalAlign:'-1px',marginRight:4}}/>{tr("主要供應商")}</FieldLabel>
                 <select className="field" value={form.supplierId || ''} onChange={e=>setForm(f=>({...f,supplierId:e.target.value}))} style={{cursor:'pointer'}}>
-                  <option value="">— 未指定 —</option>
+                  <option value="">{tr("— 未指定 —")}</option>
                   {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
                 {suppliers.length === 0 && (
-                  <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:4}}>尚未建立供應商，請至「進貨管理 → 供應商」新增</div>
+                  <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:4}}>{tr("尚未建立供應商，請至「進貨管理 → 供應商」新增")}</div>
                 )}
               </div>
               <div style={{gridColumn:'1/-1'}}>
                 <label style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13, color:'var(--text-secondary)'}}>
-                  <input type="checkbox" checked={form.noBarcode} onChange={e=>setForm(f=>({...f,noBarcode:e.target.checked,barcode:e.target.checked?'':f.barcode}))} style={{accentColor:'var(--gold)'}}/>
-                  此商品為自包裝，無條碼
-                </label>
+                  <input type="checkbox" checked={form.noBarcode} onChange={e=>setForm(f=>({...f,noBarcode:e.target.checked,barcode:e.target.checked?'':f.barcode}))} style={{accentColor:'var(--gold)'}}/>{tr("此商品為自包裝，無條碼")}</label>
               </div>
               {!form.noBarcode && (
                 <div style={{gridColumn:'1/-1'}}>
-                  <FieldLabel>條碼</FieldLabel>
-                  <input className="field" value={form.barcode} onChange={e=>setForm(f=>({...f,barcode:e.target.value}))} placeholder="掃描或手動輸入" style={{fontFamily:'var(--font-mono)'}}/>
+                  <FieldLabel>{tr("條碼")}</FieldLabel>
+                  <input className="field" value={form.barcode} onChange={e=>setForm(f=>({...f,barcode:e.target.value}))} placeholder={tr("掃描或手動輸入")} style={{fontFamily:'var(--font-mono)'}}/>
                 </div>
               )}
               <div>
-                <FieldLabel>保存期限（選填）</FieldLabel>
+                <FieldLabel>{tr("保存期限（選填）")}</FieldLabel>
                 <input className="field" type="date" value={form.expiryDate || ''} onChange={e=>setForm(f=>({...f,expiryDate:e.target.value}))}/>
               </div>
               <div>
-                <FieldLabel>商品圖片網址（選填）</FieldLabel>
+                <FieldLabel>{tr("商品圖片網址（選填）")}</FieldLabel>
                 <input className="field" value={form.imageUrl || ''} onChange={e=>setForm(f=>({...f,imageUrl:e.target.value}))} placeholder="https://..."/>
               </div>
               {form.imageUrl && (
                 <div style={{gridColumn:'1/-1', textAlign:'center'}}>
-                  <img src={form.imageUrl} alt="預覽" style={{maxHeight:120, maxWidth:'100%', borderRadius:8, border:'1px solid var(--border-dim)'}} onError={e=>e.target.style.display='none'}/>
+                  <img src={form.imageUrl} alt={tr("預覽")} style={{maxHeight:120, maxWidth:'100%', borderRadius:8, border:'1px solid var(--border-dim)'}} onError={e=>e.target.style.display='none'}/>
                 </div>
               )}
             </div>
@@ -668,15 +658,13 @@ export default function InventoryPage({ store }) {
                     color:'var(--text-secondary)',
                   }}
                 >
-                  <span>📋 變動歷史</span>
+                  <span>{tr("📋 變動歷史")}</span>
                   {showHistory ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
                 </button>
                 {showHistory && (() => {
                   const history = getProductHistory(editing, { orders, wasteLog, purchases })
                   if (history.length === 0) return (
-                    <div style={{padding:'14px', textAlign:'center', color:'var(--text-tertiary)', fontSize:12}}>
-                      此商品尚無變動紀錄
-                    </div>
+                    <div style={{padding:'14px', textAlign:'center', color:'var(--text-tertiary)', fontSize:12}}>{tr("此商品尚無變動紀錄")}</div>
                   )
                   return (
                     <div style={{maxHeight:200, overflowY:'auto'}}>
@@ -698,7 +686,7 @@ export default function InventoryPage({ store }) {
                             <span style={{fontSize:14}}>{typeMeta.icon}</span>
                             <div style={{flex:1, minWidth:0}}>
                               <div style={{display:'flex', gap:6, alignItems:'center'}}>
-                                <span style={{color:typeMeta.color, fontWeight:600, fontSize:11}}>{typeMeta.label}</span>
+                                <span style={{color:typeMeta.color, fontWeight:600, fontSize:11}}>{tr(typeMeta.label)}</span>
                                 <span style={{color:'var(--text-tertiary)', fontSize:11}}>{h.note}</span>
                               </div>
                               <div style={{fontSize:10, color:'var(--text-tertiary)', marginTop:2, fontFamily:'var(--font-mono)'}}>
@@ -716,9 +704,7 @@ export default function InventoryPage({ store }) {
                         )
                       })}
                       {history.length > 30 && (
-                        <div style={{padding:'8px 14px', textAlign:'center', fontSize:11, color:'var(--text-tertiary)', borderTop:'1px solid var(--border-dim)'}}>
-                          僅顯示最近 30 筆（共 {history.length} 筆）
-                        </div>
+                        <div style={{padding:'8px 14px', textAlign:'center', fontSize:11, color:'var(--text-tertiary)', borderTop:'1px solid var(--border-dim)'}}>{tr("僅顯示最近 30 筆（共 ")}{history.length}{tr(" 筆）")}</div>
                       )}
                     </div>
                   )
@@ -727,8 +713,8 @@ export default function InventoryPage({ store }) {
             )}
 
             <div style={{display:'flex', gap:10}}>
-              <button className="btn btn-primary" style={{flex:1}} onClick={save}><Check size={15}/>儲存</button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setEditing(null)}>取消</button>
+              <button className="btn btn-primary" style={{flex:1}} onClick={save}><Check size={15}/>{tr("儲存")}</button>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setEditing(null)}>{tr("取消")}</button>
             </div>
           </div>
         </div>
@@ -740,12 +726,12 @@ export default function InventoryPage({ store }) {
           <div style={{...iv.drawer, maxWidth:360}} className="animate-scale">
             <div style={{textAlign:'center', padding:'8px 0 20px'}}>
               <div style={{fontSize:32, marginBottom:12}}>🗑️</div>
-              <div style={{fontWeight:600, marginBottom:6}}>確認刪除？</div>
-              <div style={{fontSize:13, color:'var(--text-secondary)'}}>此操作無法復原</div>
+              <div style={{fontWeight:600, marginBottom:6}}>{tr("確認刪除？")}</div>
+              <div style={{fontSize:13, color:'var(--text-secondary)'}}>{tr("此操作無法復原")}</div>
             </div>
             <div style={{display:'flex', gap:10}}>
-              <button className="btn btn-danger" style={{flex:1}} onClick={()=>handleDelete(confirmDel)}>確認刪除</button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setConfirmDel(null)}>取消</button>
+              <button className="btn btn-danger" style={{flex:1}} onClick={()=>handleDelete(confirmDel)}>{tr("確認刪除")}</button>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setConfirmDel(null)}>{tr("取消")}</button>
             </div>
           </div>
         </div>
@@ -756,12 +742,12 @@ export default function InventoryPage({ store }) {
         <div style={iv.overlay} onClick={() => setBarcodePreview(null)}>
           <div style={{...iv.drawer, maxWidth:420, textAlign:'center'}} className="animate-scale" onClick={e => e.stopPropagation()}>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16}}>
-              <h3 style={{fontSize:15, fontWeight:600}}>條碼預覽</h3>
+              <h3 style={{fontSize:15, fontWeight:600}}>{tr("條碼預覽")}</h3>
               <button className="btn-icon btn-sm" onClick={() => setBarcodePreview(null)}><X size={16}/></button>
             </div>
             <div style={{marginBottom:12, fontWeight:600, fontSize:16}}>{barcodePreview.product.name}</div>
             <div style={{marginBottom:12, color:'var(--accent)', fontWeight:700, fontSize:18}}>
-              ${barcodePreview.product.price} / {barcodePreview.product.unit || '個'}
+              ${barcodePreview.product.price} / {barcodePreview.product.unit || tr("個")}
             </div>
             <div style={{
               marginTop:12, padding:'16px', background:'#fff', borderRadius:8,
@@ -769,14 +755,12 @@ export default function InventoryPage({ store }) {
             }}>
               <BarcodeDisplay value={barcodePreview.barcodeText} />
             </div>
-            <div style={{marginTop:6, fontSize:11, color:'var(--text-tertiary)'}}>
-              CODE128 格式 · {barcodePreview.barcodeText}
+            <div style={{marginTop:6, fontSize:11, color:'var(--text-tertiary)'}}>{tr("CODE128 格式 · ")}{barcodePreview.barcodeText}
             </div>
             <div style={{display:'flex', gap:10, marginTop:16}}>
               <button className="btn btn-primary" style={{flex:1}} onClick={() => { handlePrintLabel(barcodePreview.product); setBarcodePreview(null) }}>
-                <Printer size={14}/> 列印標籤
-              </button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={() => setBarcodePreview(null)}>關閉</button>
+                <Printer size={14}/>{tr(" 列印標籤")}</button>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={() => setBarcodePreview(null)}>{tr("關閉")}</button>
             </div>
           </div>
         </div>
@@ -787,20 +771,20 @@ export default function InventoryPage({ store }) {
         <div style={iv.overlay}>
           <div style={{...iv.drawer, maxWidth:680}} className="animate-scale">
             <div style={iv.drawerHeader}>
-              <span style={{fontWeight:600, fontSize:15}}>CSV 匯入預覽</span>
+              <span style={{fontWeight:600, fontSize:15}}>{tr("CSV 匯入預覽")}</span>
               <button className="btn-icon" onClick={()=>setCsvImport(null)}><X size={16}/></button>
             </div>
             <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:14}}>
               <div style={{padding:'10px 14px', background:'var(--green-dim)', borderRadius:8, borderTop:'2px solid var(--green)'}}>
-                <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:3}}>將新增</div>
+                <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:3}}>{tr("將新增")}</div>
                 <div style={{fontSize:22, fontWeight:600, color:'var(--green)', fontFamily:'var(--font-mono)'}}>{csvImport.toAdd.length}</div>
               </div>
               <div style={{padding:'10px 14px', background:'var(--blue-dim)', borderRadius:8, borderTop:'2px solid var(--blue)'}}>
-                <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:3}}>將更新</div>
+                <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:3}}>{tr("將更新")}</div>
                 <div style={{fontSize:22, fontWeight:600, color:'var(--blue)', fontFamily:'var(--font-mono)'}}>{csvImport.toUpdate.length}</div>
               </div>
               <div style={{padding:'10px 14px', background: csvImport.errors.length ? 'var(--red-dim)' : 'var(--bg-overlay)', borderRadius:8, borderTop:`2px solid ${csvImport.errors.length ? 'var(--red)' : 'var(--text-tertiary)'}`}}>
-                <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:3}}>錯誤</div>
+                <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:3}}>{tr("錯誤")}</div>
                 <div style={{fontSize:22, fontWeight:600, color: csvImport.errors.length ? 'var(--red)' : 'var(--text-tertiary)', fontFamily:'var(--font-mono)'}}>{csvImport.errors.length}</div>
               </div>
             </div>
@@ -808,7 +792,7 @@ export default function InventoryPage({ store }) {
             {csvImport.errors.length > 0 && (
               <div style={{marginBottom:12, padding:'10px 12px', background:'var(--red-dim)', borderRadius:6, fontSize:11, color:'var(--red)', maxHeight:120, overflowY:'auto'}}>
                 {csvImport.errors.slice(0,10).map((e,i) => <div key={i}>{e}</div>)}
-                {csvImport.errors.length > 10 && <div style={{opacity:0.7, marginTop:4}}>...還有 {csvImport.errors.length - 10} 個錯誤</div>}
+                {csvImport.errors.length > 10 && <div style={{opacity:0.7, marginTop:4}}>{tr("...還有 ")}{csvImport.errors.length - 10}{tr(" 個錯誤")}</div>}
               </div>
             )}
 
@@ -816,12 +800,12 @@ export default function InventoryPage({ store }) {
               <table style={{width:'100%', fontSize:11}}>
                 <thead>
                   <tr style={{background:'var(--bg-overlay)', position:'sticky', top:0}}>
-                    <th style={{textAlign:'left', padding:'7px 10px'}}>動作</th>
-                    <th style={{textAlign:'left', padding:'7px 10px'}}>商品</th>
-                    <th style={{textAlign:'left', padding:'7px 10px'}}>分類</th>
-                    <th style={{textAlign:'right', padding:'7px 10px'}}>售價</th>
-                    <th style={{textAlign:'right', padding:'7px 10px'}}>庫存</th>
-                    <th style={{textAlign:'left', padding:'7px 10px'}}>供應商</th>
+                    <th style={{textAlign:'left', padding:'7px 10px'}}>{tr("動作")}</th>
+                    <th style={{textAlign:'left', padding:'7px 10px'}}>{tr("商品")}</th>
+                    <th style={{textAlign:'left', padding:'7px 10px'}}>{tr("分類")}</th>
+                    <th style={{textAlign:'right', padding:'7px 10px'}}>{tr("售價")}</th>
+                    <th style={{textAlign:'right', padding:'7px 10px'}}>{tr("庫存")}</th>
+                    <th style={{textAlign:'left', padding:'7px 10px'}}>{tr("供應商")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -833,7 +817,7 @@ export default function InventoryPage({ store }) {
                           background: row.action==='add' ? 'var(--green-dim)' : 'var(--blue-dim)',
                           color: row.action==='add' ? 'var(--green)' : 'var(--blue)',
                           fontWeight:600,
-                        }}>{row.action==='add' ? '新增' : '更新'}</span>
+                        }}>{row.action==='add' ? tr("新增") : tr("更新")}</span>
                       </td>
                       <td style={{padding:'6px 10px'}}>{row.data.name}</td>
                       <td style={{padding:'6px 10px'}}>{row.data.category}</td>
@@ -853,9 +837,8 @@ export default function InventoryPage({ store }) {
                 disabled={csvImport.toAdd.length + csvImport.toUpdate.length === 0}
                 onClick={confirmCSVImport}
               >
-                <Check size={15}/>確認匯入（{csvImport.toAdd.length + csvImport.toUpdate.length} 筆）
-              </button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setCsvImport(null)}>取消</button>
+                <Check size={15}/>{tr("確認匯入（")}{csvImport.toAdd.length + csvImport.toUpdate.length}{tr(" 筆）")}</button>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setCsvImport(null)}>{tr("取消")}</button>
             </div>
           </div>
         </div>
@@ -865,7 +848,7 @@ export default function InventoryPage({ store }) {
       {showCamera && (
         <Suspense fallback={null}>
           <BarcodeScannerModal
-            title="掃條碼查找或新增商品"
+            title={tr("掃條碼查找或新增商品")}
             onScan={handleCameraScan}
             onClose={()=>setShowCamera(false)}
           />
@@ -881,18 +864,15 @@ export default function InventoryPage({ store }) {
           borderRadius:'var(--r-pill)', boxShadow:'var(--shadow-lg)',
           border:'1px solid var(--border-mid)',
         }}>
-          <span style={{fontSize:13, fontWeight:600, color:'var(--text-secondary)', marginRight:4}}>
-            已選 {selectedIds.size}
+          <span style={{fontSize:13, fontWeight:600, color:'var(--text-secondary)', marginRight:4}}>{tr("已選 ")}{selectedIds.size}
           </span>
           <button className="btn btn-primary btn-sm" onClick={()=>setShowBatch(true)}>
-            <Pencil size={14}/> 批量編輯
-          </button>
+            <Pencil size={14}/>{tr(" 批量編輯")}</button>
           {window.electronAPI && (
             <button className="btn btn-ghost btn-sm" onClick={handleBatchPrint}>
-              <Printer size={14}/> 列印標籤
-            </button>
+              <Printer size={14}/>{tr(" 列印標籤")}</button>
           )}
-          <button className="btn-icon btn-sm" onClick={()=>setSelectedIds(new Set())} title="清除選取">
+          <button className="btn-icon btn-sm" onClick={()=>setSelectedIds(new Set())} title={tr("清除選取")}>
             <X size={14}/>
           </button>
         </div>
@@ -903,31 +883,31 @@ export default function InventoryPage({ store }) {
         <div style={iv.overlay}>
           <div style={iv.drawer} className="animate-scale">
             <div style={iv.drawerHeader}>
-              <span style={{fontWeight:600, fontSize:15}}>批量編輯 {selectedIds.size} 項商品</span>
+              <span style={{fontWeight:600, fontSize:15}}>{tr("批量編輯 ")}{selectedIds.size}{tr(" 項商品")}</span>
               <button className="btn-icon" onClick={()=>setShowBatch(false)}><X size={16}/></button>
             </div>
-            <FieldLabel>批量動作</FieldLabel>
+            <FieldLabel>{tr("批量動作")}</FieldLabel>
             <select className="field" value={batchForm.action} onChange={e=>setBatchForm(f=>({...f, action:e.target.value, value:''}))} style={{cursor:'pointer', marginBottom:12}}>
-              <option value="price">設定售價</option>
-              <option value="priceAdjust">售價調整百分比（例：+10 = 漲 10%）</option>
-              <option value="cost">設定成本</option>
-              <option value="reorderLevel">設定安全庫存</option>
-              <option value="supplier">設定主要供應商</option>
-              <option value="category">設定分類</option>
+              <option value="price">{tr("設定售價")}</option>
+              <option value="priceAdjust">{tr("售價調整百分比（例：+10 = 漲 10%）")}</option>
+              <option value="cost">{tr("設定成本")}</option>
+              <option value="reorderLevel">{tr("設定安全庫存")}</option>
+              <option value="supplier">{tr("設定主要供應商")}</option>
+              <option value="category">{tr("設定分類")}</option>
             </select>
 
             {batchForm.action === 'supplier' ? (
               <>
-                <FieldLabel>供應商</FieldLabel>
+                <FieldLabel>{tr("供應商")}</FieldLabel>
                 <select className="field" value={batchForm.supplierId} onChange={e=>setBatchForm(f=>({...f, supplierId:e.target.value}))} style={{cursor:'pointer'}}>
-                  <option value="">— 未指定 —</option>
+                  <option value="">{tr("— 未指定 —")}</option>
                   {suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </>
             ) : batchForm.action === 'category' ? (
               <>
-                <FieldLabel>分類</FieldLabel>
-                <input className="field" value={batchForm.category} list="cat-list" onChange={e=>setBatchForm(f=>({...f, category:e.target.value}))} placeholder="輸入或選擇分類"/>
+                <FieldLabel>{tr("分類")}</FieldLabel>
+                <input className="field" value={batchForm.category} list="cat-list" onChange={e=>setBatchForm(f=>({...f, category:e.target.value}))} placeholder={tr("輸入或選擇分類")}/>
                 <div style={{display:'flex', flexWrap:'wrap', gap:4, marginTop:6}}>
                   {DEFAULT_CATEGORIES.slice(0,8).map(c => (
                     <button key={c} type="button" onClick={()=>setBatchForm(f=>({...f,category:c}))} style={{
@@ -942,17 +922,16 @@ export default function InventoryPage({ store }) {
             ) : (
               <>
                 <FieldLabel>
-                  {batchForm.action === 'priceAdjust' ? '百分比（+/-，例：+10 / -5）' : '數值'}
+                  {batchForm.action === 'priceAdjust' ? tr("百分比（+/-，例：+10 / -5）") : tr("數值")}
                 </FieldLabel>
-                <input className="field" type="number" value={batchForm.value} onChange={e=>setBatchForm(f=>({...f, value:e.target.value}))} placeholder={batchForm.action==='priceAdjust' ? '+10 = 漲 10%' : '0'}/>
+                <input className="field" type="number" value={batchForm.value} onChange={e=>setBatchForm(f=>({...f, value:e.target.value}))} placeholder={batchForm.action==='priceAdjust' ? tr("+10 = 漲 10%") : '0'}/>
               </>
             )}
 
             <div style={{display:'flex', gap:10, marginTop:18}}>
               <button className="btn btn-primary" style={{flex:1}} onClick={applyBatch}>
-                <Check size={15}/>套用到 {selectedIds.size} 項
-              </button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setShowBatch(false)}>取消</button>
+                <Check size={15}/>{tr("套用到 ")}{selectedIds.size}{tr(" 項")}</button>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setShowBatch(false)}>{tr("取消")}</button>
             </div>
           </div>
         </div>

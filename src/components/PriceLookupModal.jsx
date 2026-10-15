@@ -1,3 +1,4 @@
+import {tr} from "../i18n"
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { Search, X, Tag } from 'lucide-react'
 
@@ -21,16 +22,14 @@ export default function PriceLookupModal({ products, onClose }) {
         <div style={pl.head}>
           <Search size={16} color="var(--text-tertiary)"/>
           <input ref={inputRef} value={q} onChange={e=>setQ(e.target.value)}
-            placeholder="搜尋商品名稱、條碼或分類..."
+            placeholder={tr("搜尋商品名稱、條碼或分類...")}
             style={{flex:1, fontSize:16, color:'var(--text-primary)'}}
             onKeyDown={e => { if (e.key === 'Escape') onClose() }}/>
           <button onClick={onClose} style={{padding:6}}><X size={18}/></button>
         </div>
         <div style={pl.list}>
           {results.length === 0 ? (
-            <div style={{textAlign:'center', padding:40, color:'var(--text-tertiary)', fontSize:13}}>
-              查無商品
-            </div>
+            <div style={{textAlign:'center', padding:40, color:'var(--text-tertiary)', fontSize:13}}>{tr("查無商品")}</div>
           ) : results.map(p => (
             <div key={p.id} style={pl.row}>
               <div style={{flex:1, minWidth:0}}>
@@ -44,7 +43,7 @@ export default function PriceLookupModal({ products, onClose }) {
                       {p.name}
                     </div>
                     <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:2}}>
-                      {p.category} · 庫存 {p.stock} {p.unit}
+                      {p.category}{tr(" · 庫存 ")}{p.stock} {p.unit}
                       {p.barcode && ` · ${p.barcode}`}
                     </div>
                   </div>
@@ -60,7 +59,7 @@ export default function PriceLookupModal({ products, onClose }) {
           ))}
         </div>
         <div style={pl.foot}>
-          <span style={{fontSize:11, color:'var(--text-tertiary)'}}>共 {results.length} 項 · 按 Esc 關閉</span>
+          <span style={{fontSize:11, color:'var(--text-tertiary)'}}>{tr("共 ")}{results.length}{tr(" 項 · 按 Esc 關閉")}</span>
         </div>
       </div>
     </>

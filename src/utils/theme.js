@@ -3,12 +3,13 @@ import { browserStorage } from './browserStorage'
 const KEY = 'pos_theme'
 
 export function getTheme() {
-  return browserStorage.getItem(KEY) || 'light'
+  try{return browserStorage.getItem(KEY)==='dark'?'dark':'light'}catch{return 'light'}
 }
 
 export function applyTheme(theme) {
   const t = theme === 'dark' ? 'dark' : 'light'
   document.documentElement.setAttribute('data-theme', t)
+  window.dispatchEvent(new CustomEvent('pos-theme-changed',{detail:t}))
   browserStorage.setItem(KEY, t)
 }
 
@@ -21,5 +22,5 @@ export function toggleTheme() {
 
 // 在 App 啟動時呼叫
 export function initTheme() {
-  applyTheme(getTheme())
+  try{applyTheme(getTheme())}catch{/* Keep the current session usable if storage is blocked. */}
 }

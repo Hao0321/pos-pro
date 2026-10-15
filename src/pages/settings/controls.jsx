@@ -1,8 +1,9 @@
+import {tr} from "../../i18n"
 
 export function Section({ title, children }) {
   return (
     <div style={{marginBottom:24}}>
-      <div style={{fontSize:13, fontWeight:600, marginBottom:10, color:'var(--text-primary)'}}>{title}</div>
+      <div style={{fontSize:13, fontWeight:600, marginBottom:10, color:'var(--text-primary)'}}>{tr(title)}</div>
       {children}
     </div>
   )

@@ -1,3 +1,4 @@
+import {tr} from "../../i18n"
 import { useState, useEffect } from "react"
 import { Database, Download, Upload, RefreshCw } from "lucide-react"
 import { createBackup, getBackupList, restoreBackup, exportBackupFile, importBackupFile } from "../../utils/security"
@@ -18,26 +19,22 @@ export function SecurityTab({ session }) {
 
   return (
     <div style={{overflowY:'auto',height:'100%',display:'flex',flexDirection:'column',gap:10}}>
-      <div style={{fontSize:12,color:'var(--text-tertiary)',padding:'4px 0',flexShrink:0}}>
-        以下是目前使用模式的保護措施。請仍做好裝置鎖定、帳號管理與外部備份。
-      </div>
+      <div style={{fontSize:12,color:'var(--text-tertiary)',padding:'4px 0',flexShrink:0}}>{tr("以下是目前使用模式的保護措施。請仍做好裝置鎖定、帳號管理與外部備份。")}</div>
       {items.map(item=>(
         <div key={item.title} className="card" style={{padding:'13px 16px',display:'flex',gap:14,alignItems:'flex-start'}}>
           <div style={{fontSize:22,flexShrink:0,marginTop:2}}>{item.icon}</div>
           <div style={{flex:1}}>
             <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-              <span style={{fontWeight:600,fontSize:13}}>{item.title}</span>
+              <span style={{fontWeight:600,fontSize:13}}>{tr(item.title)}</span>
               <span style={{fontSize:10,padding:'1px 8px',borderRadius:20,background:item.ok?'var(--green-dim)':'var(--red-dim)',color:item.ok?'var(--green)':'var(--red)'}}>
-                {item.status}
+                {tr(item.status)}
               </span>
             </div>
-            <div style={{fontSize:12,color:'var(--text-secondary)',lineHeight:1.6}}>{item.desc}</div>
+            <div style={{fontSize:12,color:'var(--text-secondary)',lineHeight:1.6}}>{tr(item.desc)}</div>
           </div>
         </div>
       ))}
-      <div style={{background:'var(--gold-dim)',border:'1px solid var(--gold-dim)',borderRadius:10,padding:'12px 16px',fontSize:12,color:'var(--gold-bright)',lineHeight:1.7,flexShrink:0}}>
-        共用店面以 HTTPS 連到店面電腦；雲端快照須自行設定帳號與資料隔離。外部雲端或網路設備的保護需另外驗證，全部 POS 功能免費使用。
-      </div>
+      <div style={{background:'var(--gold-dim)',border:'1px solid var(--gold-dim)',borderRadius:10,padding:'12px 16px',fontSize:12,color:'var(--gold-bright)',lineHeight:1.7,flexShrink:0}}>{tr("共用店面以 HTTPS 連到店面電腦；雲端快照須自行設定帳號與資料隔離。外部雲端或網路設備的保護需另外驗證，全部 POS 功能免費使用。")}</div>
     </div>
   )
 }
@@ -71,18 +68,17 @@ export function BackupTab({ session }) {
   return (
     <div style={{display:'flex',flexDirection:'column',gap:14,height:'100%'}}>
       <div style={{display:'flex',gap:10,flexShrink:0,flexWrap:'wrap'}}>
-        <button className="btn btn-primary btn-sm" onClick={doBackup}><Database size={14}/>立即備份</button>
-        <button className="btn btn-ghost btn-sm"  onClick={doExport}><Download size={14}/>匯出 JSON 檔</button>
+        <button className="btn btn-primary btn-sm" onClick={doBackup}><Database size={14}/>{tr("立即備份")}</button>
+        <button className="btn btn-ghost btn-sm"  onClick={doExport}><Download size={14}/>{tr("匯出 JSON 檔")}</button>
         <label className="btn btn-ghost btn-sm" style={{cursor:'pointer'}}>
-          <Upload size={14}/>匯入備份
-          <input type="file" accept=".json" style={{display:'none'}} onChange={handleImport}/>
+          <Upload size={14}/>{tr("匯入備份")}<input type="file" accept=".json" style={{display:'none'}} onChange={handleImport}/>
         </label>
       </div>
       {msg && <div style={{background:'var(--green-dim)',border:'1px solid rgba(22,163,74,0.25)',color:'var(--green)',borderRadius:8,padding:'8px 14px',fontSize:13,flexShrink:0}}>{msg}</div>}
 
       <div style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:8}}>
         {backups.length===0 ? (
-          <div style={{textAlign:'center',padding:'40px',color:'var(--text-tertiary)',fontSize:13}}>尚無備份記錄</div>
+          <div style={{textAlign:'center',padding:'40px',color:'var(--text-tertiary)',fontSize:13}}>{tr("尚無備份記錄")}</div>
         ) : backups.map(b=>(
           <div key={b.id} className="card" style={{padding:'12px 16px',display:'flex',alignItems:'center',gap:14}}>
             <div style={{flex:1}}>
@@ -93,8 +89,7 @@ export function BackupTab({ session }) {
               </div>
             </div>
             <button className="btn btn-ghost btn-sm" style={{color:'var(--amber)'}} onClick={()=>setRestoring(b.id)}>
-              <RefreshCw size={13}/>還原
-            </button>
+              <RefreshCw size={13}/>{tr("還原")}</button>
           </div>
         ))}
       </div>
@@ -104,12 +99,12 @@ export function BackupTab({ session }) {
           <div style={{...ss.modal,maxWidth:360}} className="animate-scale">
             <div style={{textAlign:'center',padding:'8px 0 20px'}}>
               <div style={{fontSize:36,marginBottom:12}}>⚠️</div>
-              <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>確認還原？</div>
-              <div style={{fontSize:13,color:'var(--text-secondary)'}}>目前所有資料將被備份覆蓋，此操作無法復原</div>
+              <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>{tr("確認還原？")}</div>
+              <div style={{fontSize:13,color:'var(--text-secondary)'}}>{tr("目前所有資料將被備份覆蓋，此操作無法復原")}</div>
             </div>
             <div style={{display:'flex',gap:10}}>
-              <button className="btn btn-danger" style={{flex:1}} onClick={()=>doRestore(restoring)}>確認還原</button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setRestoring(null)}>取消</button>
+              <button className="btn btn-danger" style={{flex:1}} onClick={()=>doRestore(restoring)}>{tr("確認還原")}</button>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setRestoring(null)}>{tr("取消")}</button>
             </div>
           </div>
         </div>

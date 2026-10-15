@@ -1,3 +1,4 @@
+import {tr,trMessage} from "../../i18n"
 import { useState, useMemo, useRef, lazy, Suspense } from "react"
 import { Plus, Check, X, ChevronRight, Zap, Camera } from "lucide-react"
 import { DEFAULT_CATEGORIES, CATEGORY_META, groupByCategory } from "../../utils/categories"
@@ -226,33 +227,30 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
             background: step===n ? 'var(--accent-dim)' : 'var(--bg-overlay)',
             color: step===n ? 'var(--accent)' : 'var(--text-tertiary)',
             border: `1px solid ${step===n ? 'var(--accent)' : 'var(--border-dim)'}`,
-          }}>{l}</div>
+          }}>{tr(l)}</div>
         ))}
       </div>
       <div style={np.topGrid}>
         <div>
-          <FL>供應商 *</FL>
-          <select aria-label="採購供應商" className="field" value={supplierId} onChange={e=>{setSupplierId(e.target.value);setAddProdId('')}} style={{cursor:'pointer',fontSize:16,minHeight:44}}>
-            <option value="">— 選擇供應商 —</option>
+          <FL>{tr("供應商 *")}</FL>
+          <select aria-label={tr("採購供應商")} className="field" value={supplierId} onChange={e=>{setSupplierId(e.target.value);setAddProdId('')}} style={{cursor:'pointer',fontSize:16,minHeight:44}}>
+            <option value="">{tr("— 選擇供應商 —")}</option>
             {suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <div>
-          <FL>叫貨日期</FL>
-          <input aria-label="採購日期" type="date" className="field" value={date} onChange={e=>setDate(e.target.value)}/>
+          <FL>{tr("叫貨日期")}</FL>
+          <input aria-label={tr("採購日期")} type="date" className="field" value={date} onChange={e=>setDate(e.target.value)}/>
         </div>
       </div>
 
       {supplier && (
         <div style={{fontSize:12, color:'var(--text-secondary)', background:'var(--bg-overlay)', borderRadius:8, padding:'10px 14px'}}>
           📞 {supplier.contact} · {supplier.payTerms}{supplier.note ? ` · ${supplier.note}` : ''}
-          <div style={{marginTop:4, color:'var(--text-tertiary)', fontSize:11}}>
-            該供應商商品 {products.filter(p=>p.supplierId===supplierId).length} 項
-            {' · 📋 貨源目錄 '}{(supplier.catalog||[]).length}{' 項'}
+          <div style={{marginTop:4, color:'var(--text-tertiary)', fontSize:11}}>{tr("該供應商商品 ")}{products.filter(p=>p.supplierId===supplierId).length}{tr(" 項")}{tr(" · 📋 貨源目錄 ")}{(supplier.catalog||[]).length}{tr(" 項")}
             {lowStockForSupplier.length > 0 && (
               <span style={{color:'var(--amber)', marginLeft:8}}>
-                · {lowStockForSupplier.length} 項低於安全庫存
-              </span>
+                · {lowStockForSupplier.length}{tr(" 項低於安全庫存")}</span>
             )}
           </div>
         </div>
@@ -261,7 +259,7 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
       {/* 分類篩選 chips（只在選了供應商且有多個分類時顯示）*/}
       {supplierId && availableCategories.length > 0 && (
         <div>
-          <FL>分類篩選</FL>
+          <FL>{tr("分類篩選")}</FL>
           <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
             <button
               onClick={()=>setCatFilter('all')}
@@ -272,9 +270,7 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
                 border:`1px solid ${catFilter==='all' ? 'var(--gold)' : 'var(--border-dim)'}`,
                 fontWeight: catFilter==='all' ? 600 : 400,
               }}
-            >
-              全部
-            </button>
+            >{tr("全部")}</button>
             {availableCategories.map(c => (
               <button
                 key={c}
@@ -309,10 +305,9 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
           <div style={{display:'flex', alignItems:'center', gap:10}}>
             <Zap size={18} style={{color:'var(--amber)'}}/>
             <div>
-              <div style={{fontWeight:600, fontSize:14, color:'var(--text-primary)'}}>
-                一鍵帶入低庫存補貨清單{catFilter !== 'all' && `（${catFilter}）`}
+              <div style={{fontWeight:600, fontSize:14, color:'var(--text-primary)'}}>{tr("一鍵帶入低庫存補貨清單")}{catFilter !== 'all' && `（${catFilter}）`}
               </div>
-              <div style={{fontSize:12, color:'var(--text-secondary)', marginTop:2}}>{unaddedLow} 項商品低於安全庫存，自動計算建議叫貨量</div>
+              <div style={{fontSize:12, color:'var(--text-secondary)', marginTop:2}}>{unaddedLow}{tr(" 項商品低於安全庫存，自動計算建議叫貨量")}</div>
             </div>
           </div>
           <ChevronRight size={18} style={{color:'var(--amber)'}}/>
@@ -320,25 +315,24 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
       )}
 
       <div>
-        <FL>加入商品 {supplierId && `（限 ${supplier?.name} 供應）`}</FL>
+        <FL>{tr("加入商品 ")}{supplierId && tr("（限 {0} 供應）", {0: supplier?.name})}</FL>
         <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
           <button
             className="btn btn-ghost btn-sm"
             onClick={()=>setShowCamera(true)}
             disabled={!supplierId}
-            title="用相機掃條碼加入"
+            title={tr("用相機掃條碼加入")}
           >
-            <Camera size={14}/>掃條碼
-          </button>
+            <Camera size={14}/>{tr("掃條碼")}</button>
           <select
-            aria-label="採購商品"
+            aria-label={tr("採購商品")}
             className="field"
             value={addProdId}
             onChange={e=>setAddProdId(e.target.value)}
             disabled={!supplierId}
             style={{cursor:'pointer', flex:1, minWidth:200}}
           >
-            <option value="">— {supplierId ? '選擇商品' : '請先選供應商'} —</option>
+            <option value="">— {supplierId ? tr("選擇商品") : tr("請先選供應商")} —</option>
             {/* 依分類分組，用 optgroup */}
             {groupByCategory(filteredProducts.filter(p=>!items.find(i=>i.productId===p.id))).map(g => (
               <optgroup key={g.category} label={`${CATEGORY_META[g.category]?.icon || '📦'} ${g.category}（${g.products.length}）`}>
@@ -346,7 +340,7 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
                   const low = (Number(p.reorderLevel) || 0) > 0 && (Number(p.stock) || 0) <= (Number(p.reorderLevel) || 0)
                   return (
                     <option key={p.id} value={p.id}>
-                      {low ? '⚠ ' : ''}{p.name}（庫存：{p.stock}{p.reorderLevel ? ` / 安全 ${p.reorderLevel}` : ''}）
+                      {low ? '⚠ ' : ''}{p.name}{tr("（庫存：")}{p.stock}{p.reorderLevel ? tr(" / 安全 {0}", {0: p.reorderLevel}) : ''}）
                     </option>
                   )
                 })}
@@ -354,27 +348,26 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
             ))}
             {/* v2.6: 貨源目錄（尚未建檔）群組 */}
             {pickableCatalog.length > 0 && (
-              <optgroup label={`📋 貨源目錄（${pickableCatalog.length}）`}>
+              <optgroup label={tr("📋 貨源目錄（{0}）", {0: pickableCatalog.length})}>
                 {pickableCatalog.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}（{c.unit}｜進價 ${c.cost}）</option>
+                  <option key={c.id} value={c.id}>{c.name}（{c.unit}{tr("｜進價 $")}{c.cost}）</option>
                 ))}
               </optgroup>
             )}
           </select>
           <button className="btn btn-ghost btn-sm" onClick={()=>addItem()} disabled={!addProdId}>
-            <Plus size={14}/>加入
-          </button>
+            <Plus size={14}/>{tr("加入")}</button>
         </div>
         {/* v2.6: 不讓使用者對著灰色按鈕發呆 */}
         {!supplierId && (
-          <div style={{fontSize:12, color:'var(--amber)', marginTop:6}}>請先在上面選擇廠商，就能加商品</div>
+          <div style={{fontSize:12, color:'var(--amber)', marginTop:6}}>{tr("請先在上面選擇廠商，就能加商品")}</div>
         )}
       </div>
 
       {items.length > 0 && (
         <div className="card" style={{overflow:'auto'}}>
           <div style={np.itemsHead}>
-            <span>商品</span><span style={{textAlign:'right'}}>數量</span><span style={{textAlign:'right'}}>單價</span><span style={{textAlign:'right'}}>小計</span><span/>
+            <span>{tr("商品")}</span><span style={{textAlign:'right'}}>{tr("數量")}</span><span style={{textAlign:'right'}}>{tr("單價")}</span><span style={{textAlign:'right'}}>{tr("小計")}</span><span/>
           </div>
           {items.map((item,i)=>{
             const daysOfStock = item._dailyAvg > 0 ? (item.qty / item._dailyAvg).toFixed(0) : null
@@ -383,38 +376,37 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
               <div>
                 <div style={{fontSize:13, fontWeight:500}}>{item.name}</div>
                 <div style={{display:'flex', gap:6, marginTop:2, flexWrap:'wrap'}}>
-                  {item.isCatalog && <span style={{fontSize:10, color:'var(--accent)', background:'var(--accent-dim)', padding:'1px 6px', borderRadius:4}}>📋 未建檔</span>}
-                  {item._fromHistory && <span style={{fontSize:10, color:'var(--blue)', background:'var(--blue-dim)', padding:'1px 6px', borderRadius:4}}>歷史單價</span>}
-                  {item._autoFilled && <span style={{fontSize:10, color:'var(--amber)', background:'var(--amber-dim)', padding:'1px 6px', borderRadius:4}}>自動補貨</span>}
-                  {item._aiSuggested && <span style={{fontSize:10, color:'var(--purple)', background:'var(--purple-dim)', padding:'1px 6px', borderRadius:4}}>🤖 AI 建議</span>}
-                  {daysOfStock && <span style={{fontSize:10, color:'var(--text-tertiary)'}}>可賣 ~{daysOfStock} 天</span>}
+                  {item.isCatalog && <span style={{fontSize:10, color:'var(--accent)', background:'var(--accent-dim)', padding:'1px 6px', borderRadius:4}}>{tr("📋 未建檔")}</span>}
+                  {item._fromHistory && <span style={{fontSize:10, color:'var(--blue)', background:'var(--blue-dim)', padding:'1px 6px', borderRadius:4}}>{tr("歷史單價")}</span>}
+                  {item._autoFilled && <span style={{fontSize:10, color:'var(--amber)', background:'var(--amber-dim)', padding:'1px 6px', borderRadius:4}}>{tr("自動補貨")}</span>}
+                  {item._aiSuggested && <span style={{fontSize:10, color:'var(--purple)', background:'var(--purple-dim)', padding:'1px 6px', borderRadius:4}}>{tr("🤖 AI 建議")}</span>}
+                  {daysOfStock && <span style={{fontSize:10, color:'var(--text-tertiary)'}}>{tr("可賣 ~")}{daysOfStock}{tr(" 天")}</span>}
                 </div>
               </div>
-              <input aria-label={'訂購數量 '+item.name} type="number" className="field" value={item.qty} min={0.001} step="0.001" onChange={e=>updateItem(i,'qty',e.target.value)} style={{textAlign:'right', padding:'6px 8px', fontFamily:'var(--font-mono)', fontSize:16,minHeight:44}}/>
-              <input aria-label={'採購單價 '+item.name} type="number" className="field" value={item.unitCost} min={0} step="0.01" onChange={e=>updateItem(i,'unitCost',e.target.value)} style={{textAlign:'right', padding:'6px 8px', fontFamily:'var(--font-mono)', fontSize:16,minHeight:44}}/>
+              <input aria-label={tr("訂購數量 {0}", {0: item.name})} type="number" className="field" value={item.qty} min={0.001} step="0.001" onChange={e=>updateItem(i,'qty',e.target.value)} style={{textAlign:'right', padding:'6px 8px', fontFamily:'var(--font-mono)', fontSize:16,minHeight:44}}/>
+              <input aria-label={tr("採購單價 {0}", {0: item.name})} type="number" className="field" value={item.unitCost} min={0} step="0.01" onChange={e=>updateItem(i,'unitCost',e.target.value)} style={{textAlign:'right', padding:'6px 8px', fontFamily:'var(--font-mono)', fontSize:16,minHeight:44}}/>
               <span style={{textAlign:'right', fontFamily:'var(--font-mono)', fontSize:13}}>{(item.qty*item.unitCost).toLocaleString()}</span>
               <button className="btn-icon btn-sm" style={{color:'var(--red)'}} onClick={()=>setItems(prev=>prev.filter((_,idx)=>idx!==i))}><X size={13}/></button>
             </div>
           )})}
           <div style={{display:'flex', justifyContent:'space-between', padding:'12px 14px', borderTop:'1px solid var(--border-mid)', fontWeight:600}}>
-            <span>總計</span>
+            <span>{tr("總計")}</span>
             <span style={{fontFamily:'var(--font-mono)', color:'var(--gold-bright)'}}>NT$ {total.toLocaleString()}</span>
           </div>
         </div>
       )}
 
       <div>
-        <FL>備註</FL>
-        <input className="field" value={note} onChange={e=>setNote(e.target.value)} placeholder="（選填）"/>
+        <FL>{tr("備註")}</FL>
+        <input className="field" value={note} onChange={e=>setNote(e.target.value)} placeholder={tr("（選填）")}/>
       </div>
 
       <button className="btn btn-primary" style={{width:'100%', padding:13}} disabled={!supplierId||items.length===0} onClick={handleSave}>
-        <Check size={16}/>建立進貨單
-      </button>
+        <Check size={16}/>{tr("建立進貨單")}</button>
       {/* v2.6: 按鈕還不能按時，說清楚缺哪一步 */}
       {(!supplierId || items.length===0) && (
         <div style={{fontSize:12, color:'var(--text-tertiary)', textAlign:'center', marginTop:-8}}>
-          {!supplierId ? '① 請先選擇廠商' : '② 請先加入至少一項商品，才能送出'}
+          {!supplierId ? tr("① 請先選擇廠商") : tr("② 請先加入至少一項商品，才能送出")}
         </div>
       )}
 
@@ -422,13 +414,11 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
       {confirming && (
         <div style={ps.overlay}>
           <div style={{...ps.modal, maxWidth:400}} className="animate-scale">
-            <div style={{fontWeight:700, fontSize:16, fontFamily:'var(--font-serif)', marginBottom:10}}>確認送出叫貨單</div>
-            <p style={{fontSize:14, color:'var(--text-secondary)', lineHeight:1.7, marginBottom:18}}>
-              向「{supplier?.name}」叫貨 {items.filter(i=>i.qty>0&&i.unitCost>=0).length} 項，共 NT$ {total.toLocaleString()}。確定送出？
-            </p>
+            <div style={{fontWeight:700, fontSize:16, fontFamily:'var(--font-serif)', marginBottom:10}}>{tr("確認送出叫貨單")}</div>
+            <p style={{fontSize:14, color:'var(--text-secondary)', lineHeight:1.7, marginBottom:18}}>{tr("向「")}{supplier?.name}{tr("」叫貨 ")}{items.filter(i=>i.qty>0&&i.unitCost>=0).length}{tr(" 項，共 NT$ ")}{total.toLocaleString()}{tr("。確定送出？")}</p>
             <div style={{display:'flex', gap:10}}>
-              <button className="btn btn-primary" style={{flex:1, minHeight:44}} onClick={doSubmit}><Check size={15}/>確定送出</button>
-              <button className="btn btn-ghost" style={{flex:1, minHeight:44}} onClick={()=>setConfirming(false)}>再檢查</button>
+              <button className="btn btn-primary" style={{flex:1, minHeight:44}} onClick={doSubmit}><Check size={15}/>{tr("確定送出")}</button>
+              <button className="btn btn-ghost" style={{flex:1, minHeight:44}} onClick={()=>setConfirming(false)}>{tr("再檢查")}</button>
             </div>
           </div>
         </div>
@@ -441,13 +431,13 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
           color: camMsg.startsWith('✗') ? 'var(--red)' : 'var(--green)',
           border:`1px solid ${camMsg.startsWith('✗') ? 'var(--red)' : 'var(--green)'}`,
           padding:'8px 14px', borderRadius:8, fontSize:13, zIndex:600,
-        }}>{camMsg}</div>
+        }}>{trMessage(camMsg)}</div>
       )}
 
       {showCamera && (
         <Suspense fallback={null}>
         <BarcodeScannerModal
-          title="掃條碼加入進貨單"
+          title={tr("掃條碼加入進貨單")}
           mode="continuous"
           onScan={(code) => {
             const p = products.find(x => x.barcode === code)

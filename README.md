@@ -7,11 +7,11 @@
 <p align="center">
   所有店家，全部功能免費。從收銀升級為 ERP、點餐與 CRM 整合營運系統。<br>
   收銀 · 預訂出餐 · 採購與應付 · 庫存 · 會員 · 會計 · Agent 快速建單<br>
-  <i>Free, offline-first ERP, ordering and member CRM · Windows desktop + shared-store mobile · 繁體中文</i>
+  <i>Free, offline-first ERP, ordering and member CRM · Windows desktop + shared-store mobile · 繁體中文 / English / 日本語 / 简体中文</i>
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-2.10.0-2b20f4">
+  <img alt="version" src="https://img.shields.io/badge/version-2.11.0-2b20f4">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20PWA-555">
   <img alt="tests" src="https://img.shields.io/badge/tests-vitest%20%2B%20native-3f9c5e">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
@@ -19,15 +19,21 @@
 
 ---
 
+[English quick start](docs/QUICK_START.en.md) · [日本語ガイド](docs/QUICK_START.ja.md)
+
 ## 這是什麼
 
-目前版本：v2.10.0。產品以 **POS Pro｜ERP・點餐・CRM** 呈現，採用鈷藍、黑、米白的全新介面與桌面／手機 Logo；從收銀延伸到採購與應付、庫存會計、顧客點餐與預訂出餐、會員經營。Agent 回覆貼上就能核對單價與數量，缺少資料會引導補填；離開或重新載入後可接回同一張未完成草稿。完整 ERP 與 CRM **持續開發中**，銷售應收、多倉批次、關帳稅務、人事薪資、企業客戶與商機管理等仍有未完成能力，見 [完整目標清單](product-capabilities.json)。本機交付與限制見 [2.10.0 安裝說明](docs/INSTALLER_2_10_0.md)。
+目前版本：v2.11.0。產品以 **POS Pro｜ERP・點餐・CRM** 呈現，採用鈷藍、黑、米白的全新介面與桌面／手機 Logo；從收銀延伸到採購與應付、庫存會計、顧客點餐與預訂出餐、會員經營。Agent 回覆貼上就能核對單價與數量，缺少資料會引導補填；離開或重新載入後可接回同一張未完成草稿。完整 ERP 與 CRM **持續開發中**，銷售應收、多倉批次、關帳稅務、人事薪資、企業客戶與商機管理等仍有未完成能力，見 [完整目標清單](product-capabilities.json)。本機交付與限制見 [2.11.0 安裝說明](docs/INSTALLER_2_11_0.md)。
 
 | 整合範圍 | 目前提供的主要流程 |
 | --- | --- |
 | ERP 日常營運 | 收銀、庫存、採購收貨、請款付款、退貨退款、複式帳務與報表 |
 | 點餐與出餐 | 顧客掃碼點餐、店員登記預訂／現場／外送、原料預留、收款及交付 |
 | 會員 CRM | 會員檔案、點數與分級、儲值、生日提醒、RFM 客群分析 |
+
+新增可切換的 **明亮簡約** 與原有 **海報風格**。登入前即可選繁體中文、English、日本語、简体中文；偏好依裝置保存。切換會保留購物車、Agent 草稿與未完成輸入，商品名稱、售價、TWD 幣別和帳本不改寫。翻譯仍待母語者校對，詳見 [語言與外觀](docs/LANGUAGE_AND_STYLE.md)。
+
+![明亮簡約英文工作區](docs/bright-workspace-2.11.png)
 
 首頁可先選「顧客與點餐（CRM）」或「營運管理（ERP）」；前者幫你照顧客人，後者幫你顧好貨和錢。兩個工作區共用同一間店的資料，保留直接收銀與快速建單，不必先理解專有名詞。
 
@@ -97,7 +103,7 @@ POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模�
 
 首次啟動由你建立管理員名稱與至少 8 字元密碼。既有帳號會保留；舊的短密碼必須在驗證後更換，登入流程不再重建預設帳號。
 
-最新版的本機產物與更新方式見 [2.10.0 安裝檔說明](docs/INSTALLER_2_10_0.md)；[2.9.1 安裝檔紀錄](docs/INSTALLER_2_9_1.md)保留為歷史資料。桌面安裝及資料目錄沿用 POS Pro，既有店面不因品牌更新而切換資料目錄。
+最新版的本機產物與更新方式見 [2.11.0 安裝檔說明](docs/INSTALLER_2_11_0.md)；[2.9.1 安裝檔紀錄](docs/INSTALLER_2_9_1.md)保留為歷史資料。桌面安裝及資料目錄沿用 POS Pro，既有店面不因品牌更新而切換資料目錄。
 
 ### 自行編譯 / 開發
 

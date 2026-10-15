@@ -1,3 +1,4 @@
+import {tr,trMessage,getLocale} from "../i18n"
 import { browserStorage } from '../utils/browserStorage'
 import { useState, useEffect, useRef } from 'react'
 import { Clock, Plus, Minus, LogIn, LogOut, FileText, AlertCircle } from 'lucide-react'
@@ -42,8 +43,8 @@ export default function ShiftPage({ store, session }) {
     catch(error) { return {error:error.message} }
   })()
 
-  if(loading)return <div role="status" style={{padding:24}}>讀取班別與現金流水…</div>
-  if(loadError||shiftStats?.error)return <div role="alert" style={{padding:24}}><h2 className="page-title">交班紀錄需要核對</h2><p>{loadError||shiftStats.error}</p><button className="btn" onClick={reload}>重新讀取</button></div>
+  if(loading)return <div role="status" style={{padding:24}}>{tr("讀取班別與現金流水…")}</div>
+  if(loadError||shiftStats?.error)return <div role="alert" style={{padding:24}}><h2 className="page-title">{tr("交班紀錄需要核對")}</h2><p>{loadError||shiftStats.error}</p><button className="btn" onClick={reload}>{tr("重新讀取")}</button></div>
 
   async function handleOpen() {
     await runAction(async()=>{
@@ -76,27 +77,22 @@ export default function ShiftPage({ store, session }) {
 
   return (
     <div style={sh.root}>
-      {actionError&&<p role="alert" style={{color:'var(--red)',marginBottom:12}}>{actionError}</p>}
-      {actionMessage&&<p role="status" style={{marginBottom:12}}>{actionMessage}</p>}
+      {actionError&&<p role="alert" style={{color:'var(--red)',marginBottom:12}}>{trMessage(actionError)}</p>}
+      {actionMessage&&<p role="status" style={{marginBottom:12}}>{trMessage(actionMessage)}</p>}
       <div style={sh.header}>
         <div>
-          <h2 className="page-title" style={{fontSize:20, fontWeight:600}}>班別管理</h2>
-          <div style={{fontSize:13, color:'var(--text-tertiary)', marginTop:4}}>
-            開班 / 交班 / 現金流水
-          </div>
+          <h2 className="page-title" style={{fontSize:20, fontWeight:600}}>{tr("班別管理")}</h2>
+          <div style={{fontSize:13, color:'var(--text-tertiary)', marginTop:4}}>{tr("開班 / 交班 / 現金流水")}</div>
         </div>
         {!openShift ? (
           <button className="btn btn-primary" onClick={()=>{ setShowOpen(true); try { setOpenCash(browserStorage.getItem('pos_last_open_cash') || '') } catch {} }} style={{display:'flex',alignItems:'center',gap:6}}>
-            <LogIn size={16}/> 開班
-          </button>
+            <LogIn size={16}/>{tr(" 開班")}</button>
         ) : (
           <div style={{display:'flex', gap:8}}>
             <button className="btn btn-ghost" onClick={()=>setShowCash(true)} style={{display:'flex',alignItems:'center',gap:6}}>
-              <Plus size={16}/> 現金流水
-            </button>
+              <Plus size={16}/>{tr(" 現金流水")}</button>
             <button className="btn btn-primary" onClick={()=>{setShowClose(true);setCloseCash(String(shiftStats?.expected||0))}} style={{display:'flex',alignItems:'center',gap:6}}>
-              <LogOut size={16}/> 交班
-            </button>
+              <LogOut size={16}/>{tr(" 交班")}</button>
           </div>
         )}
       </div>
@@ -105,44 +101,43 @@ export default function ShiftPage({ store, session }) {
         <div style={sh.card}>
           <div style={{display:'flex',justifyContent:'space-between', alignItems:'center', marginBottom:16}}>
             <div>
-              <div style={{fontSize:11, color:'var(--text-tertiary)'}}>當班</div>
+              <div style={{fontSize:11, color:'var(--text-tertiary)'}}>{tr("當班")}</div>
               <div style={{fontSize:18, fontWeight:600}}>{openShift.cashier}</div>
               <div style={{fontSize:12, color:'var(--text-secondary)', marginTop:2}}>
-                <Clock size={11} style={{verticalAlign:'middle', marginRight:4}}/>
-                開班 {new Date(openShift.openTime).toLocaleString('zh-TW')}
+                <Clock size={11} style={{verticalAlign:'middle', marginRight:4}}/>{tr("開班 ")}{new Date(openShift.openTime).toLocaleString(getLocale())}
               </div>
             </div>
-            <span className="badge badge-green">營業中</span>
+            <span className="badge badge-green">{tr("營業中")}</span>
           </div>
 
           <div style={sh.kpiGrid}>
-            <KPI label="開班現金" value={`NT$ ${(openShift.openCash||0).toLocaleString()}`}/>
-            <KPI label="現金銷售" value={`NT$ ${(shiftStats?.cash||0).toLocaleString()}`} accent="green"/>
-            <KPI label="電子支付" value={`NT$ ${(shiftStats?.card||0).toLocaleString()}`} accent="blue"/>
-            <KPI label="現金儲值收入" value={`+NT$ ${(shiftStats?.cashTopups||0).toLocaleString()}`}/>
-            <KPI label="電子儲值收入" value={`NT$ ${(shiftStats?.cardTopups||0).toLocaleString()}`}/>
-            <KPI label="現金進" value={`+NT$ ${(shiftStats?.cashIn||0).toLocaleString()}`}/>
-            <KPI label="現金出" value={`-NT$ ${(shiftStats?.cashOut||0).toLocaleString()}`}/>
-            <KPI label="退貨" value={`${shiftStats?.refundCount||0} 筆 / NT$ ${(shiftStats?.refundAmt||0).toLocaleString()}`} accent="red"/>
-            <KPI label="訂單" value={`${shiftStats?.orderCount||0} 筆`}/>
-            <KPI label="預期現金" value={`NT$ ${(shiftStats?.expected||0).toLocaleString()}`} accent="gold"/>
+            <KPI label={tr("開班現金")} value={`NT$ ${(openShift.openCash||0).toLocaleString()}`}/>
+            <KPI label={tr("現金銷售")} value={`NT$ ${(shiftStats?.cash||0).toLocaleString()}`} accent="green"/>
+            <KPI label={tr("電子支付")} value={`NT$ ${(shiftStats?.card||0).toLocaleString()}`} accent="blue"/>
+            <KPI label={tr("現金儲值收入")} value={`+NT$ ${(shiftStats?.cashTopups||0).toLocaleString()}`}/>
+            <KPI label={tr("電子儲值收入")} value={`NT$ ${(shiftStats?.cardTopups||0).toLocaleString()}`}/>
+            <KPI label={tr("現金進")} value={`+NT$ ${(shiftStats?.cashIn||0).toLocaleString()}`}/>
+            <KPI label={tr("現金出")} value={`-NT$ ${(shiftStats?.cashOut||0).toLocaleString()}`}/>
+            <KPI label={tr("退貨")} value={`${shiftStats?.refundCount||0} 筆 / NT$ ${(shiftStats?.refundAmt||0).toLocaleString()}`} accent="red"/>
+            <KPI label={tr("訂單")} value={`${shiftStats?.orderCount||0} 筆`}/>
+            <KPI label={tr("預期現金")} value={`NT$ ${(shiftStats?.expected||0).toLocaleString()}`} accent="gold"/>
           </div>
 
           {cashLog.length > 0 && (
             <>
-              <div style={{fontWeight:600, fontSize:14, margin:'20px 0 10px'}}>現金流水</div>
+              <div style={{fontWeight:600, fontSize:14, margin:'20px 0 10px'}}>{tr("現金流水")}</div>
               <table style={sh.table}>
                 <thead>
                   <tr>
-                    <th>時間</th><th>類型</th><th style={{textAlign:'right'}}>金額</th><th>說明</th>
+                    <th>{tr("時間")}</th><th>{tr("類型")}</th><th style={{textAlign:'right'}}>{tr("金額")}</th><th>{tr("說明")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cashLog.map(c => (
                     <tr key={c.id}>
-                      <td>{new Date(c.time).toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})}</td>
+                      <td>{new Date(c.time).toLocaleTimeString(getLocale(),{hour:'2-digit',minute:'2-digit'})}</td>
                       <td>
-                        <span className={`badge badge-${c.type==='in'?'green':'red'}`}>{c.type==='in'?'進':'出'}</span>
+                        <span className={`badge badge-${c.type==='in'?'green':'red'}`}>{c.type==='in'?tr("進"):tr("出")}</span>
                       </td>
                       <td style={{textAlign:'right', fontFamily:'var(--font-mono)', color: c.type==='in'?'var(--green)':'var(--red)', fontWeight:500}}>
                         {c.type==='in'?'+':'-'} NT$ {c.amount.toLocaleString()}
@@ -158,30 +153,30 @@ export default function ShiftPage({ store, session }) {
       ) : (
         <div style={{...sh.card, textAlign:'center', padding:'40px 20px'}}>
           <AlertCircle size={32} color="var(--text-tertiary)" style={{margin:'0 auto 12px'}}/>
-          <div style={{fontSize:15, fontWeight:500, marginBottom:6}}>目前未開班</div>
-          <div style={{fontSize:13, color:'var(--text-tertiary)'}}>開班後才能使用收銀台功能</div>
+          <div style={{fontSize:15, fontWeight:500, marginBottom:6}}>{tr("目前未開班")}</div>
+          <div style={{fontSize:13, color:'var(--text-tertiary)'}}>{tr("開班後才能使用收銀台功能")}</div>
         </div>
       )}
 
       <div style={{...sh.card, marginTop:12}}>
-        <div style={{fontWeight:600, fontSize:14, marginBottom:12}}>歷史班別</div>
+        <div style={{fontWeight:600, fontSize:14, marginBottom:12}}>{tr("歷史班別")}</div>
         {shifts.length === 0 ? (
-          <div style={{textAlign:'center', color:'var(--text-tertiary)', padding:'20px 0', fontSize:13}}>無紀錄</div>
+          <div style={{textAlign:'center', color:'var(--text-tertiary)', padding:'20px 0', fontSize:13}}>{tr("無紀錄")}</div>
         ) : (
           <table style={sh.table}>
             <thead>
               <tr>
-                <th>收銀員</th><th>開班</th><th>交班</th>
-                <th style={{textAlign:'right'}}>現金</th><th style={{textAlign:'right'}}>電子</th>
-                <th style={{textAlign:'right'}}>差額</th><th>狀態</th>
+                <th>{tr("收銀員")}</th><th>{tr("開班")}</th><th>{tr("交班")}</th>
+                <th style={{textAlign:'right'}}>{tr("現金")}</th><th style={{textAlign:'right'}}>{tr("電子")}</th>
+                <th style={{textAlign:'right'}}>{tr("差額")}</th><th>{tr("狀態")}</th>
               </tr>
             </thead>
             <tbody>
               {shifts.map(s => (
                 <tr key={s.id}>
                   <td>{s.cashier}</td>
-                  <td>{new Date(s.openTime).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
-                  <td>{s.closeTime ? new Date(s.closeTime).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-'}</td>
+                  <td>{new Date(s.openTime).toLocaleString(getLocale(),{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+                  <td>{s.closeTime ? new Date(s.closeTime).toLocaleString(getLocale(),{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-'}</td>
                   <td style={{textAlign:'right', fontFamily:'var(--font-mono)'}}>{s.cashSales?.toLocaleString() || 0}</td>
                   <td style={{textAlign:'right', fontFamily:'var(--font-mono)'}}>{s.cardSales?.toLocaleString() || 0}</td>
                   <td style={{textAlign:'right', fontFamily:'var(--font-mono)', color: s.diff > 0 ? 'var(--green)' : s.diff < 0 ? 'var(--red)' : 'inherit'}}>
@@ -189,7 +184,7 @@ export default function ShiftPage({ store, session }) {
                   </td>
                   <td>
                     <span className={`badge badge-${s.status==='open' ? 'green' : 'blue'}`}>
-                      {s.status === 'open' ? '營業中' : '已交班'}
+                      {s.status === 'open' ? tr("營業中") : tr("已交班")}
                     </span>
                   </td>
                 </tr>
@@ -200,45 +195,44 @@ export default function ShiftPage({ store, session }) {
       </div>
 
       {showOpen && (
-        <Modal title="開班" saving={saving} error={actionError} onClose={()=>setShowOpen(false)}>
-          <Field label="收銀員"><div style={{padding:'10px 14px', fontSize:14}}>{session?.username}</div></Field>
-          <Field label="開班零用金">
+        <Modal title={tr("開班")} saving={saving} error={actionError} onClose={()=>setShowOpen(false)}>
+          <Field label={tr("收銀員")}><div style={{padding:'10px 14px', fontSize:14}}>{session?.username}</div></Field>
+          <Field label={tr("開班零用金")}>
             <input className="field" type="number" value={openCash} onChange={e=>setOpenCash(e.target.value)} placeholder="0" autoFocus/>
           </Field>
-          <button disabled={saving} className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleOpen}>{saving?'保存中…':'確認開班'}</button>
+          <button disabled={saving} className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleOpen}>{saving?tr("保存中…"):tr("確認開班")}</button>
         </Modal>
       )}
 
       {showClose && (
-        <Modal title="交班" saving={saving} error={actionError} onClose={()=>setShowClose(false)}>
+        <Modal title={tr("交班")} saving={saving} error={actionError} onClose={()=>setShowClose(false)}>
           <div style={{background:'var(--bg-overlay)', padding:'12px 14px', borderRadius:8, marginBottom:12}}>
             <div style={{display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4}}>
-              <span style={{color:'var(--text-secondary)'}}>預期現金</span>
+              <span style={{color:'var(--text-secondary)'}}>{tr("預期現金")}</span>
               <span style={{fontFamily:'var(--font-mono)', fontWeight:600}}>NT$ {(shiftStats?.expected||0).toLocaleString()}</span>
             </div>
           </div>
-          <Field label="實際現金">
-            <input aria-label="實際交班現金" className="field" type="number" min="0" step="0.01" value={closeCash} onChange={e=>setCloseCash(e.target.value)} autoFocus/>
+          <Field label={tr("實際現金")}>
+            <input aria-label={tr("實際交班現金")} className="field" type="number" min="0" step="0.01" value={closeCash} onChange={e=>setCloseCash(e.target.value)} autoFocus/>
           </Field>
           {closeCash !== '' && (
             <div style={{padding:'8px 14px', borderRadius:8,
               background: parseFloat(closeCash) - (shiftStats?.expected||0) >= 0 ? 'var(--green-dim)' : 'var(--red-dim)',
               color: parseFloat(closeCash) - (shiftStats?.expected||0) >= 0 ? 'var(--green)' : 'var(--red)',
-              fontSize:13, marginBottom:12}}>
-              差額：{parseFloat(closeCash) - (shiftStats?.expected||0) >= 0 ? '+' : ''}
+              fontSize:13, marginBottom:12}}>{tr("差額：")}{parseFloat(closeCash) - (shiftStats?.expected||0) >= 0 ? '+' : ''}
               NT$ {(parseFloat(closeCash) - (shiftStats?.expected||0)).toLocaleString()}
             </div>
           )}
-          <Field label="備註">
-            <input className="field" value={closeNote} onChange={e=>setCloseNote(e.target.value)} placeholder="差額原因..."/>
+          <Field label={tr("備註")}>
+            <input className="field" value={closeNote} onChange={e=>setCloseNote(e.target.value)} placeholder={tr("差額原因...")}/>
           </Field>
-          <button disabled={saving} className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleClose}>{saving?'保存中…':'確認交班'}</button>
+          <button disabled={saving} className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleClose}>{saving?tr("保存中…"):tr("確認交班")}</button>
         </Modal>
       )}
 
       {showCash && (
-        <Modal title="現金進出" saving={saving} error={actionError} onClose={()=>setShowCash(false)}>
-          <Field label="類型">
+        <Modal title={tr("現金進出")} saving={saving} error={actionError} onClose={()=>setShowCash(false)}>
+          <Field label={tr("類型")}>
             <div style={{display:'flex', gap:8}}>
               {[['in','現金進'],['out','現金出']].map(([k,l]) => (
                 <button key={k} onClick={()=>setCashType(k)} style={{
@@ -246,17 +240,17 @@ export default function ShiftPage({ store, session }) {
                   background: cashType===k?'var(--gold)':'var(--bg-overlay)',
                   color: cashType===k?'#fff':'var(--text-secondary)',
                   border:`1px solid ${cashType===k?'var(--gold)':'var(--border-subtle)'}`,
-                }}>{l}</button>
+                }}>{tr(l)}</button>
               ))}
             </div>
           </Field>
-          <Field label="金額">
+          <Field label={tr("金額")}>
             <input className="field" type="number" value={cashAmount} onChange={e=>setCashAmount(e.target.value)} autoFocus/>
           </Field>
-          <Field label="說明">
-            <input className="field" value={cashReason} onChange={e=>setCashReason(e.target.value)} placeholder="補零、付水電、貨款..."/>
+          <Field label={tr("說明")}>
+            <input className="field" value={cashReason} onChange={e=>setCashReason(e.target.value)} placeholder={tr("補零、付水電、貨款...")}/>
           </Field>
-          <button disabled={saving} className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleCash}>{saving?'保存中…':'記錄'}</button>
+          <button disabled={saving} className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleCash}>{saving?tr("保存中…"):tr("記錄")}</button>
         </Modal>
       )}
     </div>
@@ -266,8 +260,8 @@ export default function ShiftPage({ store, session }) {
 function KPI({ label, value, accent }) {
   return (
     <div style={{padding:'12px 14px', background:'var(--bg-overlay)', borderRadius:8}}>
-      <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>{label}</div>
-      <div style={{fontFamily:'var(--font-mono)', fontWeight:600, fontSize:15, color: accent ? `var(--${accent})` : 'var(--text-primary)'}}>{value}</div>
+      <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>{tr(label)}</div>
+      <div style={{fontFamily:'var(--font-mono)', fontWeight:600, fontSize:15, color: accent ? `var(--${accent})` : 'var(--text-primary)'}}>{trMessage(value)}</div>
     </div>
   )
 }
@@ -275,7 +269,7 @@ function KPI({ label, value, accent }) {
 function Field({ label, children }) {
   return (
     <div style={{marginBottom:10}}>
-      <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>{label}</div>
+      <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>{tr(label)}</div>
       {children}
     </div>
   )
@@ -288,10 +282,10 @@ function Modal({ title, onClose, children, saving, error }) {
       <div style={mod.overlay} onClick={()=>!saving&&onClose()}/>
       <div style={{...mod.box,top:viewport.top+viewport.height/2,maxHeight:viewport.height*.9}}>
         <div style={mod.head}>
-          <span style={{fontSize:15, fontWeight:600}}>{title}</span>
+          <span style={{fontSize:15, fontWeight:600}}>{tr(title)}</span>
           <button disabled={saving} onClick={onClose} style={{padding:10,minWidth:44,minHeight:44}}>✕</button>
         </div>
-        <div style={{padding:'16px 18px'}}>{error&&<p role="alert" style={{color:'var(--red)',marginBottom:10}}>{error}</p>}{children}</div>
+        <div style={{padding:'16px 18px'}}>{error&&<p role="alert" style={{color:'var(--red)',marginBottom:10}}>{trMessage(error)}</p>}{children}</div>
       </div>
     </>
   )

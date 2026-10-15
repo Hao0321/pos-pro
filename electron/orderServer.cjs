@@ -35,6 +35,7 @@ module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
     next()
   })
   app.use('/menu',express.static(path.join(__dirname,'../public/menu')))
+  app.use('/i18n',express.static(path.join(__dirname,'../public/i18n')))
   app.get('/api/menu',(_req,res)=>{
     const products=db.getProducts().filter(p=>p.stock>0&&p.price>0).map(publicProduct)
     res.json({success:true,products,categories:[...new Set(products.map(p=>p.category))],storeName:db.getSetting('storeName')||'商店'})

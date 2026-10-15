@@ -1,3 +1,4 @@
+import {tr} from "../../i18n"
 import { useState } from "react"
 import { Check, RefreshCw, Wifi } from "lucide-react"
 import { writeAuditLog } from "../../utils/security"
@@ -50,32 +51,25 @@ export function WebhookTab({ session }) {
         <div style={{display:'flex', alignItems:'center', gap:10}}>
           <Wifi size={18} style={{color:'var(--blue)'}}/>
           <div style={{flex:1}}>
-            <div style={{fontWeight:600, fontSize:14}}>通知 Webhook</div>
-            <div style={{fontSize:12, color:'var(--text-secondary)', marginTop:2}}>
-              關鍵事件發生時自動 POST 通知到指定 URL — 可接 Discord / Slack / Zapier / Make / 自家伺服器
-            </div>
+            <div style={{fontWeight:600, fontSize:14}}>{tr("通知 Webhook")}</div>
+            <div style={{fontSize:12, color:'var(--text-secondary)', marginTop:2}}>{tr("關鍵事件發生時自動 POST 通知到指定 URL — 可接 Discord / Slack / Zapier / Make / 自家伺服器")}</div>
           </div>
         </div>
       </div>
 
-      <Section title="連線設定">
+      <Section title={tr("連線設定")}>
         <div style={{display:'flex', flexDirection:'column', gap:12}}>
           <div>
             <FL>Webhook URL</FL>
             <input className="field" value={url} onChange={e=>setUrl(e.target.value)}
-              placeholder="https://discord.com/api/webhooks/... 或 https://hooks.slack.com/... 或自家 URL"
+              placeholder={tr("https://discord.com/api/webhooks/... 或 https://hooks.slack.com/... 或自家 URL")}
               style={{fontFamily:'var(--font-mono)', fontSize:12}}/>
-            <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:4, lineHeight:1.5}}>
-              · Discord 用：<strong>伺服器設定 → 整合 → Webhook → 複製 URL</strong><br/>
-              · Slack 用：<strong>Apps → Incoming Webhooks → Add → 複製 URL</strong><br/>
-              · 自家後端：自動發送 POST + JSON（含 event / timestamp / payload）<br/>
-              · Zapier / Make：用「Webhook by Zapier」當觸發
-            </div>
+            <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:4, lineHeight:1.5}}>{tr("· Discord 用：")}<strong>{tr("伺服器設定 → 整合 → Webhook → 複製 URL")}</strong><br/>{tr("· Slack 用：")}<strong>{tr("Apps → Incoming Webhooks → Add → 複製 URL")}</strong><br/>{tr("· 自家後端：自動發送 POST + JSON（含 event / timestamp / payload）")}<br/>{tr("· Zapier / Make：用「Webhook by Zapier」當觸發")}</div>
           </div>
         </div>
       </Section>
 
-      <Section title="觸發事件">
+      <Section title={tr("觸發事件")}>
         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))', gap:8}}>
           {WEBHOOK_EVENTS.map(ev => {
             const on = events.has(ev.key)
@@ -89,7 +83,7 @@ export function WebhookTab({ session }) {
                 <input type="checkbox" checked={on} onChange={()=>toggleEvent(ev.key)} style={{marginTop:2, accentColor:'var(--green)', cursor:'pointer'}}/>
                 <div style={{flex:1, minWidth:0}}>
                   <div style={{fontSize:13, fontWeight:600, color: on ? 'var(--text-primary)' : 'var(--text-secondary)'}}>
-                    {ev.label}
+                    {tr(ev.label)}
                   </div>
                   <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:2}}>
                     {ev.desc}
@@ -103,11 +97,9 @@ export function WebhookTab({ session }) {
 
       <div style={{display:'flex', gap:8, flexShrink:0, flexWrap:'wrap'}}>
         <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={!url}>
-          <Check size={14}/>儲存設定
-        </button>
+          <Check size={14}/>{tr("儲存設定")}</button>
         <button className="btn btn-ghost btn-sm" onClick={handleTest} disabled={!url || testing}>
-          {testing ? <RefreshCw size={14} className="spin"/> : <Wifi size={14}/>}測試送出
-        </button>
+          {testing ? <RefreshCw size={14} className="spin"/> : <Wifi size={14}/>}{tr("測試送出")}</button>
       </div>
 
       {msg && (

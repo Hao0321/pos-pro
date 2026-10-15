@@ -17,6 +17,15 @@ body {
   min-height: 100dvh;
   -webkit-tap-highlight-color: transparent;
 }
+[data-ui-style="simple"]{--accent:#235dcc;--accent-light:#174fae;--bg:#f5f8fc;--card:#fff;--text:#17283f;--text-dim:#455b77;--border:#dce4ef;--radius:12px}
+.menu-preferences{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:16px;text-align:left}
+.menu-preferences label{display:flex;flex-direction:column;gap:4px;flex:1 1 130px;max-width:210px;font-size:13px}
+.menu-preferences select{width:100%;min-height:48px;border:1px solid #ffffffa0;border-radius:var(--radius);background:#fff;color:#17283f;padding:8px;font:inherit}
+#preference-warning{font-size:13px;margin-top:8px;line-height:1.6}
+[data-ui-style="simple"] #header{background:#fff;color:#17283f;border-bottom:1px solid #dce4ef}
+[data-ui-style="simple"] .menu-preferences select{border-color:#b9c8dc}
+.form-actions{gap:10px}.form-actions>button{min-width:0;white-space:normal;overflow-wrap:anywhere}
+.success-content{max-width:100%;overflow-wrap:anywhere}
 
 /* Header */
 #header {
@@ -478,5 +487,8 @@ body {
 .form-group :is(input,textarea){min-height:48px;font-size:16px;border-radius:3px;border-color:var(--border)}
 .order-form{max-height:calc(100dvh - 32px);overflow-y:auto}.order-form-overlay{padding:16px}
 .search-bar input{min-height:48px;font-size:16px}
+[data-ui-style="simple"] :is(.product-card,.cart-panel,.order-form){border:1px solid #dce4ef;border-radius:12px;box-shadow:0 3px 12px #17283f08}
+[data-ui-style="simple"] :is(.cat-btn,.product-card .add-btn,.checkout-btn,.btn-primary,.btn-secondary){border-radius:8px}
+[data-ui-style="simple"] .cat-btn.active{background:#235dcc;color:#fff}
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

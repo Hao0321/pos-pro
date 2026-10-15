@@ -1,3 +1,4 @@
+import {tr,trMessage} from "../i18n"
 import { useState, useEffect, useCallback } from 'react'
 import { Bell, Check, X, Clock, ChefHat, RefreshCw } from 'lucide-react'
 import { isElectron, loadCustomerOrders, updateOrderStatus } from '../utils/dataAccess'
@@ -58,25 +59,23 @@ export default function OrdersPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
-      {error&&<p role="alert" style={{color:'var(--red)'}}>{error}</p>}
+      {error&&<p role="alert" style={{color:'var(--red)'}}>{trMessage(error)}</p>}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <Bell size={22} />
-        <h2 className="page-title" style={{ flex: 1, fontSize: '1.3rem' }}>顧客點餐</h2>
+        <h2 className="page-title" style={{ flex: 1, fontSize: '1.3rem' }}>{tr("顧客點餐")}</h2>
         {pendingCount > 0 && (
           <span style={{
             background: 'var(--red)', color: '#fff', padding: '4px 12px',
             borderRadius: 20, fontSize: '0.85rem', fontWeight: 700,
           }}>
-            {pendingCount} 筆待處理
-          </span>
+            {pendingCount}{tr(" 筆待處理")}</span>
         )}
         <button
           onClick={fetchOrders}
           className="btn btn-ghost btn-sm"
           style={{ display: 'flex', alignItems: 'center', gap: 6 }}
         >
-          <RefreshCw size={14} className={loading ? 'spin' : ''} /> 重新整理
-        </button>
+          <RefreshCw size={14} className={loading ? 'spin' : ''} />{tr(" 重新整理")}</button>
       </div>
 
       {/* 篩選 */}
@@ -98,7 +97,7 @@ export default function OrdersPage() {
               border: `1px solid ${filter === f.key ? 'var(--accent)' : 'var(--border-dim)'}`,
             }}
           >
-            {f.label}
+            {tr(f.label)}
             {f.key === 'pending' && pendingCount > 0 && ` (${pendingCount})`}
           </button>
         ))}
@@ -106,14 +105,12 @@ export default function OrdersPage() {
 
       {/* 訂單列表 */}
       {!isElectron && (
-        <div className="card" style={{ padding: 20, textAlign: 'center', color: 'var(--text-dim)' }}>
-          顧客點餐功能僅在桌面版本可用
-        </div>
+        <div className="card" style={{ padding: 20, textAlign: 'center', color: 'var(--text-dim)' }}>{tr("顧客點餐功能僅在桌面版本可用")}</div>
       )}
 
       {isElectron && !filtered.length && (
         <div className="card" style={{ padding: 40, textAlign: 'center', color: 'var(--text-dim)' }}>
-          {filter === 'pending' ? '目前沒有待處理的訂單' : '沒有符合條件的訂單'}
+          {filter === 'pending' ? tr("目前沒有待處理的訂單") : tr("沒有符合條件的訂單")}
         </div>
       )}
 
@@ -133,7 +130,7 @@ export default function OrdersPage() {
                   background: st.color + '18', color: st.color,
                   padding: '3px 10px', borderRadius: 12, fontSize: '0.8rem', fontWeight: 600,
                 }}>
-                  <StIcon size={13} /> {st.label}
+                  <StIcon size={13} /> {tr(st.label)}
                 </span>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
                   {dateStr} {timeStr}
@@ -168,8 +165,7 @@ export default function OrdersPage() {
               </div>
 
               {order.note && (
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: 10 }}>
-                  備註: {order.note}
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: 10 }}>{tr("備註: ")}{order.note}
                 </p>
               )}
 
@@ -181,15 +177,13 @@ export default function OrdersPage() {
                     className="btn btn-sm"
                     style={{ flex: 1, background: 'var(--green)', color: '#fff', border: 'none' }}
                   >
-                    <Check size={14} /> 接單
-                  </button>
+                    <Check size={14} />{tr(" 接單")}</button>
                   <button
                     onClick={() => handleReject(order.id)}
                     className="btn btn-sm"
                     style={{ flex: 1, background: 'var(--red)', color: '#fff', border: 'none' }}
                   >
-                    <X size={14} /> 拒絕
-                  </button>
+                    <X size={14} />{tr(" 拒絕")}</button>
                 </div>
               )}
               {order.status === 'accepted' && (
@@ -198,8 +192,7 @@ export default function OrdersPage() {
                   className="btn btn-sm"
                   style={{ width: '100%', background: 'var(--green)', color: '#fff', border: 'none' }}
                 >
-                  <Check size={14} /> 標記完成
-                </button>
+                  <Check size={14} />{tr(" 標記完成")}</button>
               )}
             </div>
           )

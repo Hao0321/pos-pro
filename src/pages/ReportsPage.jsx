@@ -1,3 +1,4 @@
+import {tr,trMessage} from "../i18n"
 import { settledOrders, netSale, orderCost } from '../utils/orderLedger'
 import { useMemo, useState } from 'react'
 import { TrendingUp, ShoppingCart, Users, Package, ArrowUp, ArrowDown, Download, Zap, AlertTriangle, Trophy } from 'lucide-react'
@@ -185,7 +186,7 @@ export default function ReportsPage({ store }) {
   return (
     <div style={rs.root}>
       <div style={rs.topBar}>
-        <h2 className="page-title" style={rs.title}>報表分析</h2>
+        <h2 className="page-title" style={rs.title}>{tr("報表分析")}</h2>
         <div style={{display:'flex', gap:8, alignItems:'center'}}>
           <div style={{display:'flex', gap:4}}>
             {RANGES.map(([k,l])=>(
@@ -193,12 +194,11 @@ export default function ReportsPage({ store }) {
                 ...rs.rangeBtn,
                 background: range===k?'var(--gold)':'var(--bg-overlay)',
                 color: range===k?'#fff':'var(--text-secondary)',
-              }}>{l}</button>
+              }}>{tr(l)}</button>
             ))}
           </div>
           <button className="btn btn-ghost btn-sm" onClick={exportReport} style={{display:'flex', alignItems:'center', gap:4}}>
-            <Download size={14}/> 匯出 Excel
-          </button>
+            <Download size={14}/>{tr(" 匯出 Excel")}</button>
         </div>
       </div>
 
@@ -207,15 +207,14 @@ export default function ReportsPage({ store }) {
         {KPIS.map((kpi, i) => (
           <div key={i} className="card animate-up" style={{padding:'16px 18px', animationDelay:`${i*40}ms`, borderTop:`2px solid ${kpi.color}`}}>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10}}>
-              <div style={{fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.06em', textTransform:'uppercase'}}>{kpi.label}</div>
+              <div style={{fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.06em', textTransform:'uppercase'}}>{tr(kpi.label)}</div>
               <div style={{color:kpi.color, opacity:.7}}>{kpi.icon}</div>
             </div>
-            <div style={{fontFamily:'var(--font-mono)', fontSize:22, fontWeight:500, letterSpacing:'-.01em'}}>{kpi.value}</div>
+            <div style={{fontFamily:'var(--font-mono)', fontSize:22, fontWeight:500, letterSpacing:'-.01em'}}>{trMessage(kpi.value)}</div>
             {kpi.delta !== null && (
               <div style={{fontSize:11, marginTop:6, display:'flex', alignItems:'center', gap:3, color: parseFloat(kpi.delta)>=0?'var(--green)':'var(--red)'}}>
                 {parseFloat(kpi.delta)>=0 ? <ArrowUp size={11}/> : <ArrowDown size={11}/>}
-                {Math.abs(parseFloat(kpi.delta))}% vs 上期
-              </div>
+                {Math.abs(parseFloat(kpi.delta))}{tr("% vs 上期")}</div>
             )}
           </div>
         ))}
@@ -224,7 +223,7 @@ export default function ReportsPage({ store }) {
       <div style={rs.twoCol}>
         {/* Hourly bars */}
         <div className="card" style={{padding:'18px 20px'}}>
-          <div style={rs.cardTitle}>今日各時段銷售</div>
+          <div style={rs.cardTitle}>{tr("今日各時段銷售")}</div>
           <div style={{display:'flex', alignItems:'flex-end', gap:3, height:100, marginTop:14}}>
             {hourly.map((v,h)=>{
               const h24 = h < 6 || h > 21
@@ -246,7 +245,7 @@ export default function ReportsPage({ store }) {
 
         {/* Pay breakdown */}
         <div className="card" style={{padding:'18px 20px'}}>
-          <div style={rs.cardTitle}>付款方式</div>
+          <div style={rs.cardTitle}>{tr("付款方式")}</div>
           <div style={{marginTop:20, display:'flex', flexDirection:'column', gap:14}}>
             {[
               ['現金', payBreakdown.cash, 'var(--green)'],
@@ -256,7 +255,7 @@ export default function ReportsPage({ store }) {
               return (
                 <div key={label}>
                   <div style={{display:'flex', justifyContent:'space-between', marginBottom:6, fontSize:13}}>
-                    <span style={{color:'var(--text-secondary)'}}>{label}</span>
+                    <span style={{color:'var(--text-secondary)'}}>{tr(label)}</span>
                     <span style={{fontFamily:'var(--font-mono)', fontSize:12}}>NT$ {val.toLocaleString()} <span style={{color:'var(--text-tertiary)'}}>({pct}%)</span></span>
                   </div>
                   <div style={{height:6, background:'var(--border-dim)', borderRadius:3}}>
@@ -273,8 +272,8 @@ export default function ReportsPage({ store }) {
       {abcAnalysis.items.length > 0 && (
         <div className="card" style={{padding:'18px 20px', flexShrink:0}}>
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-            <div style={rs.cardTitle}>ABC 商品分類</div>
-            <span style={{fontSize:11, color:'var(--text-tertiary)'}}>依營收貢獻</span>
+            <div style={rs.cardTitle}>{tr("ABC 商品分類")}</div>
+            <span style={{fontSize:11, color:'var(--text-tertiary)'}}>{tr("依營收貢獻")}</span>
           </div>
           <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginTop:12}}>
             {[
@@ -283,8 +282,8 @@ export default function ReportsPage({ store }) {
               { cls:'C', label:'C 類（佔 10%）', color:'var(--text-tertiary)', items:abcAnalysis.c, desc:'長尾商品，可考慮汰除' },
             ].map(g => (
               <div key={g.cls} style={{padding:'12px 14px', background:'var(--bg-overlay)', borderRadius:8, borderTop:`2px solid ${g.color}`}}>
-                <div style={{fontSize:12, fontWeight:600, color:g.color, marginBottom:6}}>{g.label}</div>
-                <div style={{fontSize:20, fontWeight:600, fontFamily:'var(--font-mono)'}}>{g.items.length} <span style={{fontSize:11, color:'var(--text-tertiary)', fontWeight:400}}>項</span></div>
+                <div style={{fontSize:12, fontWeight:600, color:g.color, marginBottom:6}}>{tr(g.label)}</div>
+                <div style={{fontSize:20, fontWeight:600, fontFamily:'var(--font-mono)'}}>{g.items.length} <span style={{fontSize:11, color:'var(--text-tertiary)', fontWeight:400}}>{tr("項")}</span></div>
                 <div style={{fontSize:10, color:'var(--text-tertiary)', marginTop:4}}>{g.desc}</div>
               </div>
             ))}
@@ -298,10 +297,10 @@ export default function ReportsPage({ store }) {
         <div className="card" style={{padding:'16px 18px'}}>
           <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:10}}>
             <Trophy size={14} style={{color:'var(--gold)'}}/>
-            <div style={rs.cardTitle}>30天 熱賣 Top 10</div>
+            <div style={rs.cardTitle}>{tr("30天 熱賣 Top 10")}</div>
           </div>
           {perf30d.topSellers.length === 0 ? (
-            <div style={{color:'var(--text-tertiary)', fontSize:12, padding:'20px 0', textAlign:'center'}}>近 30 天無銷售</div>
+            <div style={{color:'var(--text-tertiary)', fontSize:12, padding:'20px 0', textAlign:'center'}}>{tr("近 30 天無銷售")}</div>
           ) : perf30d.topSellers.map((p, i) => (
             <div key={p.id} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'6px 0', borderBottom:'1px solid var(--border-dim)', fontSize:12}}>
               <span style={{display:'flex', alignItems:'center', gap:8, minWidth:0, flex:1}}>
@@ -309,7 +308,7 @@ export default function ReportsPage({ store }) {
                 <span style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name}</span>
               </span>
               <span style={{fontFamily:'var(--font-mono)', color:'var(--text-secondary)', whiteSpace:'nowrap'}}>
-                {Math.round(p.totalSold)} 件 · NT$ {Math.round(p.revenue).toLocaleString()}
+                {Math.round(p.totalSold)}{tr(" 件 · NT$ ")}{Math.round(p.revenue).toLocaleString()}
               </span>
             </div>
           ))}
@@ -319,20 +318,18 @@ export default function ReportsPage({ store }) {
         <div className="card" style={{padding:'16px 18px', borderTop:'2px solid var(--red)'}}>
           <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:10}}>
             <AlertTriangle size={14} style={{color:'var(--red)'}}/>
-            <div style={rs.cardTitle}>30天 滯銷預警</div>
+            <div style={rs.cardTitle}>{tr("30天 滯銷預警")}</div>
           </div>
           {perf30d.slowMovers.length === 0 ? (
-            <div style={{color:'var(--green)', fontSize:12, padding:'20px 0', textAlign:'center'}}>🎉 沒有滯銷商品</div>
+            <div style={{color:'var(--green)', fontSize:12, padding:'20px 0', textAlign:'center'}}>{tr("🎉 沒有滯銷商品")}</div>
           ) : (
             <>
-              <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:8}}>
-                共 {perf30d.slowMovers.length} 項，積壓成本 NT$ {Math.round(perf30d.slowMovers.reduce((s,p)=>s+(p.stock*(p.cost||0)),0)).toLocaleString()}
+              <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:8}}>{tr("共 ")}{perf30d.slowMovers.length}{tr(" 項，積壓成本 NT$ ")}{Math.round(perf30d.slowMovers.reduce((s,p)=>s+(p.stock*(p.cost||0)),0)).toLocaleString()}
               </div>
               {perf30d.slowMovers.slice(0, 10).map(p => (
                 <div key={p.id} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'6px 0', borderBottom:'1px solid var(--border-dim)', fontSize:12}}>
                   <span style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name}</span>
-                  <span style={{fontFamily:'var(--font-mono)', color:'var(--text-secondary)', whiteSpace:'nowrap'}}>
-                    積壓 {p.stock} 件 · NT$ {Math.round(p.stock*(p.cost||0)).toLocaleString()}
+                  <span style={{fontFamily:'var(--font-mono)', color:'var(--text-secondary)', whiteSpace:'nowrap'}}>{tr("積壓 ")}{p.stock}{tr(" 件 · NT$ ")}{Math.round(p.stock*(p.cost||0)).toLocaleString()}
                   </span>
                 </div>
               ))}
@@ -344,10 +341,10 @@ export default function ReportsPage({ store }) {
         <div className="card" style={{padding:'16px 18px', borderTop:'2px solid var(--green)'}}>
           <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:10}}>
             <Zap size={14} style={{color:'var(--green)'}}/>
-            <div style={rs.cardTitle}>30天 高毛利商品</div>
+            <div style={rs.cardTitle}>{tr("30天 高毛利商品")}</div>
           </div>
           {perf30d.highMargin.length === 0 ? (
-            <div style={{color:'var(--text-tertiary)', fontSize:12, padding:'20px 0', textAlign:'center'}}>需要成本資料才能計算</div>
+            <div style={{color:'var(--text-tertiary)', fontSize:12, padding:'20px 0', textAlign:'center'}}>{tr("需要成本資料才能計算")}</div>
           ) : perf30d.highMargin.map((p, i) => (
             <div key={p.id} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'6px 0', borderBottom:'1px solid var(--border-dim)', fontSize:12}}>
               <span style={{display:'flex', alignItems:'center', gap:8, minWidth:0, flex:1}}>
@@ -355,7 +352,7 @@ export default function ReportsPage({ store }) {
                 <span style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name}</span>
               </span>
               <span style={{fontFamily:'var(--font-mono)', whiteSpace:'nowrap'}}>
-                <span style={{color:'var(--green)'}}>毛利 {p.margin.toFixed(0)}%</span>
+                <span style={{color:'var(--green)'}}>{tr("毛利 ")}{p.margin.toFixed(0)}%</span>
                 <span style={{color:'var(--text-tertiary)'}}> · NT$ {Math.round(p.profit).toLocaleString()}</span>
               </span>
             </div>
@@ -367,19 +364,19 @@ export default function ReportsPage({ store }) {
       {staffPerf.length > 0 && (
         <div className="card" style={{padding:'18px 20px', flexShrink:0}}>
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8}}>
-            <div style={rs.cardTitle}>員工銷售排行</div>
-            <span style={{fontSize:11, color:'var(--text-tertiary)'}}>{range==='today'?'今日':range==='week'?'本週':range==='month'?'本月':'全部期間'}</span>
+            <div style={rs.cardTitle}>{tr("員工銷售排行")}</div>
+            <span style={{fontSize:11, color:'var(--text-tertiary)'}}>{range==='today'?tr("今日"):range==='week'?tr("本週"):range==='month'?tr("本月"):tr("全部期間")}</span>
           </div>
           <div style={{overflowX:'auto'}}>
             <table style={{width:'100%', fontSize:13, minWidth:500}}>
               <thead>
                 <tr style={{color:'var(--text-tertiary)', fontSize:11, textTransform:'uppercase', letterSpacing:'.05em'}}>
                   <th style={{textAlign:'left', padding:'8px 6px', width:32}}>#</th>
-                  <th style={{textAlign:'left', padding:'8px 6px'}}>員工</th>
-                  <th style={{textAlign:'right', padding:'8px 6px'}}>訂單數</th>
-                  <th style={{textAlign:'right', padding:'8px 6px'}}>退貨</th>
-                  <th style={{textAlign:'right', padding:'8px 6px'}}>營業額</th>
-                  <th style={{textAlign:'right', padding:'8px 6px'}}>平均客單</th>
+                  <th style={{textAlign:'left', padding:'8px 6px'}}>{tr("員工")}</th>
+                  <th style={{textAlign:'right', padding:'8px 6px'}}>{tr("訂單數")}</th>
+                  <th style={{textAlign:'right', padding:'8px 6px'}}>{tr("退貨")}</th>
+                  <th style={{textAlign:'right', padding:'8px 6px'}}>{tr("營業額")}</th>
+                  <th style={{textAlign:'right', padding:'8px 6px'}}>{tr("平均客單")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -400,17 +397,15 @@ export default function ReportsPage({ store }) {
               </tbody>
             </table>
           </div>
-          <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:6}}>
-            ※ 統計以結帳人員為準，員工帳號登入時系統會自動帶入
-          </div>
+          <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:6}}>{tr("※ 統計以結帳人員為準，員工帳號登入時系統會自動帶入")}</div>
         </div>
       )}
 
       {/* Top products table */}
       <div className="card" style={{padding:'18px 20px', flexShrink:0}}>
-        <div style={rs.cardTitle}>暢銷商品（依當前期間：{range==='today'?'今日':range==='week'?'本週':range==='month'?'本月':'全部'}）</div>
+        <div style={rs.cardTitle}>{tr("暢銷商品（依當前期間：")}{range==='today'?tr("今日"):range==='week'?tr("本週"):range==='month'?tr("本月"):tr("全部")}）</div>
         {topProducts.length === 0 ? (
-          <div style={{color:'var(--text-tertiary)', fontSize:13, padding:'24px 0', textAlign:'center'}}>此區間尚無銷售資料</div>
+          <div style={{color:'var(--text-tertiary)', fontSize:13, padding:'24px 0', textAlign:'center'}}>{tr("此區間尚無銷售資料")}</div>
         ) : (
           <div style={{display:'flex', flexDirection:'column', gap:0, marginTop:12}}>
             {topProducts.map((p,i)=>(
@@ -424,7 +419,7 @@ export default function ReportsPage({ store }) {
                     <div style={{height:'100%', width:`${p.revenue/maxRevenue*100}%`, background:'var(--gold)', borderRadius:2, opacity:.6}}/>
                   </div>
                 </div>
-                <span style={{fontSize:12, color:'var(--text-secondary)', fontFamily:'var(--font-mono)', textAlign:'right'}}>{p.qty} 件</span>
+                <span style={{fontSize:12, color:'var(--text-secondary)', fontFamily:'var(--font-mono)', textAlign:'right'}}>{p.qty}{tr(" 件")}</span>
                 <span style={{fontFamily:'var(--font-mono)', fontSize:13, fontWeight:500, color:'var(--gold-bright)', textAlign:'right'}}>
                   NT$ {p.revenue.toLocaleString()}
                 </span>

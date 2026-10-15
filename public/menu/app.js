@@ -1,4 +1,6 @@
 // 顧客點餐頁面 — vanilla JS
+import {tr,trMessage} from '../i18n/core.mjs'
+import {getDisplayPreferences,setDisplayPreferences,subscribeDisplayPreferences,initDisplayPreferences} from '../i18n/preferences.mjs'
 const API = window.location.origin
 let products = []
 let categories = []
@@ -7,6 +9,24 @@ let activeCategory = null
 let ws = null
 let currentOrderId = null
 let submitting = false
+let storeName=null,lastOrderStatus='pending',menuFailed=false,preferenceFailed=false
+
+function applyMenuLanguage(){
+  initDisplayPreferences()
+  for(const el of document.querySelectorAll('[data-i18n]'))el.textContent=tr(el.dataset.i18n)
+  for(const el of document.querySelectorAll('[data-i18n-placeholder]'))el.placeholder=tr(el.dataset.i18nPlaceholder)
+  const prefs=getDisplayPreferences();document.getElementById('menu-language').value=prefs.locale;document.getElementById('menu-style').value=prefs.style
+  document.getElementById('menu-language').setAttribute('aria-label',tr('語言'));document.getElementById('menu-style').setAttribute('aria-label',tr('介面風格'))
+  document.getElementById('preference-warning').textContent=preferenceFailed?tr('這次已切換；這台裝置無法記住偏好，下次開啟需重新選擇。'):''
+  document.getElementById('store-name').textContent=storeName??tr(menuFailed?'無法連線':'載入中...')
+  document.title=storeName?storeName+' - '+tr('線上點餐'):tr('線上點餐')
+  document.getElementById('checkout-btn').textContent=tr('送出訂單')
+  document.querySelector('.order-form [data-action="confirmOrder"]').textContent=tr(submitting?'送出中...':'確認送出')
+  document.getElementById('cart-fab').setAttribute('aria-label',tr('購物車'))
+  document.querySelector('.cart-header .close-btn').setAttribute('aria-label',tr('關閉購物車'))
+  if(currentOrderId)document.getElementById('success-order-id').textContent=tr('訂單編號: {0}',{0:currentOrderId})
+  updateOrderStatus(lastOrderStatus);renderCategories();renderProducts();updateCartUI()
+}
 
 // 防 XSS：跳脫 HTML 特殊字元
 function esc(str) {
@@ -21,15 +41,15 @@ async function init() {
     if (data.success) {
       products = data.products
       categories = data.categories
-      document.getElementById('store-name').textContent = data.storeName
-      document.title = data.storeName + ' - 線上點餐'
-      renderCategories()
-      renderProducts()
+      storeName=data.storeName
+      applyMenuLanguage()
+    }else{throw Error('Menu unavailable')
     }
   } catch (err) {
-    document.getElementById('store-name').textContent = '無法連線'
+    menuFailed=true
+    document.getElementById('store-name').textContent = tr('無法連線')
     document.getElementById('product-list').innerHTML =
-      '<p style="text-align:center;color:var(--text-dim);padding:40px;grid-column:1/-1">無法載入菜單，請確認網路連線</p>'
+      '<p style="text-align:center;color:var(--text-dim);padding:40px;grid-column:1/-1">'+esc(tr('無法載入菜單，請確認網路連線'))+'</p>'
   }
   connectWebSocket()
 }
@@ -49,7 +69,8 @@ function connectWebSocket() {
 // ===== 分類 =====
 function renderCategories() {
   const nav = document.getElementById('categories')
-  const allBtn = createCatBtn('全部', null)
+  nav.replaceChildren()
+  const allBtn = createCatBtn(tr('全部'), null)
   nav.appendChild(allBtn)
   categories.filter(cat=>typeof cat==='string'&&cat.trim()).forEach(cat => nav.appendChild(createCatBtn(cat, cat)))
 }
@@ -92,23 +113,23 @@ function renderProducts() {
     const lastFew = stock > 0 && stock <= 3
     const low = stock > 0 && stock <= 5
     let stockNote = ''
-    if (soldOut) stockNote = `<span class="p-soldout">售完</span>`
-    else if (lastFew) stockNote = `<span class="p-stock-last">最後 ${stock} ${esc(p.unit || '個')}！</span>`
-    else if (low) stockNote = `<span class="p-stock-low">剩 ${stock} ${esc(p.unit || '個')}</span>`
+    if (soldOut) stockNote = `<span class="p-soldout">${esc(tr('售完'))}</span>`
+    else if (lastFew) stockNote = `<span class="p-stock-last">${esc(tr('最後 {0} {1}！',{0:stock,1:p.unit||tr('個')}))}</span>`
+    else if (low) stockNote = `<span class="p-stock-low">${esc(tr('剩 {0} {1}',{0:stock,1:p.unit||tr('個')}))}</span>`
     return `
       <div class="product-card${soldOut ? ' sold-out' : ''}">
         ${qtyBadge}
         ${p.category?`<span class="p-category">${esc(p.category)}</span>`:''}
         <span class="p-name">${esc(p.name)}</span>
-        <span class="p-price">$${esc(p.price)} <span class="p-unit">/ ${esc(p.unit || '個')}</span></span>
+        <span class="p-price">NT$ ${esc(p.price)} <span class="p-unit">/ ${esc(p.unit || tr('個'))}</span></span>
         ${stockNote}
-        <button class="add-btn" data-pid="${esc(p.id)}" ${soldOut ? 'disabled' : ''}>${soldOut ? '售完' : '加入購物車'}</button>
+        <button class="add-btn" data-pid="${esc(p.id)}" ${soldOut ? 'disabled' : ''}>${esc(tr(soldOut ? '售完' : '加入購物車'))}</button>
       </div>
     `
   }).join('')
 
   if (!filtered.length) {
-    list.innerHTML = '<p style="text-align:center;color:var(--text-dim);padding:40px;grid-column:1/-1">沒有符合的商品</p>'
+    list.innerHTML = '<p style="text-align:center;color:var(--text-dim);padding:40px;grid-column:1/-1">'+esc(tr(menuFailed?'無法載入菜單，請確認網路連線':'沒有符合的商品'))+'</p>'
   }
 
   // 用 event delegation 取代 inline onclick — 修 audit #23 邊界 case，安全處理含特殊字元的 id
@@ -171,8 +192,8 @@ function updateCartUI() {
   const checkoutBtn = document.getElementById('checkout-btn')
 
   if (!cart.length) {
-    itemsDiv.innerHTML = '<div class="cart-empty">購物車是空的</div>'
-    totalEl.textContent = '$0'
+    itemsDiv.innerHTML = '<div class="cart-empty">'+esc(tr('購物車是空的'))+'</div>'
+    totalEl.textContent = 'NT$ 0'
     checkoutBtn.disabled = true
     return
   }
@@ -181,18 +202,18 @@ function updateCartUI() {
     <div class="cart-item">
       <div class="ci-info">
         <div class="ci-name">${esc(item.name)}</div>
-        <div class="ci-price">$${esc(item.price)} / ${esc(item.unit || '個')}</div>
+        <div class="ci-price">NT$ ${esc(item.price)} / ${esc(item.unit || tr('個'))}</div>
       </div>
       <div class="ci-controls">
         <button data-action="removeFromCart" data-pid="${esc(item.id)}">-</button>
         <span class="ci-qty">${item.qty}</span>
         <button data-action="addToCart" data-pid="${esc(item.id)}">+</button>
       </div>
-      <span class="ci-subtotal">$${item.price * item.qty}</span>
+      <span class="ci-subtotal">NT$ ${item.price * item.qty}</span>
     </div>
   `).join('')
 
-  totalEl.textContent = '$' + getCartTotal()
+  totalEl.textContent = 'NT$ ' + getCartTotal()
   checkoutBtn.disabled = false
 }
 
@@ -214,7 +235,7 @@ function toggleCart() {
 function submitOrder() {
   if (!cart.length) return
   toggleCart()
-  document.getElementById('form-total').textContent = '$' + getCartTotal()
+  document.getElementById('form-total').textContent = 'NT$ ' + getCartTotal()
   document.getElementById('order-form-overlay').style.display = 'flex'
 }
 
@@ -235,7 +256,7 @@ async function confirmOrder() {
   if (submitting) return
   submitting = true
   const btn = document.querySelector('.order-form .btn-primary')
-  if (btn) { btn.disabled = true; btn.textContent = '送出中...' }
+  if (btn) { btn.disabled = true; btn.textContent = tr('送出中...') }
 
   const customerName = document.getElementById('customer-name').value.trim()
   const tableNum = document.getElementById('table-num').value.trim()
@@ -261,22 +282,23 @@ async function confirmOrder() {
       updateCartUI()
     } else {
       if(res.status===400)pendingOrderRequest=null
-      alert(data.error || '訂單送出失敗')
+      alert(trMessage(data.error || '訂單送出失敗'))
     }
   } catch (err) {
-    alert('連線中斷，結果尚未確認。再次送出會使用原請求編號，請勿另外建立訂單。')
+    alert(tr('連線中斷，結果尚未確認。再次送出會使用原請求編號，請勿另外建立訂單。'))
   }
   submitting = false
-  if (btn) { btn.disabled = false; btn.textContent = '確認送出' }
+  if (btn) { btn.disabled = false; btn.textContent = tr('確認送出') }
 }
 
 function showSuccess(orderId, total) {
-  document.getElementById('success-order-id').textContent = '訂單編號: ' + orderId
-  document.getElementById('success-status').textContent = '等待店家確認中...'
+  document.getElementById('success-order-id').textContent = tr('訂單編號: {0}',{0:orderId})
+  updateOrderStatus('pending')
   document.getElementById('order-success').style.display = 'flex'
 }
 
 function updateOrderStatus(status) {
+  lastOrderStatus=status
   const statusEl = document.getElementById('success-status')
   if (!statusEl) return
   const labels = {
@@ -285,7 +307,7 @@ function updateOrderStatus(status) {
     completed: '已完成，請取餐！',
     rejected: '很抱歉，訂單已被取消',
   }
-  statusEl.textContent = labels[status] || status
+  statusEl.textContent = tr(labels[status] || status)
 }
 
 function resetApp() {
@@ -299,6 +321,10 @@ function resetApp() {
 
 // 啟動
 document.getElementById('search-input').addEventListener('input', e => setSearch(e.target.value))
+document.getElementById('menu-language').addEventListener('change',e=>{const result=setDisplayPreferences({locale:e.target.value});preferenceFailed=!result.persisted;applyMenuLanguage()})
+document.getElementById('menu-style').addEventListener('change',e=>{const result=setDisplayPreferences({style:e.target.value});preferenceFailed=!result.persisted;applyMenuLanguage()})
+subscribeDisplayPreferences(applyMenuLanguage)
+applyMenuLanguage()
 init()
 
 document.addEventListener('click',e=>{

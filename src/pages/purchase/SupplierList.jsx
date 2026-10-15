@@ -1,3 +1,4 @@
+import {tr,trMessage} from "../../i18n"
 import { useState, useRef } from "react"
 import { Plus, Check, X, Package, ChevronDown, Pencil, Trash2 } from "lucide-react"
 import { sanitizeObject } from "../../utils/security"
@@ -101,21 +102,16 @@ export function SupplierList({ suppliers, products = [], purchases = [], onSave,
 
   return (
     <div style={{maxWidth:760, width:'100%', overflowY:'auto'}}>
-      {error&&<p role="alert" style={{color:'var(--red)'}}>{error}</p>}
+      {error&&<p role="alert" style={{color:'var(--red)'}}>{trMessage(error)}</p>}
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
-        <div style={{fontSize:12, color:'var(--text-tertiary)'}}>
-          共 {suppliers.length} 家供應商 · {products.filter(p=>p.supplierId).length} 項已指定供應商
-        </div>
+        <div style={{fontSize:12, color:'var(--text-tertiary)'}}>{tr("共 ")}{suppliers.length}{tr(" 家供應商 · ")}{products.filter(p=>p.supplierId).length}{tr(" 項已指定供應商")}</div>
         <button className="btn btn-primary btn-sm" onClick={()=>{setEditing('new');setForm({name:'',contact:'',phone:'',payTerms:'',note:''})}}>
-          <Plus size={14}/>新增供應商
-        </button>
+          <Plus size={14}/>{tr("新增供應商")}</button>
       </div>
 
       <div style={{display:'flex', flexDirection:'column', gap:8}}>
         {suppliers.length === 0 && (
-          <div className="card" style={{textAlign:'center', padding:'40px', color:'var(--text-tertiary)', fontSize:13}}>
-            尚無供應商，點右上「新增供應商」開始
-          </div>
+          <div className="card" style={{textAlign:'center', padding:'40px', color:'var(--text-tertiary)', fontSize:13}}>{tr("尚無供應商，點右上「新增供應商」開始")}</div>
         )}
         {suppliers.map(s => {
           const supplierProducts = productsOf(s.id)
@@ -145,16 +141,13 @@ export function SupplierList({ suppliers, products = [], purchases = [], onSave,
                     }}
                   >
                     <Package size={12}/>
-                    {(s.catalog || []).length} 項貨源 · {supplierProducts.length} 項商品
-                    <ChevronDown size={12} style={{transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms'}}/>
+                    {(s.catalog || []).length}{tr(" 項貨源 · ")}{supplierProducts.length}{tr(" 項商品")}<ChevronDown size={12} style={{transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms'}}/>
                   </button>
                   {/* v2.6: 明確的文字按鈕（≥40px），不再只有小圖示 */}
                   <button className="btn btn-ghost btn-sm" style={{minHeight:40}} onClick={()=>{setEditing(s.id);setForm({ name:s.name||'', contact:s.contact||'', phone:s.phone||'', payTerms:s.payTerms||'', note:s.note||'' })}}>
-                    <Pencil size={13}/>編輯
-                  </button>
+                    <Pencil size={13}/>{tr("編輯")}</button>
                   <button className="btn btn-ghost btn-sm" style={{minHeight:40, color:'var(--red)'}} onClick={()=>askDelete(s)}>
-                    <Trash2 size={13}/>刪除
-                  </button>
+                    <Trash2 size={13}/>{tr("刪除")}</button>
                 </div>
               </div>
 
@@ -163,27 +156,23 @@ export function SupplierList({ suppliers, products = [], purchases = [], onSave,
                 <div style={{borderTop:'1px solid var(--border-dim)', padding:'12px 16px', background:'var(--bg-overlay)'}}>
                   {/* ── 貨源目錄：這家能叫的貨（不一定已建檔成庫存商品）── */}
                   <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom:8, flexWrap:'wrap'}}>
-                    <div style={{fontSize:12, fontWeight:600, color:'var(--text-secondary)', letterSpacing:'.05em'}}>
-                      📋 貨源目錄 <span style={{fontFamily:'var(--font-mono)', fontWeight:400, color:'var(--text-tertiary)'}}>· {(s.catalog||[]).length}</span>
+                    <div style={{fontSize:12, fontWeight:600, color:'var(--text-secondary)', letterSpacing:'.05em'}}>{tr("📋 貨源目錄 ")}<span style={{fontFamily:'var(--font-mono)', fontWeight:400, color:'var(--text-tertiary)'}}>· {(s.catalog||[]).length}</span>
                     </div>
                     {catForm?.supplierId !== s.id && (
                       <button className="btn btn-primary btn-sm" style={{minHeight:40}} onClick={()=>setCatForm({ supplierId:s.id, name:'', unit:'個', cost:'' })}>
-                        <Plus size={14}/>新增貨源
-                      </button>
+                        <Plus size={14}/>{tr("新增貨源")}</button>
                     )}
                   </div>
 
                   {(s.catalog||[]).length === 0 && catForm?.supplierId !== s.id && (
-                    <div style={{textAlign:'center', padding:'14px 0', color:'var(--text-tertiary)', fontSize:12}}>
-                      還沒有貨源，按「＋ 新增貨源」把這家能叫的貨記下來，叫貨時就能直接選
-                    </div>
+                    <div style={{textAlign:'center', padding:'14px 0', color:'var(--text-tertiary)', fontSize:12}}>{tr("還沒有貨源，按「＋ 新增貨源」把這家能叫的貨記下來，叫貨時就能直接選")}</div>
                   )}
 
-                  {catalogDrafts[s.id]&&<button className="btn btn-primary btn-sm" onClick={()=>saveCatalog(s)}>儲存貨源修改</button>}
+                  {catalogDrafts[s.id]&&<button className="btn btn-primary btn-sm" onClick={()=>saveCatalog(s)}>{tr("儲存貨源修改")}</button>}
                   {(catalogDrafts[s.id]||s.catalog||[]).length > 0 && (
                     <div style={{display:'flex', flexDirection:'column', gap:6, marginBottom:10}}>
                       <div style={{display:'grid', gridTemplateColumns:'1fr 64px 84px 56px 40px', gap:8, fontSize:11, color:'var(--text-tertiary)', padding:'0 2px'}}>
-                        <span>品名</span><span>單位</span><span style={{textAlign:'right'}}>進價</span><span/><span/>
+                        <span>{tr("品名")}</span><span>{tr("單位")}</span><span style={{textAlign:'right'}}>{tr("進價")}</span><span/><span/>
                       </div>
                       {(catalogDrafts[s.id]||s.catalog||[]).map(ci => (
                         <div key={ci.id} style={{display:'grid', gridTemplateColumns:'1fr 64px 84px 56px 40px', gap:8, alignItems:'center'}}>
@@ -191,9 +180,9 @@ export function SupplierList({ suppliers, products = [], purchases = [], onSave,
                           <input className="field" value={ci.unit || ''} onChange={e=>updateCatalogItem(s, ci.id, 'unit', e.target.value)} style={{padding:'9px 8px', fontSize:13}}/>
                           <input type="number" className="field" min={0} value={ci.cost} onChange={e=>updateCatalogItem(s, ci.id, 'cost', e.target.value)} style={{padding:'9px 8px', fontSize:13, textAlign:'right', fontFamily:'var(--font-mono)'}}/>
                           {ci.productId && products.find(p=>p.id===ci.productId)
-                            ? <span style={{fontSize:10, color:'var(--green)', background:'var(--green-dim)', padding:'3px 5px', borderRadius:4, textAlign:'center'}}>已建檔</span>
-                            : <span style={{fontSize:10, color:'var(--amber)', background:'var(--amber-dim)', padding:'3px 5px', borderRadius:4, textAlign:'center'}}>未建檔</span>}
-                          <button className="btn-icon" style={{color:'var(--red)', minHeight:40, minWidth:40}} onClick={()=>removeCatalogItem(s, ci.id)} aria-label="刪除貨源"><Trash2 size={14}/></button>
+                            ? <span style={{fontSize:10, color:'var(--green)', background:'var(--green-dim)', padding:'3px 5px', borderRadius:4, textAlign:'center'}}>{tr("已建檔")}</span>
+                            : <span style={{fontSize:10, color:'var(--amber)', background:'var(--amber-dim)', padding:'3px 5px', borderRadius:4, textAlign:'center'}}>{tr("未建檔")}</span>}
+                          <button className="btn-icon" style={{color:'var(--red)', minHeight:40, minWidth:40}} onClick={()=>removeCatalogItem(s, ci.id)} aria-label={tr("刪除貨源")}><Trash2 size={14}/></button>
                         </div>
                       ))}
                     </div>
@@ -204,34 +193,31 @@ export function SupplierList({ suppliers, products = [], purchases = [], onSave,
                     <div style={{background:'var(--bg-raised)', border:'1px solid var(--border-dim)', borderRadius:8, padding:'10px 12px', marginBottom:12}}>
                       <div style={{display:'grid', gridTemplateColumns:'1fr 64px 84px', gap:8, marginBottom:8}}>
                         <div>
-                          <FL>品名 *</FL>
-                          <input className="field" autoFocus value={catForm.name} onChange={e=>setCatForm(f=>({...f, name:e.target.value}))} placeholder="例：花生 3斤裝" style={{padding:'9px 10px'}}/>
+                          <FL>{tr("品名 *")}</FL>
+                          <input className="field" autoFocus value={catForm.name} onChange={e=>setCatForm(f=>({...f, name:e.target.value}))} placeholder={tr("例：花生 3斤裝")} style={{padding:'9px 10px'}}/>
                         </div>
                         <div>
-                          <FL>單位</FL>
+                          <FL>{tr("單位")}</FL>
                           <input className="field" value={catForm.unit} onChange={e=>setCatForm(f=>({...f, unit:e.target.value}))} style={{padding:'9px 8px'}}/>
                         </div>
                         <div>
-                          <FL>進價</FL>
+                          <FL>{tr("進價")}</FL>
                           <input type="number" className="field" min={0} value={catForm.cost} onChange={e=>setCatForm(f=>({...f, cost:e.target.value}))} style={{padding:'9px 8px', textAlign:'right'}}/>
                         </div>
                       </div>
                       <div style={{display:'flex', gap:8}}>
-                        <button className="btn btn-primary btn-sm" style={{minHeight:40, flex:1}} disabled={!(catForm.name||'').trim()} onClick={()=>addCatalogItem(s)}><Plus size={14}/>加入貨源</button>
-                        <button className="btn btn-ghost btn-sm" style={{minHeight:40}} onClick={()=>setCatForm(null)}>完成</button>
+                        <button className="btn btn-primary btn-sm" style={{minHeight:40, flex:1}} disabled={!(catForm.name||'').trim()} onClick={()=>addCatalogItem(s)}><Plus size={14}/>{tr("加入貨源")}</button>
+                        <button className="btn btn-ghost btn-sm" style={{minHeight:40}} onClick={()=>setCatForm(null)}>{tr("完成")}</button>
                       </div>
                     </div>
                   )}
 
                   {/* ── 已建檔商品：庫存中綁定這家廠商的商品 ── */}
-                  <div style={{fontSize:12, fontWeight:600, color:'var(--text-secondary)', letterSpacing:'.05em', margin:'12px 0 8px', paddingTop:10, borderTop:'1px dashed var(--border-dim)'}}>
-                    已建檔商品 <span style={{fontFamily:'var(--font-mono)', fontWeight:400, color:'var(--text-tertiary)'}}>· {supplierProducts.length}</span>
+                  <div style={{fontSize:12, fontWeight:600, color:'var(--text-secondary)', letterSpacing:'.05em', margin:'12px 0 8px', paddingTop:10, borderTop:'1px dashed var(--border-dim)'}}>{tr("已建檔商品 ")}<span style={{fontFamily:'var(--font-mono)', fontWeight:400, color:'var(--text-tertiary)'}}>· {supplierProducts.length}</span>
                   </div>
                   {supplierProducts.length === 0 ? (
-                    <div style={{textAlign:'center', padding:'10px 0', color:'var(--text-tertiary)', fontSize:12}}>
-                      還沒有庫存商品綁定這家廠商
-                      {onGoInventory && (
-                        <button className="btn btn-ghost btn-sm" style={{marginLeft:8, minHeight:40}} onClick={onGoInventory}>去庫存管理設定</button>
+                    <div style={{textAlign:'center', padding:'10px 0', color:'var(--text-tertiary)', fontSize:12}}>{tr("還沒有庫存商品綁定這家廠商")}{onGoInventory && (
+                        <button className="btn btn-ghost btn-sm" style={{marginLeft:8, minHeight:40}} onClick={onGoInventory}>{tr("去庫存管理設定")}</button>
                       )}
                     </div>
                   ) : groups.map(g => (
@@ -260,10 +246,10 @@ export function SupplierList({ suppliers, products = [], purchases = [], onSave,
                             }}>
                               <div style={{fontWeight:500, marginBottom:2}}>{p.name}</div>
                               <div style={{display:'flex', justifyContent:'space-between', fontSize:11, color:'var(--text-tertiary)'}}>
-                                <span>庫存 {stock}{reorder ? `/安全 ${reorder}` : ''}</span>
+                                <span>{tr("庫存 ")}{stock}{reorder ? tr("/安全 {0}", {0: reorder}) : ''}</span>
                                 <span style={{fontFamily:'var(--font-mono)'}}>${p.cost || '—'}</span>
                               </div>
-                              {low && <div style={{fontSize:10, color:'var(--amber)', marginTop:2}}>⚠ 待補貨</div>}
+                              {low && <div style={{fontSize:10, color:'var(--amber)', marginTop:2}}>{tr("⚠ 待補貨")}</div>}
                             </div>
                           )
                         })}
@@ -281,13 +267,13 @@ export function SupplierList({ suppliers, products = [], purchases = [], onSave,
         <div style={ps.overlay}>
           <div style={{...ps.modal, maxWidth:400}} className="animate-scale">
             <div style={{display:'flex', justifyContent:'space-between', marginBottom:18}}>
-              <span style={{fontWeight:700}}>{editing==='new'?'新增供應商':'編輯供應商'}</span>
+              <span style={{fontWeight:700}}>{editing==='new'?tr("新增供應商"):tr("編輯供應商")}</span>
               <button className="btn-icon" onClick={()=>setEditing(null)}><X size={16}/></button>
             </div>
             {[['name','名稱 *'],['contact','聯絡方式'],['phone','電話'],['payTerms','付款條件'],['note','備註']].map(([k,l])=>(
               <div key={k} style={{marginBottom:12}}>
-                <FL>{l}</FL>
-                <input className="field" type={k==='phone'?'tel':'text'} value={form[k]||''} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={k==='phone'?'例：0912-345-678':l}/>
+                <FL>{tr(l)}</FL>
+                <input className="field" type={k==='phone'?'tel':'text'} value={form[k]||''} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={k==='phone'?tr("例：0912-345-678"):l}/>
                 {/* v2.6: 付款條件快選 chips，填進輸入框後仍可自行修改 */}
                 {k === 'payTerms' && (
                   <div style={{display:'flex', gap:6, marginTop:6, flexWrap:'wrap'}}>
@@ -305,8 +291,8 @@ export function SupplierList({ suppliers, products = [], purchases = [], onSave,
               </div>
             ))}
             <div style={{display:'flex', gap:10, marginTop:4}}>
-              <button className="btn btn-primary" style={{flex:1}} onClick={save}><Check size={15}/>儲存</button>
-              <button className="btn btn-ghost"   style={{flex:1}} onClick={()=>setEditing(null)}>取消</button>
+              <button className="btn btn-primary" style={{flex:1}} onClick={save}><Check size={15}/>{tr("儲存")}</button>
+              <button className="btn btn-ghost"   style={{flex:1}} onClick={()=>setEditing(null)}>{tr("取消")}</button>
             </div>
           </div>
         </div>
@@ -318,25 +304,19 @@ export function SupplierList({ suppliers, products = [], purchases = [], onSave,
           <div style={{...ps.modal, maxWidth:400}} className="animate-scale">
             {deleting.blocked ? (
               <>
-                <div style={{fontWeight:700, fontSize:15, fontFamily:'var(--font-serif)', marginBottom:10}}>還不能刪除「{deleting.s.name}」</div>
-                <p style={{fontSize:13, color:'var(--text-secondary)', lineHeight:1.8, marginBottom:18}}>
-                  這家廠商還有
-                  {deleting.boundCount > 0 && ` ${deleting.boundCount} 項商品綁定`}
+                <div style={{fontWeight:700, fontSize:15, fontFamily:'var(--font-serif)', marginBottom:10}}>{tr("還不能刪除「")}{deleting.s.name}」</div>
+                <p style={{fontSize:13, color:'var(--text-secondary)', lineHeight:1.8, marginBottom:18}}>{tr("這家廠商還有")}{deleting.boundCount > 0 && tr(" {0} 項商品綁定", {0: deleting.boundCount})}
                   {deleting.boundCount > 0 && deleting.openPoCount > 0 && '／'}
-                  {deleting.openPoCount > 0 && ` ${deleting.openPoCount} 張未完成叫貨單`}
-                  ，請先處理才能刪除。
-                </p>
-                <button className="btn btn-primary" style={{width:'100%', minHeight:44}} onClick={()=>setDeleting(null)}>知道了</button>
+                  {deleting.openPoCount > 0 && tr(" {0} 張未完成叫貨單", {0: deleting.openPoCount})}{tr("，請先處理才能刪除。")}</p>
+                <button className="btn btn-primary" style={{width:'100%', minHeight:44}} onClick={()=>setDeleting(null)}>{tr("知道了")}</button>
               </>
             ) : (
               <>
-                <div style={{fontWeight:700, fontSize:15, fontFamily:'var(--font-serif)', marginBottom:10}}>確定刪除廠商「{deleting.s.name}」？</div>
-                <p style={{fontSize:13, color:'var(--text-secondary)', lineHeight:1.8, marginBottom:18}}>
-                  貨源目錄會一併刪除，已完成的進貨紀錄會保留。
-                </p>
+                <div style={{fontWeight:700, fontSize:15, fontFamily:'var(--font-serif)', marginBottom:10}}>{tr("確定刪除廠商「")}{deleting.s.name}」？</div>
+                <p style={{fontSize:13, color:'var(--text-secondary)', lineHeight:1.8, marginBottom:18}}>{tr("貨源目錄會一併刪除，已完成的進貨紀錄會保留。")}</p>
                 <div style={{display:'flex', gap:10}}>
-                  <button className="btn" style={{flex:1, minHeight:44, background:'var(--red)', color:'#fff'}} onClick={confirmDelete}><Trash2 size={15}/>確定刪除</button>
-                  <button className="btn btn-ghost" style={{flex:1, minHeight:44}} onClick={()=>setDeleting(null)}>取消</button>
+                  <button className="btn" style={{flex:1, minHeight:44, background:'var(--red)', color:'#fff'}} onClick={confirmDelete}><Trash2 size={15}/>{tr("確定刪除")}</button>
+                  <button className="btn btn-ghost" style={{flex:1, minHeight:44}} onClick={()=>setDeleting(null)}>{tr("取消")}</button>
                 </div>
               </>
             )}

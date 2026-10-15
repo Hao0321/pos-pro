@@ -1,3 +1,4 @@
+import {tr,trMessage} from "../i18n"
 import { useState, useMemo,useRef } from 'react'
 import { Plus, Pencil, Trash2, X, Check, Gift, TrendingUp, Phone, Wallet, RotateCcw, Cake } from 'lucide-react'
 import RefundModal from '../components/RefundModal'
@@ -52,7 +53,7 @@ export default function MembersPage({ store, session }) {
     saving.current=true
     try{if (editing === 'new') await addMember(form)
     else await updateMember(editing, form)
-    setEditing(null)}catch(e){alert('會員未確認保存，請保留內容並核對：'+e.message)}finally{saving.current=false}
+    setEditing(null)}catch(e){alert(tr("會員未確認保存，請保留內容並核對：{0}", {0: e.message}))}finally{saving.current=false}
   }
 
   async function handleTopup() {
@@ -62,7 +63,7 @@ export default function MembersPage({ store, session }) {
     if (amt <= 0) return
     saving.current=true
     try{await topupMember(selectedLive.id, amt, bonus, topupMethod, session?.username || '')
-    setShowTopup(false); setTopupAmt(''); setTopupBonus(''); setTopupMethod('cash')}catch(e){alert(e.message)}finally{saving.current=false}
+    setShowTopup(false); setTopupAmt(''); setTopupBonus(''); setTopupMethod('cash')}catch(e){alert(trMessage(e.message))}finally{saving.current=false}
   }
 
   async function handleRefund(origOrder, refundItems, opts) {
@@ -92,18 +93,16 @@ export default function MembersPage({ store, session }) {
       <div style={ms.left}>
         <div style={ms.header}>
           <div>
-            <h2 className="page-title" style={ms.title}>會員管理</h2>
+            <h2 className="page-title" style={ms.title}>{tr("會員管理")}</h2>
             <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
-              {members.length} 位會員
-            </div>
+              {members.length}{tr(" 位會員")}</div>
           </div>
           <button className="btn btn-primary btn-sm" onClick={startNew}>
-            <Plus size={15}/>新增會員
-          </button>
+            <Plus size={15}/>{tr("新增會員")}</button>
         </div>
 
         <div style={ms.toolbar}>
-          <input className="field" value={search} onChange={e=>setSearch(e.target.value)} placeholder="搜尋姓名或手機..." style={{flex:1, maxWidth:240, padding:'8px 12px'}}/>
+          <input className="field" value={search} onChange={e=>setSearch(e.target.value)} placeholder={tr("搜尋姓名或手機...")} style={{flex:1, maxWidth:240, padding:'8px 12px'}}/>
           <div style={{display:'flex', gap:4, flexWrap:'wrap'}}>
             {[
               ['all','全部'],['normal','一般'],['silver','銀卡'],['gold','金卡'],
@@ -114,7 +113,7 @@ export default function MembersPage({ store, session }) {
                 background: filterTier===k?'var(--bg-active)':'transparent',
                 color: filterTier===k?'var(--text-primary)':'var(--text-tertiary)',
                 border: `1px solid ${filterTier===k?'var(--border-mid)':'transparent'}`,
-              }}>{l}</button>
+              }}>{tr(l)}</button>
             ))}
           </div>
         </div>
@@ -139,7 +138,7 @@ export default function MembersPage({ store, session }) {
                   <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:2, flexWrap:'wrap'}}>
                     <span style={{fontWeight:600, fontSize:14}}>{m.name}</span>
                     <span style={{fontSize:10, padding:'1px 7px', borderRadius:20, background:t.bg, color:t.color, fontWeight:500}}>
-                      {t.label}
+                      {tr(t.label)}
                     </span>
                     {rfm && (
                       <span style={{fontSize:10, padding:'1px 7px', borderRadius:20, background:'var(--bg-overlay)', color:rfm.tagColor, fontWeight:600, border:`1px solid ${rfm.tagColor}`}}>
@@ -153,21 +152,18 @@ export default function MembersPage({ store, session }) {
                   <div style={{display:'flex', gap:14, flexWrap:'wrap'}}>
                     <span style={{fontSize:11, color:'var(--text-secondary)'}}>
                       <Gift size={10} style={{marginRight:3, verticalAlign:'middle'}}/>
-                      {m.points.toLocaleString()} 點
-                    </span>
-                    <span style={{fontSize:11, color:'var(--text-secondary)'}}>
-                      累消 NT$ {m.totalSpent.toLocaleString()}
+                      {m.points.toLocaleString()}{tr(" 點")}</span>
+                    <span style={{fontSize:11, color:'var(--text-secondary)'}}>{tr("累消 NT$ ")}{m.totalSpent.toLocaleString()}
                     </span>
                     {rfm && rfm.frequency > 0 && (
                       <span style={{fontSize:11, color:'var(--text-tertiary)'}}>
-                        · {rfm.recencyDays === 0 ? '今天' : `${rfm.recencyDays} 天前`} · {rfm.frequency} 次
-                      </span>
+                        · {rfm.recencyDays === 0 ? tr("今天") : tr("{0} 天前", {0: rfm.recencyDays})} · {rfm.frequency}{tr(" 次")}</span>
                     )}
                   </div>
                   {m.tier !== 'gold' && (
                     <div style={{marginTop:8}}>
                       <div style={{display:'flex', justifyContent:'space-between', fontSize:10, color:'var(--text-tertiary)', marginBottom:3}}>
-                        <span>升級{m.tier==='normal'?'銀卡':'金卡'}進度</span>
+                        <span>{tr("升級")}{m.tier==='normal'?tr("銀卡"):tr("金卡")}{tr("進度")}</span>
                         <span className="mono">{Math.round(pct)}%</span>
                       </div>
                       <div style={{height:3, background:'var(--border-dim)', borderRadius:2}}>
@@ -184,7 +180,7 @@ export default function MembersPage({ store, session }) {
             )
           })}
           {filtered.length===0 && (
-            <div style={{textAlign:'center', padding:'48px', color:'var(--text-tertiary)', fontSize:13}}>沒有符合的會員</div>
+            <div style={{textAlign:'center', padding:'48px', color:'var(--text-tertiary)', fontSize:13}}>{tr("沒有符合的會員")}</div>
           )}
         </div>
       </div>
@@ -199,36 +195,34 @@ export default function MembersPage({ store, session }) {
             <div>
               <div style={{fontWeight:700, fontSize:18, fontFamily:'var(--font-serif)', display:'flex', alignItems:'center', gap:8}}>
                 {selectedLive.name}
-                {isBirthdayMonth(selectedLive) && <Cake size={14} color="var(--red)" title="本月生日"/>}
+                {isBirthdayMonth(selectedLive) && <Cake size={14} color="var(--red)" title={tr("本月生日")}/>}
               </div>
               <div style={{fontSize:12, color:'var(--text-tertiary)', display:'flex', alignItems:'center', gap:4, marginTop:3}}>
                 <Phone size={11}/>{selectedLive.phone}
               </div>
-              <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:2}}>
-                加入 {selectedLive.joinDate}
-                {selectedLive.birthday && ` · 生日 ${selectedLive.birthday}`}
+              <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:2}}>{tr("加入 ")}{selectedLive.joinDate}
+                {selectedLive.birthday && tr(" · 生日 {0}", {0: selectedLive.birthday})}
               </div>
             </div>
             <button className="btn-icon" style={{marginLeft:'auto'}} onClick={()=>setSelected(null)}><X size={16}/></button>
           </div>
 
           <div style={ms.statsGrid}>
-            <StatCard label="累積點數" value={`${selectedLive.points.toLocaleString()} 點`} color="var(--gold-bright)" />
-            <StatCard label="累計消費" value={`NT$ ${selectedLive.totalSpent.toLocaleString()}`} color="var(--blue)" />
-            <StatCard label="儲值餘額" value={`NT$ ${(selectedLive.balance||0).toLocaleString()}`} color="var(--teal)" />
-            <StatCard label="歷史訂單" value={`${memberOrders.length} 筆`} color="var(--text-secondary)" />
+            <StatCard label={tr("累積點數")} value={`${selectedLive.points.toLocaleString()} 點`} color="var(--gold-bright)" />
+            <StatCard label={tr("累計消費")} value={`NT$ ${selectedLive.totalSpent.toLocaleString()}`} color="var(--blue)" />
+            <StatCard label={tr("儲值餘額")} value={`NT$ ${(selectedLive.balance||0).toLocaleString()}`} color="var(--teal)" />
+            <StatCard label={tr("歷史訂單")} value={`${memberOrders.length} 筆`} color="var(--text-secondary)" />
           </div>
 
           <div style={{display:'flex', gap:8, marginBottom:16}}>
             <button className="btn btn-primary btn-sm" onClick={()=>setShowTopup(true)} style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6}}>
-              <Wallet size={14}/> 儲值
-            </button>
+              <Wallet size={14}/>{tr(" 儲值")}</button>
           </div>
 
-          <div style={ms.sectionTitle}>消費記錄</div>
+          <div style={ms.sectionTitle}>{tr("消費記錄")}</div>
           <div style={{flex:1, overflowY:'auto'}}>
             {memberOrders.length === 0 ? (
-              <div style={{color:'var(--text-tertiary)', fontSize:13, padding:'24px 0', textAlign:'center'}}>尚無消費記錄</div>
+              <div style={{color:'var(--text-tertiary)', fontSize:13, padding:'24px 0', textAlign:'center'}}>{tr("尚無消費記錄")}</div>
             ) : memberOrders.slice(0,20).map(o => {
               const isRefund = o.refundOf
               const isRefunded = o.status === 'refunded'
@@ -236,15 +230,15 @@ export default function MembersPage({ store, session }) {
                 <div key={o.id} style={{...ms.orderRow, opacity: isRefunded ? 0.5 : 1}}>
                   <div style={{flex:1, minWidth:0}}>
                     <div style={{fontSize:13, fontWeight:500, display:'flex', alignItems:'center', gap:6}}>
-                      {isRefund && <span className="badge badge-red">退貨</span>}
-                      {isRefunded && <span className="badge badge-amber">已退</span>}
+                      {isRefund && <span className="badge badge-red">{tr("退貨")}</span>}
+                      {isRefunded && <span className="badge badge-amber">{tr("已退")}</span>}
                       <span style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1}}>
                         {(o.items||[]).map(i=>i.name).join('、').slice(0,28)}
                       </span>
                     </div>
                     <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:2}}>
                       {new Date(o.time).toLocaleString('zh-TW', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}
-                      {o.pointsEarned>0 && <span style={{color:'var(--gold)', marginLeft:8}}>+{o.pointsEarned}點</span>}
+                      {o.pointsEarned>0 && <span style={{color:'var(--gold)', marginLeft:8}}>+{o.pointsEarned}{tr("點")}</span>}
                     </div>
                   </div>
                   <div style={{display:'flex', alignItems:'center', gap:6}}>
@@ -252,7 +246,7 @@ export default function MembersPage({ store, session }) {
                       NT$ {o.total.toLocaleString()}
                     </span>
                     {!isRefund && !isRefunded && (
-                      <button onClick={()=>setRefundOrder(o)} style={{padding:4, color:'var(--text-tertiary)'}} title="退貨">
+                      <button onClick={()=>setRefundOrder(o)} style={{padding:4, color:'var(--text-tertiary)'}} title={tr("退貨")}>
                         <RotateCcw size={13}/>
                       </button>
                     )}
@@ -276,18 +270,17 @@ export default function MembersPage({ store, session }) {
           <div style={ms.drawer} className="animate-scale" onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16}}>
               <span style={{fontWeight:600, fontSize:15, display:'flex', alignItems:'center', gap:8}}>
-                <Wallet size={16}/> 會員儲值
-              </span>
+                <Wallet size={16}/>{tr(" 會員儲值")}</span>
               <button className="btn-icon" onClick={()=>setShowTopup(false)}><X size={16}/></button>
             </div>
             <div style={{padding:'10px 12px', background:'var(--bg-overlay)', borderRadius:8, marginBottom:14, fontSize:13}}>
-              {selectedLive.name} · 目前餘額 <strong style={{fontFamily:'var(--font-mono)'}}>NT$ {(selectedLive.balance||0).toLocaleString()}</strong>
+              {selectedLive.name}{tr(" · 目前餘額 ")}<strong style={{fontFamily:'var(--font-mono)'}}>NT$ {(selectedLive.balance||0).toLocaleString()}</strong>
             </div>
-            <FieldLabel>儲值金額 *</FieldLabel>
+            <FieldLabel>{tr("儲值金額 *")}</FieldLabel>
             <input className="field" type="number" value={topupAmt} onChange={e=>setTopupAmt(e.target.value)} placeholder="1000" autoFocus style={{marginBottom:12}}/>
-            <FieldLabel>贈送金額（選填）</FieldLabel>
-            <input className="field" type="number" disabled={session?.role!=='owner'} value={topupBonus} onChange={e=>setTopupBonus(e.target.value)} placeholder={session?.role==='owner'?'例：儲千送百':'贈額需由老闆設定'} style={{marginBottom:12}}/>
-            <FieldLabel>付款方式</FieldLabel>
+            <FieldLabel>{tr("贈送金額（選填）")}</FieldLabel>
+            <input className="field" type="number" disabled={session?.role!=='owner'} value={topupBonus} onChange={e=>setTopupBonus(e.target.value)} placeholder={session?.role==='owner'?tr("例：儲千送百"):tr("贈額需由老闆設定")} style={{marginBottom:12}}/>
+            <FieldLabel>{tr("付款方式")}</FieldLabel>
             <div style={{display:'flex', gap:8, marginBottom:18}}>
               {[['cash','現金'],['card','電子']].map(([k,l]) => (
                 <button key={k} onClick={()=>setTopupMethod(k)} style={{
@@ -295,17 +288,16 @@ export default function MembersPage({ store, session }) {
                   background: topupMethod===k?'var(--gold)':'var(--bg-overlay)',
                   color: topupMethod===k?'#fff':'var(--text-secondary)',
                   border:`1px solid ${topupMethod===k?'var(--gold)':'var(--border-subtle)'}`,
-                }}>{l}</button>
+                }}>{tr(l)}</button>
               ))}
             </div>
             {(parseFloat(topupAmt)+parseFloat(topupBonus||0)) > 0 && (
-              <div style={{textAlign:'center', padding:12, background:'var(--gold-dim)', borderRadius:8, color:'var(--gold-bright)', marginBottom:14, fontSize:13}}>
-                會員可使用 NT$ {(parseFloat(topupAmt)+parseFloat(topupBonus||0)).toLocaleString()}
+              <div style={{textAlign:'center', padding:12, background:'var(--gold-dim)', borderRadius:8, color:'var(--gold-bright)', marginBottom:14, fontSize:13}}>{tr("會員可使用 NT$ ")}{(parseFloat(topupAmt)+parseFloat(topupBonus||0)).toLocaleString()}
               </div>
             )}
             <div style={{display:'flex', gap:10}}>
-              <button className="btn btn-primary" style={{flex:1}} disabled={!topupAmt} onClick={handleTopup}>確認儲值</button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setShowTopup(false)}>取消</button>
+              <button className="btn btn-primary" style={{flex:1}} disabled={!topupAmt} onClick={handleTopup}>{tr("確認儲值")}</button>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setShowTopup(false)}>{tr("取消")}</button>
             </div>
           </div>
         </div>
@@ -316,20 +308,20 @@ export default function MembersPage({ store, session }) {
         <div style={ms.overlay}>
           <div style={ms.drawer} className="animate-scale">
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20}}>
-              <span style={{fontWeight:600, fontSize:15}}>{editing==='new'?'新增會員':'編輯會員'}</span>
+              <span style={{fontWeight:600, fontSize:15}}>{editing==='new'?tr("新增會員"):tr("編輯會員")}</span>
               <button className="btn-icon" onClick={()=>setEditing(null)}><X size={16}/></button>
             </div>
-            <FieldLabel>姓名 *</FieldLabel>
-            <input className="field" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="陳小明" style={{marginBottom:12}}/>
-            <FieldLabel>手機號碼 *</FieldLabel>
+            <FieldLabel>{tr("姓名 *")}</FieldLabel>
+            <input className="field" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder={tr("陳小明")} style={{marginBottom:12}}/>
+            <FieldLabel>{tr("手機號碼 *")}</FieldLabel>
             <input className="field" value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="0912-345-678" style={{marginBottom:12, fontFamily:'var(--font-mono)'}}/>
-            <FieldLabel>生日（選填）</FieldLabel>
+            <FieldLabel>{tr("生日（選填）")}</FieldLabel>
             <input className="field" type="date" value={form.birthday || ''} onChange={e=>setForm(f=>({...f,birthday:e.target.value}))} style={{marginBottom:12}}/>
-            <FieldLabel>備註</FieldLabel>
-            <input className="field" value={form.note} onChange={e=>setForm(f=>({...f,note:e.target.value}))} placeholder="（選填）" style={{marginBottom:20}}/>
+            <FieldLabel>{tr("備註")}</FieldLabel>
+            <input className="field" value={form.note} onChange={e=>setForm(f=>({...f,note:e.target.value}))} placeholder={tr("（選填）")} style={{marginBottom:20}}/>
             <div style={{display:'flex', gap:10}}>
-              <button className="btn btn-primary" style={{flex:1}} onClick={save}><Check size={15}/>儲存</button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setEditing(null)}>取消</button>
+              <button className="btn btn-primary" style={{flex:1}} onClick={save}><Check size={15}/>{tr("儲存")}</button>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setEditing(null)}>{tr("取消")}</button>
             </div>
           </div>
         </div>
@@ -340,12 +332,12 @@ export default function MembersPage({ store, session }) {
           <div style={{...ms.drawer, maxWidth:340}} className="animate-scale">
             <div style={{textAlign:'center', padding:'8px 0 20px'}}>
               <div style={{fontSize:32, marginBottom:12}}>⚠️</div>
-              <div style={{fontWeight:600, marginBottom:6}}>確認刪除此會員？</div>
-              <div style={{fontSize:13, color:'var(--text-secondary)'}}>點數與歷史訂單關聯將一併移除</div>
+              <div style={{fontWeight:600, marginBottom:6}}>{tr("確認刪除此會員？")}</div>
+              <div style={{fontSize:13, color:'var(--text-secondary)'}}>{tr("點數與歷史訂單關聯將一併移除")}</div>
             </div>
             <div style={{display:'flex', gap:10}}>
-              <button className="btn btn-danger" style={{flex:1}} onClick={async()=>{if(saving.current)return;saving.current=true;try{await deleteMember(confirmDel);setConfirmDel(null);setSelected(null)}catch(e){alert(e.message)}finally{saving.current=false}}}>確認刪除</button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setConfirmDel(null)}>取消</button>
+              <button className="btn btn-danger" style={{flex:1}} onClick={async()=>{if(saving.current)return;saving.current=true;try{await deleteMember(confirmDel);setConfirmDel(null);setSelected(null)}catch(e){alert(trMessage(e.message))}finally{saving.current=false}}}>{tr("確認刪除")}</button>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setConfirmDel(null)}>{tr("取消")}</button>
             </div>
           </div>
         </div>
@@ -357,7 +349,7 @@ export default function MembersPage({ store, session }) {
 function StatCard({ label, value, color }) {
   return (
     <div style={{background:'var(--bg-overlay)', border:'1px solid var(--border-dim)', borderRadius:10, padding:'12px 14px'}}>
-      <div style={{fontSize:10, color:'var(--text-tertiary)', letterSpacing:'.06em', textTransform:'uppercase', marginBottom:4}}>{label}</div>
+      <div style={{fontSize:10, color:'var(--text-tertiary)', letterSpacing:'.06em', textTransform:'uppercase', marginBottom:4}}>{tr(label)}</div>
       <div style={{fontFamily:'var(--font-mono)', fontSize:16, fontWeight:500, color}}>{value}</div>
     </div>
   )

@@ -1,3 +1,4 @@
+import {tr} from "../i18n"
 import { browserStorage } from '../utils/browserStorage'
 import { useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense } from 'react'
 import { Search, ScanLine, X, Tag, ShoppingCart, DollarSign, Pause, Eye, Clock, Camera } from 'lucide-react'
@@ -118,29 +119,24 @@ export default function POSPage({ store, session }) {
         }}>
           <Clock size={28} color="var(--accent)"/>
         </div>
-        <div style={{fontSize:18, fontWeight:600, color:'var(--text-primary)'}}>開班就能開始收銀</div>
-        <div style={{fontSize:13, color:'var(--text-secondary)', textAlign:'center', maxWidth:300}}>
-          確認抽屜裡的零用金，按一下就開班。
-        </div>
+        <div style={{fontSize:18, fontWeight:600, color:'var(--text-primary)'}}>{tr("開班就能開始收銀")}</div>
+        <div style={{fontSize:13, color:'var(--text-secondary)', textAlign:'center', maxWidth:300}}>{tr("確認抽屜裡的零用金，按一下就開班。")}</div>
         <div style={{display:'flex', flexDirection:'column', gap:10, width:280}}>
           <div>
-            <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>
-              開班零用金{quickCash !== '' && '（已自動帶入上次金額）'}
+            <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>{tr("開班零用金")}{quickCash !== '' && tr("（已自動帶入上次金額）")}
             </div>
             <input className="field" type="number" value={quickCash}
-              onChange={e=>setQuickCash(e.target.value)} placeholder="例：2000"
+              onChange={e=>setQuickCash(e.target.value)} placeholder={tr("例：2000")}
               onKeyDown={e=>{ if (e.key === 'Enter') quickOpen() }}
               style={{textAlign:'center', fontFamily:'var(--font-mono)', fontSize:16}}/>
           </div>
           <button className="btn btn-primary" disabled={opening}
             style={{padding:'12px 24px', minHeight:48, fontSize:15, opacity: opening ? 0.6 : 1}}
             onClick={quickOpen}>
-            {opening ? '開班中...' : '一鍵開班，開始收銀'}
+            {opening ? tr("開班中...") : tr("一鍵開班，開始收銀")}
           </button>
-          <button className="btn btn-ghost btn-sm" onClick={()=>setView('readiness')}>營業前檢查</button>
-          <button className="btn btn-ghost btn-sm" onClick={()=>setView('shifts')}>
-            查看班別管理（現金流水 / 歷史班別）
-          </button>
+          <button className="btn btn-ghost btn-sm" onClick={()=>setView('readiness')}>{tr("營業前檢查")}</button>
+          <button className="btn btn-ghost btn-sm" onClick={()=>setView('shifts')}>{tr("查看班別管理（現金流水 / 歷史班別）")}</button>
         </div>
       </div>
     )
@@ -154,7 +150,7 @@ export default function POSPage({ store, session }) {
             <Search size={16} color="var(--text-tertiary)"/>
             <input ref={searchRef} style={{...ps.searchInput,fontSize:isMobile?16:14}} value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder={isMobile ? "搜尋商品..." : "搜尋商品名稱 / 條碼 / 分類    (按 / 快速聚焦)"}/>
+              placeholder={isMobile ? tr("搜尋商品...") : tr("搜尋商品名稱 / 條碼 / 分類    (按 / 快速聚焦)")}/>
             {search && (
               <button className="btn-icon btn-sm" onClick={() => setSearch('')}>
                 <X size={13}/>
@@ -164,13 +160,13 @@ export default function POSPage({ store, session }) {
               <kbd style={{...ps.kbd, fontSize:10}}>/</kbd>
             )}
           </div>
-          <button className="btn btn-ghost btn-sm" aria-label="查價" onClick={()=>setShowLookup(true)} title="查價 (F1)" style={{display:'flex', alignItems:'center', gap:4,...mobileAction}}>
-            <Eye size={14}/>{!isMobile && <span>查價</span>}
+          <button className="btn btn-ghost btn-sm" aria-label={tr("查價")} onClick={()=>setShowLookup(true)} title={tr("查價 (F1)")} style={{display:'flex', alignItems:'center', gap:4,...mobileAction}}>
+            <Eye size={14}/>{!isMobile && <span>{tr("查價")}</span>}
             {!isMobile && <kbd style={ps.kbd}>F1</kbd>}
           </button>
           {heldOrders.length > 0 && (
-            <button className="btn btn-ghost btn-sm" aria-label="取回掛單" onClick={()=>setShowHeld(true)} style={{display:'flex', alignItems:'center', gap:4, color:'var(--gold)',...mobileAction}}>
-              <Pause size={14}/>{!isMobile && <span>掛單</span>}
+            <button className="btn btn-ghost btn-sm" aria-label={tr("取回掛單")} onClick={()=>setShowHeld(true)} style={{display:'flex', alignItems:'center', gap:4, color:'var(--gold)',...mobileAction}}>
+              <Pause size={14}/>{!isMobile && <span>{tr("掛單")}</span>}
               <span className="badge badge-gold" style={{marginLeft:2}}>{heldOrders.length}</span>
             </button>
           )}
@@ -182,27 +178,26 @@ export default function POSPage({ store, session }) {
                 background: scanMode ? 'var(--accent-dim)' : 'var(--bg-raised)',
               }}>
               <ScanLine size={15}/>
-              {scanMode ? '掃碼中' : '掃碼'}
+              {scanMode ? tr("掃碼中") : tr("掃碼")}
             </button>
           )}
           {/* 手機/PWA 相機掃描 */}
           <button className="btn btn-ghost btn-sm" onClick={() => setShowCamera(true)}
-            aria-label="相機掃描"
+            aria-label={tr("相機掃描")}
             style={{
               gap:6, border:'1px solid var(--border-subtle)',
               color:'var(--text-secondary)', background:'var(--bg-raised)',...mobileAction,
             }}
-            title="用手機相機掃條碼">
+            title={tr("用手機相機掃條碼")}>
             <Camera size={15}/>
-            {!isMobile && <span>相機掃</span>}
+            {!isMobile && <span>{tr("相機掃")}</span>}
           </button>
           {window.electronAPI && !isMobile && (
             <button className="btn btn-ghost btn-sm"
               onClick={() => window.electronAPI.printer.openCashDrawer().catch(() => {})}
               style={{ gap:6, border:'1px solid var(--border-subtle)', color:'var(--text-secondary)', background:'var(--bg-raised)' }}
-              title="開啟錢箱">
-              <DollarSign size={15}/> 開錢箱
-            </button>
+              title={tr("開啟錢箱")}>
+              <DollarSign size={15}/>{tr(" 開錢箱")}</button>
           )}
         </div>
 
@@ -213,7 +208,7 @@ export default function POSPage({ store, session }) {
             border: `1px solid ${feedback.ok ? 'rgba(22,163,74,0.25)' : 'rgba(217,79,68,0.22)'}`,
             color: feedback.ok ? 'var(--green)' : 'var(--red)',
           }} className="animate-in">
-            {feedback.msg}
+            {trMessage(feedback.msg)}
           </div>
         )}
 
@@ -230,7 +225,7 @@ export default function POSPage({ store, session }) {
                 display:'flex', alignItems:'center', gap:5,
               }}>
                 {meta && <span style={{fontSize:13}}>{meta.icon}</span>}
-                <span>{cat}</span>
+                <span>{cat==='全部'?tr('全部'):cat}</span>
                 <span style={{fontSize:10, opacity:0.7, fontFamily:'var(--font-mono)'}}>{count}</span>
               </button>
             )
@@ -244,7 +239,7 @@ export default function POSPage({ store, session }) {
           {filtered.length === 0 && (
             <div style={ps.empty}>
               <div style={{fontSize:28, opacity:.3, marginBottom:8}}>📦</div>
-              <span style={{color:'var(--text-tertiary)', fontSize:13}}>沒有符合的商品</span>
+              <span style={{color:'var(--text-tertiary)', fontSize:13}}>{tr("沒有符合的商品")}</span>
             </div>
           )}
         </div>
@@ -262,7 +257,7 @@ export default function POSPage({ store, session }) {
       )}
 
       {isMobile && cartCount > 0 && !showCart && (
-        <button aria-label="開啟購物車" onClick={() => setShowCart(true)} style={ps.fab}>
+        <button aria-label={tr("開啟購物車")} onClick={() => setShowCart(true)} style={ps.fab}>
           <ShoppingCart size={20} color="#fff"/>
           <span style={ps.fabBadge}>{cartCount}</span>
         </button>
@@ -273,8 +268,8 @@ export default function POSPage({ store, session }) {
           <div style={ps.mobileOverlay} onClick={() => setShowCart(false)}/>
           <div style={{...ps.mobileCart,height:Math.min(700,visibleViewport.height*.9),bottom:visibleViewport.bottom}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',borderBottom:'1px solid var(--border-dim)'}}>
-              <span style={{fontWeight:600,fontSize:15}}>購物車</span>
-              <button aria-label="關閉購物車" onClick={() => setShowCart(false)} style={{padding:10,minWidth:44,minHeight:44}}>
+              <span style={{fontWeight:600,fontSize:15}}>{tr("購物車")}</span>
+              <button aria-label={tr("關閉購物車")} onClick={() => setShowCart(false)} style={{padding:10,minWidth:44,minHeight:44}}>
                 <X size={18} color="var(--text-secondary)"/>
               </button>
             </div>
@@ -302,7 +297,7 @@ export default function POSPage({ store, session }) {
       {showCamera && (
         <Suspense fallback={null}>
           <BarcodeScannerModal
-            title="掃條碼加入購物車"
+            title={tr("掃條碼加入購物車")}
             mode="continuous"
             onScan={(code) => {
               const p = findByBarcode(code)
@@ -340,14 +335,14 @@ function ProductCard({ product, onAdd, idx, isMobile }) {
           <img src={imageUrl} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}} onError={e => e.target.style.display='none'}/>
           {expWarn && (
             <span style={{position:'absolute', top:4, right:4, padding:'2px 7px', borderRadius:'var(--r-pill)', fontSize:9, fontWeight:700, background:expSoon <= 0 ? 'var(--red)' : 'var(--amber)', color:'#fff', boxShadow:'var(--shadow-xs)'}}>
-              {expSoon <= 0 ? '已過期' : `${expSoon}天`}
+              {expSoon <= 0 ? tr("已過期") : tr("{0}天", {0: expSoon})}
             </span>
           )}
         </div>
       ) : (
         expWarn && (
           <span style={{position:'absolute', top:8, right:8, padding:'2px 7px', borderRadius:'var(--r-pill)', fontSize:9, fontWeight:700, background:expSoon <= 0 ? 'var(--red)' : 'var(--amber)', color:'#fff'}}>
-            {expSoon <= 0 ? '已過期' : `${expSoon}天`}
+            {expSoon <= 0 ? tr("已過期") : tr("{0}天", {0: expSoon})}
           </span>
         )
       )}
@@ -364,7 +359,7 @@ function ProductCard({ product, onAdd, idx, isMobile }) {
           background: zero ? 'var(--red-dim)' : low ? 'var(--amber-dim)' : 'var(--bg-overlay)',
           color: zero ? 'var(--red)' : low ? 'var(--amber)' : 'var(--text-secondary)',
         }}>
-          {zero ? '缺貨' : low ? `${stock}` : `${stock}`}
+          {zero ? tr("缺貨") : low ? `${stock}` : `${stock}`}
         </span>
       </div>
     </button>

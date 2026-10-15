@@ -1,3 +1,4 @@
+import {tr,trMessage} from "../i18n"
 import {useRef,useState,useEffect} from 'react'
 import {BookOpen,ChefHat,Check,ArrowRight} from 'lucide-react'
 import {scenarioTemplates,applyScenarioTemplate,loadScenarioTemplateReceipt} from '../utils/scenarioTemplates'
@@ -33,34 +34,32 @@ export default function ScenarioTemplatesPage({session,store}){
   }
   return <section style={{padding:24,height:'100%',overflowY:'auto'}}>
     <div style={{maxWidth:1080,margin:'0 auto'}}>
-      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}><BookOpen size={24}/><h2 className="page-title" style={{fontSize:22,margin:0}}>情境模板</h2><span className="badge badge-green">全部免費</span></div>
-      <p style={{color:'var(--text-secondary)',lineHeight:1.7}}>從自己的生意開始設定。第一個模板：一般丼飯外帶，支援後續擴充更多店型。</p>
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}><BookOpen size={24}/><h2 className="page-title" style={{fontSize:22,margin:0}}>{tr("情境模板")}</h2><span className="badge badge-green">{tr("全部免費")}</span></div>
+      <p style={{color:'var(--text-secondary)',lineHeight:1.7}}>{tr("從自己的生意開始設定。第一個模板：一般丼飯外帶，支援後續擴充更多店型。")}</p>
       <div style={{display:'flex',gap:8,margin:'20px 0',flexWrap:'wrap'}}>
-        <button className={'btn '+(tab==='catalog'?'btn-primary':'btn-ghost')} style={{color:tab==='catalog'?'#fff':'var(--text-primary)'}} onClick={()=>setTab('catalog')}>套用菜單</button>
-        <button className={'btn '+(tab==='rehearsal'?'btn-primary':'btn-ghost')} style={{color:tab==='rehearsal'?'#fff':'var(--text-primary)'}} onClick={()=>setTab('rehearsal')}><ChefHat size={16}/>試賣演練</button>
+        <button className={'btn '+(tab==='catalog'?'btn-primary':'btn-ghost')} style={{color:tab==='catalog'?'#fff':'var(--text-primary)'}} onClick={()=>setTab('catalog')}>{tr("套用菜單")}</button>
+        <button className={'btn '+(tab==='rehearsal'?'btn-primary':'btn-ghost')} style={{color:tab==='rehearsal'?'#fff':'var(--text-primary)'}} onClick={()=>setTab('rehearsal')}><ChefHat size={16}/>{tr("試賣演練")}</button>
       </div>
       {tab==='rehearsal'?<>
-        <p style={{color:'var(--text-secondary)',lineHeight:1.7}}>這裡試跑預訂、現場、外送、限量與備料；演練紀錄與正式收銀分開。</p>
-        <iframe title="丼飯試賣演練" src="./scenarios/donburi/index.html" style={{width:'100%',height:820,border:'1px solid var(--border-subtle)',borderRadius:16}} sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"/>
+        <p style={{color:'var(--text-secondary)',lineHeight:1.7}}>{tr("這裡試跑預訂、現場、外送、限量與備料；演練紀錄與正式收銀分開。")}</p>
+        <iframe title={tr("丼飯試賣演練")} src="./scenarios/donburi/index.html" style={{width:'100%',height:820,border:'1px solid var(--border-subtle)',borderRadius:16}} sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"/>
       </>:<div className="card" style={{padding:24}}>
-        <h3 style={{margin:'0 0 8px',fontSize:20}}>{template.name}</h3>
-        <p style={{color:'var(--text-secondary)',lineHeight:1.7}}>先填實際售價、單份食材與包材成本，以及目前可售的成品碗／杯數。下方售價只是範例，可自行修改。</p>
+        <h3 style={{margin:'0 0 8px',fontSize:20}}>{tr(template.name)}</h3>
+        <p style={{color:'var(--text-secondary)',lineHeight:1.7}}>{tr("先填實際售價、單份食材與包材成本，以及目前可售的成品碗／杯數。下方售價只是範例，可自行修改。")}</p>
         {receipt?<div role="status" style={{padding:20,background:'var(--green-dim)',borderRadius:12}}>
-          <Check size={22}/><h3>丼飯菜單已保存</h3><p>已新增豬肉丼、牛肉丼與冬瓜茶；既有商品、帳號及交易都保留。</p>
-          <button className="btn btn-primary" onClick={()=>location.reload()}>重新載入，開始使用<ArrowRight size={16}/></button>
+          <Check size={22}/><h3>{tr("丼飯菜單已保存")}</h3><p>{tr("已新增豬肉丼、牛肉丼與冬瓜茶；既有商品、帳號及交易都保留。")}</p>
+          <button className="btn btn-primary" onClick={()=>location.reload()}>{tr("重新載入，開始使用")}<ArrowRight size={16}/></button>
         </div>:<form onSubmit={apply}>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:16,margin:'24px 0'}}>
             {template.products.map(p=><div key={p.key} style={{padding:18,border:'1px solid var(--border-subtle)',borderRadius:12}}>
               <h4 style={{margin:'0 0 16px'}}>{p.name}</h4>
-              {[['price','售價（元）','0.01'],['cost','單份成本（元）','0.01'],['stock',`目前可售（${p.unit}）`,'1']].map(([field,label,step])=><label key={field} style={{display:'block',marginBottom:12,fontSize:13,color:'var(--text-secondary)'}}>{label}<input className="field" type="number" min={field==='price'?'0.01':'0'} max="1000000" step={step} required value={values[p.key][field]} onChange={e=>update(p.key,field,e.target.value)} disabled={busy} style={{display:'block',width:'100%',marginTop:6}}/></label>)}
+              {[['price','售價（元）','0.01'],['cost','單份成本（元）','0.01'],['stock',tr('目前可售（{0}）',{0:p.unit}),'1']].map(([field,label,step])=><label key={field} style={{display:'block',marginBottom:12,fontSize:13,color:'var(--text-secondary)'}}>{tr(label)}<input className="field" type="number" min={field==='price'?'0.01':'0'} max="1000000" step={step} required value={values[p.key][field]} onChange={e=>update(p.key,field,e.target.value)} disabled={busy} style={{display:'block',width:'100%',marginTop:6}}/></label>)}
             </div>)}
           </div>
-          {error&&<p role="alert" style={{color:'var(--red)',lineHeight:1.6}}>{error}</p>}
-          <button className="btn btn-primary" disabled={busy}>{busy?'正在保存菜單…':'新增丼飯菜單'}</button>
+          {error&&<p role="alert" style={{color:'var(--red)',lineHeight:1.6}}>{trMessage(error)}</p>}
+          <button className="btn btn-primary" disabled={busy}>{busy?tr("正在保存菜單…"):tr("新增丼飯菜單")}</button>
         </form>}
-        <div style={{marginTop:24,padding:16,background:'var(--bg-base)',borderRadius:12,fontSize:13,color:'var(--text-secondary)',lineHeight:1.8}}>
-          套用後可使用收銀、成品庫存、班別與報表。從「預訂出餐」確認產能與原料配方，即可正式接單、備餐與交付；本頁的試賣演練另行保存。套餐可先將丼飯與冬瓜茶一起加入購物車。
-        </div>
+        <div style={{marginTop:24,padding:16,background:'var(--bg-base)',borderRadius:12,fontSize:13,color:'var(--text-secondary)',lineHeight:1.8}}>{tr("套用後可使用收銀、成品庫存、班別與報表。從「預訂出餐」確認產能與原料配方，即可正式接單、備餐與交付；本頁的試賣演練另行保存。套餐可先將丼飯與冬瓜茶一起加入購物車。")}</div>
       </div>}
     </div>
   </section>

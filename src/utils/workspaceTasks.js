@@ -1,5 +1,6 @@
 import {hasPermission} from './security'
 import {isProcurement,procurementSummary} from '../../electron/procurementRules.mjs'
+import {tr} from '../../public/i18n/core.mjs'
 
 export const WORKSPACE_TASKS=[
   {id:'sale',title:'賣東西、收款',detail:'點商品，確認金額，再收款。',view:'pos',perm:'pos.use',words:'收銀 結帳 現場'},
@@ -27,19 +28,19 @@ export const WORKSPACE_AREAS=[
 export function workspaceTasks(session,query='',area='all'){
   const terms=query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
   const group=WORKSPACE_AREAS.find(a=>a.id===area)
-  const matched=WORKSPACE_TASKS.filter(t=>hasPermission(session,t.perm)&&(area==='all'||group?.taskIds.includes(t.id))&&terms.every(term=>(t.title+' '+t.detail+' '+t.words).toLocaleLowerCase().includes(term)))
+  const matched=WORKSPACE_TASKS.filter(t=>hasPermission(session,t.perm)&&(area==='all'||group?.taskIds.includes(t.id))&&terms.every(term=>(t.title+' '+t.detail+' '+t.words+' '+tr(t.title)+' '+tr(t.detail)).toLocaleLowerCase().includes(term)))
   return group?matched.sort((a,b)=>group.taskIds.indexOf(a.id)-group.taskIds.indexOf(b.id)):matched
 }
 export function workspaceReminders(store,session){
   const reminders=[]
   if(!store.products.length&&hasPermission(session,'inventory.edit'))reminders.push({id:'first-product',title:'先新增第一個商品',detail:'填名稱與售價，再確認實際庫存。',view:'inventory'})
   if(!store.openShift)reminders.push({id:'open-shift',title:'準備營業：先開班',detail:'確認零用金後就能收款。',view:'shifts'})
-  if(store.cart.length)reminders.push({id:'cart',title:'收銀台還有 '+store.cart.length+' 種商品',detail:'接著完成這筆收款，或先掛單。',view:'pos'})
+  if(store.cart.length)reminders.push({id:'cart',title:tr('收銀台還有 {0} 種商品',{0:store.cart.length}),detail:'接著完成這筆收款，或先掛單。',view:'pos'})
   if(hasPermission(session,'purchase.view')){
     const rows=(store.purchases||[]).filter(isProcurement),summaries=rows.map(p=>procurementSummary(p))
     const owed=Math.round(summaries.reduce((n,s)=>n+s.owed,0)*100)/100,credit=Math.round(summaries.reduce((n,s)=>n+s.credit,0)*100)/100
-    if(owed>0)reminders.push({id:'payable',title:'還有 NT$ '+owed.toLocaleString('zh-TW')+' 待付款',detail:summaries.some(s=>s.overdue>0)?'其中有已逾期款項，請核對。':'依實際請款與付款紀錄計算。',view:'purchase'})
-    if(credit>0)reminders.push({id:'supplier-credit',title:'供應商還要退回 NT$ '+credit.toLocaleString('zh-TW'),detail:'收到退款後，開啟原採購單記錄。',view:'purchase'})
+    if(owed>0)reminders.push({id:'payable',title:tr('還有 NT$ {0} 待付款',{0:owed.toLocaleString('zh-TW')}),detail:summaries.some(s=>s.overdue>0)?'其中有已逾期款項，請核對。':'依實際請款與付款紀錄計算。',view:'purchase'})
+    if(credit>0)reminders.push({id:'supplier-credit',title:tr('供應商還要退回 NT$ {0}',{0:credit.toLocaleString('zh-TW')}),detail:'收到退款後，開啟原採購單記錄。',view:'purchase'})
   }
   return reminders
 }

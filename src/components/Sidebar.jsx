@@ -1,8 +1,10 @@
+import {tr,getLocale} from "../i18n"
 import { useState, useEffect } from 'react'
 import { ShoppingCart, Package, BarChart2, Users, BookOpen, Truck, ClipboardList, Tag, Settings, AlertTriangle, LogOut, Bell, LayoutDashboard, Clock, Trash2, Sparkles, CheckCircle as CheckCircleIcon } from 'lucide-react'
 import { ROLES, hasPermission } from '../utils/security'
 import SyncStatusBadge from './SyncStatusBadge'
 import Brand from './Brand'
+import DisplayPreferences from './DisplayPreferences'
 
 const NAV = [
   { key:'dashboard',  label:'首頁',     Icon:LayoutDashboard, perm:'pos.use', accent:'gold' },
@@ -35,8 +37,8 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
-  const timeStr = now.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' })
-  const dateStr = now.toLocaleDateString('zh-TW', { month:'numeric', day:'numeric', weekday:'short' })
+  const timeStr = now.toLocaleTimeString(getLocale(), { hour:'2-digit', minute:'2-digit' })
+  const dateStr = now.toLocaleDateString(getLocale(), { month:'numeric', day:'numeric', weekday:'short' })
   const role    = ROLES[session?.role]
 
   return (
@@ -47,22 +49,23 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
       </div>
 
       {/* 今日營收卡 */}
-      <button className="btn btn-ghost" aria-label="切換大字模式（選單）" aria-pressed={largeText} onClick={toggleLargeText} style={{minHeight:48,fontSize:16,margin:'0 12px 8px'}}>大字好按 {largeText?'✓':''}</button>
-      <button className="btn btn-ghost" aria-label="切換簡易操作" aria-pressed={simpleMode} onClick={toggleSimpleMode} style={{minHeight:48,fontSize:16,margin:'0 12px 8px'}}>{simpleMode?'簡易操作 ✓':'切換簡易操作'}</button>
+      <DisplayPreferences compact/>
+      <button className="btn btn-ghost" aria-label={tr("切換大字模式（選單）")} aria-pressed={largeText} onClick={toggleLargeText} style={{minHeight:48,fontSize:16,margin:'0 12px 8px'}}>{tr("大字好按 ")}{largeText?'✓':''}</button>
+      <button className="btn btn-ghost" aria-label={tr("切換簡易操作")} aria-pressed={simpleMode} onClick={toggleSimpleMode} style={{minHeight:48,fontSize:16,margin:'0 12px 8px'}}>{simpleMode?tr("簡易操作 ✓"):tr("切換簡易操作")}</button>
       <div style={s.todayCard} className="animate-up">
         <div style={s.todayTop}>
           <div>
-            <div style={s.todayLabel}>今日營業</div>
+            <div style={s.todayLabel}>{tr("今日營業")}</div>
             <div style={s.todayAmount} className="mono tabular">${todayRevenue.toLocaleString()}</div>
           </div>
           {openShift && (
-            <div style={s.liveDot} title="營業中">
+            <div style={s.liveDot} title={tr("營業中")}>
               <span style={s.liveDotPulse}/>
             </div>
           )}
         </div>
         <div style={s.todayMeta}>
-          <span>{todayOrders.length} 筆</span>
+          <span>{todayOrders.length}{tr(" 筆")}</span>
           <span style={{opacity:0.4}}>•</span>
           <span>{dateStr}</span>
           <span style={{opacity:0.4}}>•</span>
@@ -78,7 +81,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
                       : key === 'orders' && pendingOrders > 0 ? pendingOrders
                       : null
           return (
-            <button key={key} className="workspace-nav-item" aria-current={active?'page':undefined} onClick={() => setView(key)}
+            <button key={key} className="workspace-nav-item" data-nav={key} aria-current={active?'page':undefined} onClick={() => setView(key)}
               style={{
                 ...s.navItem,
                 display:simpleMode&&!showMore&&!common.has(key)&&view!==key?'none':'flex',
@@ -95,7 +98,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
               }}>
                 <Icon size={16} strokeWidth={active ? 2.4 : 2}/>
               </span>
-              <span style={s.navLabel}>{label}</span>
+              <span style={s.navLabel}>{tr(label)}</span>
               {badge != null && (
                 <span style={{
                   ...s.navBadge,
@@ -107,7 +110,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
             </button>
           )
         })}
-        {simpleMode&&<button className="btn btn-ghost" aria-label="展開全部功能" aria-expanded={showMore} style={{minHeight:48,fontSize:16,marginTop:6}} onClick={()=>setShowMore(v=>!v)}>{showMore?'收起更多功能':'全部功能'}</button>}
+        {simpleMode&&<button className="btn btn-ghost" aria-label={tr("展開全部功能")} aria-expanded={showMore} style={{minHeight:48,fontSize:16,marginTop:6}} onClick={()=>setShowMore(v=>!v)}>{showMore?tr("收起更多功能"):tr("全部功能")}</button>}
       </nav>
 
       {/* 底部 - 警示 + 用戶 */}
@@ -116,16 +119,16 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
         {lowStockCount > 0 && (
           <div style={s.alertBox} className="animate-up">
             <AlertTriangle size={14} style={{color:'var(--amber)', flexShrink:0}}/>
-            <span style={{fontSize:12, color:'var(--amber)', fontWeight:600}}>{lowStockCount} 項低庫存</span>
+            <span style={{fontSize:12, color:'var(--amber)', fontWeight:600}}>{lowStockCount}{tr(" 項低庫存")}</span>
           </div>
         )}
         <div style={s.userRow}>
           <div style={s.avatar}>{session?.username?.[0]}</div>
           <div style={{flex:1, minWidth:0}}>
             <div style={{fontSize:13, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:'var(--text-primary)'}}>{session?.username}</div>
-            <div style={{fontSize:10, color: role?.color || 'var(--text-tertiary)', fontWeight:600, letterSpacing:'.05em'}}>{role?.label}</div>
+            <div style={{fontSize:10, color: role?.color || 'var(--text-tertiary)', fontWeight:600, letterSpacing:'.05em'}}>{tr(role?.label)}</div>
           </div>
-          <button className="btn-icon" onClick={onLogout} title="登出"
+          <button className="btn-icon" onClick={onLogout} title={tr("登出")}
             style={{color:'var(--text-tertiary)'}}>
             <LogOut size={14}/>
           </button>

@@ -1,3 +1,4 @@
+import {tr,trMessage} from "../../i18n"
 import { browserStorage } from "../../utils/browserStorage"
 import { useState, useEffect } from "react"
 import { Trash2, Plus, X } from "lucide-react"
@@ -52,12 +53,12 @@ export function UsersTab({ session }) {
   // ── 刪除帳號 ─────────────────────────────────────────────
   async function handleDelete(u) {
     if (u.id === session.userId) return
-    if(u.role==='owner'&&users.filter(u=>u.role==='owner').length<2){alert('必須保留管理員帳號');return}
+    if(u.role==='owner'&&users.filter(u=>u.role==='owner').length<2){alert(tr("必須保留管理員帳號"));return}
     try{
     if(isElectron)await window.electronAPI.db.deleteUser(u.id)
     saveUsers(users.filter(x=>x.id!==u.id))
     writeAuditLog('USER_DELETE', session, { username:u.username })
-    }catch(e){alert('刪除未完成：'+e.message)}
+    }catch(e){alert(tr("刪除未完成：{0}", {0: e.message}))}
   }
 
   // ── 變更密碼 ─────────────────────────────────────────────
@@ -96,7 +97,7 @@ export function UsersTab({ session }) {
     <div style={{display:'flex',flexDirection:'column',gap:12,height:'100%'}}>
       {isOwner && (
         <div style={{display:'flex',justifyContent:'flex-end',flexShrink:0}}>
-          <button className="btn btn-primary btn-sm" onClick={()=>setAdding(true)}><Plus size={14}/>新增員工</button>
+          <button className="btn btn-primary btn-sm" onClick={()=>setAdding(true)}><Plus size={14}/>{tr("新增員工")}</button>
         </div>
       )}
 
@@ -114,9 +115,9 @@ export function UsersTab({ session }) {
               <div style={{flex:1}}>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
                   <span style={{fontWeight:600,fontSize:14}}>{u.username}</span>
-                  {isMe && <span style={{fontSize:10,color:'var(--gold)',background:'var(--gold-dim)',padding:'1px 7px',borderRadius:20}}>我</span>}
+                  {isMe && <span style={{fontSize:10,color:'var(--gold)',background:'var(--gold-dim)',padding:'1px 7px',borderRadius:20}}>{tr("我")}</span>}
                 </div>
-                <div style={{fontSize:12,color:role?.color,marginTop:2}}>{role?.label} · {role?.permissions.length} 項權限</div>
+                <div style={{fontSize:12,color:role?.color,marginTop:2}}>{tr(role?.label)} · {role?.permissions.length}{tr(" 項權限")}</div>
               </div>
               <div style={{display:'flex',gap:6,alignItems:'center'}}>
                 {canChangePw && (
@@ -125,7 +126,7 @@ export function UsersTab({ session }) {
                     style={{fontSize:11,gap:4}}
                     onClick={()=>{ setChangePw(u); setPwForm({oldPw:'',newPw:'',confirmPw:''}); setPwErr(''); setPwOk('') }}
                   >
-                    🔑 {isMe ? '改密碼' : '重設密碼'}
+                    🔑 {isMe ? tr("改密碼") : tr("重設密碼")}
                   </button>
                 )}
                 {isOwner && !isMe && (
@@ -144,24 +145,24 @@ export function UsersTab({ session }) {
         <div style={ss.overlay}>
           <div style={ss.modal} className="animate-scale">
             <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}>
-              <span style={{fontWeight:700}}>新增員工帳號</span>
+              <span style={{fontWeight:700}}>{tr("新增員工帳號")}</span>
               <button className="btn-icon" onClick={()=>setAdding(false)}><X size={16}/></button>
             </div>
-            <FL>帳號名稱 *</FL>
-            <input className="field" value={addForm.username} onChange={e=>setAddForm(f=>({...f,username:e.target.value}))} placeholder="例：小美" style={{marginBottom:12}}/>
-            <FL>密碼 *（至少8字元）</FL>
-            <input type="password" className="field" value={addForm.password} onChange={e=>setAddForm(f=>({...f,password:e.target.value}))} placeholder="輸入密碼" style={{marginBottom:addErr?4:12}}/>
-            {addErr && <div style={{fontSize:11,color:'var(--red)',marginBottom:12}}>{addErr}</div>}
-            <FL>角色</FL>
+            <FL>{tr("帳號名稱 *")}</FL>
+            <input className="field" value={addForm.username} onChange={e=>setAddForm(f=>({...f,username:e.target.value}))} placeholder={tr("例：小美")} style={{marginBottom:12}}/>
+            <FL>{tr("密碼 *（至少8字元）")}</FL>
+            <input type="password" className="field" value={addForm.password} onChange={e=>setAddForm(f=>({...f,password:e.target.value}))} placeholder={tr("輸入密碼")} style={{marginBottom:addErr?4:12}}/>
+            {addErr && <div style={{fontSize:11,color:'var(--red)',marginBottom:12}}>{trMessage(addErr)}</div>}
+            <FL>{tr("角色")}</FL>
             <select className="field" value={addForm.role} onChange={e=>setAddForm(f=>({...f,role:e.target.value}))} style={{marginBottom:18,cursor:'pointer'}}>
-              {Object.entries(ROLES).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+              {Object.entries(ROLES).map(([k,v])=><option key={k} value={k}>{tr(v.label)}</option>)}
             </select>
             <div style={{background:'var(--bg-base)',borderRadius:8,padding:'10px 12px',marginBottom:16,fontSize:11,color:'var(--text-secondary)'}}>
-              {ROLES[addForm.role]?.permissions.slice(0,5).join(' · ')}{ROLES[addForm.role]?.permissions.length>5?` ...等 ${ROLES[addForm.role].permissions.length} 項`:''}
+              {ROLES[addForm.role]?.permissions.slice(0,5).join(' · ')}{ROLES[addForm.role]?.permissions.length>5?tr(" ...等 {0} 項", {0: ROLES[addForm.role].permissions.length}):''}
             </div>
             <div style={{display:'flex',gap:10}}>
-              <button className="btn btn-primary" style={{flex:1}} onClick={handleAdd} disabled={saving}>{saving?'儲存中...':'儲存'}</button>
-              <button className="btn btn-ghost"   style={{flex:1}} onClick={()=>setAdding(false)}>取消</button>
+              <button className="btn btn-primary" style={{flex:1}} onClick={handleAdd} disabled={saving}>{saving?tr("儲存中..."):tr("儲存")}</button>
+              <button className="btn btn-ghost"   style={{flex:1}} onClick={()=>setAdding(false)}>{tr("取消")}</button>
             </div>
           </div>
         </div>
@@ -174,10 +175,10 @@ export function UsersTab({ session }) {
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <div>
                 <div style={{fontWeight:700,fontSize:15}}>
-                  {changePw.id===session.userId ? '變更我的密碼' : `重設密碼 — ${changePw.username}`}
+                  {changePw.id===session.userId ? tr("變更我的密碼") : tr("重設密碼 — {0}", {0: changePw.username})}
                 </div>
                 <div style={{fontSize:11,color:'var(--text-tertiary)',marginTop:3}}>
-                  {changePw.id===session.userId ? '需要輸入舊密碼才能更改' : '老闆權限：直接重設，無需舊密碼'}
+                  {changePw.id===session.userId ? tr("需要輸入舊密碼才能更改") : tr("老闆權限：直接重設，無需舊密碼")}
                 </div>
               </div>
               <button className="btn-icon" onClick={()=>setChangePw(null)}><X size={16}/></button>
@@ -186,24 +187,24 @@ export function UsersTab({ session }) {
             {/* 自己改才需要舊密碼 */}
             {changePw.id === session.userId && (
               <>
-                <FL>舊密碼</FL>
+                <FL>{tr("舊密碼")}</FL>
                 <input
                   type="password" className="field"
                   value={pwForm.oldPw}
                   onChange={e=>setPwForm(f=>({...f,oldPw:e.target.value}))}
-                  placeholder="輸入目前密碼"
+                  placeholder={tr("輸入目前密碼")}
                   style={{marginBottom:14}}
                   autoComplete="current-password"
                 />
               </>
             )}
 
-            <FL>新密碼（至少 8 字元）</FL>
+            <FL>{tr("新密碼（至少 8 字元）")}</FL>
             <input
               type="password" className="field"
               value={pwForm.newPw}
               onChange={e=>setPwForm(f=>({...f,newPw:e.target.value}))}
-              placeholder="輸入新密碼"
+              placeholder={tr("輸入新密碼")}
               style={{marginBottom:12}}
               autoComplete="new-password"
             />
@@ -218,22 +219,22 @@ export function UsersTab({ session }) {
                   })}
                 </div>
                 <div style={{fontSize:11,color:PW_COLORS[getPwScore(pwForm.newPw)-1]||'var(--text-tertiary)'}}>
-                  {PW_LABELS[getPwScore(pwForm.newPw)-1]||'請輸入密碼'}
+                  {tr(PW_LABELS[getPwScore(pwForm.newPw)-1]||tr("請輸入密碼"))}
                 </div>
               </div>
             )}
 
-            <FL>確認新密碼</FL>
+            <FL>{tr("確認新密碼")}</FL>
             <input
               type="password" className="field"
               value={pwForm.confirmPw}
               onChange={e=>setPwForm(f=>({...f,confirmPw:e.target.value}))}
-              placeholder="再輸入一次新密碼"
+              placeholder={tr("再輸入一次新密碼")}
               style={{marginBottom: (pwErr||pwOk) ? 8 : 18}}
               autoComplete="new-password"
             />
 
-            {pwErr && <div style={{fontSize:12,color:'var(--red)',marginBottom:14,display:'flex',alignItems:'center',gap:6}}>⚠ {pwErr}</div>}
+            {pwErr && <div style={{fontSize:12,color:'var(--red)',marginBottom:14,display:'flex',alignItems:'center',gap:6}}>⚠ {trMessage(pwErr)}</div>}
             {pwOk  && <div style={{fontSize:12,color:'var(--green)',marginBottom:14,display:'flex',alignItems:'center',gap:6}}>✓ {pwOk}</div>}
 
             <div style={{display:'flex',gap:10}}>
@@ -242,9 +243,9 @@ export function UsersTab({ session }) {
                 onClick={handleChangePw}
                 disabled={saving || !pwForm.newPw || !pwForm.confirmPw || (changePw.id===session.userId && !pwForm.oldPw)}
               >
-                {saving ? '更新中...' : '確認更新'}
+                {saving ? tr("更新中...") : tr("確認更新")}
               </button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setChangePw(null)}>取消</button>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setChangePw(null)}>{tr("取消")}</button>
             </div>
           </div>
         </div>

@@ -1,3 +1,4 @@
+import {tr} from "../i18n"
 import { useState, useMemo } from 'react'
 import { X, RotateCcw } from 'lucide-react'
 
@@ -59,7 +60,7 @@ export default function RefundModal({ order, onClose, onRefund, session, priorRe
         <div style={rm.head}>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             <RotateCcw size={16}/>
-            <span style={{fontWeight:600}}>退貨</span>
+            <span style={{fontWeight:600}}>{tr("退貨")}</span>
             <span style={{fontSize:11, color:'var(--text-tertiary)'}}>{order.id}</span>
           </div>
           <button onClick={onClose} style={{padding:4}}><X size={18}/></button>
@@ -67,17 +68,17 @@ export default function RefundModal({ order, onClose, onRefund, session, priorRe
 
         <div style={{padding:'14px 18px', background:'var(--bg-overlay)', fontSize:13}}>
           <div style={{display:'flex', justifyContent:'space-between'}}>
-            <span style={{color:'var(--text-secondary)'}}>原訂單金額</span>
+            <span style={{color:'var(--text-secondary)'}}>{tr("原訂單金額")}</span>
             <span style={{fontFamily:'var(--font-mono)', fontWeight:500}}>NT$ {order.total.toLocaleString()}</span>
           </div>
           <div style={{display:'flex', justifyContent:'space-between', marginTop:4, fontSize:12}}>
             <span style={{color:'var(--text-tertiary)'}}>{new Date(order.time).toLocaleString('zh-TW')}</span>
-            <span style={{color:'var(--text-tertiary)'}}>{order.payMethod === 'cash' ? '現金' : order.payMethod === 'card' ? '電子支付' : '混合'}</span>
+            <span style={{color:'var(--text-tertiary)'}}>{order.payMethod === 'cash' ? tr("現金") : order.payMethod === 'card' ? tr("電子支付") : tr("混合")}</span>
           </div>
         </div>
 
         <div style={{padding:'12px 18px', maxHeight:'40vh', overflowY:'auto'}}>
-          <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:8, textTransform:'uppercase', letterSpacing:'.05em'}}>選擇退貨商品</div>
+          <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:8, textTransform:'uppercase', letterSpacing:'.05em'}}>{tr("選擇退貨商品")}</div>
           {items.map(item => {
             const maxQty = remainingOf(item)
             const already = refundedById[item.id] || 0
@@ -89,7 +90,7 @@ export default function RefundModal({ order, onClose, onRefund, session, priorRe
                   <div style={{fontSize:13, fontWeight:500}}>{item.name}</div>
                   <div style={{fontSize:11, color:'var(--text-tertiary)'}}>
                     NT$ {item.price} × {Math.abs(item.qty)}
-                    {already > 0 && <span style={{color:'var(--amber)', marginLeft:6}}>已退 {already}</span>}
+                    {already > 0 && <span style={{color:'var(--amber)', marginLeft:6}}>{tr("已退 ")}{already}</span>}
                   </div>
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:6}}>
@@ -97,7 +98,7 @@ export default function RefundModal({ order, onClose, onRefund, session, priorRe
                   <input type="number" value={cur} onChange={e=>setQty(item.id, e.target.value)} disabled={done}
                     style={{width:50, textAlign:'center', fontFamily:'var(--font-mono)', fontSize:14, background:'var(--bg-overlay)', borderRadius:6, padding:'4px 0', border:'1px solid var(--border-dim)'}}/>
                   <button onClick={()=>setQty(item.id, cur + 1)} style={rm.qtyBtn} disabled={done}>+</button>
-                  <button onClick={()=>setQty(item.id, maxQty)} style={{fontSize:11, color: done ? 'var(--text-tertiary)' : 'var(--gold)', marginLeft:4, padding:4}} disabled={done}>{done ? '已退完' : '全'}</button>
+                  <button onClick={()=>setQty(item.id, maxQty)} style={{fontSize:11, color: done ? 'var(--text-tertiary)' : 'var(--gold)', marginLeft:4, padding:4}} disabled={done}>{done ? tr("已退完") : tr("全")}</button>
                 </div>
               </div>
             )
@@ -105,24 +106,24 @@ export default function RefundModal({ order, onClose, onRefund, session, priorRe
         </div>
 
         <div style={{padding:'14px 18px', borderTop:'1px solid var(--border-dim)'}}>
-          <input className="field" placeholder="退貨原因（選填）" value={reason} onChange={e=>setReason(e.target.value)} style={{marginBottom:12}}/>
+          <input className="field" placeholder={tr("退貨原因（選填）")} value={reason} onChange={e=>setReason(e.target.value)} style={{marginBottom:12}}/>
 
           <div style={{background:'var(--red-dim)', padding:'12px 14px', borderRadius:8, marginBottom:12}}>
             <div style={{display:'flex', justifyContent:'space-between', fontSize:12, color:'var(--text-secondary)', marginBottom:2}}>
-              <span>退貨小計</span><span style={{fontFamily:'var(--font-mono)'}}>NT$ {refundTotal.toLocaleString()}</span>
+              <span>{tr("退貨小計")}</span><span style={{fontFamily:'var(--font-mono)'}}>NT$ {refundTotal.toLocaleString()}</span>
             </div>
             {refundDiscount > 0 && (
               <div style={{display:'flex', justifyContent:'space-between', fontSize:12, color:'var(--text-secondary)', marginBottom:2}}>
-                <span>沖回折抵</span><span style={{fontFamily:'var(--font-mono)'}}>−NT$ {refundDiscount.toLocaleString()}</span>
+                <span>{tr("沖回折抵")}</span><span style={{fontFamily:'var(--font-mono)'}}>−NT$ {refundDiscount.toLocaleString()}</span>
               </div>
             )}
             {refundManual > 0 && (
               <div style={{display:'flex', justifyContent:'space-between', fontSize:12, color:'var(--text-secondary)', marginBottom:2}}>
-                <span>沖回手動折讓</span><span style={{fontFamily:'var(--font-mono)'}}>−NT$ {refundManual.toLocaleString()}</span>
+                <span>{tr("沖回手動折讓")}</span><span style={{fontFamily:'var(--font-mono)'}}>−NT$ {refundManual.toLocaleString()}</span>
               </div>
             )}
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline', marginTop:6}}>
-              <span style={{fontSize:13, fontWeight:600, color:'var(--red)'}}>實退金額</span>
+              <span style={{fontSize:13, fontWeight:600, color:'var(--red)'}}>{tr("實退金額")}</span>
               <span style={{fontFamily:'var(--font-mono)', fontSize:20, fontWeight:600, color:'var(--red)'}}>
                 NT$ {refundActual.toLocaleString()}
               </span>
@@ -130,11 +131,11 @@ export default function RefundModal({ order, onClose, onRefund, session, priorRe
             {restoredBalance > 0 && (
               <div style={{marginTop:8, paddingTop:8, borderTop:'1px dashed var(--border-dim)'}}>
                 <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:2}}>
-                  <span style={{color:'var(--teal)'}}>↩ 退回儲值卡</span>
+                  <span style={{color:'var(--teal)'}}>{tr("↩ 退回儲值卡")}</span>
                   <span style={{fontFamily:'var(--font-mono)', color:'var(--teal)'}}>NT$ {restoredBalance.toLocaleString()}</span>
                 </div>
                 <div style={{display:'flex', justifyContent:'space-between', fontSize:12}}>
-                  <span style={{color:'var(--text-secondary)'}}>退現金 / 原付款</span>
+                  <span style={{color:'var(--text-secondary)'}}>{tr("退現金 / 原付款")}</span>
                   <span style={{fontFamily:'var(--font-mono)'}}>NT$ {cashBack.toLocaleString()}</span>
                 </div>
               </div>
@@ -144,7 +145,7 @@ export default function RefundModal({ order, onClose, onRefund, session, priorRe
           <button className="btn btn-primary" style={{width:'100%', padding:12, background:'var(--red)', opacity: refundItems.length === 0 || submitting ? 0.4 : 1}}
             disabled={refundItems.length === 0 || submitting}
             onClick={handleSubmit}>
-            {submitting ? '處理中...' : '確認退貨'}
+            {submitting ? tr("處理中...") : tr("確認退貨")}
           </button>
         </div>
       </div>

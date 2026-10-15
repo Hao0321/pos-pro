@@ -11,12 +11,13 @@
   <div id="app">
     <header id="header">
       <h1 id="store-name">載入中...</h1>
-      <p class="subtitle">線上點餐系統</p>
+      <p class="subtitle" data-i18n="線上點餐系統">線上點餐系統</p>
+      <div class="menu-preferences"><label><span data-i18n="語言">語言</span><select id="menu-language" aria-label="語言"><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option><option value="zh-CN">简体中文</option></select></label><label><span data-i18n="介面風格">介面風格</span><select id="menu-style" aria-label="介面風格"><option value="poster" data-i18n="海報風格">海報風格</option><option value="simple" data-i18n="明亮簡約">明亮簡約</option></select></label></div><p id="preference-warning" role="status"></p>
     </header>
 
     <!-- 搜尋 -->
     <div class="search-bar">
-      <input type="text" id="search-input" placeholder="搜尋商品..."/>
+      <input type="text" id="search-input" placeholder="搜尋商品..." data-i18n-placeholder="搜尋商品..."/>
     </div>
 
     <!-- 分類選擇 -->
@@ -38,13 +39,13 @@
     <div id="cart-overlay" class="cart-overlay" data-action="toggleCart"></div>
     <div id="cart-panel" class="cart-panel">
       <div class="cart-header">
-        <h2>購物車</h2>
+        <h2 data-i18n="購物車">購物車</h2>
         <button data-action="toggleCart" class="close-btn">&times;</button>
       </div>
       <div id="cart-items" class="cart-items"></div>
       <div id="cart-footer" class="cart-footer">
         <div class="cart-total">
-          <span>合計</span>
+          <span data-i18n="合計">合計</span>
           <span id="cart-total-amount">$0</span>
         </div>
         <button id="checkout-btn" class="checkout-btn" data-action="submitOrder" disabled>
@@ -56,24 +57,24 @@
     <!-- 訂單提交表單 -->
     <div id="order-form-overlay" class="order-form-overlay" style="display:none">
       <div class="order-form">
-        <h2>確認訂單</h2>
+        <h2 data-i18n="確認訂單">確認訂單</h2>
         <div class="form-group">
-          <label>您的姓名（選填）</label>
-          <input type="text" id="customer-name" placeholder="方便取餐時叫號">
+          <label for="customer-name" data-i18n="您的姓名（選填）">您的姓名（選填）</label>
+          <input type="text" id="customer-name" placeholder="方便取餐時叫號" data-i18n-placeholder="方便取餐時叫號">
         </div>
         <div class="form-group">
-          <label>桌號 / 備註（選填）</label>
-          <input type="text" id="table-num" placeholder="例如: 3號桌">
+          <label for="table-num" data-i18n="桌號 / 備註（選填）">桌號 / 備註（選填）</label>
+          <input type="text" id="table-num" placeholder="例如: 3號桌" data-i18n-placeholder="例如: 3號桌">
         </div>
         <div class="form-group">
-          <label>備註</label>
-          <textarea id="order-note" placeholder="特殊需求..." rows="2"></textarea>
+          <label for="order-note" data-i18n="備註">備註</label>
+          <textarea id="order-note" placeholder="特殊需求..." data-i18n-placeholder="特殊需求..." rows="2"></textarea>
         </div>
         <div class="form-total">
-          合計: <strong id="form-total">$0</strong>
+          <span data-i18n="合計">合計</span>: <strong id="form-total">NT$ 0</strong>
         </div>
         <div class="form-actions">
-          <button data-action="closeOrderForm" class="btn-secondary">取消</button>
+          <button data-action="closeOrderForm" class="btn-secondary" data-i18n="取消">取消</button>
           <button data-action="confirmOrder" class="btn-primary">確認送出</button>
         </div>
       </div>
@@ -83,14 +84,14 @@
     <div id="order-success" class="order-success" style="display:none">
       <div class="success-content">
         <div class="success-icon">&#10003;</div>
-        <h2>訂單已送出!</h2>
+        <h2 data-i18n="訂單已送出!">訂單已送出!</h2>
         <p id="success-order-id"></p>
         <p id="success-status" class="status-text">等待店家確認中...</p>
-        <button data-action="resetApp" class="btn-primary">繼續點餐</button>
+        <button data-action="resetApp" class="btn-primary" data-i18n="繼續點餐">繼續點餐</button>
       </div>
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

@@ -1,3 +1,4 @@
+import {tr} from "../i18n"
 import { useState } from "react"
 import { Shield, Users, Database, FileText, Printer, Wifi, Settings as Cog, Gift, Cloud } from "lucide-react"
 import { ROLES } from "../utils/security"
@@ -30,13 +31,12 @@ export default function SettingsPage({ session, onLogout, store }) {
     <div style={ss.root}>
       <div style={ss.header}>
         <div>
-          <h2 className="page-title" style={ss.title}>系統設定</h2>
-          <div style={{fontSize:12,color:'var(--text-tertiary)',marginTop:2}}>
-            登入身份：<span style={{color:ROLES[session.role]?.color}}>{session.username}</span>
-            <span style={{color:'var(--text-tertiary)'}}> · {ROLES[session.role]?.label}</span>
+          <h2 className="page-title" style={ss.title}>{tr("系統設定")}</h2>
+          <div style={{fontSize:12,color:'var(--text-tertiary)',marginTop:2}}>{tr("登入身份：")}<span style={{color:ROLES[session.role]?.color}}>{session.username}</span>
+            <span style={{color:'var(--text-tertiary)'}}> · {tr(ROLES[session.role]?.label)}</span>
           </div>
         </div>
-        <button className="btn btn-ghost btn-sm" style={{color:'var(--red)'}} onClick={onLogout}>登出</button>
+        <button className="btn btn-ghost btn-sm" style={{color:'var(--red)'}} onClick={onLogout}>{tr("登出")}</button>
       </div>
 
       <div style={ss.tabBar}>
@@ -47,7 +47,7 @@ export default function SettingsPage({ session, onLogout, store }) {
             color: tab===key?'var(--text-primary)':'var(--text-tertiary)',
             borderBottom:`2px solid ${tab===key?'var(--gold)':'transparent'}`,
           }}>
-            <Icon size={14}/>{label}
+            <Icon size={14}/>{tr(label)}
           </button>
         ))}
       </div>

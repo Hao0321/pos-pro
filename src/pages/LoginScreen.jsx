@@ -1,3 +1,4 @@
+import {tr,trMessage,getLocale} from "../i18n"
 import { browserStorage } from '../utils/browserStorage'
 import { useState, useEffect } from 'react'
 import { Eye, EyeOff, AlertTriangle, Shield } from 'lucide-react'
@@ -7,6 +8,7 @@ import { initAccounts, setupAccount } from '../utils/accountBootstrap'
 import { isElectron } from '../utils/dataAccess'
 import useIsMobile from '../hooks/useIsMobile'
 import { version } from '../../package.json'
+import DisplayPreferences from '../components/DisplayPreferences'
 
 export default function LoginScreen({ onLogin }) {
   const [username, setUsername] = useState('')
@@ -63,37 +65,38 @@ export default function LoginScreen({ onLogin }) {
     return () => clearInterval(t)
   }, [])
 
-  const timeStr = now.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false })
-  const dateStr = now.toLocaleDateString('zh-TW', { year:'numeric', month:'long', day:'numeric', weekday:'long' })
+  const timeStr = now.toLocaleTimeString(getLocale(), { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false })
+  const dateStr = now.toLocaleDateString(getLocale(), { year:'numeric', month:'long', day:'numeric', weekday:'long' })
 
   return (
     <div className="login-screen">
       {!isMobile&&<section className="login-left"><div className="login-left-inner">
         <Brand/>
-        <div className="login-headline"><p>所有店家，全部功能免費。</p><h1>顧好店。<br/><span>照顧客人。</span></h1><p>收銀、ERP、點餐與會員 CRM，<br/>在同一間店裡，順順地接起來。</p></div>
-        <div className="login-poster" aria-hidden="true"><span>ERP.</span><span>CRM.</span><span>點餐。</span><i/><i/><i/></div>
+        <div className="login-headline"><p>{tr("所有店家，全部功能免費。")}</p><h1>{tr("顧好店。")}<br/><span>{tr("照顧客人。")}</span></h1><p>{tr("收銀、ERP、點餐與會員 CRM，")}<br/>{tr("在同一間店裡，順順地接起來。")}</p></div>
+        <div className="login-poster" aria-hidden="true"><span>ERP.</span><span>CRM.</span><span>{tr("點餐。")}</span><i/><i/><i/></div>
         <div className="login-meta"><span>{dateStr}</span><span className="mono">{timeStr}</span></div>
         <p className="login-version">POS Pro / v{version}</p>
       </div></section>}
       <div className="login-right"><div className="login-card">
+        <DisplayPreferences/>
         <div className="login-form-heading">
           {isMobile&&<div className="login-mobile-brand"><Brand compact/></div>}
-          <p className="login-kicker">開始今天的營運</p>
-          <h2>{accountsReady&&!users.length?'建立你的店':'歡迎回來'}</h2>
-          <p>{accountsReady&&!users.length?'先設定店主帳號，就能開始使用。':'選帳號，輸入密碼就能繼續。'}</p>
+          <p className="login-kicker">{tr("開始今天的營運")}</p>
+          <h2>{accountsReady&&!users.length?tr("建立你的店"):tr("歡迎回來")}</h2>
+          <p>{accountsReady&&!users.length?tr("先設定店主帳號，就能開始使用。"):tr("選帳號，輸入密碼就能繼續。")}</p>
         </div>
 
           {error && (
             <div style={ls.errorBanner} className="animate-pop">
               <AlertTriangle size={14} style={{flexShrink:0}}/>
-              <span>{error}</span>
+              <span>{trMessage(error)}</span>
             </div>
           )}
 
           <form onSubmit={handleLogin} style={{display:'flex', flexDirection:'column', gap:18}}>
             <div>
-              <div className="section-title">身份</div>
-              {accountsReady && !users.length && <input className="field" value={username} onChange={e=>setUsername(e.target.value)} placeholder="建立管理員名稱" autoComplete="username"/>}
+              <div className="section-title">{tr("身份")}</div>
+              {accountsReady && !users.length && <input className="field" value={username} onChange={e=>setUsername(e.target.value)} placeholder={tr("建立管理員名稱")} autoComplete="username"/>}
               <div style={{display:'flex', gap:10}}>
                 {users.map(u => {
                   const active = username === u.username
@@ -129,7 +132,7 @@ export default function LoginScreen({ onLogin }) {
                         {u.username}
                       </span>
                       <span style={{fontSize:10.5, color:'var(--text-tertiary)', fontWeight:500, letterSpacing:'.03em'}}>
-                        {u.role === 'owner' ? '全部權限' : '基本操作'}
+                        {u.role === 'owner' ? tr("全部權限") : tr("基本操作")}
                       </span>
                     </button>
                   )
@@ -138,11 +141,11 @@ export default function LoginScreen({ onLogin }) {
             </div>
 
             <div>
-              <div className="section-title">密碼</div>
+              <div className="section-title">{tr("密碼")}</div>
               <div style={ls.pwWrap}>
                 <input type={showPw ? 'text' : 'password'} className="field"
                   value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder="輸入密碼"
+                  placeholder={tr("輸入密碼")}
                   style={{flex:1, fontSize:15, padding:'13px 16px', paddingRight:48, fontFamily:showPw?'inherit':'var(--font-mono)', letterSpacing: showPw?'normal':'.2em'}}
                   autoComplete="current-password"/>
                 <button type="button" onClick={() => setShowPw(v=>!v)}
@@ -152,17 +155,17 @@ export default function LoginScreen({ onLogin }) {
               </div>
             </div>
 
-            {needsPasswordChange && <input type="password" className="field" value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="設定至少 8 字元的新密碼" autoComplete="new-password"/>}
+            {needsPasswordChange && <input type="password" className="field" value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder={tr("設定至少 8 字元的新密碼")} autoComplete="new-password"/>}
             <button type="submit" className="btn btn-primary btn-lg"
               disabled={loading || !accountsReady || !username || !password}
               style={{width:'100%', marginTop:8}}>
-              {loading ? '驗證中...' : users.length ? '登入系統' : '建立管理員並開始'}
+              {loading ? tr("驗證中...") : users.length ? tr("登入系統") : tr("建立管理員並開始")}
             </button>
           </form>
 
           <div style={ls.secNote}>
             <Shield size={12} style={{flexShrink:0}}/>
-            <span>首次使用請建立自己的管理員；更新會保留既有帳號。</span>
+            <span>{tr("首次使用請建立自己的管理員；更新會保留既有帳號。")}</span>
           </div>
         </div>
       </div>

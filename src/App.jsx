@@ -1,3 +1,4 @@
+import {tr,trMessage} from "./i18n"
 import { browserStorage } from './utils/browserStorage'
 import { useState, useEffect, useCallback } from 'react'
 import { Menu, X, Cloud } from 'lucide-react'
@@ -27,9 +28,12 @@ import ShiftPage from './pages/ShiftPage'
 import WastePage from './pages/WastePage'
 import { isElectron } from './utils/dataAccess'
 import useIsMobile from './hooks/useIsMobile'
+import {useDisplayPreferences} from './i18n'
 
 
 export default function App() {
+  const {locale}=useDisplayPreferences()
+  useEffect(()=>{document.title=tr('POS Pro｜ERP・點餐・CRM')},[locale])
   const [session, setSession] = useState(() => isElectron ? null : getSession())
   const [incomingDraft,setIncomingDraft]=useState('')
   const consumeIncoming=useCallback(raw=>setIncomingDraft(current=>current===raw?'':current),[])
@@ -97,11 +101,9 @@ export default function App() {
   }, [setView])
 
   if (!session) return <LoginScreen onLogin={handleLogin}/>
-  if (store.dataError) return <div role="alert" style={{padding:30}}><h2>資料需要核對</h2><p>{store.dataError}</p><button onClick={()=>location.reload()}>重新載入</button></div>
+  if (store.dataError) return <div role="alert" style={{padding:30}}><h2>{tr("資料需要核對")}</h2><p>{store.dataError}</p><button onClick={()=>location.reload()}>{tr("重新載入")}</button></div>
   if (!store.ready) return (
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',background:'var(--bg-base)',color:'var(--text-secondary)',fontSize:14}}>
-      載入中...
-    </div>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',background:'var(--bg-base)',color:'var(--text-secondary)',fontSize:14}}>{tr("載入中...")}</div>
   )
   const can = (perm) => hasPermission(session, perm)
 
@@ -134,21 +136,21 @@ export default function App() {
       )}
 
       <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column', minWidth:0 }}>
-        {!sharedConnected&&<div role="alert" style={{padding:12,background:'var(--red-dim)'}}>連不上店面電腦。請恢復店面 Wi-Fi；未確認的交易請沿用原單號核對。</div>}
-        {store.financialState.phase!=='idle'&&<div role="alert" style={{padding:12,background:'var(--gold-dim)'}}>{store.financialState.message} {store.financialState.id} {store.financialState.phase==='uncertain'&&<button onClick={()=>store.retryFinancial().catch(e=>alert(e.message))}>原編號重試保存異動</button>}</div>}
-        {backupIssue&&session.role==='owner'&&<div role="alert" style={{padding:10,background:'var(--amber-dim)'}}>自動備份未完成。<button onClick={()=>handleNavChange('readiness')}>查看與補做備份</button></div>}
+        {!sharedConnected&&<div role="alert" style={{padding:12,background:'var(--red-dim)'}}>{tr("連不上店面電腦。請恢復店面 Wi-Fi；未確認的交易請沿用原單號核對。")}</div>}
+        {store.financialState.phase!=='idle'&&<div role="alert" style={{padding:12,background:'var(--gold-dim)'}}>{trMessage(store.financialState.message)} {store.financialState.id} {store.financialState.phase==='uncertain'&&<button onClick={()=>store.retryFinancial().catch(e=>alert(trMessage(e.message)))}>{tr("原編號重試保存異動")}</button>}</div>}
+        {backupIssue&&session.role==='owner'&&<div role="alert" style={{padding:10,background:'var(--amber-dim)'}}>{tr("自動備份未完成。")}<button onClick={()=>handleNavChange('readiness')}>{tr("查看與補做備份")}</button></div>}
         {store.checkoutState.phase !== 'idle' && <div role="alert" style={{padding:12,background:'var(--gold-dim)'}}>
-          {store.checkoutState.message} {store.checkoutState.orderId}
-          {store.checkoutState.phase === 'uncertain' && <><button onClick={()=>store.reconcileCheckout().catch(e=>alert(e.message))}>查詢原交易</button><button onClick={()=>store.retryCheckout().catch(e=>alert(e.message))}>原單號重試保存</button></>}
+          {trMessage(store.checkoutState.message)} {store.checkoutState.orderId}
+          {store.checkoutState.phase === 'uncertain' && <><button onClick={()=>store.reconcileCheckout().catch(e=>alert(trMessage(e.message)))}>{tr("查詢原交易")}</button><button onClick={()=>store.retryCheckout().catch(e=>alert(trMessage(e.message)))}>{tr("原單號重試保存")}</button></>}
         </div>}
         {isMobile && (
           <div style={mob.topBar}>
-            <button aria-label={menuOpen?'關閉功能選單':'開啟功能選單'} onClick={() => setMenuOpen(v => !v)} style={mob.menuBtn}>
+            <button aria-label={menuOpen?tr("關閉功能選單"):tr("開啟功能選單")} onClick={() => setMenuOpen(v => !v)} style={mob.menuBtn}>
               {menuOpen ? <X size={20}/> : <Menu size={20}/>}
             </button>
-            {view==='dashboard'?<div style={mob.topTitle}>首頁</div>:<button className="btn btn-ghost" style={{minHeight:48}} onClick={()=>handleNavChange('dashboard')}>回首頁</button>}
-            {view!=='dashboard'&&<span style={{...mob.topTitle,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{NAV_LABELS[view]||'POS'}</span>}
-            <button className="btn btn-ghost" aria-label="切換大字模式" aria-pressed={largeText} onClick={()=>setLargeText(v=>!v)} style={{minHeight:48,minWidth:48,fontSize:16}}>大字</button>
+            {view==='dashboard'?<div style={mob.topTitle}>{tr("首頁")}</div>:<button className="btn btn-ghost" style={{minHeight:48}} onClick={()=>handleNavChange('dashboard')}>{tr("回首頁")}</button>}
+            {view!=='dashboard'&&<span style={{...mob.topTitle,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{tr(NAV_LABELS[view]||'POS')}</span>}
+            <button className="btn btn-ghost" aria-label={tr("切換大字模式")} aria-pressed={largeText} onClick={()=>setLargeText(v=>!v)} style={{minHeight:48,minWidth:48,fontSize:16}}>{tr("大字")}</button>
           </div>
         )}
         {/* Quick entry locks its fields while retaining the same-document recovery action. */}
@@ -184,13 +186,13 @@ export default function App() {
             }}/>
             <div style={{textAlign:'center'}}>
               <div style={{fontWeight:600, fontSize:15}}>
-                {autoSync === 'syncing' && '同步雲端資料中...'}
-                {autoSync === 'done' && '✓ 同步完成，重新載入中'}
-                {autoSync === 'failed' && '雲端同步失敗，使用本機資料'}
+                {autoSync === 'syncing' && tr("同步雲端資料中...")}
+                {autoSync === 'done' && tr("✓ 同步完成，重新載入中")}
+                {autoSync === 'failed' && tr("雲端同步失敗，使用本機資料")}
               </div>
               <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:4}}>
-                {autoSync === 'syncing' && '從雲端拉取最新資料'}
-                {autoSync === 'failed' && '檢查網路或稍後再從設定手動同步'}
+                {autoSync === 'syncing' && tr("從雲端拉取最新資料")}
+                {autoSync === 'failed' && tr("檢查網路或稍後再從設定手動同步")}
               </div>
             </div>
           </div>

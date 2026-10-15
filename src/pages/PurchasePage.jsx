@@ -1,3 +1,4 @@
+import {tr,trMessage} from "../i18n"
 import { browserStorage } from "../utils/browserStorage"
 import { useState, useEffect, useRef } from "react"
 import { writeAuditLog } from "../utils/security"
@@ -74,20 +75,20 @@ export default function PurchasePage({ store, session }) {
     <div style={ps.root}>
       <div style={ps.header}>
         <div>
-          <h2 className="page-title" style={ps.title}>進貨管理</h2>
+          <h2 className="page-title" style={ps.title}>{tr("進貨管理")}</h2>
           <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
-            {pending.length} 張待處理 · 待付款 NT$ {totalOwed.toLocaleString()}
+            {pending.length}{tr(" 張待處理 · 待付款 NT$ ")}{totalOwed.toLocaleString()}
           </div>
         </div>
         <div style={{display:'flex', gap:8,flexWrap:'wrap',minWidth:0}}>
           {[['list','進貨單'],...(canEdit?[['new','+ 新增'],['suppliers','供應商']]:[]),['payable','應付帳款']].map(([k,l])=>(
-            <button key={k} onClick={()=>{setTab(k);setSelected(null)}} className={`btn btn-sm ${tab===k?'btn-primary':'btn-ghost'}`}>{l}</button>
+            <button key={k} onClick={()=>{setTab(k);setSelected(null)}} className={`btn btn-sm ${tab===k?'btn-primary':'btn-ghost'}`}>{tr(l)}</button>
           ))}
         </div>
       </div>
 
       {tab === 'list'      && <PurchaseList purchases={purchases} selected={selected} onSelect={setSelected} onReceive={canEdit?setReceiving:null} renderProcurement={po=><ProcurementPanel key={po.id} po={po} onCommand={commitInventory} openShift={store.openShift} readOnly={!canEdit}/>}/>}
-      {saveError&&!receiving&&<p role="alert" style={{color:'var(--red)'}}>{saveError}</p>}
+      {saveError&&!receiving&&<p role="alert" style={{color:'var(--red)'}}>{trMessage(saveError)}</p>}
       {tab === 'new'       && <NewPurchase  products={products} suppliers={suppliers} purchases={purchases} orders={orders} onSave={async po=>{creatingId.current=po.id;const r=await commitInventory('purchase-create',{purchase:po});setSelected(r.purchase);setTab('list')}}/>}
       {tab === 'suppliers' && <SupplierList suppliers={suppliers} products={products} purchases={purchases} onSave={saveSuppliers} onGoInventory={()=>store.setView?.('inventory')}/>}
       {tab === 'payable'   && <PayableTab purchases={purchases} suppliers={suppliers} readOnly={!canEdit} onOpen={po=>{setSelected(po);setTab('list')}} onMarkPaid={async(id)=>{

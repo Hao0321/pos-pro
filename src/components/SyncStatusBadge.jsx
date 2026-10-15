@@ -1,3 +1,4 @@
+import {tr,trMessage} from "../i18n"
 import { browserStorage } from '../utils/browserStorage'
 import { useState, useEffect } from 'react'
 import { Cloud, CloudOff, ArrowUp, ArrowDown, RefreshCw, Check } from 'lucide-react'
@@ -53,7 +54,7 @@ export default function SyncStatusBadge({ onGoToSettings }) {
 
   async function handlePull() {
     if (busy) return
-    if (!confirm('從雲端拉取會覆蓋本機資料，確認？')) return
+    if (!confirm(tr("從雲端拉取會覆蓋本機資料，確認？"))) return
     setBusy('pull')
     setFeedback('')
     try {
@@ -73,10 +74,10 @@ export default function SyncStatusBadge({ onGoToSettings }) {
       <button
         onClick={onGoToSettings}
         style={styles.box}
-        title="尚未設定雲端同步，點此前往設定"
+        title={tr("尚未設定雲端同步，點此前往設定")}
       >
         <CloudOff size={13} style={{color:'var(--text-tertiary)', flexShrink:0}}/>
-        <span style={{fontSize:11, color:'var(--text-tertiary)', flex:1}}>未連線雲端</span>
+        <span style={{fontSize:11, color:'var(--text-tertiary)', flex:1}}>{tr("未連線雲端")}</span>
       </button>
     )
   }
@@ -94,7 +95,7 @@ export default function SyncStatusBadge({ onGoToSettings }) {
         )}
         <div style={{flex:1, minWidth:0, textAlign:'left'}}>
           <div style={{fontSize:11, color:'var(--text-secondary)', fontWeight:600}}>
-            {busy === 'push' ? '推送中...' : busy === 'pull' ? '拉取中...' : '雲端已連線'}
+            {busy === 'push' ? tr("推送中...") : busy === 'pull' ? tr("拉取中...") : tr("雲端已連線")}
           </div>
           <div style={{fontSize:10, color:'var(--text-tertiary)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
             {formatAgo(lastSync)}
@@ -104,12 +105,10 @@ export default function SyncStatusBadge({ onGoToSettings }) {
 
       {open && !busy && (
         <div style={styles.actions}>
-          <button onClick={handlePush} style={{...styles.actionBtn, color:'var(--blue)'}} title="把本機改動推到雲端">
-            <ArrowUp size={12}/>推送
-          </button>
-          <button onClick={handlePull} style={{...styles.actionBtn, color:'var(--amber)'}} title="從雲端拉最新（覆蓋本機）">
-            <ArrowDown size={12}/>拉取
-          </button>
+          <button onClick={handlePush} style={{...styles.actionBtn, color:'var(--blue)'}} title={tr("把本機改動推到雲端")}>
+            <ArrowUp size={12}/>{tr("推送")}</button>
+          <button onClick={handlePull} style={{...styles.actionBtn, color:'var(--amber)'}} title={tr("從雲端拉最新（覆蓋本機）")}>
+            <ArrowDown size={12}/>{tr("拉取")}</button>
         </div>
       )}
 
@@ -119,7 +118,7 @@ export default function SyncStatusBadge({ onGoToSettings }) {
           background: feedback.startsWith('✗') ? 'var(--red-dim)' : 'var(--green-dim)',
           color: feedback.startsWith('✗') ? 'var(--red)' : 'var(--green)',
           margin:'0 14px',
-        }}>{feedback}</div>
+        }}>{trMessage(feedback)}</div>
       )}
     </div>
   )

@@ -1,22 +1,18 @@
+import {tr,trMessage} from "../../i18n"
 import { useState, useEffect, useRef } from "react"
-import { Sun, Moon, Gift } from "lucide-react"
+import { Gift } from "lucide-react"
 import { getSetting, setSetting, setSettings } from "../../utils/dataAccess"
-import { getTheme, applyTheme } from "../../utils/theme"
+import DisplayPreferences from '../../components/DisplayPreferences'
 import { Section, FieldLabel } from "./controls.jsx"
 
 export function GeneralTab({ session }) {
   const saving=useRef(false)
-  const [theme, setTheme] = useState(getTheme())
   const [salesGoal, setSalesGoal] = useState('')
   const [savedMsg, setSavedMsg] = useState('')
 
   useEffect(() => {
     getSetting('dailySalesGoal').then(v => setSalesGoal(v??'')).catch(e=>setSavedMsg('讀取未完成：'+e.message))
   }, [])
-
-  function changeTheme(t) {
-    try{applyTheme(t);setTheme(t)}catch(e){setSavedMsg('偏好保存未完成：'+e.message)}
-  }
 
   async function saveGoal() {
     if(saving.current)return;saving.current=true
@@ -30,54 +26,25 @@ export function GeneralTab({ session }) {
 
   return (
     <div style={{padding:'0 24px', overflowY:'auto', height:'100%'}}>
-      <Section title="外觀">
-        <div style={{display:'flex', gap:12}}>
-          <button onClick={()=>changeTheme('light')} style={{
-            flex:1, padding:'14px 16px', borderRadius:10, display:'flex', alignItems:'center', gap:10,
-            border:`2px solid ${theme==='light' ? 'var(--gold)' : 'var(--border-subtle)'}`,
-            background: theme==='light' ? 'var(--gold-dim)' : 'var(--bg-raised)',
-            cursor:'pointer',
-          }}>
-            <Sun size={18} color="var(--amber)"/>
-            <div style={{textAlign:'left'}}>
-              <div style={{fontWeight:600, fontSize:14}}>淺色模式</div>
-              <div style={{fontSize:11, color:'var(--text-tertiary)'}}>米白底 + 棕色點綴</div>
-            </div>
-          </button>
-          <button onClick={()=>changeTheme('dark')} style={{
-            flex:1, padding:'14px 16px', borderRadius:10, display:'flex', alignItems:'center', gap:10,
-            border:`2px solid ${theme==='dark' ? 'var(--gold)' : 'var(--border-subtle)'}`,
-            background: theme==='dark' ? 'var(--gold-dim)' : 'var(--bg-raised)',
-            cursor:'pointer',
-          }}>
-            <Moon size={18} color="var(--blue)"/>
-            <div style={{textAlign:'left'}}>
-              <div style={{fontWeight:600, fontSize:14}}>深色模式</div>
-              <div style={{fontSize:11, color:'var(--text-tertiary)'}}>暗色背景 + 金色點綴</div>
-            </div>
-          </button>
-        </div>
-      </Section>
+      <Section title={tr("語言與外觀")}><DisplayPreferences/></Section>
 
-      <Section title="每日銷售目標">
+      <Section title={tr("每日銷售目標")}>
         <div style={{display:'flex', gap:8, alignItems:'center'}}>
-          <span style={{fontSize:13, color:'var(--text-secondary)', minWidth:60}}>目標金額</span>
-          <input className="field" type="number" value={salesGoal} onChange={e=>setSalesGoal(e.target.value)} placeholder="例：30000" style={{flex:1, maxWidth:200}}/>
+          <span style={{fontSize:13, color:'var(--text-secondary)', minWidth:60}}>{tr("目標金額")}</span>
+          <input className="field" type="number" value={salesGoal} onChange={e=>setSalesGoal(e.target.value)} placeholder={tr("例：30000")} style={{flex:1, maxWidth:200}}/>
           <span style={{fontSize:13, color:'var(--text-tertiary)'}}>NT$</span>
-          <button className="btn btn-primary btn-sm" onClick={saveGoal}>儲存</button>
-          {savedMsg && <span style={{fontSize:12, color:'var(--green)'}}>{savedMsg}</span>}
+          <button className="btn btn-primary btn-sm" onClick={saveGoal}>{tr("儲存")}</button>
+          {savedMsg && <span style={{fontSize:12, color:'var(--green)'}}>{trMessage(savedMsg)}</span>}
         </div>
-        <p style={{fontSize:12, color:'var(--text-tertiary)', marginTop:8}}>
-          設定後會在首頁儀表板顯示達成進度
-        </p>
+        <p style={{fontSize:12, color:'var(--text-tertiary)', marginTop:8}}>{tr("設定後會在首頁儀表板顯示達成進度")}</p>
       </Section>
 
-      <Section title="鍵盤快捷鍵">
+      <Section title={tr("鍵盤快捷鍵")}>
         <div style={{fontSize:13, color:'var(--text-secondary)', lineHeight:2}}>
-          <div><kbd style={kbdStyle}>F1</kbd> 快速查價</div>
-          <div><kbd style={kbdStyle}>F2</kbd> 掛單</div>
-          <div><kbd style={kbdStyle}>F3</kbd> 取單列表</div>
-          <div><kbd style={kbdStyle}>Esc</kbd> 關閉對話框</div>
+          <div><kbd style={kbdStyle}>F1</kbd>{tr(" 快速查價")}</div>
+          <div><kbd style={kbdStyle}>F2</kbd>{tr(" 掛單")}</div>
+          <div><kbd style={kbdStyle}>F3</kbd>{tr(" 取單列表")}</div>
+          <div><kbd style={kbdStyle}>Esc</kbd>{tr(" 關閉對話框")}</div>
         </div>
       </Section>
     </div>
@@ -120,44 +87,38 @@ export function BusinessTab({ session, store }) {
 
   return (
     <div style={{padding:'0 24px', overflowY:'auto', height:'100%'}}>
-      <Section title="會員點數規則">
+      <Section title={tr("會員點數規則")}>
         <div style={{padding:'16px 18px', background:'var(--gold-glow)', border:'1px solid var(--gold-dim)', borderRadius:8, marginBottom:14}}>
           <div style={{fontSize:13, fontWeight:600, marginBottom:10, color:'var(--gold-bright)'}}>
-            <Gift size={14} style={{verticalAlign:'middle', marginRight:6}}/>
-            目前規則
-          </div>
+            <Gift size={14} style={{verticalAlign:'middle', marginRight:6}}/>{tr("目前規則")}</div>
           <div style={{fontSize:13, color:'var(--text-secondary)', lineHeight:1.8}}>
-            <div>• 消費每 NT$ <strong style={{color:'var(--gold)'}}>{earn}</strong> 元 → 獲得 1 點</div>
-            <div>• 1 點 → 折抵 NT$ <strong style={{color:'var(--gold)'}}>{redeem}</strong> 元</div>
+            <div>{tr("• 消費每 NT$ ")}<strong style={{color:'var(--gold)'}}>{earn}</strong>{tr(" 元 → 獲得 1 點")}</div>
+            <div>{tr("• 1 點 → 折抵 NT$ ")}<strong style={{color:'var(--gold)'}}>{redeem}</strong>{tr(" 元")}</div>
           </div>
         </div>
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
           <div>
-            <FieldLabel>消費 X 元 = 1 點</FieldLabel>
+            <FieldLabel>{tr("消費 X 元 = 1 點")}</FieldLabel>
             <input className="field" type="number" value={earn} onChange={e=>setEarn(e.target.value)}/>
           </div>
           <div>
-            <FieldLabel>1 點折抵金額 (元)</FieldLabel>
+            <FieldLabel>{tr("1 點折抵金額 (元)")}</FieldLabel>
             <input className="field" type="number" step="0.5" value={redeem} onChange={e=>setRedeem(e.target.value)}/>
           </div>
         </div>
       </Section>
 
-      <Section title="會員生日贈點">
+      <Section title={tr("會員生日贈點")}>
         <div style={{display:'flex', gap:8, alignItems:'center'}}>
-          <span style={{fontSize:13, color:'var(--text-secondary)', minWidth:140}}>生日當月可獲得</span>
+          <span style={{fontSize:13, color:'var(--text-secondary)', minWidth:140}}>{tr("生日當月可獲得")}</span>
           <input className="field" type="number" value={birthdayBonus} onChange={e=>setBirthdayBonus(e.target.value)} style={{width:120}}/>
-          <span style={{fontSize:13, color:'var(--text-tertiary)'}}>點</span>
+          <span style={{fontSize:13, color:'var(--text-tertiary)'}}>{tr("點")}</span>
         </div>
-        <p style={{fontSize:12, color:'var(--text-tertiary)', marginTop:8}}>
-          會員在生日當月首次消費時自動加贈
-        </p>
+        <p style={{fontSize:12, color:'var(--text-tertiary)', marginTop:8}}>{tr("會員在生日當月首次消費時自動加贈")}</p>
       </Section>
 
-      <button className="btn btn-primary" onClick={save} style={{padding:'10px 24px'}}>
-        儲存設定
-      </button>
-      {savedMsg && <span style={{marginLeft:12, fontSize:13, color:'var(--green)'}}>{savedMsg}</span>}
+      <button className="btn btn-primary" onClick={save} style={{padding:'10px 24px'}}>{tr("儲存設定")}</button>
+      {savedMsg && <span style={{marginLeft:12, fontSize:13, color:'var(--green)'}}>{trMessage(savedMsg)}</span>}
     </div>
   )
 }

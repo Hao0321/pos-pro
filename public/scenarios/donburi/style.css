@@ -155,3 +155,12 @@ th,td{padding:12px 13px}
 .demo-banner{border-color:#b6b0f3;background:#e8e5ff;color:#2115c8}.demo-pill{background:#2b20f4;color:#fff}.small-button{border-color:#b6b0f3;color:#2115c8}
 input:focus,select:focus{outline:2px solid #2b20f4;border-color:#2b20f4}
 @media(max-width:700px){h1{font-size:28px}}
+html[data-ui-style="simple"]{--ink:#17283f;--muted:#455b77;--green:#235dcc;--pale:#ebf2ff;--bg:#f5f8fc;--line:#dce4ef;--paper:#fff}
+[data-ui-style="simple"] .sidebar{background:#fff;color:#17283f;border-right:1px solid #dce4ef}
+[data-ui-style="simple"] .sidebar :is(.brand small,.space-label,.sidebar-note,.nav-button){color:#455b77}
+[data-ui-style="simple"] .sidebar .nav-button.active{background:#ebf2ff;color:#174fae}
+[data-ui-style="simple"] :is(.metric,.panel,.ticket){border-radius:12px;box-shadow:0 3px 12px #17283f06}
+[data-ui-style="simple"] :is(.primary-button,.secondary-button,.danger-button,.small-button,input,select){border-radius:8px}
+[data-ui-style="simple"] .topbar{border-bottom:1px solid #dce4ef}
+[data-ui-style="simple"] .demo-banner{background:#ebf2ff;color:#174fae;border-color:#c5d7fa}
+[data-ui-style="simple"] .demo-pill{background:#235dcc}
