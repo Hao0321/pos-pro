@@ -29,7 +29,7 @@ function offlineShell() {
 export default defineConfig({
   plugins: [react(),offlineShell()],
   base: './',
-  test: { exclude: ['**/node_modules/**','**/.git/**','**/.rd/**','**/dist/**','**/release/**','**/build/**'] },
+  test: { setupFiles:['./tests/setup-locale.js'], exclude: ['**/node_modules/**','**/.git/**','**/.rd/**','**/dist/**','**/release/**','**/build/**'] },
   server: { host: '127.0.0.1' },
   build: {
     outDir: 'dist',

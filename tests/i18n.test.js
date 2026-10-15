@@ -2,7 +2,7 @@
 import {beforeEach,afterEach,describe,it,expect,vi} from 'vitest'
 import messages from '../public/i18n/messages.mjs'
 
-beforeEach(()=>{vi.resetModules();localStorage.clear();document.documentElement.removeAttribute('data-ui-style')})
+beforeEach(()=>{vi.resetModules();localStorage.clear();vi.stubGlobal('navigator',{languages:['zh-TW'],language:'zh-TW'});document.documentElement.removeAttribute('data-ui-style')})
 afterEach(()=>vi.unstubAllGlobals())
 describe('device-local display preferences',()=>{
   it('keeps the existing Chinese poster default',async()=>{const p=await import('../public/i18n/preferences.mjs');p.initDisplayPreferences();expect(p.getDisplayPreferences()).toEqual({locale:'zh-TW',style:'poster'});expect(document.documentElement.lang).toBe('zh-TW')})
@@ -14,6 +14,49 @@ describe('device-local display preferences',()=>{
   it('propagates cross-tab preferences and releases subscriptions',async()=>{const p=await import('../public/i18n/preferences.mjs'),fn=vi.fn(),stop=p.subscribeDisplayPreferences(fn);localStorage.setItem(p.DISPLAY_KEY,JSON.stringify({locale:'ja',style:'simple'}));dispatchEvent(new StorageEvent('storage',{key:p.DISPLAY_KEY}));expect(p.getDisplayPreferences().locale).toBe('ja');expect(document.documentElement.lang).toBe('ja');stop();p.setDisplayPreferences({locale:'en'});expect(fn).toHaveBeenCalledTimes(1)})
   it('boots with light mode when theme storage is denied',async()=>{vi.stubGlobal('localStorage',{getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}});const t=await import('../src/utils/theme.js');expect(()=>t.initTheme()).not.toThrow();expect(document.documentElement.dataset.theme).toBe('light')})
   it('notifies live theme selectors even when saving is denied',async()=>{const t=await import('../src/utils/theme.js'),fn=vi.fn();window.addEventListener('pos-theme-changed',fn,{once:true});vi.stubGlobal('localStorage',{setItem(){throw Error('blocked')}});expect(()=>t.applyTheme('dark')).toThrow();expect(document.documentElement.dataset.theme).toBe('dark');expect(fn).toHaveBeenCalledTimes(1)})
+})
+
+describe('first-visit device language',()=>{
+  it.each([
+    [['en-US'],'en'],[['EN-gb'],'en'],[['ja-JP'],'ja'],[['zh-TW'],'zh-TW'],
+    [['zh-HK'],'zh-TW'],[['zh-MO'],'zh-TW'],[['zh-Hant-CN'],'zh-TW'],
+    [['zh-CN'],'zh-CN'],[['zh-SG'],'zh-CN'],[['zh-Hans-TW'],'zh-CN'],
+    [['zh_Hans_SG'],'zh-CN'],[['en-US-u-nu-latn'],'en'],[['zh-Hant-u-nu-hanidec'],'zh-TW'],[['fr-FR','ja-JP','en-US'],'ja'],
+    [['de-DE','en-AU','zh-TW'],'en'],[['ar','ko-KR'],'zh-TW'],
+    [[null,17,{},'en<script>','ja-JP'],'ja'],[[],'zh-TW'],
+  ])('resolves %j to %s',async(languages,expected)=>{const p=await import('../public/i18n/preferences.mjs');expect(p.resolveDeviceLocale(languages)).toBe(expected)})
+  it('opens in the first supported device language without writing any preference or business record',async()=>{
+    vi.stubGlobal('navigator',{languages:['fr-FR','en-GB'],language:'fr-FR'})
+    const p=await import('../public/i18n/preferences.mjs');p.initDisplayPreferences()
+    expect(p.getDisplayPreferences()).toEqual({locale:'en',style:'poster'});expect(document.documentElement.lang).toBe('en');expect(localStorage.length).toBe(0)
+  })
+  it('keeps an explicit choice when the device changes language and after module restart',async()=>{
+    const p=await import('../public/i18n/preferences.mjs');p.setDisplayPreferences({locale:'ja',style:'simple'})
+    vi.stubGlobal('navigator',{languages:['en-US'],language:'en-US'});dispatchEvent(new Event('languagechange'))
+    expect(p.getDisplayPreferences()).toEqual({locale:'ja',style:'simple'});vi.resetModules()
+    expect((await import('../public/i18n/preferences.mjs')).getDisplayPreferences()).toEqual({locale:'ja',style:'simple'})
+  })
+  it('follows a device language change before the first explicit choice',async()=>{
+    const p=await import('../public/i18n/preferences.mjs');p.initDisplayPreferences()
+    vi.stubGlobal('navigator',{languages:['ja-JP'],language:'ja-JP'});dispatchEvent(new Event('languagechange'))
+    expect(document.documentElement.lang).toBe('ja');expect(localStorage.length).toBe(0)
+  })
+  it('uses the device language when a preference is damaged or storage is blocked',async()=>{
+    vi.stubGlobal('navigator',{languages:['en-US'],language:'en-US'});localStorage.setItem('pos_display_preferences_v1','{broken')
+    const p=await import('../public/i18n/preferences.mjs');expect(p.getDisplayPreferences().locale).toBe('en')
+    vi.resetModules();vi.stubGlobal('localStorage',{getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}})
+    expect((await import('../public/i18n/preferences.mjs')).getDisplayPreferences().locale).toBe('en')
+  })
+  it('persists only the two display fields',async()=>{
+    const p=await import('../public/i18n/preferences.mjs');p.setDisplayPreferences({locale:'en',style:'simple',storeId:'not-a-display-preference'})
+    expect(JSON.parse(localStorage.getItem(p.DISPLAY_KEY))).toEqual({locale:'en',style:'simple'})
+  })
+  it('keeps a manual session language even when saving is blocked',async()=>{
+    vi.stubGlobal('localStorage',{getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}})
+    const p=await import('../public/i18n/preferences.mjs');expect(p.setDisplayPreferences({locale:'ja'}).persisted).toBe(false)
+    vi.stubGlobal('navigator',{languages:['en-US'],language:'en-US'});dispatchEvent(new Event('languagechange'))
+    expect(p.getDisplayPreferences().locale).toBe('ja')
+  })
 })
 describe('interface translation',()=>{
   it.each([['zh-TW','首頁'],['en','Home'],['ja','ホーム'],['zh-CN','首页']])('translates a label to %s',async(locale,expected)=>{const {tr}=await import('../public/i18n/core.mjs');expect(tr('首頁',{},locale)).toBe(expected)})

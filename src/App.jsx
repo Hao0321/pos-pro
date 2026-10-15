@@ -6,6 +6,7 @@ import { useStore } from './store/useStore'
 import { getSession, destroySession, writeAuditLog, startIdleTimer, hasPermission, createBackup, getBackupList } from './utils/security'
 import LoginScreen from './pages/LoginScreen'
 import Sidebar from './components/Sidebar'
+import DisplayPreferences from './components/DisplayPreferences'
 import POSPage from './pages/POSPage'
 import InventoryPage from './pages/InventoryPage'
 import MembersPage from './pages/MembersPage'
@@ -148,12 +149,13 @@ export default function App() {
           {store.checkoutState.phase === 'uncertain' && <><button onClick={()=>store.reconcileCheckout().catch(e=>alert(trMessage(e.message)))}>{tr("查詢原交易")}</button><button onClick={()=>store.retryCheckout().catch(e=>alert(trMessage(e.message)))}>{tr("原單號重試保存")}</button></>}
         </div>}
         {isMobile && (
-          <div style={mob.topBar}>
+          <div className="workspace-mobile-bar" style={mob.topBar}>
             <button aria-label={menuOpen?tr("關閉功能選單"):tr("開啟功能選單")} onClick={() => setMenuOpen(v => !v)} style={mob.menuBtn}>
               {menuOpen ? <X size={20}/> : <Menu size={20}/>}
             </button>
             {view==='dashboard'?<div style={mob.topTitle}>{tr("首頁")}</div>:<button className="btn btn-ghost" style={{minHeight:48}} onClick={()=>handleNavChange('dashboard')}>{tr("回首頁")}</button>}
             {view!=='dashboard'&&<span style={{...mob.topTitle,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{tr(NAV_LABELS[view]||'POS')}</span>}
+            <DisplayPreferences toolbar/>
             <button className="btn btn-ghost" aria-label={tr("切換大字模式")} aria-pressed={largeText} onClick={()=>setLargeText(v=>!v)} style={{minHeight:48,minWidth:48,fontSize:16}}>{tr("大字")}</button>
           </div>
         )}
@@ -240,7 +242,7 @@ const mob = {
     boxShadow:'var(--shadow-sm)', flexShrink:0,
   },
   menuBtn: {
-    width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center',
+    width:48, height:48, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center',
     borderRadius:'var(--r2)', color:'var(--text-primary)',
   },
   topTitle: { fontSize:15, fontWeight:600, color:'var(--text-primary)' },

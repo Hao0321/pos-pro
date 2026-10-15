@@ -2,7 +2,7 @@
 
 All stores. All features free. No subscription or paid feature unlocks.
 
-Choose **English** on the sign-in screen. Choose **Bright & simple** for a light interface, or keep **Poster style**. These preferences belong to your device.
+On your first visit, a supported device language is selected automatically. You can always choose **English** on the sign-in screen. Tap the **Bright & simple** preview for a light interface, or keep **Poster style**. After signing in on a phone, use the language icon at the top to change language or appearance. Your saved choice takes priority over the device language.
 
 1. Install the Windows desktop app and create your own administrator account.
 2. Open **Products & stock**. Add actual product names, prices, units, costs and quantities.
@@ -18,7 +18,7 @@ To share a store with a phone, start **Shared store** in the Windows app. Use th
 
 Language does not change currency or tax jurisdiction. This version retains the store's existing TWD/NT$ accounting rules. Your product names and notes stay exactly as entered. Full ERP and enterprise CRM remain in development. Translations still need native-speaker review.
 
-The current Windows build is unsigned and uses manual updates. Back up before updating. See the [installer notes](INSTALLER_2_13_0.md) and [language/style details](LANGUAGE_AND_STYLE.md).
+The current Windows build is unsigned and uses manual updates. Back up before updating. See the [installer notes](INSTALLER_2_13_1.md) and [language/style details](LANGUAGE_AND_STYLE.md).
 
 ## Quotes and catalogues
 

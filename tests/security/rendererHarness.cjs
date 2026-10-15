@@ -23,6 +23,7 @@ async function tap(target,selector){
   target.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount:1,...point});target.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,...point})
 }
 async function button(target,label){
+  await wait(target,`[...document.querySelectorAll('button')].some(element=>element.textContent.trim()===${JSON.stringify(label)})`,'button '+label)
   await js(target,`(()=>{document.querySelector('[data-sales-test-tap]')?.removeAttribute('data-sales-test-tap');const element=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(label)});if(!element)throw Error('Missing button '+${JSON.stringify(label)});element.setAttribute('data-sales-test-tap','')})()`)
   await tap(target,'[data-sales-test-tap]')
 }
