@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron')
 const path = require('path')
 const os = require('os')
 
@@ -7,6 +7,12 @@ let db = null
 let orderServer = null
 let ipcSecurity = null
 let sharedStore = null
+let closing = false
+let shutdownComplete = false
+const stop = require('./shutdown.cjs')({
+  stopServices: () => [() => sharedStore?.stop(), () => orderServer?.close()],
+  closeDatabase: () => { if (db) { db.close(); db = null } },
+})
 const rendererPath = path.resolve(__dirname, '../dist/index.html')
 
 // 單一實例鎖定
@@ -72,7 +78,7 @@ function createWindow() {
 }
 
 // ===== 初始化 =====
-app.whenReady().then(async () => {
+if (gotLock) app.whenReady().then(async () => {
   // 初始化 SQLite 資料庫
   const initDatabase = require('./database')
   const dbPath = path.join(app.getPath('userData'), 'pos-data.db')
@@ -97,14 +103,26 @@ app.whenReady().then(async () => {
 })
 
 app.on('window-all-closed', () => {
-  sharedStore?.stop().catch(()=>{})
-  if (orderServer) orderServer.close()
-  if (db) db.close()
   app.quit()
 })
 
+// app.quit() does not emit window-all-closed. All normal quit paths must pass
+// the same network barriers before SQLite closes; failure keeps data open.
+app.on('will-quit', event => {
+  if (shutdownComplete) return
+  event.preventDefault()
+  if (closing) return
+  closing = true
+  stop().then(() => { shutdownComplete = true; app.quit() }).catch(error => {
+    closing = false
+    console.error('[POS] 安全關閉未完成:', error)
+    if (!mainWindow || mainWindow.isDestroyed()) createWindow()
+    dialog.showErrorBox('尚未安全關閉', '有連線還沒停止，系統已保留資料並回到畫面。請稍後再關閉一次。')
+  })
+})
+
 app.on('activate', () => {
-  if (mainWindow === null) createWindow()
+  if (mainWindow === null && !closing && !shutdownComplete) createWindow()
 })
 
 // ===== IPC Handlers =====

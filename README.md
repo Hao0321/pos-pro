@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-2.9.0-b8895a">
+  <img alt="version" src="https://img.shields.io/badge/version-2.9.1-b8895a">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20PWA-555">
   <img alt="tests" src="https://img.shields.io/badge/tests-vitest%20%2B%20native-3f9c5e">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
@@ -20,7 +20,7 @@
 
 ## 這是什麼
 
-目前版本：v2.9.0。加入預設簡易工作台、白話搜尋、一鍵 Agent 建單資料包，以及採購部分退貨、供應商待退、分次退款與更正。沿用分批收貨、請款核對、分次付款、班次現金與自動分錄。完整 ERP 和真人易用性仍有未完成能力，見 [完整目標清單](product-capabilities.json)。本機安裝包與 GitHub Release 的交付範圍見 [2.9.0 安裝說明](docs/INSTALLER_2_9_0.md)。
+目前版本：v2.9.1。修正手機共用服務的啟停衝突，所有一般關閉路徑先停止連線、再關閉資料庫；詳見 [安全關閉與已知限制](docs/SAFE_SHUTDOWN.md)。沿用簡易工作台、白話搜尋、一鍵 Agent 資料包、採購退貨與退款。完整 ERP 和真人易用性仍有未完成能力，見 [完整目標清單](product-capabilities.json)。本機安裝包交付範圍見 [2.9.1 安裝說明](docs/INSTALLER_2_9_1.md)。
 
 POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模與店型，不設訂閱或進階功能解鎖費。資料預設存在本機（桌面版走 SQLite、瀏覽器版走 localStorage），雲端同步是選用。
 
@@ -70,7 +70,7 @@ POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模�
 
 首次啟動由你建立管理員名稱與至少 8 字元密碼。既有帳號會保留；舊的短密碼必須在驗證後更換，登入流程不再重建預設帳號。
 
-最新版的本機產物與更新方式見 [2.9.0 安裝檔說明](docs/INSTALLER_2_9_0.md)；[2.8.0 安裝檔紀錄](docs/INSTALLER_2_8_0.md)保留為歷史資料。
+最新版的本機產物與更新方式見 [2.9.1 安裝檔說明](docs/INSTALLER_2_9_1.md)；[2.9.0 安裝檔紀錄](docs/INSTALLER_2_9_0.md)保留為歷史資料。
 
 ### 自行編譯 / 開發
 

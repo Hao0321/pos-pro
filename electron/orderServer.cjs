@@ -26,8 +26,10 @@ function prepareCustomerOrder(body,products) {
 }
 module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
   const app=express(),limits=new Map()
+  let closing=false,closeTask=null
   app.disable('x-powered-by')
   app.use((req,res,next)=>{
+    if(closing)return res.status(503).json({success:false,error:'店面正在關閉，請稍後重試'})
     res.set({'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Cache-Control':'no-store',
       'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"})
     next()
@@ -52,6 +54,7 @@ module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
     next()
   },express.json({limit:'32kb',strict:true}),(req,res)=>{
     try {
+      if(closing)return res.status(503).json({success:false,error:'店面正在關閉，請稍後重試'})
       const signature=digest(JSON.stringify(req.body))
       const old=typeof req.body?.requestId==='string' ? db.getOrder('CO'+req.body.requestId) : null
       let order
@@ -79,23 +82,35 @@ module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
   })
   app.get('/api/info',(_req,res)=>res.json({storeName:db.getSetting('storeName')||'商店',version:require('../package.json').version}))
   app.use((err,_req,res,_next)=>res.status(err.type==='entity.too.large'?413:400).json({success:false,error:'請求格式或大小不符'}))
-  let server,tunnelUrl=null,tunnelStop=null
+  let server,stopServer,tunnelUrl=null,tunnelStop=null
   const ready=new Promise((resolve,reject)=>{
     server=app.listen(port,options.host||'0.0.0.0',error=>error?reject(error):resolve(server))
+    stopServer=require('./serverShutdown.cjs')(server)
     server.on('error',reject);server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=50
   })
   ready.then(()=>{
-    if (db.getSetting('publicOrderingEnabled')!=='true' || options.disableTunnel) return
+    if (closing || db.getSetting('publicOrderingEnabled')!=='true' || options.disableTunnel) return
     try {
       const {bin}=require('cloudflared'),{execFile}=require('node:child_process')
       const child=execFile(bin,['tunnel','--url',`http://localhost:${server.address().port}`,'--no-autoupdate'],{windowsHide:true})
-      tunnelStop=()=>child.kill()
+      tunnelStop=()=>new Promise((resolve,reject)=>{
+        if(child.exitCode!==null||child.signalCode!==null)return resolve()
+        const finish=error=>{clearTimeout(timer);child.removeListener('exit',exited);child.removeListener('error',failed);error?reject(error):resolve()}
+        const exited=()=>finish(),failed=error=>finish(error)
+        const timer=setTimeout(()=>finish(Error('對外連線尚未停止')),5000)
+        child.once('exit',exited);child.once('error',failed)
+        try{if(!child.kill())finish(Error('無法停止對外連線'))}catch(error){finish(error)}
+      })
       child.stderr?.on('data',data=>{const m=String(data).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);if(m)tunnelUrl=m[0]})
       child.on('error',()=>{tunnelUrl=null});child.on('exit',()=>{tunnelUrl=null})
     } catch {tunnelUrl=null}
   }).catch(()=>{})
-  return {app,ready,isRunning:()=>server.listening,getActualPort:()=>server.address()?.port||null,getTunnelUrl:()=>tunnelUrl,
-    close:async()=>{tunnelStop?.();await new Promise(resolve=>server.close(resolve))}}
+  return {app,ready,isRunning:()=>!closing&&server.listening,getActualPort:()=>!closing?server.address()?.port||null:null,getTunnelUrl:()=>!closing?tunnelUrl:null,
+    close(){
+      closing=true
+      if(!closeTask)closeTask=(async()=>{await ready.catch(()=>{});await Promise.all([stopServer(),tunnelStop?.()]);tunnelUrl=null})().catch(error=>{closeTask=null;throw error})
+      return closeTask
+    }}
 }
 module.exports.prepareCustomerOrder=prepareCustomerOrder
 module.exports.publicProduct=publicProduct

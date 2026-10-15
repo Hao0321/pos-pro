@@ -11,7 +11,7 @@ const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length
 function privateIPv4(host){const n=host.split('.').map(Number);return n.length===4&&n.every((v,i)=>Number.isInteger(v)&&v>=0&&v<=255&&String(v)===host.split('.')[i])&&(n[0]===10||n[0]===192&&n[1]===168||n[0]===172&&n[1]>=16&&n[1]<=31)}
 function addresses(){return [...new Set(Object.values(os.networkInterfaces()).flat().filter(i=>i?.family==='IPv4'&&!i.internal&&privateIPv4(i.address)).map(i=>i.address))]}
 module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{},now=Date.now,allowLoopback=false}){
-  let server=null,host='',port=0,cert=null,revision=0
+  let server=null,host='',port=0,cert=null,revision=0,startTask=null,stopTask=null,stopServer=null,stopping=false
   const devices=new Map(),pairs=new Map(),attempts=new Map()
   function storeIdentity(){let id=db.getSetting('sharedStoreId');if(!id){id=randomUUID();db.setSetting('sharedStoreId',id)}return id}
   function changed(){revision++;onChanged()}
@@ -19,7 +19,7 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
   for(const name of Object.keys(db).filter(k=>/^(add|update|delete|set|apply|rememberAgentMappings$|checkout$|refundOrder$|openShift$|closeShift$|importData$|restoreBackup$|migrateFromLocalStorage$)/.test(k))){
     const original=db[name];db[name]=function(...args){const result=original.apply(db,args);if(result?.success!==false)changed();return result}
   }
-  const status=()=>({running:!!server?.listening,addresses:addresses(),host,port,url:server?.listening?`https://${host}:${port}/shop/`:null,fingerprint:cert?.fingerprint||null,validTo:cert?.validTo||null,devices:[...devices].map(([id,d])=>({id,username:d.session?.username||'尚未登入',role:d.session?.role||'',pairedAt:d.pairedAt})),revision})
+  const status=()=>({running:!stopping&&!!server?.listening,addresses:addresses(),host,port,url:!stopping&&server?.listening?`https://${host}:${port}/shop/`:null,fingerprint:cert?.fingerprint||null,validTo:cert?.validTo||null,devices:[...devices].map(([id,d])=>({id,username:d.session?.username||'尚未登入',role:d.session?.role||'',pairedAt:d.pairedAt})),revision})
   function current(device){
     const s=device.session,user=s&&db.getUsers().find(u=>u.id===s.userId)
     if(!user||user.password!==device.credential||user.role!==s.role||now()>=s.expiresAt){device.session=null;device.credential=null}
@@ -77,11 +77,13 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
   }
   async function handle(req,res){
     try{
+      if(stopping)throw Object.assign(Error('店面正在關閉，請稍後重試'),{status:503})
       admit(req)
       const pathname=new URL(req.url,`https://${host}:${port}`).pathname
       if(pathname.startsWith('/api/')){
         if(req.method!=='POST')return reply(res,405,{error:'請使用 POST'})
         const input=await body(req)
+        if(stopping)throw Object.assign(Error('店面正在關閉，請稍後重試'),{status:503})
         if(!input||typeof input!=='object'||Array.isArray(input))throw Error('請求格式錯誤')
         if(pathname==='/api/pair'){
           throttle(req)
@@ -116,7 +118,11 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
   }
   return {
     status,changed,
-    async start(input={}){
+    start(input={}){
+      if(stopTask)return Promise.reject(Error('共用店面正在停止，請稍後再啟動'))
+      if(startTask)return startTask
+      stopping=false
+      startTask=(async()=>{
       if(server?.listening)return status()
       const selected=input.host
       if(!(allowLoopback&&selected==='127.0.0.1')&&!addresses().includes(selected))throw Error('請選擇這台電腦目前的私人網路位址')
@@ -124,12 +130,27 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
       if(!Number.isInteger(requested)||requested< (allowLoopback?0:1024)||requested>65535)throw Error('連接埠需介於 1024 到 65535')
       cert=require('./sharedCertificate.cjs')(path.join(certificateRoot,selected),selected);host=selected
       const candidate=https.createServer({pfx:cert.pfx,passphrase:cert.passphrase,minVersion:'TLSv1.2'},handle)
+      const stopCandidate=require('./serverShutdown.cjs')(candidate)
       candidate.requestTimeout=20000;candidate.headersTimeout=10000;candidate.keepAliveTimeout=5000
-      await new Promise((resolve,reject)=>{candidate.once('error',reject);candidate.listen(requested,host,resolve)})
-      server=candidate;port=server.address().port;return status()
+      try{await new Promise((resolve,reject)=>{candidate.once('error',reject);candidate.listen(requested,host,resolve)})}
+      catch(error){await stopCandidate();throw error}
+      server=candidate;stopServer=stopCandidate;port=server.address().port
+      if(stopping)throw Error('共用店面已取消啟動')
+      return status()
+      })().finally(()=>{startTask=null})
+      return startTask
     },
-    async stop(){pairs.clear();devices.clear();const old=server;server=null;if(old)await new Promise(resolve=>{old.close(resolve);old.closeAllConnections()});return status()},
-    pair(){if(!server?.listening)throw Error('請先啟動共用店面');for(const [token,expiry]of pairs)if(now()>expiry)pairs.delete(token);if(pairs.size>=50)throw Error('請先使用或等待現有配對連結失效');const token=random();pairs.set(token,now()+300000);return {url:`https://${host}:${port}/shop/#pair=${token}`,expiresAt:now()+300000,fingerprint:cert.fingerprint}},
+    stop(){
+      if(stopTask)return stopTask
+      stopping=true;pairs.clear();devices.clear()
+      stopTask=(async()=>{
+        if(startTask)await startTask.catch(()=>{})
+        if(server){await stopServer();server=null;stopServer=null}
+        return status()
+      })().finally(()=>{stopTask=null})
+      return stopTask
+    },
+    pair(){if(stopping||!server?.listening)throw Error('請先啟動共用店面');for(const [token,expiry]of pairs)if(now()>expiry)pairs.delete(token);if(pairs.size>=50)throw Error('請先使用或等待現有配對連結失效');const token=random();pairs.set(token,now()+300000);return {url:`https://${host}:${port}/shop/#pair=${token}`,expiresAt:now()+300000,fingerprint:cert.fingerprint}},
     revoke(id){devices.delete(id);return status()},
     certificate(){if(!cert)throw Error('請先啟動共用店面');return cert.certificate.toString('base64')},
   }
