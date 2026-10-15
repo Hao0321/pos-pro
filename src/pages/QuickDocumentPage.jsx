@@ -32,8 +32,9 @@ export default function QuickDocumentPage({store,session,incoming=''}){
   async function readDocument(raw){
     if(raw.length>32768)throw Error('單據太大，請分批匯入（每次最多 32 KB）')
     const d=JSON.parse(raw)
-    if(d?.protocol===BUSINESS_PROTOCOL){const result=await prepareBusinessDocument(d,context);setExternal({document:d,overrides:{},...result});setEditMappings(false);setDraft(result.draft);setKind(d.intent)}
-    else{validateAgentDraft(d,context,Date.now(),true);setExternal(null);setDraft(d);setKind(d.kind)}
+    const activeContext=await getAgentContext(session);setContext(activeContext)
+    if(d?.protocol===BUSINESS_PROTOCOL){const result=await prepareBusinessDocument(d,activeContext);setExternal({document:d,overrides:{},...result});setEditMappings(false);setDraft(result.draft);setKind(d.intent)}
+    else{validateAgentDraft(d,activeContext,Date.now(),true);setExternal(null);setDraft(d);setKind(d.kind)}
     setText('');setDone('');setError('')
   }
   async function organize(){setError('');setDone('');try{if(text.trim().startsWith('{'))await readDocument(text);else{const d=draftFromText(text,context,kind);setExternal(null);setDraft(d);setKind(d.kind)}}catch(e){setError(e.message)}}
