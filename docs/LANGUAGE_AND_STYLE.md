@@ -33,6 +33,6 @@
 
 ## 維護翻譯
 
-`public/i18n/messages.mjs` 是介面字典，鍵為繁體中文原文，每列依序是 English、日本語、简体中文。`core.mjs` 保留插值資料，只在明確的系統訊息使用訊息比對；`preferences.mjs` 的 `pos_display_preferences_v1` 不屬於店面交易、同步或備份集合。
+`public/i18n/catalogue/` 依功能拆分介面字典，鍵為繁體中文原文，每列依序是 English、日本語、简体中文，最後一個數字保留原始鍵順序。`messages.mjs` 組合字典，對外仍只提供三種翻譯。`core.mjs` 保留插值資料，只在明確的系統訊息使用訊息比對；`preferences.mjs` 的 `pos_display_preferences_v1` 不屬於店面交易、同步或備份集合。
 
 修改後執行 `tests/i18n.test.js`、`tests/i18n-coverage.test.js` 與原生 `native-display-ui.cjs`。新增文字須維持 `{0}` 等參數一致。翻譯只改顯示端，避免以文字取代方式改寫商家資料或內部列舉值。
