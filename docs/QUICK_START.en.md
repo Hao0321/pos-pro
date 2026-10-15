@@ -18,7 +18,7 @@ To share a store with a phone, start **Shared store** in the Windows app. Use th
 
 Language does not change currency or tax jurisdiction. This version retains the store's existing TWD/NT$ accounting rules. Your product names and notes stay exactly as entered. Full ERP and enterprise CRM remain in development. Translations still need native-speaker review.
 
-The current Windows build is unsigned and uses manual updates. Back up before updating. See the [installer notes](INSTALLER_2_12_0.md) and [language/style details](LANGUAGE_AND_STYLE.md).
+The current Windows build is unsigned and uses manual updates. Back up before updating. See the [installer notes](INSTALLER_2_13_0.md) and [language/style details](LANGUAGE_AND_STYLE.md).
 
 ## Quotes and catalogues
 
@@ -27,3 +27,11 @@ Search for **quote** on Home. In **Quotes & catalogues**, paste the buyer's stor
 To buy, share **Copy my store card** with your supplier. Paste their quotation in **Quick entry**, check the product mapping, supplier, date and total, then confirm the purchase. Receiving goods and paying remain separate actions.
 
 The catalogue download contains only selected products and reference prices. A store card or recipient ID does not authenticate a company or encrypt the file. Verify the sender and recipient through your agreed channel. Third-party ERP/Agent support is available through the public JSON schemas; independent interoperability and native-speaker review remain open.
+
+## Sales and receivables
+
+Open an agreed quote and choose **Customer accepted: create sales order**, or search for **receivables** on Home and create a manual order. Review the customer, quantities and agreed prices, then confirm. This saves an order without deducting or reserving stock or collecting money.
+
+Use **Next: hand over the goods** only after the agreed handover; enter this batch and its payment due date. Then use **Record this payment** for money actually received, including partial payments. Cash requires an open shift. A bank entry records a payment you verified; it does not charge anyone. Returns and allowances stay tied to the original handover, refunds to the original payment, and corrections preserve history. Original cost feeds reports and accounting even after repricing. If saving is uncertain, use **Check the original result**.
+
+This is an internal TWD all-inclusive goods workflow. Advances, multi-claim remittance, complete stock allocation, tax invoices and period close remain in development. See the [sales guide](SALES_GUIDE.md).

@@ -6,7 +6,7 @@
   "exchangeProfiles": [
     {"protocol":"business-party/v1","schema":"/agent/business-party-v1.schema.json","purpose":"share a store identifier and display name; not identity authentication"},
     {"protocol":"business-catalogue/v1","schema":"/agent/business-catalogue-v1.schema.json","purpose":"public reference prices, not an order"},
-    {"protocol":"business-quote/v1","schema":"/agent/business-quote-v1.schema.json","purpose":"recipient-specific immutable quotation; human-reviewed purchase import"}
+    {"protocol":"business-quote/v1","schema":"/agent/business-quote-v1.schema.json","purpose":"recipient-specific immutable quotation; human-reviewed buyer purchase import and seller sales-order handoff"}
   ],
   "publicCatalogue": {"path":"/api/catalogue","surface":"existing customer ordering server when started; no automatic publication","prices":"TWD reference prices; no costs or other customers' quotes"},
   "schema": "/agent/document-draft-v1.schema.json",

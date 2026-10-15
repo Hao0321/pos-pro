@@ -18,6 +18,7 @@ const NAV = [
   { key:'inventory',  label:'庫存管理', Icon:Package,         perm:'inventory.view', accent:'blue' },
   { key:'purchase',   label:'進貨管理', Icon:Truck,           perm:'purchase.view', accent:'purple' },
   { key:'exchange',label:'報價與價目表',Icon:ClipboardList,perm:'purchase.edit',accent:'blue' },
+  { key:'sales',label:'銷售與應收',Icon:BookOpen,perm:'purchase.edit',accent:'green' },
   { key:'waste',      label:'損耗管理', Icon:Trash2,          perm:'inventory.view', accent:'red' },
   { key:'stocktake',  label:'每日盤點', Icon:ClipboardList,   perm:'stocktake.view', accent:'amber' },
   { key:'promotions', label:'促銷活動', Icon:Tag,             perm:'promotions.view', accent:'pink' },
@@ -29,7 +30,7 @@ const NAV = [
   { key:'scenarios',  label:'情境模板', Icon:Sparkles,        perm:'settings.edit', accent:'green' },
 ]
 
-export default function Sidebar({ view, setView, session, lowStockCount, todayRevenue, todayOrders, onLogout, pendingOrders = 0, openShift = null,largeText=false,toggleLargeText,simpleMode=false,toggleSimpleMode }) {
+export default function Sidebar({ view, setView, session, lowStockCount, todayRevenue, todayOrders,todayBusinessCount, onLogout, pendingOrders = 0, openShift = null,largeText=false,toggleLargeText,simpleMode=false,toggleSimpleMode }) {
   const [now, setNow] = useState(new Date())
   const [showMore,setShowMore]=useState(false)
   const common=new Set(['dashboard','quick','pos','restaurant','shifts','readiness','inventory','purchase'])
@@ -66,7 +67,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
           )}
         </div>
         <div style={s.todayMeta}>
-          <span>{todayOrders.length}{tr(" 筆")}</span>
+          <span>{todayBusinessCount??todayOrders.length}{tr(" 筆")}</span>
           <span style={{opacity:0.4}}>•</span>
           <span>{dateStr}</span>
           <span style={{opacity:0.4}}>•</span>

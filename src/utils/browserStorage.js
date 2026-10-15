@@ -2,11 +2,12 @@
 // Legacy keys remain intact for recovery; reads use this record after migration.
 import {validateRestaurantRecords,readRestaurantConfig} from '../../electron/restaurantRules.mjs'
 import {validateProcurementRecords} from '../../electron/procurementRules.mjs'
-import {validateExchangeSettings} from '../../electron/businessExchange.mjs'
+import {validateExchangeSettings,readExchangeTextSetting,readExchangeStore,EXCHANGE_SETTING} from '../../electron/businessExchange.mjs'
+import {validateSalesRecords} from '../../electron/salesPlan.mjs'
 export const RECORD_KEY = 'pos_atomic_records_v1'
 export const DATA_KEYS = ['pos2_products','pos2_members','pos2_orders','pos2_manual_j',
   'pos_users','pos_suppliers','pos_purchases','pos_promotions','pos2_held_orders',
-  'pos2_shifts','pos2_cash_log','pos2_waste','pos2_topups','pos_audit_log','pos_business_settings','pos_restaurant_orders','pos_restaurant_operations']
+  'pos2_shifts','pos2_cash_log','pos2_waste','pos2_topups','pos_audit_log','pos_business_settings','pos_restaurant_orders','pos_restaurant_operations','pos_sales_documents','pos_sales_operations']
 const keys = new Set(DATA_KEYS)
 const SETTINGS_PREFIX='pos_settings_'
 const legacySettings=['pointsEarnRate','pointsRedeemRate','birthdayBonus','dailySalesGoal','storeName','storePhone','storeAddress','receiptFooter','serverPort']
@@ -22,9 +23,10 @@ export function readRecords() {
     const record = JSON.parse(raw)
     if (record?.version !== 1 || !Number.isSafeInteger(record.revision) || record.revision < 1 || !record.data)
       throw new Error('本機資料紀錄損壞，請保留資料並還原備份。')
-    // Only this newly added collection may be absent in older atomic records.
+    if(record.salesEpoch!==undefined&&(typeof record.salesEpoch!=='string'||!record.salesEpoch))throw new Error('銷售還原識別損壞，請保留原資料核對。')
+    // New collections may be absent in records written by earlier versions.
     if(!Object.hasOwn(record.data,'pos_business_settings'))record.data.pos_business_settings=readLegacySettings()
-    for(const key of ['pos_restaurant_orders','pos_restaurant_operations'])if(!Object.hasOwn(record.data,key))record.data[key]=[]
+    for(const key of ['pos_restaurant_orders','pos_restaurant_operations','pos_sales_documents','pos_sales_operations'])if(!Object.hasOwn(record.data,key))record.data[key]=[]
     for (const key of DATA_KEYS) validArray(record.data[key])
     return record
   }
@@ -35,7 +37,7 @@ export function readRecords() {
   }
   return {version:1,revision:0,data}
 }
-export function writeRecords(updates, expectedRevision) {
+export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false}={}) {
   const current = readRecords()
   if (expectedRevision != null && current.revision !== expectedRevision)
     throw new Error('本機資料已改變，請重新載入後再操作。')
@@ -44,14 +46,25 @@ export function writeRecords(updates, expectedRevision) {
     validArray(value)
   }
   const next = {version:1,revision:current.revision+1,data:{...current.data,...updates}}
+  // The restore fence is local runtime metadata, excluded from business backups.
+  // Rotate it in the SAME atomic write as a restore, never as a later side effect.
+  if(restore||ensureSalesEpoch||current.salesEpoch||next.data.pos_sales_documents.length)
+    next.salesEpoch=restore?crypto.randomUUID():current.salesEpoch||crypto.randomUUID()
   validateProcurementRecords(next.data.pos_purchases,next.data.pos2_cash_log)
   validateExchangeSettings(next.data.pos_business_settings,next.data.pos_purchases,next.data.pos_audit_log)
+  validateSalesRecords(next.data.pos_sales_documents,next.data.pos_sales_operations,next.data.pos2_cash_log,readExchangeTextSetting(next.data.pos_business_settings,'sharedStoreId'),next.data.pos2_products,readExchangeStore(readExchangeTextSetting(next.data.pos_business_settings,EXCHANGE_SETTING)).quotes)
   validateRestaurantRecords(next.data.pos_restaurant_orders,next.data.pos_restaurant_operations,next.data.pos2_orders,next.data.pos2_products)
   const rawConfig=next.data.pos_business_settings.find(s=>s.key==='restaurantConfig')?.value
   readRestaurantConfig(rawConfig==null?null:JSON.parse(rawConfig),next.data.pos2_products)
   // setItem is atomic: quota/security failure keeps the previous complete record.
   nativeStorage().setItem(RECORD_KEY, JSON.stringify(next))
   return next
+}
+export function restoreRecords(data,expectedRevision){
+  if(!data||typeof data!=='object'||Array.isArray(data))throw new Error('備份格式錯誤')
+  const updates=Object.fromEntries(DATA_KEYS.filter(key=>Object.hasOwn(data,key)).map(key=>[key,data[key]]))
+  for(const key of ['pos_sales_documents','pos_sales_operations'])if(!Object.hasOwn(updates,key))updates[key]=[]
+  return writeRecords(updates,expectedRevision,{restore:true})
 }
 export const browserStorage = {
   getItem(key) {if(key.startsWith(SETTINGS_PREFIX))return readRecords().data.pos_business_settings.find(s=>s.key===key.slice(SETTINGS_PREFIX.length))?.value??null;return keys.has(key) ? JSON.stringify(readRecords().data[key]) : nativeStorage().getItem(key) },

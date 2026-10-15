@@ -9,7 +9,7 @@ import Sidebar from './components/Sidebar'
 import POSPage from './pages/POSPage'
 import InventoryPage from './pages/InventoryPage'
 import MembersPage from './pages/MembersPage'
-import ReportsPage from './pages/ReportsPage'
+const ReportsPage=lazy(()=>import('./pages/ReportsPage'))
 import AccountingPage from './pages/AccountingPage'
 import PurchasePage from './pages/PurchasePage'
 import StocktakePage from './pages/StocktakePage'
@@ -21,8 +21,9 @@ import SharedDevicesPage from './pages/SharedDevicesPage'
 import RestaurantPage from './pages/RestaurantPage'
 import QuickDocumentPage from './pages/QuickDocumentPage'
 const BusinessExchangePage=lazy(()=>import('./pages/BusinessExchangePage'))
+const SalesPage=lazy(()=>import('./pages/SalesPage'))
 import OrdersPage from './pages/OrdersPage'
-import DashboardPage from './pages/DashboardPage'
+const DashboardPage=lazy(()=>import('./pages/DashboardPage'))
 import SimpleHomePage from './pages/SimpleHomePage'
 import './styles/easy-workspace.css'
 import ShiftPage from './pages/ShiftPage'
@@ -45,6 +46,7 @@ export default function App() {
   const store = useStore(session)
   const { view, setView, lowStockCount, todayRevenue, todayOrders } = store
   useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='exchange'&&store.financialState.phase==='uncertain')setView('exchange')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
+  useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='sales'&&store.financialState.phase==='uncertain')setView('sales')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
   useEffect(()=>{document.documentElement.dataset.largeText=String(largeText);try{localStorage.setItem('pos_large_text_v1',String(largeText))}catch{}},[largeText])
   useEffect(()=>{document.documentElement.dataset.simpleMode=String(simpleMode);try{localStorage.setItem('pos_simple_mode_v1',String(simpleMode))}catch{}},[simpleMode])
   useEffect(()=>{
@@ -111,7 +113,7 @@ export default function App() {
 
   const NAV_LABELS = {
     dashboard:'首頁',overview:'營運總覽',quick:'快速建單', pos:'收銀台',restaurant:'預訂出餐', shifts:'班別交班', readiness:'營業前檢查',devices:'共用店面',
-    inventory:'庫存管理', purchase:'進貨管理',exchange:'報價與價目表', waste:'損耗管理',
+    inventory:'庫存管理', purchase:'進貨管理',exchange:'報價與價目表',sales:'銷售與應收', waste:'損耗管理',
     stocktake:'每日盤點', promotions:'促銷活動', members:'會員',
     reports:'報表分析', accounting:'會計帳務', orders:'顧客點餐', settings:'設定', scenarios:'情境模板',
   }
@@ -121,7 +123,7 @@ export default function App() {
       {!isMobile && (
         <Sidebar view={view} setView={setView} session={session}
           lowStockCount={lowStockCount} todayRevenue={todayRevenue}
-          todayOrders={todayOrders} onLogout={handleLogout}
+          todayOrders={todayOrders} todayBusinessCount={store.todayBusinessCount} onLogout={handleLogout}
           pendingOrders={pendingOrders} openShift={store.openShift} largeText={largeText} toggleLargeText={()=>setLargeText(v=>!v)} simpleMode={simpleMode} toggleSimpleMode={()=>setSimpleMode(v=>!v)}/>
       )}
 
@@ -132,7 +134,7 @@ export default function App() {
         <div style={{...mob.drawer, transform: menuOpen ? 'translateX(0)' : 'translateX(-100%)'}}>
           <Sidebar view={view} setView={handleNavChange} session={session}
             lowStockCount={lowStockCount} todayRevenue={todayRevenue}
-            todayOrders={todayOrders} onLogout={handleLogout}
+            todayOrders={todayOrders} todayBusinessCount={store.todayBusinessCount} onLogout={handleLogout}
             pendingOrders={pendingOrders} openShift={store.openShift} largeText={largeText} toggleLargeText={()=>setLargeText(v=>!v)} simpleMode={simpleMode} toggleSimpleMode={()=>setSimpleMode(v=>!v)}/>
         </div>
       )}
@@ -156,18 +158,19 @@ export default function App() {
           </div>
         )}
         {/* Quick entry locks its fields while retaining the same-document recovery action. */}
-        <main className="workspace-content" data-view={view} inert={store.checkoutState.phase!=='idle'||store.financialState.phase!=='idle'&&!['quick','exchange'].includes(view)?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
-          {view === 'dashboard' && can('pos.use') && (simpleMode?<SimpleHomePage store={store} session={session} area={workspaceArea} onAreaChange={setWorkspaceArea}/>:<DashboardPage store={store} session={session}/>)}
-          {view === 'overview' && can('reports.view') && <DashboardPage store={store} session={session}/>}
+        <main className="workspace-content" data-view={view} inert={store.checkoutState.phase!=='idle'||store.financialState.phase!=='idle'&&!['quick','exchange','sales'].includes(view)?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+          {view === 'dashboard' && can('pos.use') && (simpleMode?<SimpleHomePage store={store} session={session} area={workspaceArea} onAreaChange={setWorkspaceArea}/>:<Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><DashboardPage store={store} session={session}/></Suspense>)}
+          {view === 'overview' && can('reports.view') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><DashboardPage store={store} session={session}/></Suspense>}
           {view === 'quick' && can('pos.use') && <QuickDocumentPage key={session.userId+':'+session.role} store={store} session={session} incoming={incomingDraft} onIncomingConsumed={consumeIncoming}/>}
           {view === 'exchange' && can('purchase.edit') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><BusinessExchangePage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
+          {view === 'sales' && session.role==='owner' && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><SalesPage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
           {view === 'pos'        && can('pos.use')         && <POSPage        store={store} session={session}/>}
           {view === 'restaurant' && can('pos.use') && <RestaurantPage store={store} session={session}/>}
           {view === 'shifts'     && can('pos.use')         && <ShiftPage      store={store} session={session}/>}
           {view === 'inventory'  && can('inventory.view')  && <InventoryPage  store={store} session={session}/>}
           {view === 'waste'      && can('inventory.view')  && <WastePage      store={store} session={session}/>}
           {view === 'members'    && can('members.view')    && <MembersPage    store={store} session={session}/>}
-          {view === 'reports'    && can('reports.view')    && <ReportsPage    store={store} session={session}/>}
+          {view === 'reports'    && can('reports.view')    && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><ReportsPage store={store} session={session}/></Suspense>}
           {view === 'accounting' && can('accounting.view') && <AccountingPage store={store} session={session}/>}
           {view === 'purchase'   && can('purchase.view')   && <PurchasePage   store={store} session={session}/>}
           {view === 'stocktake'  && can('stocktake.view')  && <StocktakePage  store={store} session={session}/>}

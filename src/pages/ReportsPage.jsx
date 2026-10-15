@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react'
 import { TrendingUp, ShoppingCart, Users, Package, ArrowUp, ArrowDown, Download, Zap, AlertTriangle, Trophy } from 'lucide-react'
 import { exportXLS } from '../utils/exportXLS'
 import { productPerformance } from '../utils/analytics'
+import {businessReportRows,businessCashFlows,reportDay,reportLineRevenue} from '../utils/businessReports'
+import {salesDate,salesSummary} from '../../electron/salesRules.mjs'
 
 export default function ReportsPage({ store }) {
   const { orders: rawOrders, products, members } = store
@@ -11,31 +13,31 @@ export default function ReportsPage({ store }) {
 
   const now = new Date()
   // 排除完整退貨配對；部分退貨保留兩邊（原訂單 + 負數退貨訂單），總額自動抵銷正確
-  const orders = settledOrders(rawOrders)
+  const businessDocuments=store.sales?.documents||[]
+  const orders = useMemo(()=>[...settledOrders(rawOrders),...businessReportRows(businessDocuments)],[rawOrders,businessDocuments])
+  const today=store.sales?.today||salesDate(now)
+  function inRange(day){const age=(Date.parse(today)-Date.parse(day))/86400000;return range==='today'?day===today:range==='week'?age>=0&&age<7:range==='month'?day.slice(0,7)===today.slice(0,7):true}
   const filtered = useMemo(() => orders.filter(o => {
-    const d = new Date(o.time)
-    if (range === 'today') return d.toDateString() === now.toDateString()
-    if (range === 'week')  return (now - d) < 7 * 864e5
-    if (range === 'month') return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear()
-    return true
-  }), [orders, range])
+    return inRange(reportDay(o))
+  }), [orders, range,today])
 
   const prev = useMemo(() => {
     const shift = range==='today'?864e5 : range==='week'?7*864e5 : 30*864e5
     return orders.filter(o => {
-      const d = new Date(o.time), a = new Date(o.time)
-      if (range === 'today') return new Date(d.getTime()+864e5).toDateString()===now.toDateString() && d.toDateString()!==now.toDateString()
-      return (now-d) >= shift && (now-d) < shift*2
+      const age=Date.parse(today)-Date.parse(reportDay(o))
+      return age>=shift&&age<shift*2
     })
-  }, [orders, range])
+  }, [orders, range,today])
 
-  const revenue = filtered.reduce((s,o)=>s+netSale(o),0)
-  const prevRevenue = prev.reduce((s,o)=>s+netSale(o),0)
+  const revenue = Math.round(filtered.reduce((s,o)=>s+netSale(o),0)*100)/100
+  const prevRevenue = Math.round(prev.reduce((s,o)=>s+netSale(o),0)*100)/100
   const revDelta = prevRevenue ? ((revenue-prevRevenue)/prevRevenue*100).toFixed(1) : null
 
-  const profit=useMemo(()=>filtered.reduce((sum,o)=>sum+netSale(o)-orderCost(o,products),0),[filtered,products])
+  const profit=useMemo(()=>Math.round(filtered.reduce((sum,o)=>sum+netSale(o)-orderCost(o,products),0)*100)/100,[filtered,products])
 
-  const avgOrder = filtered.length ? Math.round(revenue / filtered.length) : 0
+  const saleCount=filtered.filter(row=>!row.refundOf).length
+  const avgOrder = saleCount ? Math.round(revenue / saleCount) : 0
+  const currentReceivables=businessDocuments.map(doc=>salesSummary(doc,today)).reduce((sum,row)=>sum+row.owed,0)
   const newMembers = members.filter(m => {
     const d = new Date(m.joinDate)
     if (range === 'today') return d.toDateString()===now.toDateString()
@@ -49,7 +51,7 @@ export default function ReportsPage({ store }) {
     filtered.forEach(o => o.items.forEach(i => {
       if (!map[i.id]) map[i.id] = { name:i.name, qty:0, revenue:0 }
       map[i.id].qty += i.qty
-      map[i.id].revenue += i.price * i.qty
+      map[i.id].revenue += reportLineRevenue(i)
     }))
     return Object.values(map).sort((a,b)=>b.revenue-a.revenue).slice(0,8)
   }, [filtered])
@@ -59,7 +61,7 @@ export default function ReportsPage({ store }) {
   // Hourly chart (today)
   const hourly = useMemo(() => {
     const arr = Array(24).fill(0)
-    const src = range==='today' ? filtered : orders.filter(o=>new Date(o.time).toDateString()===now.toDateString())
+    const src = range==='today' ? filtered : orders.filter(o=>reportDay(o)===today)
     src.forEach(o => arr[new Date(o.time).getHours()] += o.total)
     return arr
   }, [filtered, orders, range])
@@ -67,8 +69,8 @@ export default function ReportsPage({ store }) {
 
   // Pay method breakdown (支援混合付款拆分)
   const payBreakdown = useMemo(() => {
-    let cash = 0, card = 0
-    for (const o of filtered) {
+    let cash = 0, card = 0,bank=0
+    for (const o of filtered.filter(row=>row.source!=='business-report')) {
       if (o.payMethod === 'cash') cash += o.total
       else if (o.payMethod === 'mixed' && Array.isArray(o.payments)) {
         for (const p of o.payments) {
@@ -77,11 +79,12 @@ export default function ReportsPage({ store }) {
         }
       } else card += o.total
     }
-    return { cash, card, total: cash+card }
-  }, [filtered])
+    for(const row of businessCashFlows(businessDocuments).filter(row=>inRange(row.date))){if(row.method==='cash')cash+=row.amount;else bank+=row.amount}
+    return { cash, card,bank, total: cash+card+bank }
+  }, [filtered,businessDocuments,range,today])
 
   // 30 天商品表現分析（基於 store.orders 全部訂單，獨立於 range filter）
-  const perf30d = useMemo(() => productPerformance(products, rawOrders, 30), [products, rawOrders])
+  const perf30d = useMemo(() => productPerformance(products, orders, 30), [products, orders])
 
   // 員工績效（依當前期間）
   const staffPerf = useMemo(() => {
@@ -112,7 +115,7 @@ export default function ReportsPage({ store }) {
     filtered.forEach(o => o.items.forEach(i => {
       if (!map[i.id]) map[i.id] = { id:i.id, name:i.name, qty:0, revenue:0 }
       map[i.id].qty += i.qty
-      map[i.id].revenue += i.price * i.qty
+      map[i.id].revenue += reportLineRevenue(i)
     }))
     const sorted = Object.values(map).sort((a,b) => b.revenue - a.revenue)
     const total = sorted.reduce((s,p) => s + p.revenue, 0) || 1
@@ -142,10 +145,11 @@ export default function ReportsPage({ store }) {
       ['營業額', revenue],
       ['毛利', profit],
       ['毛利率(%)', revenue > 0 ? (profit/revenue*100).toFixed(1) : 0],
-      ['訂單數', filtered.length],
-      ['客單價', avgOrder],
+      ['銷售筆數', saleCount],
+      ['每筆銷售平均', avgOrder],
       ['現金收入', payBreakdown.cash],
       ['電子支付', payBreakdown.card],
+      ['銀行收款',payBreakdown.bank],
       [],
       ['暢銷商品 Top 8'],
       ['排名', '商品', '數量', '營收'],
@@ -165,7 +169,7 @@ export default function ReportsPage({ store }) {
       ...filtered.map(o => [
         o.id,
         new Date(o.time).toLocaleString('zh-TW'),
-        o.payMethod === 'cash' ? '現金' : o.payMethod === 'card' ? '電子' : '混合',
+        o.source==='business-report'?'客戶交付／折抵':o.payMethod === 'cash' ? '現金' : o.payMethod === 'card' ? '電子' : '混合',
         o.total,
         o.memberId ? (members.find(m=>m.id===o.memberId)?.name || '') : '',
         o.pointsEarned || 0,
@@ -179,8 +183,8 @@ export default function ReportsPage({ store }) {
   const KPIS = [
     { label:'營業額', value:`NT$ ${revenue.toLocaleString()}`, delta:revDelta, icon:<TrendingUp size={16}/>, color:'var(--gold)' },
     { label:'毛利',   value:`NT$ ${profit.toLocaleString()}`,  delta:null,     icon:<ArrowUp size={16}/>,   color:'var(--green)' },
-    { label:'訂單數', value:`${filtered.length} 筆`,           delta:null,     icon:<ShoppingCart size={16}/>, color:'var(--blue)' },
-    { label:'客單價', value:`NT$ ${avgOrder.toLocaleString()}`, delta:null,    icon:<Package size={16}/>,   color:'var(--teal)' },
+    { label:'銷售筆數', value:`${saleCount} 筆`,           delta:null,     icon:<ShoppingCart size={16}/>, color:'var(--blue)' },
+    { label:'每筆銷售平均', value:`NT$ ${avgOrder.toLocaleString()}`, delta:null,    icon:<Package size={16}/>,   color:'var(--teal)' },
   ]
 
   return (
@@ -203,6 +207,7 @@ export default function ReportsPage({ store }) {
       </div>
 
       {/* KPI row */}
+      {businessDocuments.length>0&&<section className="card" style={{padding:18,marginBottom:16,lineHeight:1.8}} data-business-report><p>{tr('營業額與毛利包含收銀及客戶交付，分批交付每批算一筆銷售；收款不再重複計入營業額。')}</p><p>{tr('目前全部客戶未付款：{0}',{0:'NT$ '+currentReceivables.toLocaleString(undefined,{maximumFractionDigits:2})})}</p><button className="btn btn-ghost" style={{minHeight:48}} onClick={()=>store.setView('sales')}>{tr('查看銷售與應收')}</button></section>}
       <div style={rs.kpiGrid}>
         {KPIS.map((kpi, i) => (
           <div key={i} className="card animate-up" style={{padding:'16px 18px', animationDelay:`${i*40}ms`, borderTop:`2px solid ${kpi.color}`}}>
@@ -245,18 +250,19 @@ export default function ReportsPage({ store }) {
 
         {/* Pay breakdown */}
         <div className="card" style={{padding:'18px 20px'}}>
-          <div style={rs.cardTitle}>{tr("付款方式")}</div>
+          <div style={rs.cardTitle}>{tr('實際收付淨額')}</div>
           <div style={{marginTop:20, display:'flex', flexDirection:'column', gap:14}}>
             {[
               ['現金', payBreakdown.cash, 'var(--green)'],
               ['電子支付', payBreakdown.card, 'var(--blue)'],
+              ['銀行收款',payBreakdown.bank,'var(--teal)'],
             ].map(([label, val, color])=>{
-              const pct = payBreakdown.total ? (val/payBreakdown.total*100).toFixed(0) : 0
+              const scale=Math.max(Math.abs(payBreakdown.cash),Math.abs(payBreakdown.card),Math.abs(payBreakdown.bank),1),pct=Math.abs(val)/scale*100
               return (
                 <div key={label}>
                   <div style={{display:'flex', justifyContent:'space-between', marginBottom:6, fontSize:13}}>
                     <span style={{color:'var(--text-secondary)'}}>{tr(label)}</span>
-                    <span style={{fontFamily:'var(--font-mono)', fontSize:12}}>NT$ {val.toLocaleString()} <span style={{color:'var(--text-tertiary)'}}>({pct}%)</span></span>
+                    <span style={{fontFamily:'var(--font-mono)', fontSize:12,color:val<0?'var(--red)':undefined}}>NT$ {Math.round(val*100)/100}</span>
                   </div>
                   <div style={{height:6, background:'var(--border-dim)', borderRadius:3}}>
                     <div style={{height:'100%', width:`${pct}%`, background:color, borderRadius:3, transition:'width .6s var(--ease)'}}/>

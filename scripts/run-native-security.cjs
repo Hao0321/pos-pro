@@ -1,5 +1,8 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--sales':['native-sales.cjs','POS_SALES_PASS',false],
+  '--sales-ui':['native-sales-ui.cjs','POS_SALES_UI_PASS',true],
+  '--display-ui':['native-display-ui.cjs','POS_DISPLAY_UI_PASS',true],
   '--exchange':['native-exchange.cjs','POS_EXCHANGE_PASS',false],
   '--exchange-ui':['native-exchange-ui.cjs','POS_EXCHANGE_UI_PASS',true],
   '--shutdown':['native-shutdown.cjs','POS_SHUTDOWN_PASS',false],

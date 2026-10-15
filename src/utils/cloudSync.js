@@ -158,6 +158,8 @@ async function readLocal() {
       _revision:data._revision,
       _restaurantOrders:data.restaurantOrders||[],
       _restaurantOperations:data.restaurantOperations||[],
+      _salesDocuments:data.salesDocuments||[],
+      _salesOperations:data.salesOperations||[],
       _restaurantEnabled:JSON.parse(data.settings?.find(s=>s.key==='restaurantConfig')?.value||'{}').enabled===true,
       pos2_products: data.products || [],
       pos2_members: data.members || [],
@@ -179,10 +181,12 @@ async function readLocal() {
   for (const t of TABLES) all[t.localKey] = loadLS(t.localKey)
   const data=readRecords().data,raw=data.pos_business_settings.find(s=>s.key==='restaurantConfig')?.value
   all._restaurantOrders=data.pos_restaurant_orders;all._restaurantOperations=data.pos_restaurant_operations
+  all._salesDocuments=data.pos_sales_documents;all._salesOperations=data.pos_sales_operations
   all._restaurantEnabled=raw==null?false:JSON.parse(JSON.parse(raw)).enabled===true
   return all
 }
 function guardRestaurantCloud(data){
+  if(data._salesDocuments.length||data._salesOperations.length)throw Error('目前雲端快照不包含完整銷售、應收及收款回執，已停止同步。請使用完整 JSON 備份；手機共用店面可照常使用。')
   if(data.pos_purchases?.some(p=>p.procurement))throw Error('目前雲端快照不包含完整採購、請款及付款文件，已停止同步。請使用完整 JSON 備份；手機共用店面可照常使用。')
   if(data._restaurantEnabled||data._restaurantOrders.length||data._restaurantOperations.length)throw Error('目前雲端快照不包含完整預訂與原料回執，已停止同步以保護資料。請使用完整 JSON 備份；手機共用店面可照常使用。')
 }
@@ -209,7 +213,7 @@ async function writeLocal(allByKey, before) {
     }, before._revision)
     return
   }
-  writeRecords(Object.fromEntries(TABLES.map(t=>[t.localKey,allByKey[t.localKey] || []])))
+  writeRecords({...Object.fromEntries(TABLES.map(t=>[t.localKey,allByKey[t.localKey] || []])),pos_sales_documents:[],pos_sales_operations:[]},undefined,{restore:true})
 }
 
 // ===== Push：本機 → 雲端（upsert） =====

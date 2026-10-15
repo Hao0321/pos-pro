@@ -1,0 +1,98 @@
+const assert=require('node:assert/strict'),path=require('node:path'),https=require('node:https'),{pbkdf2Sync,X509Certificate}=require('node:crypto')
+const init=require('../../electron/database.js'),Database=require('better-sqlite3'),sharedFactory=require('../../electron/sharedStoreServer.cjs')
+const {salesSummary,salesDate}=require('../../electron/salesRules.mjs'),{salesToJournalEntries}=require('../../electron/salesJournal.mjs'),{productReference}=require('../../electron/businessExchange.mjs'),{summarizeShift}=require('../../electron/shiftReconciliation.mjs')
+const {planSales}=require('../../electron/salesPlan.mjs')
+const root=process.env.POS_SECURITY_FIXTURE_ROOT;if(!root)throw Error('isolated fixture required')
+const file=path.join(root,'sales.db'),owner={role:'owner',userId:'owner',username:'owner fixture'}
+let db=init(file),server,origin,ca,tests=0,counter=0
+const hash=password=>JSON.stringify({salt:Array(32).fill(1),iter:1000,hash:[...pbkdf2Sync(password,Buffer.alloc(32,1),1000,32,'sha256')]})
+const pass=name=>{tests++;console.log('PASS '+name)}
+const state=()=>db.getSalesState(owner),doc=id=>state().documents.find(d=>d.id===id),stamp=input=>({...input,id:'native-sales-'+(++counter),time:new Date().toISOString()})
+const header=()=>({kind:'sales',storeId:state().storeId,epoch:state().epoch,date:salesDate(new Date())})
+const create=(productId='p',qty=3.125,unitPrice=12.34)=>stamp({...header(),action:'create',document:{customer:{id:'buyer',name:'客戶 <script>'},date:salesDate(new Date()),items:[{productId,qty,unitPrice,expectedProduct:productReference(db.getProducts().find(p=>p.id===productId))}],note:'fixture'}})
+const command=(id,action,extra={})=>stamp({...header(),action,orderId:id,expectedRevision:doc(id).revision,...extra})
+function run(input){const result=db.applySalesOperation(input,owner);assert.equal(result.success,true,result.error);return result}
+function request(endpoint,input={},device={},extra={}){return new Promise((resolve,reject)=>{
+  const body=JSON.stringify(input),req=https.request(new URL('/api/'+endpoint,origin),{method:'POST',ca,checkServerIdentity:(_host,certificate)=>require('node:tls').checkServerIdentity('127.0.0.1',certificate),headers:{'Content-Type':'application/json',Origin:origin,'X-POS-CSRF':device.csrf||'',Cookie:device.cookie||'',...extra}},res=>{let text='';res.on('data',part=>text+=part);res.on('end',()=>{try{resolve({status:res.statusCode,value:JSON.parse(text),cookie:res.headers['set-cookie']?.[0]?.split(';')[0]})}catch(e){reject(e)}})});req.on('error',reject);req.end(body)
+})}
+const rpc=(device,method,...args)=>request('rpc',{method,args},device)
+async function pair(username){const result=await request('pair',{token:new URLSearchParams(new URL(server.pair().url).hash.slice(1)).get('pair')});assert.equal(result.status,200);const device={cookie:result.cookie,csrf:result.value.csrf};assert.equal((await rpc(device,'auth:login',{username,password:'fixture-password'})).status,200);return device}
+;(async()=>{try{
+  db.addUser({id:'owner',username:owner.username,password:hash('fixture-password'),role:'owner'});db.addUser({id:'staff',username:'staff fixture',password:hash('fixture-password'),role:'staff'})
+  db.addProduct({id:'p',name:'牛肉',unit:'公斤',stock:5,cost:8.88,price:15});db.openShift({id:'shift',cashier:owner.username,openCash:100})
+  const legacy=structuredClone(db.exportData());delete legacy.salesDocuments;delete legacy.salesOperations
+  const original=create(),id=original.id;let result=run(original)
+  assert.equal(result.document.total,38.56);assert.equal(db.getProducts()[0].stock,5);assert.equal(db.getCashLog().length,0);assert.equal(db.getOrders().length,0);assert.deepEqual(salesToJournalEntries(result.document),[])
+  pass('native sales creation persists an agreed order without a reservation, checkout, revenue or cash movement')
+  const deliveryRequest=command(id,'deliver',{quantities:[1.125],dueDate:salesDate(new Date()),handedOver:true}),delivery=run(deliveryRequest).document.deliveries[0]
+  assert.equal(delivery.amount,13.88);assert.equal(delivery.costTotal,9.99);assert.equal(db.getProducts()[0].stock,3.875)
+  const paymentRequest=command(id,'pay',{deliveryId:delivery.id,amount:5,method:'cash',shiftId:'shift',reference:''});run(paymentRequest)
+  assert.equal(salesSummary(doc(id)).owed,8.88);assert.equal(summarizeShift(db.getOpenShift(),db.getOrders(),db.exportData().cashLog,[],[]).expected,105)
+  assert.equal(db.getOrders().length,0);pass('partial handover and cash collection update native stock, receivable and drawer exactly once')
+  let before=db.exportData(),epoch=state().epoch,raw=new Database(file)
+  raw.exec("CREATE TRIGGER sales_late_failure BEFORE INSERT ON sales_operations BEGIN SELECT RAISE(ABORT,'fixture late receipt failure'); END")
+  const late=command(id,'pay',{deliveryId:delivery.id,amount:1,method:'cash',shiftId:'shift',reference:''})
+  assert.equal(db.applySalesOperation(late,owner).success,false);assert.deepEqual(db.exportData(),before);assert.equal(state().epoch,epoch);raw.exec('DROP TRIGGER sales_late_failure');raw.close()
+  pass('a real late SQLite receipt failure rolls back document, cash log and all inventory together')
+  db.close();db=init(file);assert.equal(run(paymentRequest).document.payments.length,1);assert.deepEqual(db.exportData(),before)
+  pass('lost acknowledgement followed by actual SQLite reopen replays the original payment without a second collection')
+  const changed=structuredClone(paymentRequest);changed.amount=6;assert.equal(db.applySalesOperation(changed,owner).committed,false)
+  const stale=command(id,'close',{reason:'stale fixture'});run(command(id,'allowance',{deliveryId:delivery.id,amounts:[.01],reason:'fixture'}));before=db.exportData()
+  assert.equal(db.applySalesOperation(stale,owner).success,false);assert.deepEqual(db.exportData(),before)
+  assert.throws(()=>db.getSalesState({role:'staff'}),/權限/);assert.throws(()=>db.applySalesOperation(create(),{role:'staff'}),/權限/)
+  pass('changed-ID contents, stale document revisions and direct staff access reject before native mutation')
+  db.updateProduct('p',{cost:99});result=run(command(id,'return',{deliveryId:delivery.id,quantities:[.125],restock:true,reason:'original-cost fixture'}))
+  assert.equal(result.document.returns[0].costTotal,1.11);assert.equal(db.getProducts()[0].stock,4)
+  const entries=salesToJournalEntries(doc(id));for(const entry of entries)assert.equal(Math.round(entry.lines.reduce((n,l)=>n+l.debit-l.credit,0)*100),0)
+  assert.equal(entries.find(e=>e.id.endsWith('cost-return')).lines[0].debit,1.11);assert.throws(()=>db.deleteProduct('p'),/銷售文件/)
+  pass('native returns restore original delivery cost after repricing and preserve balanced source-linked journal entries')
+  const full=db.exportData(),backup=db.createBackup('sales full fixture',owner.username);epoch=state().epoch
+  assert.equal(db.restoreBackup(backup.id).success,true);assert.notEqual(state().epoch,epoch);assert.deepEqual(db.exportData(),full);assert.equal(run(original).document.revision,doc(id).revision)
+  pass('complete native backup round trip preserves source and all receipts while atomically rotating the local restore fence')
+  const earlier=db.exportData(),later=command(id,'pay',{deliveryId:delivery.id,amount:1,method:'cash',shiftId:'shift',reference:''});run(later);db.importData(earlier);before=db.exportData()
+  assert.deepEqual(db.applySalesOperation(later,owner),{success:false,committed:null,error:'資料已還原或更換，請先核對原銷售操作，不要重新收款'});assert.deepEqual(db.exportData(),before)
+  pass('restoring before a lost payment makes that missing historical operation uncertain instead of collecting again')
+  const corrupt=structuredClone(before);corrupt.salesOperations.pop();epoch=state().epoch
+  assert.throws(()=>db.importData(corrupt),/不完整/);assert.deepEqual(db.exportData(),before);assert.equal(state().epoch,epoch)
+  pass('corrupt native restore rolls back all business rows and its restore fence')
+  raw=new Database(file);const insert=raw.prepare('INSERT INTO cash_log (id,shiftId,time,type,amount,reason,cashier) VALUES (?,?,?,?,?,?,?)')
+  raw.transaction(()=>{for(let i=0;i<2100;i++)insert.run('ordinary-'+i,'shift',new Date(Date.now()+i+1).toISOString(),'in',.01,'retention fixture',owner.username)})();raw.close()
+  assert.equal(db.getCashLog().length,500);assert.ok(!db.getCashLog().some(row=>row.id==='sales-cash:'+paymentRequest.id))
+  const complete=db.exportData();assert.equal(complete.cashLog.length,2101);db.importData(complete);assert.deepEqual(db.exportData(),complete);assert.equal(run(paymentRequest).cashLog.id,'sales-cash:'+paymentRequest.id)
+  pass('native validation, backup and original replay retain formal cash evidence beyond the 500-row display limit')
+  db.importData(legacy);assert.deepEqual(state().documents,[]);assert.deepEqual(db.exportData().salesOperations,[]);assert.equal(db.getProducts()[0].stock,5)
+  assert.equal(db.applySalesOperation(original,owner).committed,null)
+  pass('pre-sales backups replace future sales history and cannot silently repeat a removed original operation')
+  let historyDb=init(path.join(root,'history.db'))
+  try{
+    const historyStore='history-store',historyData={storeId:historyStore,epoch:'history-epoch',documents:[],products:legacy.products,quotes:[]},documents=[],operations=[]
+    for(let i=0;i<2001;i++){
+      const input={id:'historical-sales-'+i,kind:'sales',storeId:historyStore,epoch:historyData.epoch,time:new Date().toISOString(),date:salesDate(new Date()),action:'create',document:{customer:{id:'buyer',name:'history fixture'},date:salesDate(new Date()),items:[{productId:'p',qty:.001,unitPrice:1,expectedProduct:productReference(legacy.products[0])}],note:''}}
+      const plan=planSales(input,historyData,owner);documents.push(plan.document);operations.push(plan.receipt)
+    }
+    historyDb.importData({...legacy,settings:[...legacy.settings.filter(row=>row.key!=='sharedStoreId'),{key:'sharedStoreId',value:historyStore}],salesDocuments:documents,salesOperations:operations})
+    const historyBackup=historyDb.createBackup('more than two thousand formal documents',owner.username),historySnapshot=historyDb.exportData()
+    historyDb.close();historyDb=init(path.join(root,'history.db'));assert.equal(historyDb.getSalesState(owner).documents.length,2001);assert.equal(historyDb.exportData().salesOperations.length,2001)
+    assert.equal(historyDb.restoreBackup(historyBackup.id).success,true);assert.deepEqual(historyDb.exportData(),historySnapshot)
+    const originalRequest=JSON.parse(operations[0].signature);assert.equal(historyDb.applySalesOperation(originalRequest,owner).success,true);assert.deepEqual(historyDb.exportData(),historySnapshot)
+    pass('actual SQLite backup, reopen and original replay preserve all 2001 formal sales documents and receipts')
+  }finally{historyDb.close()}
+  db.addProduct({id:'last',name:'last portion',unit:'個',stock:1,cost:20,price:50})
+  server=sharedFactory({db,distRoot:path.resolve('dist'),certificateRoot:path.join(root,'cert'),allowLoopback:true});const status=await server.start({host:'127.0.0.1',port:0});origin='https://127.0.0.1:'+status.port;ca=new X509Certificate(Buffer.from(server.certificate(),'base64')).toString()
+  const first=await pair(owner.username),second=await pair(owner.username),staff=await pair('staff fixture')
+  assert.equal((await rpc(first,'db:getSalesState')).value.result.storeId,state().storeId)
+  before=db.exportData();assert.equal((await rpc(staff,'db:getSalesState')).status,400);assert.equal((await rpc(staff,'db:applySalesOperation',create('last',1,50),owner)).status,400);assert.deepEqual(db.exportData(),before)
+  pass('authenticated private HTTPS serves the same native sales authority and refuses forged owner access from staff')
+  const a=create('last',1,50),b=create('last',1,50)
+  assert.equal((await rpc(first,'db:applySalesOperation',a)).value.result.success,true);assert.equal((await rpc(second,'db:applySalesOperation',b)).value.result.success,true)
+  const d1=command(a.id,'deliver',{quantities:[1],dueDate:salesDate(new Date()),handedOver:true}),d2=command(b.id,'deliver',{quantities:[1],dueDate:salesDate(new Date()),handedOver:true})
+  const raced=await Promise.all([rpc(first,'db:applySalesOperation',d1),rpc(second,'db:applySalesOperation',d2)])
+  assert.equal(raced.filter(r=>r.value.result?.success).length,1);assert.equal(db.getProducts().find(p=>p.id==='last').stock,0);assert.equal(state().documents.reduce((n,d)=>n+d.deliveries.length,0),1)
+  pass('two real authenticated HTTPS clients can accept orders but only one can hand over the last shared item')
+  const winner=raced.find(r=>r.value.result?.success).value.result.document,remotePayment=command(winner.id,'pay',{deliveryId:winner.deliveries[0].id,amount:10,method:'cash',shiftId:'shift',reference:''})
+  before=db.exportData();assert.equal((await request('rpc',{method:'db:applySalesOperation',args:[remotePayment]},first,{'X-POS-CSRF':'forged'})).status,403);assert.deepEqual(db.exportData(),before)
+  assert.equal((await rpc(first,'db:applySalesOperation',remotePayment)).value.result.success,true);before=db.exportData();assert.equal((await rpc(second,'db:applySalesOperation',remotePayment)).value.result.success,true);assert.deepEqual(db.exportData(),before)
+  assert.equal(db.exportData().cashLog.filter(row=>row.id==='sales-cash:'+remotePayment.id).length,1)
+  pass('real HTTPS rejects forged CSRF and original-payment replay from a second paired device remains exactly once')
+  console.log(JSON.stringify({success:true,marker:'POS_SALES_PASS',tests,electron:process.versions.electron,transport:'private HTTPS with trusted fixture certificate',realPhone:false}))
+}catch(error){console.error(error.stack);process.exitCode=1}finally{await server?.stop();db.close()}})()

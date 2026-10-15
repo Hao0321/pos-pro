@@ -6,6 +6,8 @@ import { createCheckoutCoordinator } from '../utils/checkoutCoordinator.mjs'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { orderToJournalEntries, topupToJournalEntries,wasteToJournalEntries } from '../utils/accounting'
 import {PROCUREMENT_KINDS,procurementToJournalEntries} from '../../electron/procurementRules.mjs'
+import {salesToJournalEntries,salesDayMetrics} from '../../electron/salesJournal.mjs'
+import {salesDate} from '../../electron/salesRules.mjs'
 import {
   isElectron,isSharedStore, checkAndMigrate,
   loadProducts, saveProducts, dbAddProduct, dbUpdateProduct, dbDeleteProduct,
@@ -20,6 +22,7 @@ import {
   getSetting, setSetting,setSettings,
   applyInventoryOperation,
   applyExchangeOperation,
+  loadSalesState,applySalesOperation,
   applyRestaurantOperation,
   loadRestaurantState,
 } from '../utils/dataAccess'
@@ -38,6 +41,8 @@ export function useStore(session){
   const [members,       setMembers]       = useState([])
   const [orders,        setOrders]        = useState([])
   const [purchases,setPurchases]=useState([])
+  const [sales,setSales]=useState({documents:[]})
+  const [salesQuote,setSalesQuote]=useState(null)
   const [manualEntries, setManualEntries] = useState([])
   const [cart,          setCart]          = useState([])
   const [view,          setView]          = useState('dashboard')
@@ -95,10 +100,11 @@ export function useStore(session){
         getOpenShift(),
         loadRestaurantState(),
         session.role==='owner'?loadPurchases([]):Promise.resolve([]),
+        session.role==='owner'?loadSalesState(session):Promise.resolve({documents:[]}),
       ])
       if(cancelled)return
-      const fallbacks = [[], [], [], [], [], [], [], null,{config:defaultRestaurantConfig()},[]]
-      const [p, m, o, j, held, waste, tps, shift,restaurant,po] = results.map((r, i) => {
+      const fallbacks = [[], [], [], [], [], [], [], null,{config:defaultRestaurantConfig()},[],{documents:[]}]
+      const [p, m, o, j, held, waste, tps, shift,restaurant,po,salesState] = results.map((r, i) => {
         if (r.status === 'fulfilled') return r.value
         setDataError('資料載入失敗，請保留原資料並重試：' + String(r.reason?.message || '讀取失敗'))
         console.error('[POS] init load failed:', i, r.reason)
@@ -108,6 +114,7 @@ export function useStore(session){
       setMembers(Array.isArray(m) ? m : [])
       setOrders(Array.isArray(o) ? o : [])
       setPurchases(Array.isArray(po)?po:[])
+      setSales(salesState)
       setManualEntries(Array.isArray(j) ? j : [])
       setHeldOrders(Array.isArray(held) ? held : [])
       setWasteLog(Array.isArray(waste) ? waste : [])
@@ -165,7 +172,8 @@ export function useStore(session){
     ...topups.flatMap(topupToJournalEntries),   // 會員儲值（加值 + 折抵）一併入帳，損益表才完整
     ...wasteLog.flatMap(wasteToJournalEntries),
     ...purchases.flatMap(procurementToJournalEntries),
-  ],[orders,products,topups,wasteLog,purchases])
+    ...sales.documents.flatMap(salesToJournalEntries),
+  ],[orders,products,topups,wasteLog,purchases,sales.documents])
   const allJournal  = useMemo(()=>[...autoJournal,...manualEntries].sort((a,b)=>b.date.localeCompare(a.date)),[autoJournal,manualEntries])
 
   const addManualEntry = useCallback(async e=>{
@@ -349,6 +357,18 @@ export function useStore(session){
     window.dispatchEvent(new CustomEvent('pos-exchange-operation',{detail:result}))
     return result
   }
+  function applySalesResult(result){
+    setSales(previous=>({...previous,documents:[result.document,...previous.documents.filter(doc=>doc.id!==result.document.id)]}))
+    setProducts(previous=>previous.map(product=>result.products.find(row=>row.id===product.id)||product))
+    if(result.cashLog)window.dispatchEvent(new Event('pos-cash-operation'))
+    window.dispatchEvent(new CustomEvent('pos-sales-operation',{detail:result}))
+    return result
+  }
+  async function commitSales(input,identity=null){
+    if(dataError)throw Error(dataError)
+    if(checkoutRef.current.getState().phase!=='idle')throw Error('請先確認原收款交易')
+    return applySalesResult(await executeFinancial('sales',{...input,kind:'sales'},request=>applySalesOperation(request,session),setFinancialState,identity))
+  }
   async function commitRestaurant(input,identity=null){
     if(dataError)throw Error(dataError)
     if(checkoutRef.current.getState().phase!=='idle')throw Error('請先確認原收款交易')
@@ -360,6 +380,7 @@ export function useStore(session){
     const pending=readPendingFinancial();if(!pending)return
     const ports={restaurant:r=>applyRestaurantOperation(r,session),refund:r=>dbRefund(r.refundOf,r),topup:addTopup,waste:addWaste,cashlog:addCashLog,stocktake:r=>applyInventoryOperation(r,session),receive:r=>applyInventoryOperation(r,session)}
     ports.exchange=r=>applyExchangeOperation(r,session)
+    ports.sales=r=>applySalesOperation(r,session)
     for(const kind of PROCUREMENT_KINDS)ports[kind]=r=>applyInventoryOperation(r,session)
     const result=await executeFinancial(pending.kind,JSON.parse(pending.signature).input,ports[pending.kind],setFinancialState)
     if(pending.kind==='topup'){setMembers(p=>p.map(m=>m.id===result.member.id?result.member:m));setTopups(p=>[result.topup,...p.filter(t=>t.id!==result.topup.id)])}
@@ -369,6 +390,7 @@ export function useStore(session){
     if(pending.kind==='cashlog')window.dispatchEvent(new Event('pos-cash-operation'))
     if(pending.kind==='restaurant')await applyRestaurantResult(result)
     if(pending.kind==='exchange')window.dispatchEvent(new CustomEvent('pos-exchange-operation',{detail:result}))
+    if(pending.kind==='sales')applySalesResult(result)
     return result
   }
 
@@ -448,6 +470,7 @@ export function useStore(session){
       const s=await window.electronAPI.db.getStoreSnapshot()
       setProducts(s.products);setMembers(s.members);setOrders(s.orders);setManualEntries(s.manualEntries);setHeldOrders(s.heldOrders);setWasteLog(s.wasteLog);setTopups(s.topups);setOpenShiftState(s.openShift);setPurchases(s.purchases||[])
       setRestaurantConfig(s.restaurantConfig||defaultRestaurantConfig())
+      setSales(s.sales||{documents:[]})
       setPointsRule({earn:s.rules.earn==null?10:Number(s.rules.earn),redeem:s.rules.redeem==null?1:Number(s.rules.redeem)});setBirthdayBonus(s.rules.birthdayBonus==null?100:Number(s.rules.birthdayBonus));return
     }
     const [p, m, o, j] = await Promise.all([
@@ -460,9 +483,10 @@ export function useStore(session){
     setMembers(m)
     setOrders(o)
     setManualEntries(j)
-    if(session.role==='owner')setPurchases(await loadPurchases([]))
+    if(session?.role==='owner'){setPurchases(await loadPurchases([]));setSales(await loadSalesState(session))}
+    else setSales({documents:[]})
     setWasteLog(await loadWasteLog());setRestaurantConfig((await loadRestaurantState()).config)
-  }, [])
+  }, [session?.userId,session?.role])
   useEffect(()=>{
     if(!ready||!session||!isElectron||!window.electronAPI.onStoreChanged)return
     let cancelled=false,timer,running=false,again=false
@@ -474,18 +498,19 @@ export function useStore(session){
   const categories    = [...new Set(products.map(p=>p.category))]
   // 排除完整退貨原訂單（status='refunded'）；部分退貨負數訂單保留，與原單抵銷正確
   const todayOrders   = settledOrders(orders).filter(o=>new Date(o.time).toDateString()===new Date().toDateString())
-  const todayRevenue  = todayOrders.reduce((s,o)=>s+netSale(o),0)
+  const todaySales=useMemo(()=>salesDayMetrics(sales.documents,salesDate(new Date())),[sales.documents])
+  const todayRevenue  = Math.round((todayOrders.reduce((s,o)=>s+netSale(o),0)+todaySales.revenue)*100)/100
   const lowStockCount = products.filter(p=>p.stock<=5).length
-  const todayProfit= todayOrders.reduce((sum,o)=>sum+netSale(o)-orderCost(o,products),0)
+  const todayProfit= Math.round((todayOrders.reduce((sum,o)=>sum+netSale(o)-orderCost(o,products),0)+todaySales.profit)*100)/100
 
   return {
-    products,members,orders,purchases,cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitInventory,commitRestaurant,commitExchange,restaurantConfig,
+    products,members,orders,purchases,sales,salesQuote,openSalesQuote:quote=>{setSalesQuote({id:quote.id,revision:quote.revision});setView('sales')},consumeSalesQuote:()=>setSalesQuote(null),cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitInventory,commitRestaurant,commitExchange,commitSales,restaurantConfig,
     activeMember,setActiveMember:value=>{ensureCartEditable();setActiveMember(value)},
     addToCart,removeFromCart,updateCartQty,updateCartItemPrice,clearCart,stageQuickSale,
     cartSubtotal,cartCount,checkout,refund,
     addProduct,updateProduct,deleteProduct,findByBarcode,
     addMember,updateMember,deleteMember,findMember,
-    categories,todayOrders,todayRevenue,lowStockCount,todayProfit,
+    categories,todayOrders,todayRevenue,lowStockCount,todayProfit,todaySales,todayBusinessCount:todayOrders.length+todaySales.deliveries,
     allJournal,autoJournal,manualEntries,
     addManualEntry,deleteManualEntry,
     reloadFromDB,

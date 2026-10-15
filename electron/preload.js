@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAgentContext:()=>ipcRenderer.invoke('db:getAgentContext'),
     getExchangeContext:()=>ipcRenderer.invoke('db:getExchangeContext'),
     applyExchangeOperation:input=>ipcRenderer.invoke('db:applyExchangeOperation',input),
+    getSalesState:()=>ipcRenderer.invoke('db:getSalesState'),
+    applySalesOperation:input=>ipcRenderer.invoke('db:applySalesOperation',input),
     rememberAgentMappings:input=>ipcRenderer.invoke('db:rememberAgentMappings',input),
     getRestaurantState:()=>ipcRenderer.invoke('db:getRestaurantState'),
     applyRestaurantOperation:input=>ipcRenderer.invoke('db:applyRestaurantOperation',input),

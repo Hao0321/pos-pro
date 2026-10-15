@@ -1,4 +1,6 @@
 module.exports=function initializeSchema(db){
+  db.exec('CREATE TABLE IF NOT EXISTS sales_documents (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS sales_operations (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS sales_runtime (id TEXT PRIMARY KEY,value TEXT NOT NULL);')
+  db.prepare('INSERT OR IGNORE INTO sales_runtime (id,value) VALUES (?,?)').run('epoch',require('node:crypto').randomUUID())
   db.exec(`CREATE TABLE IF NOT EXISTS restaurant_orders (id TEXT PRIMARY KEY, data TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS restaurant_operations (id TEXT PRIMARY KEY, data TEXT NOT NULL);`)
   // ===== Schema =====

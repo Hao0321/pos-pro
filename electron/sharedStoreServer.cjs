@@ -56,6 +56,8 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(method==='db:getAgentContext')return db.getAgentContext(actor)
     if(method==='db:getExchangeContext')return db.getExchangeContext(actor)
     if(method==='db:applyExchangeOperation')return db.applyExchangeOperation(args[0],actor)
+    if(method==='db:getSalesState')return db.getSalesState(actor)
+    if(method==='db:applySalesOperation')return db.applySalesOperation(args[0],actor)
     if(method==='db:rememberAgentMappings')return db.rememberAgentMappings(args[0],actor)
     if(method==='db:applyRestaurantOperation')return db.applyRestaurantOperation(args[0],actor)
     if(method==='db:applyInventoryOperation')return db.applyInventoryOperation(args[0],actor)

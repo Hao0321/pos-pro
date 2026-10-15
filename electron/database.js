@@ -160,6 +160,7 @@ module.exports = function initDatabase(dbPath) {
     ...require('./scenarioTemplates.cjs')(db, stmts),
     ...require('./inventoryOperations.cjs')(db,stmts,supplierParams),
     ...require('./exchangeOperations.cjs')(db,stmts),
+    ...require('./salesOperations.cjs')(db,stmts),
     // Products
     getProducts() {
       return stmts.getAllProducts.all().map(p => ({ ...p, noBarcode: !!p.noBarcode }))
@@ -209,6 +210,7 @@ module.exports = function initDatabase(dbPath) {
       return { success: true }
     },
     deleteProduct(id) {
+      if(db.prepare("SELECT 1 FROM sales_documents d,json_each(json_extract(d.data,'$.items')) i WHERE json_extract(i.value,'$.productId')=? LIMIT 1").get(id))throw Error('商品仍被銷售文件使用，請保留以供核對')
       if(stmts.getAllPurchases.all().some(p=>p.procurement&&JSON.parse(p.items||'[]').some(i=>i.productId===id)))throw Error('品項仍被採購文件使用，請保留以供核對')
       const cfg=JSON.parse(stmts.getSetting.get('restaurantConfig')?.value||'{}')
       if(Object.hasOwn(cfg.recipes||{},id)||Object.values(cfg.recipes||{}).some(rows=>rows.some(r=>r.id===id))||db.prepare('SELECT data FROM restaurant_orders').all().some(r=>{const e=JSON.parse(r.data);return e.items.some(i=>i.id===id)||e.allocations.some(i=>i.id===id)}))throw Error('品項仍被預訂或配方使用，請保留以供核對')
@@ -526,7 +528,7 @@ module.exports = function initDatabase(dbPath) {
       // 清空所有表再匯入 — 包在「單一 transaction」內：若匯入中途 throw，DELETE 會一起 rollback，
       // 不會發生「舊資料已清掉、新資料卻沒匯入」的整庫遺失。
       if(!data||typeof data!=='object')throw new Error('備份格式錯誤')
-      const current=this.exportData(),merged={...current,...data}
+      const current=this.exportData(),merged={...current,...data,salesDocuments:data.salesDocuments??[],salesOperations:data.salesOperations??[]}
       for(const key of Object.keys(current).filter(k=>k!=='_revision'))if(!Array.isArray(merged[key]))throw new Error('備份資料集合格式錯誤：'+key)
       if(current.users.length && !merged.users.some(u=>u.role==='owner'))throw new Error('備份必須保留管理員帳號')
       replaceAllTx(merged)
@@ -553,6 +555,8 @@ module.exports = function initDatabase(dbPath) {
         settings: stmts.getAllSettings.all(),
         restaurantOrders: db.prepare('SELECT data FROM restaurant_orders ORDER BY rowid DESC').all().map(r=>JSON.parse(r.data)),
         restaurantOperations: db.prepare('SELECT data FROM restaurant_operations ORDER BY rowid').all().map(r=>JSON.parse(r.data)),
+        salesDocuments:db.prepare('SELECT data FROM sales_documents ORDER BY id').all().map(r=>JSON.parse(r.data)),
+        salesOperations:db.prepare('SELECT data FROM sales_operations ORDER BY id').all().map(r=>JSON.parse(r.data)),
       }
       // A backup round trip may change insertion order for tied timestamps.
       // Stable collection ordering keeps the revision tied to business content.
@@ -563,7 +567,7 @@ module.exports = function initDatabase(dbPath) {
       // 同 restoreBackup：清空＋重匯包成單一 transaction，避免匯入失敗造成整庫遺失
       if (expectedRevision && this.exportData()._revision!==expectedRevision) throw new Error('本機資料已改變，已取消覆蓋')
       if(!data||typeof data!=='object')throw new Error('備份格式錯誤')
-      const current=this.exportData(),merged={...current,...data}
+      const current=this.exportData(),merged={...current,...data,salesDocuments:data.salesDocuments??[],salesOperations:data.salesOperations??[]}
       for(const key of Object.keys(current).filter(k=>k!=='_revision'))if(!Array.isArray(merged[key]))throw new Error('備份資料集合格式錯誤：'+key)
       if(current.users.length && !merged.users.some(u=>u.role==='owner'))throw new Error('備份必須保留管理員帳號')
       replaceAllTx(merged)
@@ -593,7 +597,7 @@ module.exports = function initDatabase(dbPath) {
       return migrateTx(data)
     },
     isEmpty() {
-      return ['products','members','orders','suppliers','purchases','promotions','manual_journal','held_orders','shifts','cash_log','waste_log','member_topups'].every(t=>db.prepare('SELECT 1 FROM '+t+' LIMIT 1').get()==null)
+      return ['products','members','orders','suppliers','purchases','promotions','manual_journal','held_orders','shifts','cash_log','waste_log','member_topups','sales_documents','sales_operations'].every(t=>db.prepare('SELECT 1 FROM '+t+' LIMIT 1').get()==null)
     },
 
     // ===== Held Orders 掛單 =====

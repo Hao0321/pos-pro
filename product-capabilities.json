@@ -1,41 +1,264 @@
 {
   "schemaVersion": 1,
-  "productVersion": "2.12.0",
+  "productVersion": "2.13.0",
   "objective": "把 ERP 全部完成，讓老人、小孩會使用；建單協議與全系統操作極簡、一鍵自動",
   "completionScope": "public",
   "allFeaturesFree": true,
-  "requiredIds": ["ux.tasks", "ux.all-workflows", "ux.human-acceptance", "agent.handoff", "agent.interoperability", "pos.transactions", "restaurant.fulfilment", "restaurant.deposits-modifiers", "sales.orders-receivables", "crm.customers", "procurement.core", "procurement.returns", "procurement.approvals-advances", "inventory.movements-costing", "inventory.warehouses-lots", "inventory.units-counting", "accounting.ledger", "accounting.close-tax", "finance.reconciliation-assets", "manufacturing.mrp", "people.payroll", "projects.services", "organization.multi-entity", "integration.commerce", "security.authority", "recovery.backup", "delivery.devices", "delivery.installation", "update.client-check", "update.release-channel", "operations.scale"],
+  "requiredIds": [
+    "ux.tasks",
+    "ux.all-workflows",
+    "ux.human-acceptance",
+    "agent.handoff",
+    "agent.interoperability",
+    "pos.transactions",
+    "restaurant.fulfilment",
+    "restaurant.deposits-modifiers",
+    "sales.orders-receivables",
+    "crm.customers",
+    "procurement.core",
+    "procurement.returns",
+    "procurement.approvals-advances",
+    "inventory.movements-costing",
+    "inventory.warehouses-lots",
+    "inventory.units-counting",
+    "accounting.ledger",
+    "accounting.close-tax",
+    "finance.reconciliation-assets",
+    "manufacturing.mrp",
+    "people.payroll",
+    "projects.services",
+    "organization.multi-entity",
+    "integration.commerce",
+    "security.authority",
+    "recovery.backup",
+    "delivery.devices",
+    "delivery.installation",
+    "update.client-check",
+    "update.release-channel",
+    "operations.scale"
+  ],
   "capabilities": [
-    {"id":"ux.tasks","name":"預設簡易首頁、白話搜尋、常用工作入口","status":"unmeasured","implementation":"available","nextExperiment":"原生與配對手機實際完成搜尋、導覽、重啟與 360px 觸控驗收"},
-    {"id":"ux.all-workflows","name":"全系統表單、引導、自動帶入與可恢復操作","status":"unmeasured","implementation":"partial","nextExperiment":"逐頁檢查從開始、保存、失敗恢復到查詢的完整流程，包含仍使用舊表單的模組"},
-    {"id":"ux.human-acceptance","name":"長者、兒童及第一次使用者可獨立操作","status":"unmeasured","implementation":"needs-real-users","nextExperiment":"招募真實使用者，以無口頭提示任務測量完成率、錯誤、時間與付款理解"},
-    {"id":"agent.handoff","name":"一鍵 Agent 資料包、跨公司文件、未知品項對照與確認建單","status":"unmeasured","implementation":"available","nextExperiment":"同一份外部文件通過資料包、檔案、JSON 區塊、配對手機及原編號重試"},
-    {"id":"agent.interoperability","name":"多家公司真實 Agent 的互通與首次設定體驗","status":"unmeasured","implementation":"needs-external-agents","nextExperiment":"使用獨立供應商 Agent 與未知品項文件完成實際往返，不由內建測試器生成全部輸入"},
-    {"id":"pos.transactions","name":"收銀、退款、會員款項、班次與交易一致性","status":"unmeasured","implementation":"available","nextExperiment":"目前版本重跑完整原生、瀏覽器、共用手機及故障回歸"},
-    {"id":"restaurant.fulfilment","name":"預訂、現場、外送登記、原料預留、收款與交付","status":"unmeasured","implementation":"available","nextExperiment":"目前版本回歸並在實店演練預訂至交付、取消、日結"},
-    {"id":"restaurant.deposits-modifiers","name":"訂金、部分取消、加料與組合品","status":"planned","implementation":"partial","nextExperiment":"設計不可重複認列的訂金、尾款、部分退訂及配方加料交易"},
-    {"id":"sales.orders-receivables","name":"企業銷售訂單、出貨、客戶應收與收款核銷","status":"planned","implementation":"partial","nextExperiment":"以賒帳銷售、分批出貨、部分收款、退貨折讓完成獨立單據閉環"},
-    {"id":"crm.customers","name":"會員到企業客戶、聯絡人與商機的 CRM","status":"planned","implementation":"partial","nextExperiment":"共用客戶身份並串聯報價、訂單、應收及互動紀錄"},
-    {"id":"procurement.core","name":"採購、部分收貨、核對請款、分次付款與分錄","status":"unmeasured","implementation":"available","nextExperiment":"目前版本重跑原生、UI、共用手機、備份及現金核對"},
-    {"id":"procurement.returns","name":"部分退貨、折抵、供應商退款及更正","status":"unmeasured","implementation":"available","nextExperiment":"驗證分批小數尾差、已付退款、原編號恢復、回滾、重啟與備份"},
-    {"id":"procurement.approvals-advances","name":"採購核准、預付貨款與多單核銷","status":"planned","implementation":"partial","nextExperiment":"設計小店預設簡單、企業可選雙人核准及預付分攤"},
-    {"id":"inventory.movements-costing","name":"一致庫存流水、期初與可核對成本評價","status":"planned","implementation":"partial","nextExperiment":"建立逐筆流水與期初核對，接入所有交易並驗證 FIFO 或明確成本政策"},
-    {"id":"inventory.warehouses-lots","name":"多倉、調撥、批次、效期及 FEFO","status":"planned","implementation":"not-started","nextExperiment":"以兩倉、兩批、到期隔離和原單退貨驗證可售與保留數量"},
-    {"id":"inventory.units-counting","name":"單位換算、盤點差異與追溯","status":"planned","implementation":"partial","nextExperiment":"明確商品換算比例、盤點核准及差異流水，不從品名猜測"},
-    {"id":"accounting.ledger","name":"總帳、來源單據、自動分錄與報表核對","status":"unmeasured","implementation":"partial","nextExperiment":"驗證各業務來源不重複認列及期初、退款、儲值、損耗與採購的對帳"},
-    {"id":"accounting.close-tax","name":"期間鎖定、關帳、稅務及電子發票","status":"planned","implementation":"not-started","nextExperiment":"先建立期間鎖定與更正機制，再依目標法域和正式服務沙盒驗證"},
-    {"id":"finance.reconciliation-assets","name":"銀行對帳、固定資產、折舊與預算","status":"planned","implementation":"not-started","nextExperiment":"以匯入對帳、已認列來源匹配和資產生命週期建立可追溯流程"},
-    {"id":"manufacturing.mrp","name":"BOM、需求規劃、工單、排程及品質","status":"planned","implementation":"partial","nextExperiment":"從現有餐飲配方擴充為領料、產出、耗損、返工與成本核對"},
-    {"id":"people.payroll","name":"人員、工時與薪資","status":"planned","implementation":"not-started","nextExperiment":"設計工時核准與薪資試算，法定規則需依所在地驗證"},
-    {"id":"projects.services","name":"專案、服務工單與合約","status":"planned","implementation":"not-started","nextExperiment":"完成服務報價、履約、費用與請款的簡單閉環"},
-    {"id":"organization.multi-entity","name":"多公司、多店、多幣別與合併核對","status":"planned","implementation":"not-started","nextExperiment":"先證明組織隔離、匯率快照、公司間交易與權限不互漏"},
-    {"id":"integration.commerce","name":"LINE、外送、電商及供應商整合","status":"planned","implementation":"partial","nextExperiment":"以各服務正式沙盒驗證認證、重播、退款及訂單對應"},
-    {"id":"security.authority","name":"認證、權限、稽核與第三方邊界","status":"unmeasured","implementation":"partial","nextExperiment":"對每個新增模組執行實際未登入、員工、偽造、重播與復原控制"},
-    {"id":"recovery.backup","name":"完整備份、升級、損壞還原與災難演練","status":"unmeasured","implementation":"available","nextExperiment":"本版跨版本副本升級與完整資料恢復；不覆寫正式店面"},
-    {"id":"delivery.devices","name":"真實手機、相機、印表機與店內網路","status":"unmeasured","implementation":"needs-physical-devices","nextExperiment":"iPhone/Android 實機信任、休眠、重連、掃碼、列印與長時間營業演練"},
-    {"id":"delivery.installation","name":"簽章安裝、安裝移除與資料保留","status":"unmeasured","implementation":"partial","nextExperiment":"在隔離 Windows 環境安裝、升級、移除，驗證使用者資料與可信簽章"},
-    {"id":"update.client-check","name":"可驗證更新檢查、並存升級與回退","status":"planned","implementation":"manual-only","nextExperiment":"驗證來源策略、簽章中繼資料、離線、過期、混用、斷電及回退"},
-    {"id":"update.release-channel","name":"有可信簽章的正式更新來源","status":"blocked_external","implementation":"not-configured","blocker":{"owner":"project-maintainer","condition":"尚未設定可信發佈簽章與正式更新來源","nextAction":"建立並審查信任政策後驗證精確來源與簽章；不自動購買憑證或發布"},"nextExperiment":"與本地更新器共同驗證正式來源的獨立讀回"},
-    {"id":"operations.scale","name":"資料量、並行、效能與長時間營業","status":"unmeasured","implementation":"partial","nextExperiment":"凍結大資料集與並行工作量，測量延遲、資源、重啟及尖峰最後庫存"}
+    {
+      "id": "ux.tasks",
+      "name": "預設簡易首頁、白話搜尋、常用工作入口",
+      "status": "unmeasured",
+      "implementation": "available",
+      "nextExperiment": "原生與配對手機實際完成搜尋、導覽、重啟與 360px 觸控驗收"
+    },
+    {
+      "id": "ux.all-workflows",
+      "name": "全系統表單、引導、自動帶入與可恢復操作",
+      "status": "unmeasured",
+      "implementation": "partial",
+      "nextExperiment": "逐頁檢查從開始、保存、失敗恢復到查詢的完整流程，包含仍使用舊表單的模組"
+    },
+    {
+      "id": "ux.human-acceptance",
+      "name": "長者、兒童及第一次使用者可獨立操作",
+      "status": "unmeasured",
+      "implementation": "needs-real-users",
+      "nextExperiment": "招募真實使用者，以無口頭提示任務測量完成率、錯誤、時間與付款理解"
+    },
+    {
+      "id": "agent.handoff",
+      "name": "一鍵 Agent 資料包、跨公司文件、未知品項對照與確認建單",
+      "status": "unmeasured",
+      "implementation": "available",
+      "nextExperiment": "同一份外部文件通過資料包、檔案、JSON 區塊、配對手機及原編號重試"
+    },
+    {
+      "id": "agent.interoperability",
+      "name": "多家公司真實 Agent 的互通與首次設定體驗",
+      "status": "unmeasured",
+      "implementation": "needs-external-agents",
+      "nextExperiment": "使用獨立供應商 Agent 與未知品項文件完成實際往返，不由內建測試器生成全部輸入"
+    },
+    {
+      "id": "pos.transactions",
+      "name": "收銀、退款、會員款項、班次與交易一致性",
+      "status": "unmeasured",
+      "implementation": "available",
+      "nextExperiment": "目前版本重跑完整原生、瀏覽器、共用手機及故障回歸"
+    },
+    {
+      "id": "restaurant.fulfilment",
+      "name": "預訂、現場、外送登記、原料預留、收款與交付",
+      "status": "unmeasured",
+      "implementation": "available",
+      "nextExperiment": "目前版本回歸並在實店演練預訂至交付、取消、日結"
+    },
+    {
+      "id": "restaurant.deposits-modifiers",
+      "name": "訂金、部分取消、加料與組合品",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "設計不可重複認列的訂金、尾款、部分退訂及配方加料交易"
+    },
+    {
+      "id": "sales.orders-receivables",
+      "name": "企業銷售訂單、出貨、客戶應收與收款核銷",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "已接通分批交付、部分收款、退貨折讓、退款與原編號復原；接續完成預收款、跨單核銷、收款帳戶與完整對帳，並持續驗證規模及真人操作。完整銷售應收範圍仍未完成。"
+    },
+    {
+      "id": "crm.customers",
+      "name": "會員到企業客戶、聯絡人與商機的 CRM",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "共用客戶身份並串聯報價、訂單、應收及互動紀錄"
+    },
+    {
+      "id": "procurement.core",
+      "name": "採購、部分收貨、核對請款、分次付款與分錄",
+      "status": "unmeasured",
+      "implementation": "available",
+      "nextExperiment": "目前版本重跑原生、UI、共用手機、備份及現金核對"
+    },
+    {
+      "id": "procurement.returns",
+      "name": "部分退貨、折抵、供應商退款及更正",
+      "status": "unmeasured",
+      "implementation": "available",
+      "nextExperiment": "驗證分批小數尾差、已付退款、原編號恢復、回滾、重啟與備份"
+    },
+    {
+      "id": "procurement.approvals-advances",
+      "name": "採購核准、預付貨款與多單核銷",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "設計小店預設簡單、企業可選雙人核准及預付分攤"
+    },
+    {
+      "id": "inventory.movements-costing",
+      "name": "一致庫存流水、期初與可核對成本評價",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "建立逐筆流水與期初核對，接入所有交易並驗證 FIFO 或明確成本政策"
+    },
+    {
+      "id": "inventory.warehouses-lots",
+      "name": "多倉、調撥、批次、效期及 FEFO",
+      "status": "planned",
+      "implementation": "not-started",
+      "nextExperiment": "以兩倉、兩批、到期隔離和原單退貨驗證可售與保留數量"
+    },
+    {
+      "id": "inventory.units-counting",
+      "name": "單位換算、盤點差異與追溯",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "明確商品換算比例、盤點核准及差異流水，不從品名猜測"
+    },
+    {
+      "id": "accounting.ledger",
+      "name": "總帳、來源單據、自動分錄與報表核對",
+      "status": "unmeasured",
+      "implementation": "partial",
+      "nextExperiment": "驗證各業務來源不重複認列及期初、退款、儲值、損耗與採購的對帳"
+    },
+    {
+      "id": "accounting.close-tax",
+      "name": "期間鎖定、關帳、稅務及電子發票",
+      "status": "planned",
+      "implementation": "not-started",
+      "nextExperiment": "先建立期間鎖定與更正機制，再依目標法域和正式服務沙盒驗證"
+    },
+    {
+      "id": "finance.reconciliation-assets",
+      "name": "銀行對帳、固定資產、折舊與預算",
+      "status": "planned",
+      "implementation": "not-started",
+      "nextExperiment": "以匯入對帳、已認列來源匹配和資產生命週期建立可追溯流程"
+    },
+    {
+      "id": "manufacturing.mrp",
+      "name": "BOM、需求規劃、工單、排程及品質",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "從現有餐飲配方擴充為領料、產出、耗損、返工與成本核對"
+    },
+    {
+      "id": "people.payroll",
+      "name": "人員、工時與薪資",
+      "status": "planned",
+      "implementation": "not-started",
+      "nextExperiment": "設計工時核准與薪資試算，法定規則需依所在地驗證"
+    },
+    {
+      "id": "projects.services",
+      "name": "專案、服務工單與合約",
+      "status": "planned",
+      "implementation": "not-started",
+      "nextExperiment": "完成服務報價、履約、費用與請款的簡單閉環"
+    },
+    {
+      "id": "organization.multi-entity",
+      "name": "多公司、多店、多幣別與合併核對",
+      "status": "planned",
+      "implementation": "not-started",
+      "nextExperiment": "先證明組織隔離、匯率快照、公司間交易與權限不互漏"
+    },
+    {
+      "id": "integration.commerce",
+      "name": "LINE、外送、電商及供應商整合",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "以各服務正式沙盒驗證認證、重播、退款及訂單對應"
+    },
+    {
+      "id": "security.authority",
+      "name": "認證、權限、稽核與第三方邊界",
+      "status": "unmeasured",
+      "implementation": "partial",
+      "nextExperiment": "對每個新增模組執行實際未登入、員工、偽造、重播與復原控制"
+    },
+    {
+      "id": "recovery.backup",
+      "name": "完整備份、升級、損壞還原與災難演練",
+      "status": "unmeasured",
+      "implementation": "available",
+      "nextExperiment": "本版跨版本副本升級與完整資料恢復；不覆寫正式店面"
+    },
+    {
+      "id": "delivery.devices",
+      "name": "真實手機、相機、印表機與店內網路",
+      "status": "unmeasured",
+      "implementation": "needs-physical-devices",
+      "nextExperiment": "iPhone/Android 實機信任、休眠、重連、掃碼、列印與長時間營業演練"
+    },
+    {
+      "id": "delivery.installation",
+      "name": "簽章安裝、安裝移除與資料保留",
+      "status": "unmeasured",
+      "implementation": "partial",
+      "nextExperiment": "在隔離 Windows 環境安裝、升級、移除，驗證使用者資料與可信簽章"
+    },
+    {
+      "id": "update.client-check",
+      "name": "可驗證更新檢查、並存升級與回退",
+      "status": "planned",
+      "implementation": "manual-only",
+      "nextExperiment": "驗證來源策略、簽章中繼資料、離線、過期、混用、斷電及回退"
+    },
+    {
+      "id": "update.release-channel",
+      "name": "有可信簽章的正式更新來源",
+      "status": "blocked_external",
+      "implementation": "not-configured",
+      "blocker": {
+        "owner": "project-maintainer",
+        "condition": "尚未設定可信發佈簽章與正式更新來源",
+        "nextAction": "建立並審查信任政策後驗證精確來源與簽章；不自動購買憑證或發布"
+      },
+      "nextExperiment": "與本地更新器共同驗證正式來源的獨立讀回"
+    },
+    {
+      "id": "operations.scale",
+      "name": "資料量、並行、效能與長時間營業",
+      "status": "unmeasured",
+      "implementation": "partial",
+      "nextExperiment": "凍結大資料集與並行工作量，測量延遲、資源、重啟及尖峰最後庫存"
+    }
   ]
 }

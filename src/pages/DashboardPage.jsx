@@ -8,9 +8,12 @@ import {
 } from 'lucide-react'
 import { getSetting, setSetting } from '../utils/dataAccess'
 import { averageTicket, profitAnalysis, getExpiringProducts, getReorderList, customerSegmentation, computeAllRFM } from '../utils/analytics'
+import {businessReportRows,reportDay,reportLineRevenue} from '../utils/businessReports'
+import {salesDate} from '../../electron/salesRules.mjs'
 
 export default function DashboardPage({ store, session }) {
-  const { products, members, orders, todayRevenue, todayOrders, todayProfit, lowStockCount, openShift } = store
+  const { products, members, orders:posOrders, todayRevenue, todayOrders, todayProfit, lowStockCount, openShift } = store
+  const orders=useMemo(()=>[...posOrders,...businessReportRows(store.sales?.documents||[])],[posOrders,store.sales?.documents])
   const [salesGoal, setSalesGoal] = useState(0)
   const [editingGoal, setEditingGoal] = useState(false)
   const [goalInput, setGoalInput] = useState('')
@@ -35,18 +38,18 @@ export default function DashboardPage({ store, session }) {
     // 排除完整退貨配對（原訂單 status='refunded' + 對應的全退負數訂單）；
     // 部分退貨保留：原訂單 (status='completed') 與負數退貨訂單兩邊都計入，總和會正確
     const validOrders = settledOrders(orders)
-    const today = new Date().toDateString()
-    const yesterday = new Date(Date.now() - 86400000).toDateString()
-    const ordersToday    = validOrders.filter(o => new Date(o.time).toDateString() === today)
-    const ordersYesterday = validOrders.filter(o => new Date(o.time).toDateString() === yesterday)
+    const today = store.sales?.today||salesDate(new Date())
+    const yesterday = new Date(Date.parse(today)-86400000).toISOString().slice(0,10)
+    const ordersToday    = validOrders.filter(o => reportDay(o) === today)
+    const ordersYesterday = validOrders.filter(o => reportDay(o) === yesterday)
     const revYesterday    = ordersYesterday.reduce((s,o) => s + netSale(o), 0)
     const revDelta = revYesterday > 0 ? ((todayRevenue - revYesterday) / revYesterday * 100) : 0
 
     // 最近 7 天
     const last7 = Array.from({length:7}, (_,i) => {
       const d = new Date(); d.setDate(d.getDate() - (6-i))
-      const ds = d.toDateString()
-      const dayOrders = validOrders.filter(o => new Date(o.time).toDateString() === ds)
+      const ds = new Date(Date.parse(today)-(6-i)*86400000).toISOString().slice(0,10)
+      const dayOrders = validOrders.filter(o => reportDay(o) === ds)
       return { date: d, label: d.getDate() + '日', revenue: dayOrders.reduce((s,o)=>s+netSale(o),0), count: dayOrders.length }
     })
     const max7 = Math.max(...last7.map(d => d.revenue), 1)
@@ -57,7 +60,7 @@ export default function DashboardPage({ store, session }) {
       (o.items||[]).forEach(i => {
         if (!itemMap[i.id]) itemMap[i.id] = { name: i.name, qty: 0, revenue: 0 }
         itemMap[i.id].qty += i.qty
-        itemMap[i.id].revenue += i.price * i.qty
+        itemMap[i.id].revenue += reportLineRevenue(i)
       })
     })
     const topItems = Object.values(itemMap).sort((a,b)=>b.qty-a.qty).slice(0,5)

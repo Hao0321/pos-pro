@@ -1,4 +1,4 @@
-import { browserStorage, DATA_KEYS, writeRecords } from './browserStorage'
+import { browserStorage, DATA_KEYS, restoreRecords } from './browserStorage'
 import {retainAuditLogs} from './auditRetention'
 // ═══════════════════════════════════════════════════════════════════
 // 資安核心模組 — POS Pro Security Layer
@@ -288,7 +288,7 @@ export async function restoreBackup(backupId, session) {
   }else{
     const backups=JSON.parse(browserStorage.getItem(BACKUP_KEY)||'[]'),backup=backups.find(b=>b.id===backupId)
     if(!backup?.data)throw new Error('備份不存在')
-    writeRecords(Object.fromEntries(BACKUP_KEYS.filter(k=>Object.hasOwn(backup.data,k)).map(k=>[k,backup.data[k]])))
+    restoreRecords(backup.data)
   }
   writeAuditLog('BACKUP_RESTORE',session,{backupId})
   return true
@@ -319,7 +319,7 @@ export function importBackupFile(file,session) {
         }else{
           if(!Array.isArray(data.pos2_products)||storage==='sqlite')throw new Error('請選擇瀏覽器版匯出的備份')
           await createBackup(session,'匯入前備份')
-          writeRecords(Object.fromEntries(BACKUP_KEYS.filter(k=>Object.hasOwn(data,k)).map(k=>[k,data[k]])))
+          restoreRecords(data)
         }
         writeAuditLog('BACKUP_RESTORE',session,{source:'file'});resolve(true)
       }catch(error){reject(error)}

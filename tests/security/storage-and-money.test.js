@@ -7,6 +7,9 @@ import { addTopup, openShift } from '../../src/utils/dataAccess'
 import { initAccounts } from '../../src/utils/accountBootstrap'
 import { createBackup, restoreBackup, getBackupList } from '../../src/utils/security'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
+import {planSales} from '../../electron/salesPlan.mjs'
+import {salesDate} from '../../electron/salesRules.mjs'
+import {productReference} from '../../electron/businessExchange.mjs'
 let map, failWrite
 const copy=x=>JSON.parse(JSON.stringify(x))
 beforeEach(()=>{
@@ -52,10 +55,14 @@ test('all business collections restore atomically, including restaurant orders, 
   data.pos_business_settings=[{id:'pos_business_settings',key:'storeName',value:'"fixture"'}]
   data.pos_restaurant_orders=[{id:'pos_restaurant_orders',version:1,status:'reserved',channel:'walkin',day:'2026-10-14',slot:'12:00',customer:'',contact:'',note:'',createdAt:time,startedAt:'',saleId:'',refundId:'',quantity:1,total:95,items:[{id:'pos2_products',name:'fixture',price:95,cost:40,qty:1}],allocations:[{id:'pos2_products',name:'fixture',qty:1,unitCost:40}]}]
   data.pos_restaurant_operations=[{id:'pos_restaurant_operations',kind:'restaurant',action:'create',entityId:'pos_restaurant_orders',productIds:['pos2_products'],signature:canonicalSignature({id:'pos_restaurant_operations',kind:'restaurant',action:'create',time})}]
+  data.pos_business_settings.push({key:'sharedStoreId',value:'"restore-fixture"'})
+  const request={id:'restore-sale',kind:'sales',storeId:'restore-fixture',epoch:'fixture-epoch',time:new Date().toISOString(),date:salesDate(new Date()),action:'create',document:{customer:{id:'customer',name:'fixture customer'},date:salesDate(new Date()),items:[{productId:'pos2_products',qty:1,unitPrice:95,expectedProduct:productReference(data.pos2_products[0])}],note:''}}
+  const plan=planSales(request,{storeId:'restore-fixture',epoch:'fixture-epoch',products:data.pos2_products,documents:[],quotes:[]},{role:'owner',userId:'owner',username:'fixture owner'})
+  data.pos_sales_documents=[plan.document];data.pos_sales_operations=[plan.receipt]
   writeRecords(data)
   const backup=await createBackup({username:'測試'},'完整備份');expect(await getBackupList()).toHaveLength(1)
   writeRecords(Object.fromEntries(DATA_KEYS.map(key=>[key,[]])));await restoreBackup(backup.id,{username:'測試'})
-  for(const key of DATA_KEYS)expect(readRecords().data[key].some(row=>row.id===key)).toBe(true)
+  for(const key of DATA_KEYS)expect(readRecords().data[key]).toEqual(expect.arrayContaining(data[key]))
 })
 test('failed backup does not return a fabricated ID or add an empty snapshot',async()=>{
   failWrite=true;await expect(createBackup({username:'測試'})).rejects.toThrow('quota');expect(map.has('pos_backups')).toBe(false)

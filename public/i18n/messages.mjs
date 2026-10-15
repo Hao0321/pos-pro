@@ -39,5 +39,14 @@ import part36 from './catalogue/rehearsal-validation.mjs'
 import part37 from './catalogue/business-exchange.mjs'
 import part38 from './catalogue/business-exchange-validation.mjs'
 
-const entries=Object.entries(Object.assign({},part0,part1,part2,part3,part4,part5,part6,part7,part8,part9,part10,part11,part12,part13,part14,part15,part16,part17,part18,part19,part20,part21,part22,part23,part24,part25,part26,part27,part28,part29,part30,part31,part32,part33,part34,part35,part36,part37,part38))
+
+
+
+
+import part39 from './catalogue/sales-orders.mjs'
+import part40 from './catalogue/sales-collections.mjs'
+import part41 from './catalogue/sales-rules.mjs'
+import part42 from './catalogue/sales-history.mjs'
+
+const entries=Object.entries(Object.assign({},part0,part1,part2,part3,part4,part5,part6,part7,part8,part9,part10,part11,part12,part13,part14,part15,part16,part17,part18,part19,part20,part21,part22,part23,part24,part25,part26,part27,part28,part29,part30,part31,part32,part33,part34,part35,part36,part37,part38,part39,part40,part41,part42))
 export default Object.fromEntries(entries.sort((a,b)=>a[1][3]-b[1][3]).map(([key,row])=>[key,row.slice(0,3)]))

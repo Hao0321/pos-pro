@@ -8,12 +8,15 @@ import {commitBrowserRestaurant,browserRestaurantState} from './browserRestauran
 import {makeAgentContext} from '../../electron/agentDraftRules.mjs'
 import {readAgentMappings,mergeAgentMappings} from '../../electron/businessDocument.mjs'
 import {retainAuditLogs} from './auditRetention'
+import {readExchangeTextSetting} from '../../electron/businessExchange.mjs'
 // 資料存取抽象層 — 自動判斷 Electron (SQLite) 或 瀏覽器 (localStorage)
 export const isElectron = !!(typeof window !== 'undefined' && window.electronAPI)
 export const isSharedStore = !!(typeof window !== 'undefined' && window.electronAPI?.sharedStore)
 export async function applyInventoryOperation(request,actor){return isElectron?window.electronAPI.db.applyInventoryOperation(request):commitBrowserInventory(request,actor)}
 export async function getExchangeContext(actor){return isElectron?window.electronAPI.db.getExchangeContext():(await import('./browserExchange')).getBrowserExchangeContext(actor)}
 export async function applyExchangeOperation(request,actor){return isElectron?window.electronAPI.db.applyExchangeOperation(request):(await import('./browserExchange')).commitBrowserExchange(request,actor)}
+export async function loadSalesState(actor){return isElectron?window.electronAPI.db.getSalesState():(await import('./browserSalesDocuments')).getBrowserSalesState(actor)}
+export async function applySalesOperation(request,actor){return isElectron?window.electronAPI.db.applySalesOperation(request):(await import('./browserSalesDocuments')).commitBrowserSalesDocument(request,actor)}
 export async function loadRestaurantState(){return isElectron?window.electronAPI.db.getRestaurantState():browserRestaurantState()}
 export async function applyRestaurantOperation(request,actor){return isElectron?window.electronAPI.db.applyRestaurantOperation(request):commitBrowserRestaurant(request,actor)}
 export async function getAgentContext(actor){
@@ -243,7 +246,9 @@ export async function checkAndMigrate() {
       promotions: loadLS('pos_promotions', []),
       heldOrders:loadLS('pos2_held_orders',[]),shifts:loadLS('pos2_shifts',[]),cashLog:loadLS('pos2_cash_log',[]),
       wasteLog:loadLS('pos2_waste',[]),memberTopups:loadLS('pos2_topups',[]),auditLog:loadLS('pos_audit_log',[]),
-      settings:loadLS('pos_business_settings',[]).map(s=>({key:s.key,value:String(JSON.parse(s.value))})),
+      restaurantOrders:loadLS('pos_restaurant_orders',[]),restaurantOperations:loadLS('pos_restaurant_operations',[]),
+      salesDocuments:loadLS('pos_sales_documents',[]),salesOperations:loadLS('pos_sales_operations',[]),
+      settings:loadLS('pos_business_settings',[]).map(s=>({key:s.key,value:readExchangeTextSetting(loadLS('pos_business_settings',[]),s.key)})),
     }
 
     const hasData = Object.values(data).some(arr => arr && arr.length > 0)

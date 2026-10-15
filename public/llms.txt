@@ -14,6 +14,8 @@ For another company that does not use POS Pro, read /agent/business-document-v1.
 
 No standalone MCP server, external AI subscription or public write API is installed by this protocol.
 
+Seller sales workflow (v2.13): an owner can open their saved business-quote/v1 in Quotes & catalogues, choose Customer accepted: create sales order, review the original customer/quantities/prices and confirm. Reopening that quote family opens the original order; a later quote revision never rewrites it. Manual sales orders are also supported in Sales & receivables. Creation does not deduct or reserve stock, recognize revenue or collect funds. A human separately confirms agreed goods handover and payment claims, then actual cash/bank receipts. Returns and allowances reference the original delivery; refunds reference original payments. Preserve every operation ID and use original-ID recovery for uncertain results. The existing pos-document-draft/v1 kind sale still means a POS cart draft, not a credit sales order. Do not reinterpret that existing protocol or invent a public sales-write endpoint. This is an internal TWD all-inclusive goods workflow; advances, multi-claim remittance and fiscal invoices remain open.
+
 Business exchange profiles (v2.12):
 - business-party/v1: read /agent/business-party-v1.schema.json. Only a declared store ID and name; no verified identity, credentials or customer tiers.
 - business-catalogue/v1: read /agent/business-catalogue-v1.schema.json. Public reference prices only. A catalogue is not an order; ask for quantities and agreement on terms before preparing business-document/v1.

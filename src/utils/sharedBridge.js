@@ -25,6 +25,8 @@ if(sharedStoreMode&&!window.electronAPI){
   const db=Object.fromEntries(dbMethods.map(method=>[method,(...args)=>rpc('db:'+method,...args)]))
   db.getExchangeContext=()=>rpc('db:getExchangeContext')
   db.applyExchangeOperation=input=>rpc('db:applyExchangeOperation',input)
+  db.getSalesState=()=>rpc('db:getSalesState')
+  db.applySalesOperation=input=>rpc('db:applySalesOperation',input)
   db.getRestaurantState=()=>rpc('db:getRestaurantState')
   db.applyRestaurantOperation=input=>rpc('db:applyRestaurantOperation',input)
   for(const method of ['migrateFromLocalStorage','importData','restoreBackup','deleteWaste','addOrder','getUsers','addUser','updateUser','deleteUser'])db[method]=async()=>{throw Error('此項管理操作請在店面電腦執行')}
