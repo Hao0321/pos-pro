@@ -216,7 +216,7 @@ function JournalView({ grouped, manualEntries, deleteManualEntry }) {
                   <div key={j.id} style={{borderBottom:'1px solid var(--border-dim)',padding:'10px 16px'}}>
                     <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
                       <span style={{...ac.typeBadge,...TYPE_STYLE[j.type]||TYPE_STYLE.manual}}>{tr(TYPE_LABEL[j.type]||'手動')}</span>
-                      <span style={{fontSize:13,fontWeight:500}}>{j.type==='auto_business_sale'?tr(j.descriptionKey,j.descriptionValues):j.description}</span>
+                      <span style={{fontSize:13,fontWeight:500}}>{['auto_business_sale','auto_customer_ledger'].includes(j.type)?tr(j.descriptionKey,j.descriptionValues):j.description}</span>
                       {manualIds.has(j.id) && (
                         <button className="btn-icon btn-sm" style={{marginLeft:'auto',color:'var(--red)'}} onClick={()=>deleteManualEntry(j.id).catch(e=>alert(trMessage(e.message)))}>
                           <Trash2 size={13}/>
@@ -253,9 +253,10 @@ function JournalView({ grouped, manualEntries, deleteManualEntry }) {
   )
 }
 
-const TYPE_LABEL = { auto_sale:'銷售', auto_cogs:'成本', auto_discount:'折抵', auto_balance:'儲值折抵', auto_topup:'會員儲值', auto_business_sale:'客戶銷售與應收',manual:'手動', }
+const TYPE_LABEL = { auto_sale:'銷售', auto_cogs:'成本', auto_discount:'折抵', auto_balance:'儲值折抵', auto_topup:'會員儲值', auto_business_sale:'客戶銷售與應收',auto_customer_ledger:'客戶預收與抵付',manual:'手動', }
 const TYPE_STYLE = {
   auto_business_sale:{background:'var(--blue-dim)',color:'var(--blue)'},
+  auto_customer_ledger:{background:'var(--teal-dim)',color:'var(--teal)'},
   auto_sale:     { background:'var(--teal-dim)',   color:'var(--teal)'  },
   auto_cogs:     { background:'var(--amber-dim)',  color:'var(--amber)' },
   auto_discount: { background:'var(--gold-dim)',   color:'var(--gold-bright)' },

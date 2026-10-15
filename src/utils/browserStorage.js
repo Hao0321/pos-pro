@@ -4,6 +4,7 @@ import {validateRestaurantRecords,readRestaurantConfig} from '../../electron/res
 import {validateProcurementRecords} from '../../electron/procurementRules.mjs'
 import {validateExchangeSettings,readExchangeTextSetting,readExchangeStore,EXCHANGE_SETTING} from '../../electron/businessExchange.mjs'
 import {validateSalesRecords} from '../../electron/salesPlan.mjs'
+import {validateCustomerLedgerRecords} from '../../electron/customerLedger.mjs'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
 import {signature as checkoutSignature} from '../../electron/checkoutSignature.mjs'
 import {refundSignature} from './refundSafety.mjs'
@@ -11,7 +12,7 @@ import {RECOVERY_PROTOCOL,browserToBook,bookToBrowser,materialSignature,protecte
 export const RECORD_KEY = 'pos_atomic_records_v1'
 export const DATA_KEYS = ['pos2_products','pos2_members','pos2_orders','pos2_manual_j',
   'pos_users','pos_suppliers','pos_purchases','pos_promotions','pos2_held_orders',
-  'pos2_shifts','pos2_cash_log','pos2_waste','pos2_topups','pos_audit_log','pos_business_settings','pos_restaurant_orders','pos_restaurant_operations','pos_sales_documents','pos_sales_operations']
+  'pos2_shifts','pos2_cash_log','pos2_waste','pos2_topups','pos_audit_log','pos_business_settings','pos_restaurant_orders','pos_restaurant_operations','pos_sales_documents','pos_sales_operations','pos_customer_entries','pos_customer_operations']
 const keys = new Set(DATA_KEYS)
 const SETTINGS_PREFIX='pos_settings_'
 const legacySettings=['pointsEarnRate','pointsRedeemRate','birthdayBonus','dailySalesGoal','storeName','storePhone','storeAddress','receiptFooter','serverPort']
@@ -30,7 +31,7 @@ export function readRecords() {
     if(record.salesEpoch!==undefined&&(typeof record.salesEpoch!=='string'||!record.salesEpoch))throw new Error('銷售還原識別損壞，請保留原資料核對。')
     // New collections may be absent in records written by earlier versions.
     if(!Object.hasOwn(record.data,'pos_business_settings'))record.data.pos_business_settings=readLegacySettings()
-    for(const key of ['pos_restaurant_orders','pos_restaurant_operations','pos_sales_documents','pos_sales_operations'])if(!Object.hasOwn(record.data,key))record.data[key]=[]
+    for(const key of ['pos_restaurant_orders','pos_restaurant_operations','pos_sales_documents','pos_sales_operations','pos_customer_entries','pos_customer_operations'])if(!Object.hasOwn(record.data,key))record.data[key]=[]
     for (const key of DATA_KEYS) validArray(record.data[key])
     if(Object.keys(record.data).some(key=>!keys.has(key)))throw Error('備份含有目前版本不支援的資料，請保留原檔並使用相容版本')
     recoveryMetadata(record)
@@ -87,11 +88,12 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
   }
   // The restore fence is local runtime metadata, excluded from business backups.
   // Rotate it in the SAME atomic write as a restore, never as a later side effect.
-  if(restore||ensureSalesEpoch||current.salesEpoch||next.data.pos_sales_documents.length)
+  if(restore||ensureSalesEpoch||current.salesEpoch||next.data.pos_sales_documents.length||next.data.pos_customer_entries.length)
     next.salesEpoch=restore?crypto.randomUUID():current.salesEpoch||crypto.randomUUID()
   validateProcurementRecords(next.data.pos_purchases,next.data.pos2_cash_log)
   validateExchangeSettings(next.data.pos_business_settings,next.data.pos_purchases,next.data.pos_audit_log)
   validateSalesRecords(next.data.pos_sales_documents,next.data.pos_sales_operations,next.data.pos2_cash_log,readExchangeTextSetting(next.data.pos_business_settings,'sharedStoreId'),next.data.pos2_products,readExchangeStore(readExchangeTextSetting(next.data.pos_business_settings,EXCHANGE_SETTING)).quotes)
+  validateCustomerLedgerRecords(next.data.pos_customer_entries,next.data.pos_customer_operations,{storeId:readExchangeTextSetting(next.data.pos_business_settings,'sharedStoreId'),documents:next.data.pos_sales_documents,salesOperations:next.data.pos_sales_operations,cashLogs:next.data.pos2_cash_log})
   validateRestaurantRecords(next.data.pos_restaurant_orders,next.data.pos_restaurant_operations,next.data.pos2_orders,next.data.pos2_products)
   const rawConfig=next.data.pos_business_settings.find(s=>s.key==='restaurantConfig')?.value
   readRestaurantConfig(rawConfig==null?null:JSON.parse(rawConfig),next.data.pos2_products)
@@ -102,7 +104,7 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
 export function restoreRecords(data,expectedRevision,recoveryCommand=null){
   if(!data||typeof data!=='object'||Array.isArray(data))throw new Error('備份格式錯誤')
   const updates=Object.fromEntries(DATA_KEYS.filter(key=>Object.hasOwn(data,key)).map(key=>[key,data[key]]))
-  for(const key of ['pos_sales_documents','pos_sales_operations'])if(!Object.hasOwn(updates,key))updates[key]=[]
+  for(const key of ['pos_sales_documents','pos_sales_operations','pos_customer_entries','pos_customer_operations'])if(!Object.hasOwn(updates,key))updates[key]=[]
   return writeRecords(updates,expectedRevision,{restore:true,recoveryCommand})
 }
 export const browserStorage = {

@@ -1,5 +1,27 @@
 # Agent 建單協議 v1
 
+## 客戶收款草稿：2.15.0
+
+「客戶與款項 → 讓 Agent 幫我填收款草稿」接受獨立的 `pos-customer-receipt-draft/v1`，格式見 [JSON Schema](../public/agent/customer-receipt-draft-v1.schema.json)。這是填表草稿，不是銀行付款證明，也不是自動收款 API。原本 `pos-document-draft/v1` 的 `sale` 仍代表收銀購物車，不改成賒銷或預收款。
+
+已授權的 Agent 在現有登入頁讀取 `window.electronAPI.db.getSalesState()`，只取本次需要的 `storeId` 及 `customerLedger.customers` 中固定客戶代碼。不得靠同名合併客戶、索取登入憑證或把名單放到公開目錄。
+
+```json
+{
+  "protocol": "pos-customer-receipt-draft/v1",
+  "id": "keep-this-original-draft-id",
+  "issuedAt": "2026-10-16T01:00:00+08:00",
+  "storeId": "exact-store-id-from-authenticated-context",
+  "customerId": "existing-customer-id",
+  "amount": 500,
+  "method": "cash",
+  "reference": "雙方原收款參考",
+  "note": "商家要保留的原文"
+}
+```
+
+使用當下時間，草稿最長保留 24 小時；支援 `cash`、`bank`，金額為正數、最多兩位小數、TWD。不得包含 `confirmed`、操作人、帳密或執行指令。保留同一個草稿 ID；重試不另產生編號。系統帶入後，必須由管理員核對客戶與實際收款，勾選確認才保存。銀行項目僅登記已核對款項；現金需目前班次。抵付多張帳、解除抵付及退款由客戶頁的明確操作處理。結果不明時查回原結果，不能改 ID 來繞過。
+
 目標：使用者說出要什麼，或讓已授權 Agent 讀取店內品項，畫面顯示完整草稿後按一次建單。所有功能免費，不要求另外購買 AI API。內建文字輸入是可預測的品名／數量辨識；通用語意理解可交給使用者選擇的 Agent。
 
 ## 簡單操作

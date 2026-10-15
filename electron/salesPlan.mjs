@@ -9,9 +9,10 @@ function validateSalesItem(row){
   quantityValue(row.qty,'訂購數量',.001);moneyValue(row.unitPrice,'議定單價')
 }
 export function makeSalesOrder(request,data,actor){
-  salesOnly(request,['id','time','date','kind','storeId','epoch','action','document'])
+  salesOnly(request,['id','time','date','kind','storeId','epoch','action','document','expectedLedgerRevision'])
   const input=request.document;salesOnly(input,['customer','date','items','note','quoteRef'])
   const customer=party(input.customer),date=validateSalesDay(input.date)
+  if(Object.hasOwn(request,'expectedLedgerRevision')&&!data.customerLedger?.customers.some(row=>row.id===customer.id))throw Error('請先選擇或新增往來客戶')
   if(date>request.date)throw Error('訂單日期不能在未來')
   if(!Array.isArray(input.items)||!input.items.length||input.items.length>100)throw Error('請選擇 1 至 100 個商品')
   let quote
@@ -46,6 +47,7 @@ export function planSales(request,data,actor){
   if(request.kind!==SALES_KIND)throw Error('銷售操作類型不正確')
   if(request.storeId!==data.storeId)throw Object.assign(Error('銷售操作屬於另一間店，請回原店面核對'),{historyUncertain:true})
   if(request.epoch!==data.epoch)throw Object.assign(Error('資料已還原或更換，請先核對原銷售操作，不要重新收款'),{historyUncertain:true})
+  if(!Number.isSafeInteger(request.expectedLedgerRevision??0)||(request.expectedLedgerRevision??0)!==(data.customerEntries?.length||0))throw Error('客戶款項已更新，請重新核對')
   if(Math.abs(Date.now()-Date.parse(request.time))>300000)throw Error('操作時間已過久，請重新核對')
   validateSalesDay(request.date);if(request.date>salesDate(new Date()))throw Error('操作日期不能在未來')
   let document,event
@@ -89,7 +91,7 @@ function validateSalesSource(request,doc,event,receipt){
   if(receipt.action!=='create'){
     if(canonicalSignature(request)!==canonicalSignature(event.input))throw Error('銷售回執與來源內容不同')
   }else{
-    salesOnly(request,['id','time','date','kind','storeId','epoch','action','document']);operationHeader(request);validateSalesDay(request.date)
+    salesOnly(request,['id','time','date','kind','storeId','epoch','action','document','expectedLedgerRevision']);operationHeader(request);validateSalesDay(request.date)
     const input=request.document;salesOnly(input,['customer','date','items','note','quoteRef'])
     if(Array.isArray(input.items))input.items.forEach(validateSalesItem)
     if(typeof request.epoch!=='string'||!request.epoch||doc.date>request.date||request.id!==doc.id||request.storeId!==doc.storeId||request.action!=='create'||request.kind!==SALES_KIND||request.time!==doc.createdAt||input.date!==doc.date||salesText(input.note??'',1000,false)!==doc.note||canonicalSignature(party(input.customer))!==canonicalSignature(doc.customer)||!Array.isArray(input.items)||input.items.length!==doc.items.length||input.items.some((row,i)=>row.productId!==doc.items[i].productId||row.qty!==doc.items[i].qty||row.unitPrice!==doc.items[i].unitPrice||!doc.sourceQuote&&(row.expectedProduct?.name!==doc.items[i].name||(row.expectedProduct?.unit||'個')!==doc.items[i].unit))||canonicalSignature(input.quoteRef??null)!==canonicalSignature(doc.sourceQuote?{id:doc.sourceQuote.id,revision:doc.sourceQuote.revision}:null))throw Error('銷售單缺少正確的建立來源')

@@ -5,11 +5,12 @@ import {salesMoney} from './SalesOrderForm'
 
 export const salesActionTitle=action=>tr({deliver:'這批貨已交給客戶',pay:'記錄客戶已付款',return:'記錄客戶退貨',allowance:'給客戶折讓',refund:'記錄已退回多收款','pay-reverse':'更正原收款','refund-reverse':'更正原退款',close:'結束剩餘訂購'}[action]||'銷售操作')
 export default function SalesOperationForm({document:doc,target,store,busy,onSave,onCancel,error}){
-  const summary=salesSummary(doc),delivery=doc.deliveries.find(row=>row.id===target.deliveryId)
+  const summary=salesSummary(doc,store.sales.today,store.sales.customerLedger?.entries),delivery=doc.deliveries.find(row=>row.id===target.deliveryId)
   const payment=doc.payments.find(row=>row.id===target.paymentId),refund=doc.refunds.find(row=>row.id===target.refundId)
   const remaining=delivery?salesRemaining(doc,delivery):[],claim=target.deliveryId?summary.claims.find(row=>row.delivery.id===target.deliveryId):payment?summary.claims.find(row=>row.delivery.id===payment.deliveryId):null
   const refunded=payment?activeSalesRefunds(doc).filter(row=>row.paymentId===payment.id).reduce((n,row)=>n+row.amount,0):0
-  const maxRefund=payment?Math.max(0,Math.round(Math.min(claim.credit,payment.amount-refunded)*100)/100):0
+  const directClaim=payment?salesSummary(doc).claims.find(row=>row.delivery.id===payment.deliveryId):null
+  const maxRefund=payment?Math.max(0,Math.round(Math.min(claim.credit,directClaim.credit,payment.amount-refunded)*100)/100):0
   const [quantities,setQuantities]=useState(()=>target.action==='deliver'?summary.pending.map(String):remaining.map(row=>String(salesQuantity(row.quantity))))
   const [amounts,setAmounts]=useState(()=>doc.items.map(()=>'')),[amount,setAmount]=useState(()=>String(target.action==='refund'?maxRefund:claim?.owed??''))
   const [date,setDate]=useState(store.sales.today),[dueDate,setDueDate]=useState(store.sales.today),[method,setMethod]=useState(store.openShift?'cash':'bank')

@@ -4,14 +4,15 @@ import {salesMoney} from './SalesOrderForm'
 import {salesActionTitle} from './SalesOperationForm'
 
 export const salesStatus=status=>tr({ordered:'已接單、尚未備貨',partial:'部分交付',delivered:'已全部交付',closed:'剩餘訂購已結束'}[status])
-export default function SalesDocumentDetail({document:doc,today,pending,onAction,onBack}){
-  const summary=salesSummary(doc,today),payments=activeSalesPayments(doc),refunds=activeSalesRefunds(doc)
+export default function SalesDocumentDetail({document:doc,today,pending,onAction,onBack,customerCredits=[],onCustomerLedger}){
+  const summary=salesSummary(doc,today,customerCredits),payments=activeSalesPayments(doc),refunds=activeSalesRefunds(doc)
   const events=[...doc.deliveries,...doc.payments,...doc.paymentReversals,...doc.returns,...doc.allowances,...doc.refunds,...doc.refundReversals,...doc.closures].sort((a,b)=>b.revision-a.revision)
   function download(){
     const url=URL.createObjectURL(new Blob([JSON.stringify(doc,null,2)],{type:'application/json;charset=utf-8'})),link=document.createElement('a')
     link.href=url;link.download='sales-'+doc.id+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
   }
   return <section className="card sales-detail" aria-label={tr('銷售單明細')}>
+    {summary.prepaid>0&&<div className="sales-note"><p>{tr('已有預收款抵付 {0}。退貨後需要退回這部分款項，請先到客戶款項解除抵付。',{0:salesMoney(summary.prepaid)})}</p><button className="btn btn-ghost" onClick={onCustomerLedger}>{tr('查看客戶款項')}</button></div>}
     <div className="sales-heading"><div><p className="sales-status">{salesStatus(summary.status)}</p><h2>{doc.customer.name}</h2><p>{doc.date} · <span className="sales-id">{doc.id}</span></p></div><button className="btn btn-ghost" data-sales-back onClick={onBack}>{tr('回銷售單列表')}</button></div>
     <div className="sales-metrics"><div><span>{tr('原接單金額')}</span><strong>{salesMoney(doc.total)}</strong></div><div><span>{tr('客戶還沒付')}</span><strong data-sales-owed>{salesMoney(summary.owed)}</strong></div><div><span>{tr('還要退給客戶')}</span><strong data-sales-credit>{salesMoney(summary.credit)}</strong></div></div>
     {summary.status==='ordered'&&<p className="sales-note">{tr('尚未扣庫存或保留商品。交給客戶時，系統會再次確認可用量。')}</p>}

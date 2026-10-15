@@ -1,0 +1,19 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"pos-customer-receipt-draft/v1",
+  "title":"Human-reviewed customer receipt draft",
+  "description":"Prepare an owner review, never proof of payment. Paste into Customers & balances. No credentials, execution, transfers or automatic cash confirmation.",
+  "type":"object","additionalProperties":false,
+  "required":["protocol","id","issuedAt","storeId","customerId","amount","method"],
+  "properties":{
+    "protocol":{"const":"pos-customer-receipt-draft/v1"},
+    "id":{"type":"string","pattern":"^[A-Za-z0-9_-]{1,128}$"},
+    "issuedAt":{"type":"string","format":"date-time","description":"At most 24 hours old and no more than 5 minutes in the future at review."},
+    "storeId":{"type":"string","pattern":"^[A-Za-z0-9:_-]{1,128}$"},
+    "customerId":{"type":"string","pattern":"^[A-Za-z0-9:_-]{1,128}$","description":"An existing customer ID from authenticated owner context; never match a customer by name alone."},
+    "amount":{"type":"number","minimum":0.01,"maximum":1000000000,"multipleOf":0.01},
+    "method":{"enum":["cash","bank"]},
+    "reference":{"type":"string","maxLength":100},
+    "note":{"type":"string","maxLength":1000}
+  }
+}

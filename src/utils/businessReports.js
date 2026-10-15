@@ -19,12 +19,12 @@ export function businessReportRows(documents=[]){
 }
 export const reportDay=row=>row.businessDate||salesDate(row.time)
 export const reportLineRevenue=item=>Number.isFinite(item.reportRevenue)?item.reportRevenue:item.price*item.qty
-export function businessCashFlows(documents=[]){
-  return documents.flatMap(doc=>{
+export function businessCashFlows(documents=[],customerEntries=[]){
+  return [...documents.flatMap(doc=>{
     validateSalesDocument(doc)
     return [...doc.payments,...doc.paymentReversals,...doc.refunds,...doc.refundReversals].map(event=>({
       id:event.id,date:event.date,time:event.time,method:event.method,
       amount:(['pay','refund-reverse'].includes(event.action)?1:-1)*event.amount,
     }))
-  })
+  }),...customerEntries.filter(event=>['receive','refund','refund-reverse','receipt-reverse'].includes(event.action)).map(event=>({id:event.id,date:event.date,time:event.time,method:event.method,amount:(['receive','refund-reverse'].includes(event.action)?1:-1)*event.amount}))]
 }

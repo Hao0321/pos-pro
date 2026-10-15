@@ -10,7 +10,7 @@ export const isMaterialAudit=row=>materialAudit.has(row.action)
 export const isCredentialSetting=key=>key!=='orderTrackingSecret'&&/shared|supabase|cloud|token|secret|password|credential|api.?key/i.test(key)
 export const recoveryStoreId=book=>readExchangeTextSetting(book.settings||[],'sharedStoreId')||''
 const sorted=rows=>[...rows].sort((a,b)=>String(a.id??a.key).localeCompare(String(b.id??b.key)))
-export const BROWSER_COLLECTIONS={products:'pos2_products',members:'pos2_members',orders:'pos2_orders',manualJournal:'pos2_manual_j',users:'pos_users',suppliers:'pos_suppliers',purchases:'pos_purchases',promotions:'pos_promotions',heldOrders:'pos2_held_orders',shifts:'pos2_shifts',cashLog:'pos2_cash_log',wasteLog:'pos2_waste',memberTopups:'pos2_topups',auditLog:'pos_audit_log',settings:'pos_business_settings',restaurantOrders:'pos_restaurant_orders',restaurantOperations:'pos_restaurant_operations',salesDocuments:'pos_sales_documents',salesOperations:'pos_sales_operations'}
+export const BROWSER_COLLECTIONS={products:'pos2_products',members:'pos2_members',orders:'pos2_orders',manualJournal:'pos2_manual_j',users:'pos_users',suppliers:'pos_suppliers',purchases:'pos_purchases',promotions:'pos_promotions',heldOrders:'pos2_held_orders',shifts:'pos2_shifts',cashLog:'pos2_cash_log',wasteLog:'pos2_waste',memberTopups:'pos2_topups',auditLog:'pos_audit_log',settings:'pos_business_settings',restaurantOrders:'pos_restaurant_orders',restaurantOperations:'pos_restaurant_operations',salesDocuments:'pos_sales_documents',salesOperations:'pos_sales_operations',customerEntries:'pos_customer_entries',customerOperations:'pos_customer_operations'}
 export const browserToBook=data=>Object.fromEntries(Object.entries(BROWSER_COLLECTIONS).map(([key,local])=>[key,data[local]??[]]))
 export const bookToBrowser=book=>Object.fromEntries(Object.entries(BROWSER_COLLECTIONS).map(([key,local])=>[local,book[key]??[]]))
 export const recoveryOperationId=id=>typeof id==='number'&&Number.isSafeInteger(id)?String(id):id
@@ -56,7 +56,7 @@ export function protectedRestoreBook(current,source){
 export function recoverySummary(book){
   return {products:book.products.length,orders:book.orders.length,salesDocuments:book.salesDocuments.length,
     salesPayments:book.salesDocuments.reduce((n,d)=>n+(d.payments?.length||0),0),cashLogs:book.cashLog.length,
-    purchases:book.purchases.length,members:book.members.length}
+    purchases:book.purchases.length,members:book.members.length,customerEntries:(book.customerEntries||[]).length,customerReceipts:(book.customerEntries||[]).filter(e=>e.action==='receive').length}
 }
 
 export function operationRecords(book){
@@ -65,8 +65,8 @@ export function operationRecords(book){
   for(const [key,method] of [['memberTopups','addTopup'],['cashLog','addCashLog'],['wasteLog','addWaste'],['manualJournal','addManualEntry'],['purchases','addPurchase']])
     for(const row of book[key])add(method,row.id,row)
   for(const row of book.shifts){add('openShift',row.id,row);if(row.status==='closed')add('closeShift',row.id,row)}
-  for(const [key,method] of [['restaurantOperations','applyRestaurantOperation'],['salesOperations','applySalesOperation']])
-    for(const row of book[key])add(method,row.id,row)
+  for(const [key,method] of [['restaurantOperations','applyRestaurantOperation'],['salesOperations','applySalesOperation'],['customerOperations','applyCustomerLedgerOperation']])
+    for(const row of book[key]||[])add(method,row.id,row)
   for(const row of book.auditLog){
     if(!isMaterialAudit(row))continue
     const receipt=typeof row.detail==='string'?JSON.parse(row.detail):row.detail
@@ -79,7 +79,7 @@ export function operationRecords(book){
 export function pendingOperation(pending){
   if(!pending||JSON.stringify(pending).length>1024*1024)throw Error('待確認異動紀錄需要核對')
   const request=pending.kind==='checkout'?pending.plan?.order:pending.request
-  const method=({checkout:'checkout',refund:'refundOrder',topup:'addTopup',cashlog:'addCashLog',waste:'addWaste',restaurant:'applyRestaurantOperation',exchange:'applyExchangeOperation',sales:'applySalesOperation'})[pending.kind]
+  const method=({checkout:'checkout',refund:'refundOrder',topup:'addTopup',cashlog:'addCashLog',waste:'addWaste',restaurant:'applyRestaurantOperation',exchange:'applyExchangeOperation',sales:'applySalesOperation','customer-ledger':'applyCustomerLedgerOperation'})[pending.kind]
     ||(['stocktake','receive'].includes(pending.kind)||pending.kind?.startsWith('purchase-')?'applyInventoryOperation':null)
   if(!method||typeof request?.id!=='string'||!request.id||request.id.length>128)throw Error('待確認異動紀錄需要核對')
   return {method,id:request.id,request}

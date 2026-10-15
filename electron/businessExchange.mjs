@@ -31,6 +31,7 @@ export function party(value){
   only(value,['id','name'],'店面資料')
   return {id:businessId(value.id),name:text(value.name,100,'店名')}
 }
+export {instant as businessInstant}
 export function makePartyCard(sender){return {protocol:PARTY_PROTOCOL,business:party(sender)}}
 export function readPartyCard(value){
   only(value,['protocol','business'],'店面資料')

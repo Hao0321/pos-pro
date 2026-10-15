@@ -1,6 +1,7 @@
 import {canonicalSignature,operationHeader,moneyValue,quantityValue} from './operationRules.mjs'
 import {procurementLineCents,allocateCents} from './procurementAmounts.mjs'
 import {party,validateQuote,businessId} from './businessExchange.mjs'
+import {customerAppliedCents} from './customerCredit.mjs'
 
 export const SALES_KIND='sales'
 export const SALES_ACTIONS=['create','deliver','pay','pay-reverse','return','allowance','refund','refund-reverse','close']
@@ -36,18 +37,19 @@ const zeroRows=doc=>doc.items.map(()=>0)
 export const saleDeliveredUnits=doc=>doc.items.map((_,index)=>doc.deliveries.reduce((n,row)=>n+salesUnits(row.quantities[index]),0))
 export const activeSalesPayments=doc=>doc.payments.filter(p=>!doc.paymentReversals.some(r=>r.paymentId===p.id))
 export const activeSalesRefunds=doc=>doc.refunds.filter(p=>!doc.refundReversals.some(r=>r.refundId===p.id))
-export function salesClaim(doc,id){
+export function salesClaim(doc,id,customerCredits=[]){
   const delivery=doc.deliveries.find(d=>d.id===id);if(!delivery)throw Error('找不到原交付請款')
   const credits=sumMoney(doc.returns.filter(r=>r.deliveryId===id))+sumMoney(doc.allowances.filter(r=>r.deliveryId===id))
-  const paid=sumMoney(activeSalesPayments(doc).filter(p=>p.deliveryId===id))-sumMoney(activeSalesRefunds(doc).filter(p=>p.deliveryId===id))
+  const prepaid=customerAppliedCents(customerCredits,doc.id,id)
+  const paid=sumMoney(activeSalesPayments(doc).filter(p=>p.deliveryId===id))-sumMoney(activeSalesRefunds(doc).filter(p=>p.deliveryId===id))+prepaid
   const net=salesCents(delivery.amount)-credits
-  return {delivery,net:salesAmount(net),paid:salesAmount(paid),owed:salesAmount(Math.max(0,net-paid)),credit:salesAmount(Math.max(0,paid-net))}
+  return {delivery,net:salesAmount(net),paid:salesAmount(paid),prepaid:salesAmount(prepaid),owed:salesAmount(Math.max(0,net-paid)),credit:salesAmount(Math.max(0,paid-net))}
 }
-export function salesSummary(doc,today=salesDate(new Date())){
-  const claims=doc.deliveries.map(delivery=>salesClaim(doc,delivery.id)),delivered=saleDeliveredUnits(doc)
+export function salesSummary(doc,today=salesDate(new Date()),customerCredits=[]){
+  const claims=doc.deliveries.map(delivery=>salesClaim(doc,delivery.id,customerCredits)),delivered=saleDeliveredUnits(doc)
   const pending=doc.items.map((item,i)=>salesQuantity(salesUnits(item.qty)-delivered[i]))
   const money=field=>salesAmount(claims.reduce((n,c)=>n+salesCents(c[field]),0))
-  return {claims,net:money('net'),paid:money('paid'),owed:money('owed'),credit:money('credit'),pending,
+  return {claims,net:money('net'),paid:money('paid'),prepaid:money('prepaid'),owed:money('owed'),credit:money('credit'),pending,
     overdue:salesAmount(claims.filter(c=>c.delivery.dueDate<today).reduce((n,c)=>n+salesCents(c.owed),0)),
     status:doc.closures.length?'closed':pending.every(q=>q===0)?'delivered':doc.deliveries.length?'partial':'ordered'}
 }
@@ -63,7 +65,7 @@ function quantities(doc,values,ceilings){
   values.forEach((q,i)=>{quantityValue(q,'本次數量');if(salesUnits(q)>ceilings[i])throw Error('本次數量超過尚可處理數量')})
   return [...values]
 }
-const rootFields=['id','time','date','kind','storeId','epoch','action','orderId','expectedRevision']
+const rootFields=['id','time','date','kind','storeId','epoch','action','orderId','expectedRevision','expectedLedgerRevision']
 const actionFields={deliver:['quantities','dueDate','handedOver'],pay:['deliveryId','amount','method','shiftId','reference'],'pay-reverse':['paymentId','reason','shiftId'],return:['deliveryId','quantities','restock','reason'],allowance:['deliveryId','amounts','reason'],refund:['paymentId','amount','reason','shiftId'],'refund-reverse':['refundId','reason','shiftId'],close:['reason']}
 function cashFields(request,event,context,type){
   if(event.method!=='cash'){event.shiftId='';event.cashLogId='';return event}
@@ -75,6 +77,7 @@ export function deriveSalesEvent(request,doc,context={}){
   validateSalesRequest(request)
   if(!actionFields[request.action])throw Error('銷售操作不支援')
   salesOnly(request,[...rootFields,...actionFields[request.action]]);operationHeader(request)
+  if(request.expectedLedgerRevision!==undefined&&(!Number.isSafeInteger(request.expectedLedgerRevision)||request.expectedLedgerRevision<0))throw Error('客戶帳版本不正確')
   if(request.kind!==SALES_KIND||request.storeId!==doc.storeId||request.orderId!==doc.id||request.expectedRevision!==doc.revision||typeof request.epoch!=='string'||!request.epoch)throw Error('銷售單版本或店面已改變，請重新核對')
   const event={id:request.id,time:request.time,date:validateSalesDay(request.date),action:request.action,revision:doc.revision+1,input:structuredClone(request),actor:salesActor(context.actor)}
   if(event.date<doc.date)throw Error('操作日期不能早於訂單日期')
@@ -119,7 +122,7 @@ export function deriveSalesEvent(request,doc,context={}){
     event.deliveryId=delivery.id;event.reason=salesText(request.reason);event.amount=salesAmount(event.amounts.reduce((n,value)=>n+salesCents(value),0));return event
   }
   if(request.action==='pay'){
-    const claim=salesClaim(doc,request.deliveryId)
+    const claim=salesClaim(doc,request.deliveryId,context.customerCredits||context.customerEntries||[])
     event.amount=moneyValue(request.amount,'收款金額',.01);if(salesCents(event.amount)>salesCents(claim.owed))throw Error('收款超過這張請款的未收餘額')
     if(!['cash','bank'].includes(request.method))throw Error('請選現金或銀行收款')
     event.method=request.method;event.deliveryId=claim.delivery.id;event.reference=salesText(request.reference??'',100,false)
@@ -150,6 +153,17 @@ export function appendSalesEvent(doc,event){
 }
 export function salesBase(doc){
   return Object.fromEntries(['version','id','storeId','customer','createdOperationId','createdAt','createdBy','date','items','total','note','sourceQuote'].filter(key=>Object.hasOwn(doc,key)).map(key=>[key,doc[key]]))
+}
+export function salesDocumentAt(doc,revision){
+  if(!doc||!Number.isSafeInteger(revision)||revision<1||revision>doc.revision)throw Error('找不到原銷售版本')
+  if(revision===doc.revision)return doc
+  let previous={...salesBase(doc),revision:1,...Object.fromEntries(Object.values(SALES_COLLECTION).map(key=>[key,[]]))}
+  for(const event of Object.values(SALES_COLLECTION).flatMap(key=>doc[key]).sort((a,b)=>a.revision-b.revision)){
+    if(event.revision>revision)break
+    previous=appendSalesEvent(previous,event)
+  }
+  if(previous.revision!==revision)throw Error('找不到完整的原銷售版本')
+  return previous
 }
 export function salesEvent(doc,action,id){
   if(action==='create')return salesBase(doc)

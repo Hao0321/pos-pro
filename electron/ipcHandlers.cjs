@@ -19,6 +19,7 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:applyExchangeOperation',(_e,input)=>db.applyExchangeOperation(input,ipcSecurity.current()))
   handle('db:getSalesState',()=>db.getSalesState(ipcSecurity.current()))
   handle('db:applySalesOperation',(_e,input)=>db.applySalesOperation(input,ipcSecurity.current()))
+  handle('db:applyCustomerLedgerOperation',(_e,input)=>db.applyCustomerLedgerOperation(input,ipcSecurity.current()))
   handle('db:rememberAgentMappings',(_e,input)=>db.rememberAgentMappings(input,ipcSecurity.current()))
   handle('db:applyRestaurantOperation',(_e,input)=>db.applyRestaurantOperation(input,ipcSecurity.current()))
   handle('shared:getStatus',()=>sharedStore?.status()||{running:false,addresses:[]})

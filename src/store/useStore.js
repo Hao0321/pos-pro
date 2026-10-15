@@ -8,7 +8,9 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { orderToJournalEntries, topupToJournalEntries,wasteToJournalEntries } from '../utils/accounting'
 import {PROCUREMENT_KINDS,procurementToJournalEntries} from '../../electron/procurementRules.mjs'
 import {salesToJournalEntries,salesDayMetrics} from '../../electron/salesJournal.mjs'
+import {customerLedgerToJournalEntries} from '../../electron/customerJournal.mjs'
 import {salesDate} from '../../electron/salesRules.mjs'
+import {finalizeCustomerDraft} from '../utils/customerDraftReceipt.mjs'
 import {
   isElectron,isSharedStore, checkAndMigrate,
   loadProducts, saveProducts, dbAddProduct, dbUpdateProduct, dbDeleteProduct,
@@ -23,7 +25,7 @@ import {
   getSetting, setSetting,setSettings,
   applyInventoryOperation,
   applyExchangeOperation,
-  loadSalesState,applySalesOperation,
+  loadSalesState,applySalesOperation,applyCustomerLedgerOperation,
   applyRestaurantOperation,
   loadRestaurantState,
 } from '../utils/dataAccess'
@@ -43,6 +45,9 @@ export function useStore(session){
   const [orders,        setOrders]        = useState([])
   const [purchases,setPurchases]=useState([])
   const [sales,setSales]=useState({documents:[]})
+  const salesRef=useRef(sales)
+  useEffect(()=>{salesRef.current=sales},[sales])
+  const [customerTarget,setCustomerTarget]=useState(''),[salesTarget,setSalesTarget]=useState('')
   const [salesQuote,setSalesQuote]=useState(null)
   const [manualEntries, setManualEntries] = useState([])
   const [cart,          setCart]          = useState([])
@@ -115,7 +120,7 @@ export function useStore(session){
       setMembers(Array.isArray(m) ? m : [])
       setOrders(Array.isArray(o) ? o : [])
       setPurchases(Array.isArray(po)?po:[])
-      setSales(salesState)
+      salesRef.current=salesState;setSales(salesState)
       setManualEntries(Array.isArray(j) ? j : [])
       setHeldOrders(Array.isArray(held) ? held : [])
       setWasteLog(Array.isArray(waste) ? waste : [])
@@ -174,7 +179,8 @@ export function useStore(session){
     ...wasteLog.flatMap(wasteToJournalEntries),
     ...purchases.flatMap(procurementToJournalEntries),
     ...sales.documents.flatMap(salesToJournalEntries),
-  ],[orders,products,topups,wasteLog,purchases,sales.documents])
+    ...customerLedgerToJournalEntries(sales.customerLedger?.entries||[]),
+  ],[orders,products,topups,wasteLog,purchases,sales])
   const allJournal  = useMemo(()=>[...autoJournal,...manualEntries].sort((a,b)=>b.date.localeCompare(a.date)),[autoJournal,manualEntries])
 
   const addManualEntry = useCallback(async e=>{
@@ -368,7 +374,24 @@ export function useStore(session){
   async function commitSales(input,identity=null){
     if(dataError)throw Error(dataError)
     if(checkoutRef.current.getState().phase!=='idle')throw Error('請先確認原收款交易')
-    return applySalesResult(await executeFinancial('sales',{...input,kind:'sales'},request=>applySalesOperation(request,session),setFinancialState,identity))
+    return applySalesResult(await executeFinancial('sales',{expectedLedgerRevision:salesRef.current.customerLedger?.revision||0,...input,kind:'sales'},request=>applySalesOperation(request,session),setFinancialState,identity))
+  }
+  function applyCustomerLedgerResult(result){
+    result={...result,draftWarning:finalizeCustomerDraft(result,session.userId)}
+    salesRef.current={...salesRef.current,customerLedger:result.customerLedger}
+    setSales(previous=>({...previous,customerLedger:result.customerLedger,documents:[...result.documents,...previous.documents.filter(doc=>!result.documents.some(row=>row.id===doc.id))]}))
+    if(result.cashLog)window.dispatchEvent(new Event('pos-cash-operation'))
+    window.dispatchEvent(new CustomEvent('pos-customer-ledger-operation',{detail:result}))
+    return result
+  }
+  async function commitCustomerLedger(input,identity=null,prepare=null){
+    if(dataError)throw Error(dataError)
+    if(checkoutRef.current.getState().phase!=='idle')throw Error('請先確認原收款交易')
+    const state=salesRef.current
+    return applyCustomerLedgerResult(await executeFinancial('customer-ledger',{storeId:state.storeId,epoch:state.epoch,date:state.today,expectedRevision:state.customerLedger?.revision||0,...input,kind:'customer-ledger'},request=>applyCustomerLedgerOperation(request,session),setFinancialState,identity,null,prepare))
+  }
+  async function refreshTrading(){
+    const next=await loadSalesState(session);salesRef.current=next;setSales(next);return next
   }
   async function commitRestaurant(input,identity=null){
     if(dataError)throw Error(dataError)
@@ -382,6 +405,7 @@ export function useStore(session){
     const ports={restaurant:r=>applyRestaurantOperation(r,session),refund:r=>dbRefund(r.refundOf,r),topup:addTopup,waste:addWaste,cashlog:addCashLog,stocktake:r=>applyInventoryOperation(r,session),receive:r=>applyInventoryOperation(r,session)}
     ports.exchange=r=>applyExchangeOperation(r,session)
     ports.sales=r=>applySalesOperation(r,session)
+    ports['customer-ledger']=r=>applyCustomerLedgerOperation(r,session)
     for(const kind of PROCUREMENT_KINDS)ports[kind]=r=>applyInventoryOperation(r,session)
     const result=await executeFinancial(pending.kind,JSON.parse(pending.signature).input,ports[pending.kind],setFinancialState,null,async original=>(await getRecoveryState(original,session)).active==='matched')
     if(pending.kind==='topup'){setMembers(p=>p.map(m=>m.id===result.member.id?result.member:m));setTopups(p=>[result.topup,...p.filter(t=>t.id!==result.topup.id)])}
@@ -392,6 +416,7 @@ export function useStore(session){
     if(pending.kind==='restaurant')await applyRestaurantResult(result)
     if(pending.kind==='exchange')window.dispatchEvent(new CustomEvent('pos-exchange-operation',{detail:result}))
     if(pending.kind==='sales')applySalesResult(result)
+    if(pending.kind==='customer-ledger')applyCustomerLedgerResult(result)
     return result
   }
 
@@ -509,7 +534,7 @@ export function useStore(session){
   const todayProfit= Math.round((todayOrders.reduce((sum,o)=>sum+netSale(o)-orderCost(o,products),0)+todaySales.profit)*100)/100
 
   return {
-    products,members,orders,purchases,sales,salesQuote,openSalesQuote:quote=>{setSalesQuote({id:quote.id,revision:quote.revision});setView('sales')},consumeSalesQuote:()=>setSalesQuote(null),cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitInventory,commitRestaurant,commitExchange,commitSales,restaurantConfig,
+    products,members,orders,purchases,sales,salesQuote,openSalesQuote:quote=>{setSalesQuote({id:quote.id,revision:quote.revision});setView('sales')},consumeSalesQuote:()=>setSalesQuote(null),cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitInventory,commitRestaurant,commitExchange,commitSales,commitCustomerLedger,refreshTrading,customerTarget,openCustomerLedger:id=>{setCustomerTarget(id);setView("customers")},consumeCustomerTarget:()=>setCustomerTarget(""),salesTarget,openSalesDocument:id=>{setSalesTarget(id);setView("sales")},consumeSalesTarget:()=>setSalesTarget(""),restaurantConfig,
     activeMember,setActiveMember:value=>{ensureCartEditable();setActiveMember(value)},
     addToCart,removeFromCart,updateCartQty,updateCartItemPrice,clearCart,stageQuickSale,
     cartSubtotal,cartCount,checkout,refund,

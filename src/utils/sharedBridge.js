@@ -27,6 +27,7 @@ if(sharedStoreMode&&!window.electronAPI){
   db.applyExchangeOperation=input=>rpc('db:applyExchangeOperation',input)
   db.getSalesState=()=>rpc('db:getSalesState')
   db.applySalesOperation=input=>rpc('db:applySalesOperation',input)
+  db.applyCustomerLedgerOperation=input=>rpc('db:applyCustomerLedgerOperation',input)
   for(const method of ['getRecoveryState','applyRecoveryOperation','lookupRecoveryOperation','exportRecoverySource','exportRecoveryDiagnostics'])db[method]=input=>rpc('db:'+method,input)
   db.getRestaurantState=()=>rpc('db:getRestaurantState')
   db.applyRestaurantOperation=input=>rpc('db:applyRestaurantOperation',input)

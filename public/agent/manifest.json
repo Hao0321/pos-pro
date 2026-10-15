@@ -15,6 +15,7 @@
   "delivery": {"paste": "快速建單", "linkFragment": "agentDraft=<encodeURIComponent(JSON)>"},
   "kinds": ["sale", "restaurant", "purchase"],
   "humanReviewRequired": true,
+  "customerReceiptDraft": {"protocol":"pos-customer-receipt-draft/v1","schema":"/agent/customer-receipt-draft-v1.schema.json","context":"authenticated window.electronAPI.db.getSalesState().customerLedger.customers; owner only","paste":"客戶與款項 → 讓 Agent 幫我填收款草稿","requiresActualReceiptConfirmation":true,"automaticMoneyMovement":false},
   "moneyMovement": false,
   "arbitraryExecution": false,
   "featurePrice": "free"

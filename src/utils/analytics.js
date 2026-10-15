@@ -3,6 +3,7 @@
 // 訂單格式：{ id, items: [{id, qty, price}], total, time, status, refundOf, fullRefund, memberId }
 
 import { settledOrders, netSale, orderCost } from './orderLedger'
+import {reportLineRevenue} from './businessReports'
 const DAY_MS = 86400000
 const now = () => Date.now()
 
@@ -58,16 +59,27 @@ export function suggestReorderQty(product, dailyAvg, leadDays = 14) {
 export function productPerformance(products = [], orders = [], days = 30) {
   days = Math.max(1, Number(days) || 30)
   const velocity = computeSalesVelocity(orders, days)
+  const history=new Map(),since=now()-days*DAY_MS
+  for(const order of effectiveOrders(orders)){
+    if(new Date(order.time).getTime()<since)continue
+    const lines=order.items||[],gross=lines.reduce((sum,item)=>sum+reportLineRevenue(item),0)
+    for(const item of lines){
+      const id=item.id||item.productId;if(!id)continue
+      const row=history.get(id)||{revenue:0,cost:0}
+      row.revenue+=Number.isFinite(item.reportRevenue)?item.reportRevenue:gross?netSale(order)*reportLineRevenue(item)/gross:0
+      row.cost+=orderCost({...order,items:[item]},products)
+      history.set(id,row)
+    }
+  }
 
   const enriched = products.map(p => {
     const dailyAvg = velocity.get(p.id) || 0
     const totalSold = dailyAvg * days
     const stock = Number(p.stock) || 0
-    const cost = Number(p.cost) || 0
-    const price = Number(p.price) || 0
-    const margin = price > 0 ? ((price - cost) / price) * 100 : 0
-    const revenue = totalSold * price
-    const profit = totalSold * (price - cost)
+    const actual=history.get(p.id)||{revenue:0,cost:0}
+    const revenue = Math.round(actual.revenue*100)/100
+    const profit = Math.round((actual.revenue-actual.cost)*100)/100
+    const margin = revenue>0?profit/revenue*100:0
     return {
       ...p,
       dailyAvg, totalSold,

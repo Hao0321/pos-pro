@@ -4,6 +4,9 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
     require('./procurementRules.mjs').validateProcurementRecords(data.purchases||[],data.cashLog||[])
     require('./businessExchange.mjs').validateExchangeSettings(data.settings||[],data.purchases||[],data.auditLog||[])
     const exchange=require('./businessExchange.mjs')
+    require('./customerLedger.mjs').validateCustomerLedgerRecords(data.customerEntries||[],data.customerOperations||[],{storeId:data.settings?.find(s=>s.key==='sharedStoreId')?.value,documents:data.salesDocuments||[],salesOperations:data.salesOperations||[],cashLogs:data.cashLog||[]})
+    if(data.customerEntries?.length||data.customerOperations?.length)require('./databaseFeatureFence.cjs').installCustomerFence(db)
+    for(const [key,table]of [['customerEntries','customer_entries'],['customerOperations','customer_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
     require('./salesPlan.mjs').validateSalesRecords(data.salesDocuments||[],data.salesOperations||[],data.cashLog||[],data.settings?.find(s=>s.key==='sharedStoreId')?.value,data.products||[],exchange.readExchangeStore(exchange.readExchangeTextSetting(data.settings||[],exchange.EXCHANGE_SETTING)).quotes)
     for(const [key,table]of [['salesDocuments','sales_documents'],['salesOperations','sales_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
     const restaurantConfig=data.settings?.find(s=>s.key==='restaurantConfig')
@@ -263,7 +266,7 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
       DELETE FROM member_topups; DELETE FROM audit_log;
       DELETE FROM settings;
       DELETE FROM restaurant_orders; DELETE FROM restaurant_operations;
-      DELETE FROM sales_documents; DELETE FROM sales_operations;
+      DELETE FROM sales_documents; DELETE FROM sales_operations; DELETE FROM customer_entries; DELETE FROM customer_operations;
     `)
     migrateTx(data)
     db.prepare('UPDATE sales_runtime SET value=? WHERE id=?').run(require('node:crypto').randomUUID(),'epoch')

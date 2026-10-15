@@ -17,11 +17,11 @@ export function salesDraftInput(form){
   if(!form.confirmed)throw Error('請先確認客戶已同意商品、數量與價格')
   return {customer,date:form.date,items,note:form.note,...(form.quoteRef?{quoteRef:form.quoteRef}:{})}
 }
-export default function SalesOrderForm({form,setForm,products,documents,quotes,onQuote,onSave,onHide,onDiscard,busy,error}){
+export default function SalesOrderForm({form,setForm,products,documents,customers=[],quotes,onQuote,onSave,onHide,onDiscard,busy,error}){
   const [query,setQuery]=useState('')
   const update=(key,value)=>setForm(previous=>({...previous,[key]:value,confirmed:false}))
   const changeRow=(index,key,value)=>update('items',form.items.map((row,i)=>i===index?{...row,[key]:value}:row))
-  const known=[...new Map(documents.map(doc=>[doc.customer.id,doc.customer])).values()]
+  const known=[...new Map([...documents.map(doc=>[doc.customer.id,doc.customer]),...customers.map(({id,name})=>[id,{id,name}])]).values()]
   const latest=[...new Map(quotes.map(quote=>[quote.id,quote])).values()].filter(quote=>!documents.some(doc=>doc.sourceQuote?.id===quote.id))
   function add(product){if(!form.items.some(row=>row.productId===product.id)&&form.items.length<100)update('items',[...form.items,{productId:product.id,qty:'1',unitPrice:String(product.price),expectedProduct:productReference(product)}])}
   function next(){
@@ -38,10 +38,10 @@ export default function SalesOrderForm({form,setForm,products,documents,quotes,o
       <fieldset disabled={busy}>
         {form.step===1&&<div className="sales-fields">
           {!form.quoteRef&&latest.length>0&&<label>{tr('已有報價？直接帶入')}<select className="field" value="" onChange={e=>onQuote(latest.find(q=>q.id===e.target.value))}><option value="">{tr('選擇客戶已同意的報價')}</option>{latest.map(q=><option key={q.id} value={q.id}>{q.recipient.name} · {salesMoney(q.total)}</option>)}</select></label>}
-          {!form.quoteRef&&known.length>0&&<label>{tr('曾經往來的客戶')}<select className="field" value="" onChange={e=>{const customer=known.find(c=>c.id===e.target.value);if(customer)update('customer',customer)}}><option value="">{tr('選擇客戶，或在下方填新客戶')}</option>{known.map(c=><option key={c.id} value={c.id}>{c.name} · {c.id}</option>)}</select></label>}
-          <label>{tr('客戶名稱')}<input className="field" data-sales-customer value={form.customer.name} maxLength={100} readOnly={!!form.quoteRef} onChange={e=>update('customer',{...form.customer,name:e.target.value})} autoComplete="organization" required/></label>
+          {!form.quoteRef&&known.length>0&&<label>{tr('曾經往來的客戶')}<select className="field" data-sales-customer-select value="" onChange={e=>{if(e.target.value==='__new__'){update('customer',{id:'customer-'+crypto.randomUUID(),name:''});return}const customer=known.find(c=>c.id===e.target.value);if(customer)update('customer',customer)}}><option value="">{tr('選擇客戶，或在下方填新客戶')}</option><option value="__new__">{tr('新增另一位客戶')}</option>{known.map(c=><option key={c.id} value={c.id}>{c.name} · {c.id}</option>)}</select></label>}
+          <label>{tr('客戶名稱')}<input className="field" data-sales-customer value={form.customer.name} maxLength={100} readOnly={!!form.quoteRef||customers.some(c=>c.id===form.customer.id)} onChange={e=>update('customer',{...form.customer,name:e.target.value})} autoComplete="organization" required/></label>
           <label>{tr('訂單日期')}<input className="field" data-sales-date type="date" value={form.date} onChange={e=>update('date',e.target.value)} required/></label>
-          <details><summary>{tr('客戶代碼（已自動產生，可自行修改）')}</summary><label>{tr('客戶代碼')}<input className="field" value={form.customer.id} maxLength={128} readOnly={!!form.quoteRef} onChange={e=>update('customer',{...form.customer,id:e.target.value})}/></label></details>
+          <details><summary>{tr('客戶代碼')}</summary><label>{tr('客戶代碼')}<input className="field" value={form.customer.id} maxLength={128} readOnly={!!form.quoteRef||customers.some(c=>c.id===form.customer.id)} onChange={e=>update('customer',{...form.customer,id:e.target.value})}/></label></details>
         </div>}
         {form.step===2&&<>
           {!form.quoteRef&&<><label className="sales-search">{tr('找商品')}<input className="field" value={query} onChange={e=>setQuery(e.target.value)} placeholder={tr('輸入商品名稱或代碼')}/></label><div className="sales-products">{products.filter(p=>(p.name+' '+p.id).toLocaleLowerCase().includes(query.toLocaleLowerCase())).slice(0,20).map(p=><button key={p.id} type="button" className="btn btn-ghost" disabled={form.items.some(row=>row.productId===p.id)} onClick={()=>add(p)}><strong>{p.name}</strong><span>{salesMoney(p.price)} / {p.unit||'個'}</span></button>)}</div></>}

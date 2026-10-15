@@ -14,6 +14,7 @@ export default function ReportsPage({ store }) {
   const now = new Date()
   // 排除完整退貨配對；部分退貨保留兩邊（原訂單 + 負數退貨訂單），總額自動抵銷正確
   const businessDocuments=store.sales?.documents||[]
+  const customerEntries=store.sales?.customerLedger?.entries
   const orders = useMemo(()=>[...settledOrders(rawOrders),...businessReportRows(businessDocuments)],[rawOrders,businessDocuments])
   const today=store.sales?.today||salesDate(now)
   function inRange(day){const age=(Date.parse(today)-Date.parse(day))/86400000;return range==='today'?day===today:range==='week'?age>=0&&age<7:range==='month'?day.slice(0,7)===today.slice(0,7):true}
@@ -37,7 +38,7 @@ export default function ReportsPage({ store }) {
 
   const saleCount=filtered.filter(row=>!row.refundOf).length
   const avgOrder = saleCount ? Math.round(revenue / saleCount) : 0
-  const currentReceivables=businessDocuments.map(doc=>salesSummary(doc,today)).reduce((sum,row)=>sum+row.owed,0)
+  const currentReceivables=businessDocuments.map(doc=>salesSummary(doc,today,store.sales?.customerLedger?.entries)).reduce((sum,row)=>sum+row.owed,0)
   const newMembers = members.filter(m => {
     const d = new Date(m.joinDate)
     if (range === 'today') return d.toDateString()===now.toDateString()
@@ -79,9 +80,9 @@ export default function ReportsPage({ store }) {
         }
       } else card += o.total
     }
-    for(const row of businessCashFlows(businessDocuments).filter(row=>inRange(row.date))){if(row.method==='cash')cash+=row.amount;else bank+=row.amount}
+    for(const row of businessCashFlows(businessDocuments,customerEntries).filter(row=>inRange(row.date))){if(row.method==='cash')cash+=row.amount;else bank+=row.amount}
     return { cash, card,bank, total: cash+card+bank }
-  }, [filtered,businessDocuments,range,today])
+  }, [filtered,businessDocuments,customerEntries,range,today])
 
   // 30 天商品表現分析（基於 store.orders 全部訂單，獨立於 range filter）
   const perf30d = useMemo(() => productPerformance(products, orders, 30), [products, orders])
@@ -290,7 +291,7 @@ export default function ReportsPage({ store }) {
               <div key={g.cls} style={{padding:'12px 14px', background:'var(--bg-overlay)', borderRadius:8, borderTop:`2px solid ${g.color}`}}>
                 <div style={{fontSize:12, fontWeight:600, color:g.color, marginBottom:6}}>{tr(g.label)}</div>
                 <div style={{fontSize:20, fontWeight:600, fontFamily:'var(--font-mono)'}}>{g.items.length} <span style={{fontSize:11, color:'var(--text-tertiary)', fontWeight:400}}>{tr("項")}</span></div>
-                <div style={{fontSize:10, color:'var(--text-tertiary)', marginTop:4}}>{g.desc}</div>
+                <div style={{fontSize:10, color:'var(--text-tertiary)', marginTop:4}}>{tr(g.desc)}</div>
               </div>
             ))}
           </div>

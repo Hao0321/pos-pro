@@ -25,11 +25,26 @@ export default function useDeviceDraft(key,empty,valid,messages){
   useEffect(persist,[key,ready,form])
   useEffect(()=>{const flush=()=>persist();window.addEventListener('pagehide',flush);return()=>{flush();window.removeEventListener('pagehide',flush)}},[])
   function setForm(value){finished.current=false;setValue(value)}
+  function saveNow(value){
+    const current=latest.current
+    if(!current?.ready||!fits(value))throw Error(messages.unsaved)
+    try{
+      if(blocked.current){
+        if(!messages.preserveUnreadable)throw Error(messages.unreadable)
+        const raw=localStorage.getItem(current.key)
+        if(raw!==null)localStorage.setItem(current.key+':unreadable:'+crypto.randomUUID(),raw)
+      }
+      localStorage.setItem(current.key,JSON.stringify({version:1,form:value}))
+    }catch{setWarning(messages.unsaved);throw Error(messages.unsaved)}
+    blocked.current=false;finished.current=false;latest.current={...current,form:value};setValue(value)
+    return value
+  }
   function clear(){
     finished.current=true
+    if(blocked.current&&messages.preserveUnreadable){setValue(empty());return}
     try{if(key)localStorage.removeItem(key);blocked.current=false;setWarning('')}
     catch{setWarning(messages.uncleared)}
     setValue(empty())
   }
-  return {form,setForm,clear,warning,ready:ready===key&&!!key}
+  return {form,setForm,saveNow,clear,warning,ready:ready===key&&!!key}
 }

@@ -22,10 +22,11 @@ export const WORKSPACE_TASKS=[
   {id:'settings',title:'設定、備份還原',detail:'店面、帳號、設備與資料管理。',view:'settings',perm:'settings.view',words:'印表機 密碼 權限 設備'},
   {id:'scenarios',title:'套用情境模板',detail:'先在演練空間試跑，再設定店面。',view:'scenarios',perm:'settings.edit',words:'丼飯 新手 試賣'},
   {id:'sales',title:'接客戶訂單、收欠款',detail:'從客戶同意報價，到交貨、收款與退貨。',view:'sales',perm:'purchase.edit',words:'銷售 應收 請款 交付 退款 sales receivables'},
+  {id:'customers',title:'管理客戶、預收與抵付',detail:'客戶建一次，收到的錢可抵付多張帳單。',view:'customers',perm:'purchase.edit',words:'客戶 預收 餘額 抵付 退款 customer advance deposit allocation'},
 ]
 export const WORKSPACE_AREAS=[
-  {id:'crm',title:'顧客與點餐',code:'CRM',intro:'幫你照顧客人',detail:'會員、點數、儲值、點餐與預訂。',description:'會員、點數、儲值、點餐和預訂，讓接單與經營回頭客更方便。',taskIds:['sales','members','orders','restaurant','exchange','quick','sale','promotions','reports']},
-  {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['sales','sale','quick','exchange','inventory','purchase','shifts','stocktake','waste','accounting','reports','readiness','devices','settings','scenarios']},
+  {id:'crm',title:'顧客與點餐',code:'CRM',intro:'幫你照顧客人',detail:'會員、點數、儲值、點餐與預訂。',description:'會員、點數、儲值、點餐和預訂，讓接單與經營回頭客更方便。',taskIds:['customers','sales','members','orders','restaurant','exchange','quick','sale','promotions','reports']},
+  {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['customers','sales','sale','quick','exchange','inventory','purchase','shifts','stocktake','waste','accounting','reports','readiness','devices','settings','scenarios']},
 ]
 export function workspaceTasks(session,query='',area='all'){
   const terms=query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)

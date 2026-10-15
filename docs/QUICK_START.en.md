@@ -34,4 +34,6 @@ Open an agreed quote and choose **Customer accepted: create sales order**, or se
 
 Use **Next: hand over the goods** only after the agreed handover; enter this batch and its payment due date. Then use **Record this payment** for money actually received, including partial payments. Cash requires an open shift. A bank entry records a payment you verified; it does not charge anyone. Returns and allowances stay tied to the original handover, refunds to the original payment, and corrections preserve history. Original cost feeds reports and accounting even after repricing. If saving is uncertain, use **Check the original result**.
 
-This is an internal TWD all-inclusive goods workflow. Advances, multi-claim remittance, complete stock allocation, tax invoices and period close remain in development. See the [sales guide](SALES_GUIDE.md).
+For advance money or one payment covering several bills, use **Customers & balances**. Add or select a customer, record money actually received, then review **Apply money to bills** after goods handover. This allocates the original receipt without collecting it again. Release an allocation before returning that part of an advance; refunds retain the original payment method. An uncertain result keeps its original ID and draft. See the [customer guide](CUSTOMER_GUIDE.md).
+
+This is an internal TWD all-inclusive goods workflow. Complete stock allocation, tax invoices and period close remain in development. See the [sales guide](SALES_GUIDE.md).

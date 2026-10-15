@@ -17,6 +17,7 @@ export async function getExchangeContext(actor){return isElectron?window.electro
 export async function applyExchangeOperation(request,actor){return isElectron?window.electronAPI.db.applyExchangeOperation(request):(await import('./browserExchange')).commitBrowserExchange(request,actor)}
 export async function loadSalesState(actor){return isElectron?window.electronAPI.db.getSalesState():(await import('./browserSalesDocuments')).getBrowserSalesState(actor)}
 export async function applySalesOperation(request,actor){return isElectron?window.electronAPI.db.applySalesOperation(request):(await import('./browserSalesDocuments')).commitBrowserSalesDocument(request,actor)}
+export async function applyCustomerLedgerOperation(request,actor){return isElectron?window.electronAPI.db.applyCustomerLedgerOperation(request):(await import('./browserCustomerLedger')).commitBrowserCustomerLedger(request,actor)}
 export async function loadRestaurantState(){return isElectron?window.electronAPI.db.getRestaurantState():browserRestaurantState()}
 export async function applyRestaurantOperation(request,actor){return isElectron?window.electronAPI.db.applyRestaurantOperation(request):commitBrowserRestaurant(request,actor)}
 export async function getAgentContext(actor){
@@ -248,6 +249,7 @@ export async function checkAndMigrate() {
       wasteLog:loadLS('pos2_waste',[]),memberTopups:loadLS('pos2_topups',[]),auditLog:loadLS('pos_audit_log',[]),
       restaurantOrders:loadLS('pos_restaurant_orders',[]),restaurantOperations:loadLS('pos_restaurant_operations',[]),
       salesDocuments:loadLS('pos_sales_documents',[]),salesOperations:loadLS('pos_sales_operations',[]),
+      customerEntries:loadLS('pos_customer_entries',[]),customerOperations:loadLS('pos_customer_operations',[]),
       settings:loadLS('pos_business_settings',[]).map(s=>({key:s.key,value:readExchangeTextSetting(loadLS('pos_business_settings',[]),s.key)})),
     }
 

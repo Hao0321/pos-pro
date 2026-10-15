@@ -9,10 +9,12 @@ const {moneyValue,quantityValue,operationHeader,sameCommand,canonicalSignature}=
 
 module.exports = function initDatabase(dbPath) {
   const db = new Database(dbPath)
+  require('./databaseFeatureFence.cjs').register(db)
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
 
   require('./databaseSchema.cjs')(db)
+  if(db.prepare('SELECT 1 FROM customer_entries LIMIT 1').get())require('./databaseFeatureFence.cjs').installCustomerFence(db)
   const stmts = require('./databaseStatements.cjs')(db)
 
   const orderInsertParams = (o) => ({
@@ -162,6 +164,7 @@ module.exports = function initDatabase(dbPath) {
     ...require('./inventoryOperations.cjs')(db,stmts,supplierParams),
     ...require('./exchangeOperations.cjs')(db,stmts),
     ...require('./salesOperations.cjs')(db,stmts),
+    ...require('./customerOperations.cjs')(db,stmts),
     // Products
     getProducts() {
       return stmts.getAllProducts.all().map(p => ({ ...p, noBarcode: !!p.noBarcode }))
@@ -545,6 +548,8 @@ module.exports = function initDatabase(dbPath) {
         restaurantOperations: db.prepare('SELECT data FROM restaurant_operations ORDER BY rowid').all().map(r=>JSON.parse(r.data)),
         salesDocuments:db.prepare('SELECT data FROM sales_documents ORDER BY id').all().map(r=>JSON.parse(r.data)),
         salesOperations:db.prepare('SELECT data FROM sales_operations ORDER BY id').all().map(r=>JSON.parse(r.data)),
+        customerEntries:db.prepare('SELECT data FROM customer_entries ORDER BY id').all().map(r=>JSON.parse(r.data)),
+        customerOperations:db.prepare('SELECT data FROM customer_operations ORDER BY id').all().map(r=>JSON.parse(r.data)),
       }
       // A backup round trip may change insertion order for tied timestamps.
       // Stable collection ordering keeps the revision tied to business content.
@@ -577,7 +582,7 @@ module.exports = function initDatabase(dbPath) {
       return migrateTx(data)
     },
     isEmpty() {
-      return ['products','members','orders','suppliers','purchases','promotions','manual_journal','held_orders','shifts','cash_log','waste_log','member_topups','sales_documents','sales_operations','restaurant_orders','restaurant_operations'].every(t=>db.prepare('SELECT 1 FROM '+t+' LIMIT 1').get()==null)
+      return ['products','members','orders','suppliers','purchases','promotions','manual_journal','held_orders','shifts','cash_log','waste_log','member_topups','sales_documents','sales_operations','customer_entries','customer_operations','restaurant_orders','restaurant_operations'].every(t=>db.prepare('SELECT 1 FROM '+t+' LIMIT 1').get()==null)
     },
 
     // ===== Held Orders 掛單 =====
@@ -646,7 +651,7 @@ module.exports = function initDatabase(dbPath) {
     },
     addCashLog(data) {
       try{return db.transaction(()=>{
-        operationHeader(data);const old=db.prepare('SELECT * FROM cash_log WHERE id=?').get(data.id)
+        operationHeader(data);if(data.id.startsWith('customer-cash:'))throw Error('客戶收付現金流水只能由原客戶款項操作保存');const old=db.prepare('SELECT * FROM cash_log WHERE id=?').get(data.id)
         if(old){if(!sameCommand(old,data,['shiftId','time','type','amount','reason','cashier']))throw Error('現金流水編號內容不一致');return {success:true,cashLog:old}}
         moneyValue(data.amount,'現金流水',.01)
         if(!['in','out'].includes(data.type)||stmts.getShiftById.get(data.shiftId)?.status!=='open')throw Error('現金異動或班別不正確')

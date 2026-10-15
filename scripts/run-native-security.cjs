@@ -1,5 +1,7 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--customers':['native-customers.cjs','POS_CUSTOMERS_PASS',false],
+  '--customers-ui':['native-customers-ui.cjs','POS_CUSTOMERS_UI_PASS',true],
   '--recovery':['native-recovery.cjs','POS_RECOVERY_PASS',false],
   '--recovery-ui':['native-recovery-ui.cjs','POS_RECOVERY_UI_PASS',true],
   '--sales':['native-sales.cjs','POS_SALES_PASS',false],

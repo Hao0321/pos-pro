@@ -3,8 +3,9 @@ import {PROCUREMENT_KINDS,isProcurement,procurementEvent,validateProcurement} fr
 import {operationHeader} from '../../electron/operationRules.mjs'
 import {assertExchangeReceipt} from '../../electron/businessExchange.mjs'
 import {assertSalesResult} from '../../electron/salesPlan.mjs'
+import {assertCustomerLedgerResult} from '../../electron/customerLedger.mjs'
 export const FINANCIAL_PENDING='pos_pending_financial_v1'
-const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt'}
+const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt'}
 for(const kind of PROCUREMENT_KINDS)fields[kind]='receipt'
 let running=false
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value
@@ -23,6 +24,7 @@ function assertReceipt(kind,request,result){
   if(result?.success!==true||row?.id!==request.id)throw Error('保存結果尚未確認：回覆缺少正確的異動編號')
   if(kind==='exchange')assertExchangeReceipt(request,result)
   if(kind==='sales')assertSalesResult(request,result)
+  if(kind==='customer-ledger')assertCustomerLedgerResult(request,result)
   if(kind==='topup'&&(['memberId','amount','bonus','payMethod','shiftId'].some(k=>(row[k]??'')!==(request[k]??''))||result.member?.id!==request.memberId))throw Error('儲值保存結果尚未確認：回覆內容不符')
   if(kind==='refund'&&(row.refundOf!==request.refundOf||result.original?.id!==request.refundOf))throw Error('退款保存結果尚未確認：原單不符')
   if(kind==='cashlog'&&['shiftId','type','amount','reason'].some(k=>(row[k]??'')!==(request[k]??'')))throw Error('現金流水保存結果尚未確認：回覆內容不符')
@@ -60,10 +62,10 @@ function clearOriginal(pending){
 }
 // A lost reply retains the original ID. Retrying identical input is safe only
 // because every participating persistence adapter deduplicates that ID.
-export async function executeFinancial(kind, input, persist,onState=()=>{},identity=null,verifyLegacy=null) {
+export async function executeFinancial(kind, input, persist,onState=()=>{},identity=null,verifyLegacy=null,prepare=null) {
   if(running)throw Error('正在保存異動，請勿重複提交')
   if(!Object.hasOwn(fields,kind))throw Error('異動類型不正確')
-  finiteTree(input);running=true;let pending
+  finiteTree(input);running=true;let pending,createdPending=false
   const notify=(phase,message='')=>onState({phase,kind:pending?.kind||kind,id:pending?.request.id||null,message})
   try{
   const signature=JSON.stringify({kind,input})
@@ -73,18 +75,26 @@ export async function executeFinancial(kind, input, persist,onState=()=>{},ident
     if(identity)operationHeader(identity)
     pending={signature,kind,recoveryProtocol:'pos-recovery-v1',request:{...input,id:identity?.id||kind+'-'+crypto.randomUUID(),time:identity?.time||new Date().toISOString()}}
     browserStorage.setItem(FINANCIAL_PENDING,JSON.stringify(pending))
+    createdPending=true
   }else if(pending.recoveryProtocol!=='pos-recovery-v1'){
     // An old release may have already replaced the book. Never silently create
     // a missing historical operation just because its old pending ID is absent.
     if(!verifyLegacy||await verifyLegacy(pending)!==true)throw Error('舊版原紀錄仍需要核對，請店主使用復原引導確認，勿重新收款')
   }
+  if(prepare){
+    try{await prepare(pending)}catch(error){
+      if(createdPending){const rejectedId=pending.request.id;clearOriginal(pending);pending=null;notify('idle');throw Object.assign(error,{notCommitted:true,operationId:rejectedId})}
+      throw error
+    }
+  }
   notify('saving','保存中，請勿重複異動')
   let result
   try {result=await persist(pending.request)} catch {throw new Error(kind==='exchange'?'報價保存結果尚未確認。請用原編號確認，先不要再開一張。':'保存結果尚未確認。請以原內容重試；系統會沿用原單號，勿重複付款或退款。')}
   if (result?.success===false && result.committed===false) {
+    const rejectedId=pending.request.id
     clearOriginal(pending)
     pending=null;notify('idle')
-    throw new Error(result.error||'資料保存失敗')
+    throw Object.assign(new Error(result.error||'資料保存失敗'),{notCommitted:true,operationId:rejectedId})
   }
   if(result?.success===false&&result.committed===null&&result.errorCode==='RECOVERY_REQUIRED')throw new Error(result.error)
   assertReceipt(kind,pending.request,result)

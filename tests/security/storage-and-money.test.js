@@ -8,6 +8,7 @@ import { initAccounts } from '../../src/utils/accountBootstrap'
 import { createBackup, restoreBackup, getBackupList } from '../../src/utils/security'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
 import {planSales} from '../../electron/salesPlan.mjs'
+import {planCustomerLedger} from '../../electron/customerLedger.mjs'
 import {salesDate} from '../../electron/salesRules.mjs'
 import {productReference} from '../../electron/businessExchange.mjs'
 let map, failWrite
@@ -60,6 +61,11 @@ test('all business collections restore atomically, including restaurant orders, 
   const request={id:'restore-sale',kind:'sales',storeId:'restore-fixture',epoch:'fixture-epoch',time:new Date().toISOString(),date:salesDate(new Date()),action:'create',document:{customer:{id:'customer',name:'fixture customer'},date:salesDate(new Date()),items:[{productId:'pos2_products',qty:1,unitPrice:95,expectedProduct:productReference(data.pos2_products[0])}],note:''}}
   const plan=planSales(request,{storeId:'restore-fixture',epoch:'fixture-epoch',products:data.pos2_products,documents:[],quotes:[]},{role:'owner',userId:'owner',username:'fixture owner'})
   data.pos_sales_documents=[plan.document];data.pos_sales_operations=[plan.receipt]
+  const ledgerData={storeId:'restore-fixture',epoch:'fixture-epoch',documents:data.pos_sales_documents,salesOperations:data.pos_sales_operations,customerEntries:[],customerOperations:[],cashLogs:data.pos2_cash_log},actor={role:'owner',userId:'owner',username:'fixture owner'}
+  const created=planCustomerLedger({id:'restore-customer',kind:'customer-ledger',action:'customer-create',storeId:'restore-fixture',epoch:'fixture-epoch',time:new Date().toISOString(),date:salesDate(new Date()),expectedRevision:0,customer:{id:'restore-buyer',name:'restored customer'}},ledgerData,actor)
+  ledgerData.customerEntries=[created.event]
+  const received=planCustomerLedger({id:'restore-receipt',kind:'customer-ledger',action:'receive',storeId:'restore-fixture',epoch:'fixture-epoch',time:new Date().toISOString(),date:salesDate(new Date()),expectedRevision:1,customerId:'restore-buyer',amount:125.50,method:'bank',shiftId:'',confirmed:true},ledgerData,actor)
+  data.pos_customer_entries=[created.event,received.event];data.pos_customer_operations=[created.receipt,received.receipt]
   writeRecords(data)
   const backup=await createBackup({username:'測試'},'完整備份');expect(await getBackupList()).toHaveLength(1)
   writeRecords({...Object.fromEntries(DATA_KEYS.map(key=>[key,[]])),pos_users:data.pos_users});await restoreBackup(backup.id,{userId:'restore-owner',username:'測試',role:'owner'})

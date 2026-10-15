@@ -142,7 +142,7 @@ export default function ShiftPage({ store, session }) {
                       <td style={{textAlign:'right', fontFamily:'var(--font-mono)', color: c.type==='in'?'var(--green)':'var(--red)', fontWeight:500}}>
                         {c.type==='in'?'+':'-'} NT$ {c.amount.toLocaleString()}
                       </td>
-                      <td style={{color:'var(--text-secondary)'}}>{c.reason}</td>
+                      <td style={{color:'var(--text-secondary)'}}>{String(c.id).startsWith('customer-cash:')&&c.reason?.startsWith('客戶收付 ')?tr('客戶收付 {0}',{0:c.reason.slice(5)}):c.reason}</td>
                     </tr>
                   ))}
                 </tbody>
