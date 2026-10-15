@@ -108,7 +108,7 @@ export default function WastePage({ store, session }) {
       {message&&<p role="status" style={{marginBottom:12}}>{message}</p>}
       <div style={ws.header}>
         <div>
-          <h2 style={{fontSize:20, fontWeight:600}}>損耗管理</h2>
+          <h2 className="page-title" style={{fontSize:20, fontWeight:600}}>損耗管理</h2>
           <div style={{fontSize:13, color:'var(--text-tertiary)', marginTop:4}}>
             記錄過期、破損、自用等庫存損耗
           </div>

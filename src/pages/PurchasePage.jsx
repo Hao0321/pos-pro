@@ -74,7 +74,7 @@ export default function PurchasePage({ store, session }) {
     <div style={ps.root}>
       <div style={ps.header}>
         <div>
-          <h2 style={ps.title}>進貨管理</h2>
+          <h2 className="page-title" style={ps.title}>進貨管理</h2>
           <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
             {pending.length} 張待處理 · 待付款 NT$ {totalOwed.toLocaleString()}
           </div>

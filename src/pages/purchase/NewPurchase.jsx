@@ -301,7 +301,7 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
           style={{
             display:'flex', alignItems:'center', justifyContent:'space-between', gap:10,
             padding:'14px 16px', borderRadius:'var(--r3)',
-            background:'linear-gradient(135deg, var(--amber-dim), var(--gold-dim))',
+            background:'var(--amber-dim)',
             border:'1px solid var(--amber)', cursor:'pointer', textAlign:'left',
             width:'100%',
           }}

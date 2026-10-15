@@ -512,16 +512,16 @@ const cs = {
   },
   doneCheck:{
     width:72, height:72, borderRadius:'50%',
-    background:'linear-gradient(135deg, var(--green) 0%, var(--teal) 100%)',
+    background:'var(--green)',
     color:'#fff',
     display:'flex', alignItems:'center', justifyContent:'center',
     marginBottom:24,
-    boxShadow:'0 8px 24px rgba(22,163,74,0.35), inset 0 1px 0 rgba(255,255,255,.2)',
+    boxShadow:'none',
   },
   totalDisplay:{
     padding:'24px 20px', marginBottom:16,
     borderRadius:'var(--r3)',
-    background:'linear-gradient(135deg, var(--accent-dim), var(--gold-glow))',
+    background:'var(--accent-dim)',
     border:'1px solid var(--accent-dim)',
     textAlign:'center',
   },
@@ -545,7 +545,7 @@ const cs = {
   },
   pointsBox:{
     padding:'14px 16px',
-    background:'linear-gradient(135deg, var(--gold-glow), transparent)',
+    background:'var(--accent-dim)',
     border:'1.5px solid var(--gold-dim)',
     borderRadius:'var(--r3)', marginBottom:14,
   },

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { ShoppingCart, Package, BarChart2, Users, BookOpen, Truck, ClipboardList, Tag, Settings, AlertTriangle, LogOut, Bell, LayoutDashboard, Clock, Trash2, Sparkles, CheckCircle as CheckCircleIcon } from 'lucide-react'
 import { ROLES, hasPermission } from '../utils/security'
 import SyncStatusBadge from './SyncStatusBadge'
+import Brand from './Brand'
 
 const NAV = [
   { key:'dashboard',  label:'首頁',     Icon:LayoutDashboard, perm:'pos.use', accent:'gold' },
@@ -39,17 +40,10 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
   const role    = ROLES[session?.role]
 
   return (
-    <aside style={s.sidebar}>
+    <aside className="workspace-sidebar" style={s.sidebar}>
       {/* Logo */}
       <div style={s.logoWrap}>
-        <div style={s.logoMark}>
-          <Sparkles size={14} style={{position:'absolute', top:-6, right:-6, color:'var(--gold-bright)', filter:'drop-shadow(0 0 6px var(--accent-glow))'}}/>
-          P
-        </div>
-        <div>
-          <div style={s.logoName}>POS<span style={{background:'var(--accent-grad)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text'}}>Pro</span></div>
-          <div style={s.logoSub}>免費 POS・ERP</div>
-        </div>
+        <Brand compact/>
       </div>
 
       {/* 今日營收卡 */}
@@ -84,7 +78,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
                       : key === 'orders' && pendingOrders > 0 ? pendingOrders
                       : null
           return (
-            <button key={key} onClick={() => setView(key)}
+            <button key={key} className="workspace-nav-item" aria-current={active?'page':undefined} onClick={() => setView(key)}
               style={{
                 ...s.navItem,
                 display:simpleMode&&!showMore&&!common.has(key)&&view!==key?'none':'flex',
@@ -151,23 +145,6 @@ const s = {
   logoWrap:{
     display:'flex', alignItems:'center', gap:12,
     padding:'18px 18px 14px',
-  },
-  logoMark:{
-    width:38, height:38, borderRadius:12,
-    background:'var(--accent-grad)',
-    color:'#fff',
-    display:'flex', alignItems:'center', justifyContent:'center',
-    fontFamily:'var(--font-serif)', fontWeight:900, fontSize:18,
-    flexShrink:0, position:'relative',
-    boxShadow:'0 4px 12px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
-  },
-  logoName:{
-    fontSize:16, fontWeight:800, letterSpacing:'-.01em',
-    color:'var(--text-primary)',
-  },
-  logoSub:{
-    fontSize:10, color:'var(--text-tertiary)',
-    letterSpacing:'.05em', marginTop:1,
   },
   todayCard:{
     margin:'4px 14px 14px',

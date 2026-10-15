@@ -43,7 +43,7 @@ export default function ShiftPage({ store, session }) {
   })()
 
   if(loading)return <div role="status" style={{padding:24}}>讀取班別與現金流水…</div>
-  if(loadError||shiftStats?.error)return <div role="alert" style={{padding:24}}><h2>交班紀錄需要核對</h2><p>{loadError||shiftStats.error}</p><button className="btn" onClick={reload}>重新讀取</button></div>
+  if(loadError||shiftStats?.error)return <div role="alert" style={{padding:24}}><h2 className="page-title">交班紀錄需要核對</h2><p>{loadError||shiftStats.error}</p><button className="btn" onClick={reload}>重新讀取</button></div>
 
   async function handleOpen() {
     await runAction(async()=>{
@@ -80,7 +80,7 @@ export default function ShiftPage({ store, session }) {
       {actionMessage&&<p role="status" style={{marginBottom:12}}>{actionMessage}</p>}
       <div style={sh.header}>
         <div>
-          <h2 style={{fontSize:20, fontWeight:600}}>班別管理</h2>
+          <h2 className="page-title" style={{fontSize:20, fontWeight:600}}>班別管理</h2>
           <div style={{fontSize:13, color:'var(--text-tertiary)', marginTop:4}}>
             開班 / 交班 / 現金流水
           </div>

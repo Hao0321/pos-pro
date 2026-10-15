@@ -185,7 +185,7 @@ export default function ReportsPage({ store }) {
   return (
     <div style={rs.root}>
       <div style={rs.topBar}>
-        <h2 style={rs.title}>報表分析</h2>
+        <h2 className="page-title" style={rs.title}>報表分析</h2>
         <div style={{display:'flex', gap:8, alignItems:'center'}}>
           <div style={{display:'flex', gap:4}}>
             {RANGES.map(([k,l])=>(

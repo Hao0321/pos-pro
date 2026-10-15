@@ -1,6 +1,7 @@
 import { browserStorage } from '../utils/browserStorage'
 import { useState, useEffect } from 'react'
-import { Lock, Eye, EyeOff, AlertTriangle, Shield, Sparkles, ShoppingBag, TrendingUp, Users as UsersIcon, Smartphone } from 'lucide-react'
+import { Eye, EyeOff, AlertTriangle, Shield } from 'lucide-react'
+import Brand from '../components/Brand'
 import { hashPassword, verifyPassword, createSession, writeAuditLog, checkRateLimit, resetRateLimit } from '../utils/security'
 import { initAccounts, setupAccount } from '../utils/accountBootstrap'
 import { isElectron } from '../utils/dataAccess'
@@ -62,68 +63,25 @@ export default function LoginScreen({ onLogin }) {
     return () => clearInterval(t)
   }, [])
 
-  const timeStr = now.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+  const timeStr = now.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false })
   const dateStr = now.toLocaleDateString('zh-TW', { year:'numeric', month:'long', day:'numeric', weekday:'long' })
 
-  const features = [
-    { Icon: ShoppingBag, label: '簡潔流暢的收銀體驗', color: 'green' },
-    { Icon: TrendingUp,  label: '即時報表與營運洞察', color: 'blue' },
-    { Icon: UsersIcon,   label: '會員點數與儲值系統', color: 'gold' },
-    { Icon: Smartphone,  label: '顧客掃碼點餐', color: 'teal' },
-  ]
-
   return (
-    <div style={{...ls.root, flexDirection: isMobile ? 'column' : 'row', justifyContent: isMobile ? 'center' : undefined}}>
-      {/* 漸層裝飾球 */}
-      <div style={ls.blob1}/>
-      <div style={ls.blob2}/>
-
-      {!isMobile && (
-        <div style={ls.left}>
-          <div style={ls.leftContent} className="animate-up">
-            <div style={ls.brandRow}>
-              <div style={ls.logoMark}>
-                <Sparkles size={12} style={{position:'absolute', top:-4, right:-4, color:'#fff', filter:'drop-shadow(0 0 4px rgba(255,255,255,.6))'}}/>
-                P
-              </div>
-              <div>
-                <div style={{fontSize:24, fontWeight:800, letterSpacing:'-.02em'}}>
-                  POS<span style={{background:'var(--accent-grad)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text'}}>Pro</span>
-                </div>
-                <div style={{fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.06em', marginTop:1}}>智慧雜貨店系統</div>
-              </div>
-            </div>
-
-            <div style={ls.clock} className="mono tabular">{timeStr}</div>
-            <div style={ls.date}>{dateStr}</div>
-
-            <div style={ls.featureGrid}>
-              {features.map((f, i) => (
-                <div key={i} style={{...ls.featureCard, animationDelay:`${i*60+200}ms`}} className="animate-up">
-                  <div style={{...ls.featureIcon, background:`var(--${f.color}-dim)`, color:`var(--${f.color})`}}>
-                    <f.Icon size={16}/>
-                  </div>
-                  <span style={{fontSize:13, color:'var(--text-secondary)', fontWeight:500}}>{f.label}</span>
-                </div>
-              ))}
-            </div>
-
-            <div style={ls.tipBox}>
-              <span style={{fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.04em'}}>v{version} · 藍白新裝</span>
-            </div>
-          </div>
+    <div className="login-screen">
+      {!isMobile&&<section className="login-left"><div className="login-left-inner">
+        <Brand/>
+        <div className="login-headline"><p>所有店家，全部功能免費。</p><h1>顧好店。<br/><span>照顧客人。</span></h1><p>收銀、ERP、點餐與會員 CRM，<br/>在同一間店裡，順順地接起來。</p></div>
+        <div className="login-poster" aria-hidden="true"><span>ERP.</span><span>CRM.</span><span>點餐。</span><i/><i/><i/></div>
+        <div className="login-meta"><span>{dateStr}</span><span className="mono">{timeStr}</span></div>
+        <p className="login-version">POS Pro / v{version}</p>
+      </div></section>}
+      <div className="login-right"><div className="login-card">
+        <div className="login-form-heading">
+          {isMobile&&<div className="login-mobile-brand"><Brand compact/></div>}
+          <p className="login-kicker">開始今天的營運</p>
+          <h2>{accountsReady&&!users.length?'建立你的店':'歡迎回來'}</h2>
+          <p>{accountsReady&&!users.length?'先設定店主帳號，就能開始使用。':'選帳號，輸入密碼就能繼續。'}</p>
         </div>
-      )}
-
-      <div style={{...ls.right, width: isMobile ? '100%' : 460, padding: isMobile ? 20 : 32}}>
-        <div style={ls.card} className="animate-scale">
-          <div style={{textAlign:'center', marginBottom:28}}>
-            <div style={ls.lockBubble}>
-              <Lock size={26} color="#fff"/>
-            </div>
-            <h2 style={{fontSize:22, fontWeight:800, color:'var(--text-primary)', letterSpacing:'-.01em'}}>歡迎回來</h2>
-            <div style={{fontSize:13.5, color:'var(--text-tertiary)', marginTop:6, fontWeight:500}}>選擇身份並輸入密碼</div>
-          </div>
 
           {error && (
             <div style={ls.errorBanner} className="animate-pop">
@@ -151,7 +109,7 @@ export default function LoginScreen({ onLogin }) {
                         transition: 'all 240ms var(--ease-spring)',
                         display:'flex', flexDirection:'column', alignItems:'center', gap:8,
                         transform: active ? 'translateY(-2px)' : 'translateY(0)',
-                        boxShadow: active ? '0 8px 24px rgba(37,99,235,0.28)' : 'var(--shadow-xs)',
+                        boxShadow: 'none',
                       }}>
                       <div style={{
                         width:46, height:46, borderRadius:'50%',
@@ -213,106 +171,9 @@ export default function LoginScreen({ onLogin }) {
 }
 
 const ls = {
-  root:{
-    display:'flex', height:'100dvh',
-    background:'var(--bg-base)', overflow:'hidden',
-    position:'relative',
-  },
-  blob1:{
-    position:'absolute', top:-100, left:-100,
-    width:400, height:400, borderRadius:'50%',
-    background:'radial-gradient(circle, var(--accent-glow), transparent 70%)',
-    pointerEvents:'none', zIndex:0,
-  },
-  blob2:{
-    position:'absolute', bottom:-150, right:-100,
-    width:500, height:500, borderRadius:'50%',
-    background:'radial-gradient(circle, var(--gold-glow), transparent 70%)',
-    pointerEvents:'none', zIndex:0,
-  },
-  left:{
-    flex:1, display:'flex', alignItems:'center', justifyContent:'center',
-    padding:48, position:'relative', zIndex:1,
-  },
-  leftContent:{ maxWidth:380, width:'100%' },
-  brandRow:{ display:'flex', alignItems:'center', gap:12, marginBottom:36 },
-  logoMark:{
-    width:44, height:44, borderRadius:12,
-    background:'var(--accent-grad)', color:'#fff',
-    display:'flex', alignItems:'center', justifyContent:'center',
-    fontFamily:'var(--font-serif)', fontWeight:900, fontSize:22,
-    flexShrink:0, position:'relative',
-    boxShadow:'0 6px 20px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,.2)',
-  },
-  clock:{
-    fontSize:64, fontWeight:600, letterSpacing:'-.04em', lineHeight:1,
-    color:'var(--text-primary)', marginBottom:8,
-  },
-  date:{ fontSize:14, color:'var(--text-tertiary)', marginBottom:36, fontWeight:500 },
-  featureGrid:{
-    display:'flex', flexDirection:'column', gap:10, marginBottom:24,
-  },
-  featureCard:{
-    display:'flex', alignItems:'center', gap:12,
-    padding:'12px 14px', borderRadius:'var(--r3)',
-    background:'var(--bg-raised)',
-    border:'1px solid var(--border-dim)',
-    boxShadow:'var(--shadow-xs)',
-  },
-  featureIcon:{
-    width:32, height:32, borderRadius:'var(--r2)',
-    display:'flex', alignItems:'center', justifyContent:'center',
-    flexShrink:0,
-  },
-  tipBox:{
-    padding:'8px 14px', borderRadius:'var(--r-pill)',
-    background:'var(--bg-overlay)', display:'inline-block',
-    border:'1px solid var(--border-dim)',
-  },
-  right:{
-    width:460, flexShrink:0,
-    display:'flex', alignItems:'center', justifyContent:'center',
-    padding:32, position:'relative', zIndex:1,
-  },
-  card:{
-    background:'var(--bg-glass)',
-    backdropFilter:'blur(24px) saturate(180%)',
-    WebkitBackdropFilter:'blur(24px) saturate(180%)',
-    border:'1px solid var(--border-subtle)',
-    borderRadius:'var(--r5)',
-    padding:'40px 32px', width:'100%',
-    boxShadow:'var(--shadow-xl)',
-  },
-  lockBubble:{
-    width:60, height:60, borderRadius:18,
-    background:'var(--accent-grad)',
-    display:'flex', alignItems:'center', justifyContent:'center',
-    margin:'0 auto 16px',
-    boxShadow:'0 8px 24px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,.15)',
-  },
-  errorBanner:{
-    background:'var(--red-dim)',
-    border:'1.5px solid rgba(217,79,68,0.22)',
-    borderRadius:'var(--r2)', padding:'12px 16px', marginBottom:14,
-    display:'flex', gap:10, alignItems:'center', color:'var(--red)',
-    fontSize:13, fontWeight:600,
-  },
-  pwWrap:{ position:'relative', display:'flex', alignItems:'center' },
-  eyeBtn:{
-    position:'absolute', right:8, top:'50%', transform:'translateY(-50%)',
-    padding:8, borderRadius:'var(--r2)',
-    display:'flex', alignItems:'center', justifyContent:'center',
-  },
-  secNote:{
-    display:'flex', alignItems:'center', gap:8,
-    marginTop:24, fontSize:11.5,
-    color:'var(--text-tertiary)',
-    justifyContent:'center', fontWeight:500,
-  },
-  code:{
-    fontFamily:'var(--font-mono)', fontWeight:600,
-    padding:'2px 6px', borderRadius:'var(--r1)',
-    background:'var(--bg-overlay)', color:'var(--accent-deep)',
-    fontSize:11,
-  },
+  errorBanner:{background:'var(--red-dim)',border:'1px solid var(--red)',borderRadius:'var(--r2)',padding:14,marginBottom:16,display:'flex',gap:10,alignItems:'center',color:'var(--red)',fontSize:16},
+  pwWrap:{position:'relative',display:'flex',alignItems:'center'},
+  eyeBtn:{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',padding:8,display:'flex',alignItems:'center',justifyContent:'center'},
+  secNote:{display:'flex',alignItems:'flex-start',gap:8,marginTop:24,fontSize:13,color:'var(--text-secondary)',lineHeight:1.7},
+  code:{fontFamily:'var(--font-mono)',padding:'2px 6px',background:'var(--bg-overlay)',fontSize:12},
 }

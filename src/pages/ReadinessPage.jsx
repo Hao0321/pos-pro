@@ -34,7 +34,7 @@ export default function ReadinessPage({store,session,backupIssue,onBackupVerifie
   ]
   return <div style={{flex:1,overflowY:'auto',padding:20,minWidth:0}}>
     <div style={{maxWidth:850,margin:'0 auto'}}>
-      <h2>營業前檢查</h2><p style={{color:'var(--text-secondary)',margin:'8px 0 16px'}}>把會影響保存、斷網與收攤的狀態先核對。</p>
+      <h2 className="page-title">營業前檢查</h2><p style={{color:'var(--text-secondary)',margin:'8px 0 16px'}}>把會影響保存、斷網與收攤的狀態先核對。</p>
       <div className="card" style={{padding:16,marginBottom:16,lineHeight:1.7}}>
         <strong>{isSharedStore?'這台手機使用店面電腦的共同資料庫':isElectron?'這台電腦是本機收銀台':'這台手機／瀏覽器是獨立收銀台'}</strong>
         <p>{isSharedStore?'訂單與庫存會與店面電腦共用。連不到電腦時停止保存，恢復連線後先核對原交易。':isElectron?'可從「共用店面」啟動手機連線。透過配對網址登入的手機，會共用這台電腦的訂單與庫存。':'獨立瀏覽器的資料只在這台裝置。要與電腦共用訂單與庫存，請改用桌面版「共用店面」產生的配對網址。'}</p>

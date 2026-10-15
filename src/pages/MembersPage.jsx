@@ -92,7 +92,7 @@ export default function MembersPage({ store, session }) {
       <div style={ms.left}>
         <div style={ms.header}>
           <div>
-            <h2 style={ms.title}>會員管理</h2>
+            <h2 className="page-title" style={ms.title}>會員管理</h2>
             <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
               {members.length} 位會員
             </div>

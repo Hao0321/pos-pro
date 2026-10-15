@@ -61,7 +61,7 @@ export default function OrdersPage() {
       {error&&<p role="alert" style={{color:'var(--red)'}}>{error}</p>}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <Bell size={22} />
-        <h2 style={{ flex: 1, fontSize: '1.3rem' }}>顧客點餐</h2>
+        <h2 className="page-title" style={{ flex: 1, fontSize: '1.3rem' }}>顧客點餐</h2>
         {pendingCount > 0 && (
           <span style={{
             background: 'var(--red)', color: '#fff', padding: '4px 12px',

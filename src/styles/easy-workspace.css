@@ -3,6 +3,15 @@
 .easy-home h1{font-size:32px;line-height:1.3;margin:4px 0 8px}
 .easy-home h2{font-size:21px;margin:0 0 10px}
 .easy-eyebrow{font-size:14px;color:var(--accent-deep);font-weight:700}
+.easy-areas{margin-top:24px}.easy-areas>p{font-size:16px;color:var(--text-secondary);margin:4px 0 14px}
+.easy-area-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.easy-area{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-height:170px;min-width:0;padding:20px;text-align:left;border:1px solid var(--border-mid);border-radius:16px;background:var(--bg-raised);color:var(--text-primary);overflow-wrap:anywhere}
+.easy-area>svg{color:var(--accent-deep)}.easy-area strong{font-size:23px}.easy-area>span{font-size:16px;color:var(--text-secondary)}.easy-area .easy-area-code{font-weight:700;color:var(--accent-deep)}.easy-area .easy-area-enter{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--accent-deep);margin-top:auto}
+.easy-area[aria-pressed="true"]{border:2px solid var(--accent-deep);background:var(--bg-overlay)}
+.easy-area .easy-area-intro{font-weight:700;color:var(--text-primary)}
+.easy-direct{display:flex;gap:10px;margin:14px 0}.easy-direct .btn{flex:1;min-height:52px;font-size:18px;white-space:normal}
+.easy-work-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0}.easy-work-heading h2{margin:0;scroll-margin-top:12px}.easy-work-heading .btn{min-height:48px;font-size:16px}.easy-area-note{font-size:16px;color:var(--text-secondary);margin-bottom:14px}
+.easy-area:focus-visible{outline:3px solid var(--accent-deep);outline-offset:3px}
 .easy-summary{display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:14px 18px;border:1px solid var(--border-dim);border-radius:16px;background:var(--bg-raised);margin:20px 0}
 .easy-summary strong{margin-left:auto;font-size:22px}
 .easy-reminders{margin:24px 0}
@@ -24,4 +33,5 @@ html[data-large-text="true"] .procurement-flow :is(div,p,label,summary){font-siz
 html[data-large-text="true"] .procurement-flow :is(h3,h4,strong){font-size:18px!important}
 @media(max-width:900px){.easy-task-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:430px){.easy-home{padding:18px 14px 32px}.easy-home h1{font-size:28px}.easy-task-grid{grid-template-columns:minmax(0,1fr)}.easy-task{min-height:128px;padding:18px;gap:7px}.easy-summary{padding:12px;gap:8px;font-size:16px}.easy-summary strong{font-size:20px}}
+@media(max-width:430px){.easy-area{padding:12px;gap:5px;min-height:185px}.easy-area strong{font-size:19px}.easy-area>span{font-size:16px}.easy-area-grid{gap:10px}}
 @media(prefers-reduced-motion:reduce){.easy-home *{animation:none!important;transition:none!important}}

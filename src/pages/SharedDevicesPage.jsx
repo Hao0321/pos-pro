@@ -8,7 +8,7 @@ export default function SharedDevicesPage(){
   async function run(fn){if(busy)return;setBusy(true);setError('');try{await fn()}catch(e){setError(e.message)}finally{setBusy(false)}}
   async function downloadCertificate(){const data=await api.certificate(),a=document.createElement('a');a.href='data:application/pkix-cert;base64,'+data;a.download='POS-Store.cer';a.click()}
   return <div style={{padding:24,overflowY:'auto',maxWidth:850}}>
-    <h2>手機與電腦共用店面</h2>
+    <h2 className="page-title">手機與電腦共用店面</h2>
     <p>所有訂單、庫存、會員與交班都存於店面電腦。手機與電腦連到同一個 Wi-Fi 或熱點，電腦須保持開機並開啟 POS。</p>
     <p>共用店面免費使用；連不到電腦時會停止保存，恢復後沿用原單號核對。</p>
     {error&&<p role="alert" style={{color:'var(--red)'}}>{error}</p>}

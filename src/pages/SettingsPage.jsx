@@ -30,7 +30,7 @@ export default function SettingsPage({ session, onLogout, store }) {
     <div style={ss.root}>
       <div style={ss.header}>
         <div>
-          <h2 style={ss.title}>系統設定</h2>
+          <h2 className="page-title" style={ss.title}>系統設定</h2>
           <div style={{fontSize:12,color:'var(--text-tertiary)',marginTop:2}}>
             登入身份：<span style={{color:ROLES[session.role]?.color}}>{session.username}</span>
             <span style={{color:'var(--text-tertiary)'}}> · {ROLES[session.role]?.label}</span>

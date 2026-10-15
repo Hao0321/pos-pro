@@ -458,7 +458,7 @@ const ps = {
     position:'fixed', bottom:'calc(20px + env(safe-area-inset-bottom))', right:20, zIndex:100,
     width:60, height:60, borderRadius:'50%',
     background:'var(--accent-grad)',
-    boxShadow:'0 8px 24px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
+    boxShadow:'none',
     display:'flex', alignItems:'center', justifyContent:'center',
     transition:'transform var(--t2) var(--ease-spring)',
   },

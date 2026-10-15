@@ -2,139 +2,54 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Editorial palette: ultramarine ink, carbon black and warm paper. */
 :root {
-  /* —— 藍白基底：乾淨、明亮、簡約 —— */
-  --bg-base:    #f4f7fb;
-  --bg-raised:  #ffffff;
-  --bg-overlay: #edf2f8;
-  --bg-hover:   rgba(37,99,235,0.05);
-  --bg-active:  #e2ebf6;
-  --bg-glass:   rgba(255,255,255,0.78);
-
-  --border-dim:    rgba(30,58,105,0.07);
-  --border-subtle: rgba(30,58,105,0.12);
-  --border-mid:    rgba(30,58,105,0.18);
-  --border-strong: rgba(30,58,105,0.30);
-
-  --text-primary:   #17253c;
-  --text-secondary: #4c5f7d;
-  --text-tertiary:  #8595ac;
-  --text-disabled:  #bcc7d6;
-
-  /* 主色：清爽藍 + 漸層 */
-  --accent:        #2563eb;
-  --accent-bright: #4f86f5;
-  --accent-deep:   #1d4ed8;
-  --accent-dim:    rgba(37,99,235,0.10);
-  --accent-glow:   rgba(37,99,235,0.16);
-  --accent-grad:   linear-gradient(135deg, #4f86f5 0%, #2563eb 50%, #1d4ed8 100%);
-
-  /* 歷史命名：--gold 系列 = 主色別名（v2.6 藍白改版後值為藍色，保留名稱避免全站改名風險） */
-  --gold:        #2563eb;
-  --gold-bright: #4f86f5;
-  --gold-dim:    rgba(37,99,235,0.10);
-  --gold-glow:   rgba(37,99,235,0.16);
-
-  /* 點綴色 — 亮色系、與主藍區隔 */
-  --blue:       #0284c7;
-  --blue-dim:   rgba(2,132,199,0.12);
-  --green:      #16a34a;
-  --green-dim:  rgba(22,163,74,0.12);
-  --red:        #d94f44;
-  --red-dim:    rgba(217,79,68,0.10);
-  --amber:      #d97706;
-  --amber-dim:  rgba(217,119,6,0.12);
-  --teal:       #0d9488;
-  --teal-dim:   rgba(13,148,136,0.12);
-  --purple:     #7c5cd6;
-  --purple-dim: rgba(124,92,214,0.12);
-  --pink:       #e0559a;
-  --pink-dim:   rgba(224,85,154,0.12);
-  --silver:     #64748b;                     /* 會員銀卡（亮色可讀） */
-  --silver-dim: rgba(100,116,139,0.12);
-
-  --font-sans:  'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-serif: 'Noto Serif TC', serif;
-  --font-mono:  'DM Mono', 'SF Mono', monospace;
-
+  --bg-base:#f5f4ef; --bg-raised:#fffefa; --bg-overlay:#eeede6;
+  --bg-hover:rgba(43,32,244,.05); --bg-active:#e8e5ff; --bg-glass:#fffefa;
+  --border-dim:rgba(20,20,20,.18); --border-subtle:rgba(20,20,20,.28);
+  --border-mid:rgba(20,20,20,.44); --border-strong:#141414;
+  --text-primary:#141414; --text-secondary:#4e4e48; --text-tertiary:#6b6b64; --text-disabled:#a8a8a0;
+  --accent:#2b20f4; --accent-bright:#6157ff; --accent-deep:#2115c8;
+  --accent-dim:rgba(43,32,244,.08); --accent-glow:rgba(43,32,244,.14); --accent-grad:#2b20f4;
+  /* Keep existing component aliases so business modules share one palette. */
+  --gold:var(--accent); --gold-bright:var(--accent-bright); --gold-dim:var(--accent-dim); --gold-glow:var(--accent-glow);
+  --blue:#2b20f4; --blue-dim:rgba(43,32,244,.08);
+  --green:#216742; --green-dim:rgba(33,103,66,.10);
+  --red:#b62921; --red-dim:rgba(182,41,33,.09);
+  --amber:#8a5108; --amber-dim:rgba(138,81,8,.10);
+  --teal:#226b68; --teal-dim:rgba(34,107,104,.10);
+  --purple:#6351ae; --purple-dim:rgba(99,81,174,.10);
+  --pink:#a23b69; --pink-dim:rgba(162,59,105,.10);
+  --silver:#62625d; --silver-dim:rgba(98,98,93,.10);
+  --font-sans:'Noto Sans TC',Arial,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-serif:var(--font-sans); --font-mono:'DM Mono','SF Mono',Consolas,monospace;
   --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:20px;--s6:24px;--s8:32px;--s10:40px;--s12:48px;
-  --r1:6px;--r2:10px;--r3:14px;--r4:18px;--r5:24px;--r6:32px;--r-pill:999px;
-
-  /* 動畫曲線 — 加 spring */
-  --ease:       cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-out:   cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-spring:cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-snap:  cubic-bezier(0.4, 0, 0.2, 1);
-
-  --t1:120ms;--t2:200ms;--t3:320ms;--t4:480ms;
-
-  --sidebar-w: 232px;
-  --topbar-h: 60px;
-
-  /* 三層陰影 — 藍墨底、輕透 */
-  --shadow-xs: 0 1px 2px rgba(23,37,60,0.05);
-  --shadow-sm: 0 1px 3px rgba(23,37,60,0.06), 0 1px 2px rgba(23,37,60,0.04);
-  --shadow-md: 0 4px 12px rgba(23,37,60,0.08), 0 2px 4px rgba(23,37,60,0.05);
-  --shadow-lg: 0 12px 32px rgba(23,37,60,0.11), 0 4px 12px rgba(23,37,60,0.06);
-  --shadow-xl: 0 24px 60px rgba(23,37,60,0.15), 0 8px 24px rgba(23,37,60,0.09);
-  --shadow-glow: 0 0 0 4px rgba(37,99,235,0.14);
-  --ring-focus: 0 0 0 3px rgba(37,99,235,0.25);
+  --r1:2px;--r2:3px;--r3:4px;--r4:6px;--r5:8px;--r6:12px;--r-pill:999px;
+  --ease:cubic-bezier(.16,1,.3,1); --ease-out:cubic-bezier(.22,1,.36,1);
+  --ease-spring:cubic-bezier(.22,1,.36,1); --ease-snap:cubic-bezier(.4,0,.2,1);
+  --t1:100ms;--t2:160ms;--t3:220ms;--t4:320ms;
+  --sidebar-w:232px; --topbar-h:60px;
+  --shadow-xs:none; --shadow-sm:none; --shadow-md:0 4px 12px rgba(20,20,20,.06);
+  --shadow-lg:0 12px 32px rgba(20,20,20,.10); --shadow-xl:0 20px 50px rgba(20,20,20,.14);
+  --shadow-glow:0 0 0 4px rgba(43,32,244,.14); --ring-focus:0 0 0 3px rgba(43,32,244,.24);
 }
-
 [data-theme="dark"] {
-  --bg-base:    #0e1420;
-  --bg-raised:  #16202f;
-  --bg-overlay: #1e2a3d;
-  --bg-hover:   rgba(255,255,255,0.05);
-  --bg-active:  #263449;
-  --bg-glass:   rgba(22,32,47,0.80);
-
-  --border-dim:    rgba(255,255,255,0.06);
-  --border-subtle: rgba(255,255,255,0.10);
-  --border-mid:    rgba(255,255,255,0.16);
-  --border-strong: rgba(255,255,255,0.28);
-
-  --text-primary:   #e8eef7;
-  --text-secondary: #a7b4c8;
-  --text-tertiary:  #71809a;
-  --text-disabled:  #454f63;
-
-  --accent:        #5b8ef7;
-  --accent-bright: #7fa6f9;
-  --accent-deep:   #3b6fe0;
-  --accent-dim:    rgba(91,142,247,0.16);
-  --accent-glow:   rgba(91,142,247,0.22);
-  --accent-grad:   linear-gradient(135deg, #7fa6f9 0%, #5b8ef7 50%, #3b6fe0 100%);
-
-  --gold:        #5b8ef7;
-  --gold-bright: #7fa6f9;
-  --gold-dim:    rgba(91,142,247,0.16);
-  --gold-glow:   rgba(91,142,247,0.22);
-
-  --blue:       #56b8f0;
-  --blue-dim:   rgba(86,184,240,0.16);
-  --green:      #4ade80;
-  --green-dim:  rgba(74,222,128,0.16);
-  --red:        #f47c72;
-  --red-dim:    rgba(244,124,114,0.16);
-  --amber:      #f0b25e;
-  --amber-dim:  rgba(240,178,94,0.16);
-  --teal:       #45d6c0;
-  --teal-dim:   rgba(69,214,192,0.16);
-  --purple:     #a78bfa;
-  --purple-dim: rgba(167,139,250,0.16);
-  --pink:       #ef8fbe;
-  --pink-dim:   rgba(239,143,190,0.16);
-  --silver:     #a5b4c8;                     /* 會員銀卡（暗色可讀） */
-  --silver-dim: rgba(165,180,200,0.16);
-
-  --shadow-xs: 0 1px 2px rgba(0,0,0,0.4);
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.45), 0 1px 2px rgba(0,0,0,0.3);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.35);
-  --shadow-lg: 0 12px 32px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4);
-  --shadow-xl: 0 24px 60px rgba(0,0,0,0.7), 0 8px 24px rgba(0,0,0,0.45);
-  --shadow-glow: 0 0 0 4px rgba(91,142,247,0.18);
-  --ring-focus: 0 0 0 3px rgba(91,142,247,0.3);
+  --bg-base:#111110; --bg-raised:#1c1c1b; --bg-overlay:#252523;
+  --bg-hover:rgba(245,244,239,.06); --bg-active:#302b52; --bg-glass:#1c1c1b;
+  --border-dim:rgba(245,244,239,.20); --border-subtle:rgba(245,244,239,.30);
+  --border-mid:rgba(245,244,239,.44); --border-strong:#f5f4ef;
+  --text-primary:#f5f4ef; --text-secondary:#cccac0; --text-tertiary:#aaa89e; --text-disabled:#707068;
+  --accent:#7469ff; --accent-bright:#aaa3ff; --accent-deep:#b1aaff;
+  --accent-dim:rgba(116,105,255,.15); --accent-glow:rgba(116,105,255,.20); --accent-grad:#4839f5;
+  --blue:#a59aff; --blue-dim:rgba(165,154,255,.14);
+  --green:#81cda0; --green-dim:rgba(129,205,160,.13);
+  --red:#ff9a91; --red-dim:rgba(255,154,145,.13);
+  --amber:#e7bb76; --amber-dim:rgba(231,187,118,.13);
+  --teal:#85cac5; --teal-dim:rgba(133,202,197,.13);
+  --purple:#b7a7ee; --purple-dim:rgba(183,167,238,.13);
+  --pink:#e9a1be; --pink-dim:rgba(233,161,190,.13);
+  --silver:#c2c0b8; --silver-dim:rgba(194,192,184,.13);
+  --ring-focus:0 0 0 3px rgba(177,170,255,.35);
 }
 
 html,body,#root{height:100%;width:100%;overflow:hidden}
@@ -230,12 +145,10 @@ select option{background:var(--bg-raised);color:var(--text-primary)}
 .btn-primary{
   background:var(--accent-grad);
   color:#fff;
-  box-shadow: 0 2px 8px rgba(37,99,235,0.28),
-              inset 0 1px 0 rgba(255,255,255,0.15);
+  box-shadow:none;
 }
 .btn-primary:hover{
-  box-shadow: 0 4px 16px rgba(37,99,235,0.40),
-              inset 0 1px 0 rgba(255,255,255,0.2);
+  box-shadow:none;
 }
 .btn-primary:disabled{opacity:0.45; cursor:not-allowed; transform:none}
 

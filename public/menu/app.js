@@ -51,7 +51,7 @@ function renderCategories() {
   const nav = document.getElementById('categories')
   const allBtn = createCatBtn('全部', null)
   nav.appendChild(allBtn)
-  categories.forEach(cat => nav.appendChild(createCatBtn(cat, cat)))
+  categories.filter(cat=>typeof cat==='string'&&cat.trim()).forEach(cat => nav.appendChild(createCatBtn(cat, cat)))
 }
 
 function createCatBtn(label, value) {
@@ -98,7 +98,7 @@ function renderProducts() {
     return `
       <div class="product-card${soldOut ? ' sold-out' : ''}">
         ${qtyBadge}
-        <span class="p-category">${esc(p.category)}</span>
+        ${p.category?`<span class="p-category">${esc(p.category)}</span>`:''}
         <span class="p-name">${esc(p.name)}</span>
         <span class="p-price">$${esc(p.price)} <span class="p-unit">/ ${esc(p.unit || '個')}</span></span>
         ${stockNote}
@@ -222,6 +222,15 @@ function closeOrderForm() {
   document.getElementById('order-form-overlay').style.display = 'none'
 }
 
+function newOrderRequestId() {
+  // getRandomValues also works on private-network HTTP where randomUUID may
+  // be unavailable. The server still validates the exact UUID v4 identity.
+  const bytes=crypto.getRandomValues(new Uint8Array(16))
+  bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128
+  const hex=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('')
+  return [hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-')
+}
+
 async function confirmOrder() {
   if (submitting) return
   submitting = true
@@ -234,8 +243,8 @@ async function confirmOrder() {
 
   const orderItems = cart.map(c => ({ id: c.id, qty: c.qty }))
 
-  pendingOrderRequest ||= {items:orderItems,customerName,tableNum,note,requestId:crypto.randomUUID()}
   try {
+    pendingOrderRequest ||= {items:orderItems,customerName,tableNum,note,requestId:newOrderRequestId()}
     const res = await fetch(API + '/api/order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

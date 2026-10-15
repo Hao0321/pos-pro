@@ -33,7 +33,7 @@ export default function ScenarioTemplatesPage({session,store}){
   }
   return <section style={{padding:24,height:'100%',overflowY:'auto'}}>
     <div style={{maxWidth:1080,margin:'0 auto'}}>
-      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}><BookOpen size={24}/><h2 style={{fontSize:22,margin:0}}>情境模板</h2><span className="badge badge-green">全部免費</span></div>
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}><BookOpen size={24}/><h2 className="page-title" style={{fontSize:22,margin:0}}>情境模板</h2><span className="badge badge-green">全部免費</span></div>
       <p style={{color:'var(--text-secondary)',lineHeight:1.7}}>從自己的生意開始設定。第一個模板：一般丼飯外帶，支援後續擴充更多店型。</p>
       <div style={{display:'flex',gap:8,margin:'20px 0',flexWrap:'wrap'}}>
         <button className={'btn '+(tab==='catalog'?'btn-primary':'btn-ghost')} style={{color:tab==='catalog'?'#fff':'var(--text-primary)'}} onClick={()=>setTab('catalog')}>套用菜單</button>

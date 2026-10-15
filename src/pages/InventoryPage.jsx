@@ -348,7 +348,7 @@ export default function InventoryPage({ store }) {
     <div style={iv.root}>
       <div style={iv.header}>
         <div>
-          <h2 style={iv.title}>庫存管理</h2>
+          <h2 className="page-title" style={iv.title}>庫存管理</h2>
           <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
             {filtersActive
               ? <>顯示 {filtered.length} / {products.length} 項</>

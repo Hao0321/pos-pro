@@ -4,24 +4,27 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: wss:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#2563eb" />
+  <meta name="theme-color" content="#2b20f4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="POS Pro" />
+  <meta name="description" content="所有店家、全部功能免費。POS Pro 整合 ERP、顧客點餐、會員 CRM 與 Agent 快速建單，支援離線營業及手機共用店面。" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="format-detection" content="telephone=no" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="./icon-192.png" />
-  <title>POS Pro 雜貨店管理系統</title>
+  <title>POS Pro｜ERP・點餐・CRM</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 </head>
-<body style="background:#f4f7fb;color:#17253c;-webkit-tap-highlight-color:transparent;overscroll-behavior:none">
+<body style="background:var(--bg-base,#f5f4ef);color:var(--text-primary,#141414);-webkit-tap-highlight-color:transparent;overscroll-behavior:none">
   <div id="root">
     <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif">
-      <div style="font-size:24px;font-weight:700;color:#2563eb">POS Pro</div>
-      <div style="font-size:13px;color:#64748b">啟動中...</div>
+      <img src="./icon-192.png" width="64" height="64" alt="" />
+      <div style="font-size:24px;font-weight:700;color:#141414">POS Pro</div>
+      <div style="font-size:16px;font-weight:700;color:#2b20f4">ERP・點餐・CRM</div>
+      <div style="font-size:13px;color:#5f5f59">啟動中...</div>
     </div>
   </div>
   <script type="module" src="/src/main.jsx"></script>

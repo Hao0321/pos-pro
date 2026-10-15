@@ -1,0 +1,18 @@
+.quick-flow{min-width:0;line-height:1.6;overflow-wrap:anywhere}
+.quick-progress{list-style:none;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:20px 0}
+.quick-progress li{font-size:16px;display:flex;align-items:center;gap:8px;border:1px solid var(--border-dim);border-radius:12px;padding:12px;color:var(--text-secondary)}
+.quick-progress li span{display:grid;place-items:center;flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--bg-overlay);font-weight:700}
+.quick-progress li[aria-current]{border:2px solid var(--accent-deep);color:var(--text-primary);font-weight:700}
+.quick-progress li[aria-current] span{background:var(--accent-deep);color:var(--bg-raised)}
+.quick-fields{border:0;padding:0;margin:0;min-width:0}.quick-fields>label{display:block;margin:14px 0}
+.quick-product-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.quick-review{padding:18px;margin-top:18px;min-width:0}.quick-review h3{margin-top:0;font-size:23px}
+.quick-line{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:16px 0;border-bottom:1px solid var(--border-dim)}
+.quick-line-name{flex:1;min-width:130px}.quick-line-name strong,.quick-line-name span{display:block}.quick-line-name span{font-size:16px;color:var(--text-secondary);margin-top:6px}
+.quick-confirm{position:sticky;bottom:0;z-index:2;background:var(--bg-raised);border-top:1px solid var(--border-dim);padding-top:14px;margin-top:18px}
+.quick-confirm>.btn{width:100%;white-space:normal}.quick-total{display:block;font-size:25px}.quick-hint{font-size:16px;color:var(--text-secondary)}
+.quick-question{padding:12px;border-left:4px solid var(--accent-deep);background:var(--bg-overlay);font-size:18px}
+.quick-success strong{font-size:23px}.quick-success>div{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.quick-flow :is(button,input,select,textarea):focus-visible{outline:3px solid var(--accent-deep);outline-offset:3px}
+@media(max-width:430px){.quick-progress li{flex-direction:column;text-align:center;padding:10px 4px;gap:5px}.quick-review{padding:14px}.quick-line-name{flex-basis:100%}.quick-confirm{margin-inline:-2px}.quick-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.quick-flow *{scroll-behavior:auto!important;transition:none!important}}

@@ -97,10 +97,8 @@ export default function DashboardPage({ store, session }) {
 
   return (
     <div style={ds.root}>
-      {/* Hero — 漸層問候卡 */}
+      {/* 營運摘要 */}
       <div style={ds.hero} className="animate-up">
-        <div style={ds.heroBlob1}/>
-        <div style={ds.heroBlob2}/>
         <div style={{position:'relative', zIndex:1}}>
           <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:8, fontSize:12.5, color:'var(--text-tertiary)', fontWeight:500}}>
             <Calendar size={13}/>
@@ -371,24 +369,12 @@ const ds = {
     padding:'28px 32px',
     marginBottom:20,
     borderRadius:'var(--r4)',
-    background:'linear-gradient(135deg, var(--bg-raised) 0%, var(--bg-overlay) 100%)',
+    background:'var(--bg-raised)',
     border:'1px solid var(--border-dim)',
     boxShadow:'var(--shadow-sm)',
     overflow:'hidden',
     display:'flex', justifyContent:'space-between', alignItems:'center', gap:16,
     flexWrap:'wrap',
-  },
-  heroBlob1: {
-    position:'absolute', top:-40, right:80,
-    width:200, height:200, borderRadius:'50%',
-    background:'radial-gradient(circle, var(--accent-glow), transparent 70%)',
-    pointerEvents:'none',
-  },
-  heroBlob2: {
-    position:'absolute', bottom:-60, right:-40,
-    width:240, height:240, borderRadius:'50%',
-    background:'radial-gradient(circle, var(--gold-glow), transparent 70%)',
-    pointerEvents:'none',
   },
   shiftBadge: {
     position:'relative', zIndex:1,

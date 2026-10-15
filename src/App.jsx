@@ -35,6 +35,8 @@ export default function App() {
   const consumeIncoming=useCallback(raw=>setIncomingDraft(current=>current===raw?'':current),[])
   const [largeText,setLargeText]=useState(()=>{try{return localStorage.getItem('pos_large_text_v1')==='true'}catch{return false}})
   const [simpleMode,setSimpleMode]=useState(()=>{try{return localStorage.getItem('pos_simple_mode_v1')!=='false'}catch{return true}})
+  const [workspaceArea,setWorkspaceArea]=useState('all')
+  useEffect(()=>{setWorkspaceArea('all')},[session?.userId,session?.role])
   const store = useStore(session)
   const { view, setView, lowStockCount, todayRevenue, todayOrders } = store
   useEffect(()=>{document.documentElement.dataset.largeText=String(largeText);try{localStorage.setItem('pos_large_text_v1',String(largeText))}catch{}},[largeText])
@@ -149,10 +151,11 @@ export default function App() {
             <button className="btn btn-ghost" aria-label="切換大字模式" aria-pressed={largeText} onClick={()=>setLargeText(v=>!v)} style={{minHeight:48,minWidth:48,fontSize:16}}>大字</button>
           </div>
         )}
-        <main inert={store.checkoutState.phase!=='idle'||store.financialState.phase!=='idle'?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
-          {view === 'dashboard' && can('pos.use') && (simpleMode?<SimpleHomePage store={store} session={session}/>:<DashboardPage store={store} session={session}/>)}
+        {/* Quick entry locks its fields while retaining the same-document recovery action. */}
+        <main className="workspace-content" data-view={view} inert={store.checkoutState.phase!=='idle'||store.financialState.phase!=='idle'&&view!=='quick'?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+          {view === 'dashboard' && can('pos.use') && (simpleMode?<SimpleHomePage store={store} session={session} area={workspaceArea} onAreaChange={setWorkspaceArea}/>:<DashboardPage store={store} session={session}/>)}
           {view === 'overview' && can('reports.view') && <DashboardPage store={store} session={session}/>}
-          {view === 'quick' && can('pos.use') && <QuickDocumentPage store={store} session={session} incoming={incomingDraft} onIncomingConsumed={consumeIncoming}/>}
+          {view === 'quick' && can('pos.use') && <QuickDocumentPage key={session.userId+':'+session.role} store={store} session={session} incoming={incomingDraft} onIncomingConsumed={consumeIncoming}/>}
           {view === 'pos'        && can('pos.use')         && <POSPage        store={store} session={session}/>}
           {view === 'restaurant' && can('pos.use') && <RestaurantPage store={store} session={session}/>}
           {view === 'shifts'     && can('pos.use')         && <ShiftPage      store={store} session={session}/>}

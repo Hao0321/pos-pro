@@ -50,7 +50,7 @@ export default function AccountingPage({ store }) {
       {/* Header */}
       <div style={ac.header}>
         <div>
-          <h2 style={ac.title}>會計帳務</h2>
+          <h2 className="page-title" style={ac.title}>會計帳務</h2>
           <div style={{fontSize:12,color:'var(--text-tertiary)',marginTop:2}}>
             自動複式記帳 · {allJournal.length} 筆分錄
           </div>

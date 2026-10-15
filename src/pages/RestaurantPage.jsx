@@ -33,7 +33,7 @@ export default function RestaurantPage({store,session}){
   const config=data?.config||defaultRestaurantConfig(),ingredients=new Set(Object.values(config.recipes).flat().map(r=>r.id)),menu=products.filter(p=>!ingredients.has(p.id))
   const list=data?.entries.filter(e=>filter==='all'||!['cancelled','completed'].includes(e.status)).sort((a,b)=>a.day.localeCompare(b.day)||a.slot.localeCompare(b.slot)||(a.pickupNumber||0)-(b.pickupNumber||0))||[]
   return <div className="restaurant-page" style={{padding:16,overflowY:'auto',height:'100%'}}>
-    <h2>預訂出餐</h2><p>預訂、現場與外送共用這間店的庫存。接單即預留，未收到保存回覆請沿用原編號核對。</p>
+    <h2 className="page-title">預訂出餐</h2><p>預訂、現場與外送共用這間店的庫存。接單即預留，未收到保存回覆請沿用原編號核對。</p>
     {error&&<p role="alert" style={{color:'var(--red)',overflowWrap:'anywhere'}}>{error}</p>}
     {message&&<p role="status" style={{color:'var(--green)',overflowWrap:'anywhere'}}>{message}</p>}
     {!data&&<p>載入正式預訂紀錄中…</p>}

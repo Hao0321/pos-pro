@@ -1,8 +1,8 @@
 {
   "name": "pos-system",
-  "version": "2.9.1",
+  "version": "2.10.0",
   "private": true,
-  "description": "POS Pro — 零售收銀、庫存、會員、訂貨與複式記帳一體化系統",
+  "description": "POS Pro — 全部功能免費、離線優先的 ERP、點餐與會員 CRM 整合營運系統",
   "author": "Chroma Street Studio <chromastreetstudio@gmail.com>",
   "license": "MIT",
   "main": "electron/main.js",
@@ -32,7 +32,8 @@
     "test:agent-ui": "npm run build && node scripts/run-native-security.cjs --agent-ui",
     "test:scenarios": "node scripts/run-native-security.cjs --scenarios",
     "test:scenario-ui": "npm run build && node scripts/run-native-security.cjs --scenario-ui",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "build:icons": "node scripts/generate-icon.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",

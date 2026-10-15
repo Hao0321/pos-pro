@@ -127,7 +127,7 @@ export default function StocktakePage({ store, session }) {
       <div style={st.header}>
         {saveError&&<p role="alert" style={{color:'var(--red)'}}>{saveError}</p>}
         <div>
-          <h2 style={st.title}>確認差異</h2>
+          <h2 className="page-title" style={st.title}>確認差異</h2>
           <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
             {diffs.length} 項庫存有差異，確認後系統將自動更新
           </div>
@@ -187,7 +187,7 @@ export default function StocktakePage({ store, session }) {
     <div style={st.root}>
       <div style={st.header}>
         <div>
-          <h2 style={st.title}>每日盤點</h2>
+          <h2 className="page-title" style={st.title}>每日盤點</h2>
           <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
             {new Date().toLocaleDateString('zh-TW', {year:'numeric',month:'long',day:'numeric',weekday:'long'})}
           </div>

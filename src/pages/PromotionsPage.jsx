@@ -156,7 +156,7 @@ export default function PromotionsPage({ store, session }) {
       <p style={{fontSize:12,color:'var(--text-secondary)'}}>活動資料會保存供核對。目前結帳的活動折扣需由老闆以「手動折讓」套用。</p>
       <div style={pm.header}>
         <div>
-          <h2 style={pm.title}>促銷活動</h2>
+          <h2 className="page-title" style={pm.title}>促銷活動</h2>
           <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
             {active.length} 個活動進行中 · 共 {promotions.length} 個
           </div>

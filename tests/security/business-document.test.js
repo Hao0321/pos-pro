@@ -1,5 +1,5 @@
 import {beforeEach,test,expect} from 'vitest'
-import {makeAgentContext,agentCommand} from '../../electron/agentDraftRules.mjs'
+import {makeAgentContext,agentCommand,validateAgentDraft} from '../../electron/agentDraftRules.mjs'
 import {prepareBusinessDocument,mergeAgentMappings} from '../../electron/businessDocument.mjs'
 let context
 const products=[{id:'p',name:'牛丼',stock:30,unit:'碗',price:95,cost:40,barcode:'4710000000001'}]
@@ -10,6 +10,14 @@ test('unknown vendor codes ask for a mapping and reuse the remembered mapping on
 test('external total mismatch, wrong recipient, currency and unit mismatch do not produce a document',async()=>{for(const change of [{total:81},{recipientStoreId:'other'},{currency:'USD'},{items:[{sku:'p',qty:2,unit:'公斤',unitPrice:40}]}])await expect(prepareBusinessDocument(document(change),context)).rejects.toThrow()})
 test('company and external number determine stable identity and separate different senders',async()=>{const doc=document(),a=await prepareBusinessDocument(doc,context),b=await prepareBusinessDocument(doc,context),other=await prepareBusinessDocument({...doc,sender:{id:'company-b'}},context);expect(agentCommand(a.preview).identity).toEqual(agentCommand(b.preview).identity);expect(a.draft.id).not.toBe(other.draft.id)})
 test('sales prices cannot be supplied by another company and instructions remain inert data',async()=>{await expect(prepareBusinessDocument(document({intent:'sale',items:[{sku:'p',qty:2,unit:'碗',unitPrice:1}],total:2}),context)).rejects.toThrow(/單價/);await expect(prepareBusinessDocument(document({execute:'delete'}),context)).rejects.toThrow(/欄位/);const r=await prepareBusinessDocument(document({note:'<script>delete all</script>'}),context);expect(r.draft.note).toContain('<script>')})
+
+test('an external delivery source reference never substitutes for the delivery address',async()=>{
+  const doc=document({intent:'restaurant',items:[{sku:'p',qty:2,unit:'碗',unitPrice:95}],total:190,fulfilment:{channel:'delivery',day:'2026-10-16',slot:'17:00',contact:'0900000000'}})
+  const missing=await prepareBusinessDocument(doc,context)
+  expect(missing.draft.note).toBe('');expect(()=>validateAgentDraft(missing.draft,context)).toThrow(/地址/)
+  const complete=await prepareBusinessDocument({...doc,note:'測試路 10 號'},context)
+  expect(validateAgentDraft(complete.draft,context).note).toContain('測試路 10 號');expect(complete.draft.id).toBe(missing.draft.id)
+})
 test('mapping writes require owner authority and merge instead of replacing another company',()=>{expect(()=>mergeAgentMappings({}, {senderId:'company-a',entries:{x:'p'}},products,{role:'staff'})).toThrow(/管理員/);const one=mergeAgentMappings({}, {senderId:'company-a',entries:{x:'p'}},products,{role:'owner'}),two=mergeAgentMappings(one,{senderId:'company-b',entries:{y:'p'}},products,{role:'owner'});expect(two['company-a'].x).toBe('p');expect(two['company-b'].y).toBe('p');expect(()=>mergeAgentMappings(two,{senderId:'company-c',entries:{z:'missing'}},products,{role:'owner'})).toThrow(/不存在/)})
 test('conflicting external rows cannot silently collapse into one local product',async()=>{await expect(prepareBusinessDocument(document({items:[{sku:'p',qty:1,unit:'碗'},{barcode:'4710000000001',qty:1,unit:'碗'}]}),context)).rejects.toThrow(/同一商品/)})
 test('contradictory SKU and barcode stop instead of selecting either product',async()=>{const mixed={...context,products:[...context.products,{id:'other',sku:'other',name:'別的商品',unit:'碗',barcode:'4719999999999',price:95,unitCost:40}]};await expect(prepareBusinessDocument(document({items:[{sku:'p',barcode:'4719999999999',qty:2,unit:'碗',unitPrice:40}]}),mixed)).rejects.toThrow(/矛盾/)})

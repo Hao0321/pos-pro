@@ -44,7 +44,8 @@ export async function prepareBusinessDocument(doc,context,overrides={}){
   const seed=canonicalSignature([BUSINESS_PROTOCOL,senderId,externalId]),digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(seed)),id='b-'+[...new Uint8Array(digest)].map(v=>v.toString(16).padStart(2,'0')).join('').slice(0,48)
   const fulfilment=doc.fulfilment||{};only(fulfilment,['supplierId','date','channel','day','slot','customer','contact'],'交付資料')
   const source='來源 '+(doc.sender.name||senderId)+' / '+externalId
-  const draft={protocol:AGENT_PROTOCOL,id,issuedAt:doc.createdAt,storeId:context.storeId,catalogueRevision:context.catalogueRevision,kind:doc.intent,items,...fulfilment,note:source+(doc.note?'；'+text(doc.note,'備註',800):'')}
+  const note=doc.note?text(doc.note,'備註',800):''
+  const draft={protocol:AGENT_PROTOCOL,id,issuedAt:doc.createdAt,storeId:context.storeId,catalogueRevision:context.catalogueRevision,kind:doc.intent,items,...fulfilment,note:doc.intent==='restaurant'&&fulfilment.channel==='delivery'&&!note?'':source+(note?'；'+note:'')}
   const preview=validateAgentDraft(draft,context,Date.now(),true)
   if(doc.total!==undefined){moneyValue(doc.total,'交換合計');if(Math.round(doc.total*100)!==Math.round(preview.total*100))throw Error('外部單據合計與明細不同，請先核對；沒有建立任何單據')}
   return {draft,unresolved:[],chosen,senderId,source,preview}

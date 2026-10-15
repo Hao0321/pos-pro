@@ -62,7 +62,8 @@ export function draftFromText(input,context,kind='sale',now=new Date()){
   if(/預訂|自取|外送/.test(input)||kind==='sale'&&/明天/.test(input))kind='restaurant'
   else if(/採購|進貨|叫貨/.test(input))kind='purchase'
   const draft={protocol:AGENT_PROTOCOL,id:crypto.randomUUID(),issuedAt:now.toISOString(),storeId:context.storeId,catalogueRevision:context.catalogueRevision,kind,items:[],note:input.trim()}
-  const main=input.split(/備註[:：]/)[0]
+  const [main,...notes]=input.split(/備註[:：]/)
+  if(kind==='restaurant'&&input.includes('外送'))draft.note=notes.join('備註：').trim()
   const clean=value=>{
     let rest=value;for(const s of context.suppliers)rest=rest.replaceAll(s.name,'')
     return rest.replace(/\d{4}-\d{2}-\d{2}|(?:[01]\d|2[0-3]):(?:00|15|30|45)|09\d{8}|(?:上午|下午|晚上)?[一二兩三四五六七八九十\d]{1,3}點(?:半)?|明天|今天|預訂|現場|外送|自取|採購|進貨|叫貨|我要|幫我|請|謝謝|[\s。.!！?？:：]/g,'')

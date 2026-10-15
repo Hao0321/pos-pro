@@ -13,8 +13,9 @@ function offlineShell() {
     const scenarioFiles=fs.existsSync(scenariosDir)?fs.readdirSync(scenariosDir).filter(name=>/\.(html|css|mjs)$/.test(name)).sort().map(name=>'scenarios/donburi/'+name):[]
     const agentFiles=['agent/manifest.json','agent/document-draft-v1.schema.json','agent/business-document-v1.schema.json','llms.txt']
     const bundleFiles=[...assets.map(name=>'assets/'+name),...scenarioFiles,...agentFiles]
-    const version=hash(Buffer.concat(bundleFiles.flatMap(name=>[Buffer.from(name),fs.readFileSync(path.join(output,name))])))
-    const core=['./','./index.html','./manifest.webmanifest','./apple-touch-icon.png',...bundleFiles.map(name=>'./'+name)]
+    const cachedFiles=['index.html','manifest.webmanifest','apple-touch-icon.png','icon-192.png','icon-512.png',...bundleFiles]
+    const version=hash(Buffer.concat(cachedFiles.flatMap(name=>[Buffer.from(name),fs.readFileSync(path.join(output,name))])))
+    const core=['./',...cachedFiles.map(name=>'./'+name)]
     const worker=fs.readFileSync(path.join(root,'public/sw.js'),'utf8').replace("'__BUILD_VERSION__'",JSON.stringify('pos-pro-'+version)).replace(/const CORE = .*\n/, 'const CORE = '+JSON.stringify(core)+'\n')
     fs.writeFileSync(path.join(output,'sw.js'),worker)
     const evidence=path.join(root,'.rd/build');fs.mkdirSync(evidence,{recursive:true})

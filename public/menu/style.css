@@ -1,14 +1,14 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
-  --accent: #2563eb;
-  --accent-light: #4f86f5;
-  --bg: #f6f9fc;
-  --card: #ffffff;
-  --text: #1c2a3f;
-  --text-dim: #7a8699;
-  --border: #dde6f0;
-  --success: #4caf50;
-  --radius: 12px;
+  --accent: #2b20f4;
+  --accent-light: #2115c8;
+  --bg: #f5f4ef;
+  --card: #fffefa;
+  --text: #141414;
+  --text-dim: #5f5f59;
+  --border: #b9b8b0;
+  --success: #216742;
+  --radius: 3px;
 }
 body {
   font-family: -apple-system, 'Noto Sans TC', 'Segoe UI', sans-serif;
@@ -89,7 +89,7 @@ body {
 .product-card .p-category {
   font-size: 0.7rem;
   color: var(--text-dim);
-  background: #eaf0f7;
+  background: #eeede6;
   padding: 2px 8px;
   border-radius: 10px;
   width: fit-content;
@@ -110,18 +110,18 @@ body {
 }
 .product-card .p-stock-low {
   font-size: 0.7rem;
-  color: #d97706;
+  color: #8a5108;
 }
 .product-card .p-stock-last {
   font-size: 0.7rem;
   font-weight: 600;
-  color: #d97706;
+  color: #8a5108;
   animation: pulse 1.4s ease-in-out infinite;
 }
 .product-card .p-soldout {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #d94f44;
+  color: #b62921;
   background: rgba(217,79,68,0.10);
   padding: 2px 8px;
   border-radius: 4px;
@@ -215,7 +215,7 @@ body {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #d94f44;
+  background: #b62921;
   color: #fff;
   width: 22px;
   height: 22px;
@@ -306,7 +306,7 @@ body {
   align-items: center;
   justify-content: center;
 }
-.cart-item .ci-controls button:active { background: #e8eef6; }
+.cart-item .ci-controls button:active { background: #e8e5ff; }
 .cart-item .ci-qty {
   font-weight: 700;
   min-width: 20px;
@@ -457,3 +457,26 @@ body {
   padding: 14px 40px;
   font-size: 1rem;
 }
+
+/* Same paper / ink / ultramarine design as the store workspace. */
+#header{position:relative;text-align:left;padding:24px 18px;border-bottom:2px solid #141414}
+#header h1{font-size:28px;font-weight:850;letter-spacing:-.04em;overflow-wrap:anywhere}
+#header .subtitle{font-size:15px;opacity:1}
+.categories{top:0;border-bottom:1px solid var(--border)}
+.cat-btn{min-height:48px;border-radius:3px;font-size:16px;font-weight:650}
+.product-card{border-width:1px;border-radius:3px;box-shadow:none}
+.product-card .p-name{font-size:18px;font-weight:750}.product-card .p-price{font-size:22px;letter-spacing:-.03em}
+.product-card :is(.p-category,.p-unit,.p-stock-low,.p-stock-last,.p-soldout){font-size:14px;border-radius:2px}
+.product-card .add-btn{min-height:48px;border-radius:3px;font-size:16px}
+.cart-fab{border-radius:4px;box-shadow:none;border:1px solid #141414}
+.cart-panel{border-radius:4px 4px 0 0;border:1px solid #141414;max-height:86dvh}
+.cart-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px}.cart-item .ci-info{grid-column:1/-1}
+.cart-item .ci-controls button{width:48px;height:48px;border-radius:3px}
+.cart-item .ci-name{font-size:18px}.cart-item .ci-price{font-size:16px}.cart-item .ci-subtotal{font-size:20px}
+.checkout-btn,.btn-primary,.btn-secondary{min-height:50px;border-radius:3px;font-size:17px;font-weight:700}
+.close-btn{min-height:48px;min-width:48px}.order-form{border-radius:4px;border:1px solid #141414}
+.form-group :is(input,textarea){min-height:48px;font-size:16px;border-radius:3px;border-color:var(--border)}
+.order-form{max-height:calc(100dvh - 32px);overflow-y:auto}.order-form-overlay{padding:16px}
+.search-bar input{min-height:48px;font-size:16px}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
