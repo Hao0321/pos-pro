@@ -60,7 +60,7 @@ export function validateRestaurantRecords(entries,operations,orders,products){
   for(const op of operations){id(op?.id);if(operationIds.has(op.id)||typeof op.signature!=='string'||op.kind!==RESTAURANT_KIND||op.entityId&&!seen.has(op.entityId))throw Error('預訂操作回執需要核對');operationIds.add(op.id);const original=JSON.parse(op.signature);operationHeader(original);if(original.id!==op.id||original.action!==op.action||canonicalSignature(original)!==op.signature)throw Error('預訂回執內容需要核對')}
 }
 export function restaurantReceipt(request,receipt,data){
-  if(receipt.signature!==canonicalSignature(request))throw Error('原操作編號已存在且內容不同')
+  if(receipt.signature!==canonicalSignature(request))throw Object.assign(Error('原操作編號已存在且內容不同，請核對已建立單據；新單請重新整理草稿'),{operationConflict:true})
   const entry=receipt.entityId?data.entries.find(e=>e.id===receipt.entityId):null
   if(receipt.entityId&&!entry)throw Error('原預訂紀錄已不存在，請核對備份')
   const products=receipt.productIds.map(id=>data.products.find(p=>p.id===id))

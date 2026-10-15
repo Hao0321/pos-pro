@@ -395,3 +395,10 @@ h1{font-size:28px} h2{font-size:22px} h3{font-size:18px} h4{font-size:15px}
   .restaurant-page .field{font-size:16px;min-height:44px;}
   .restaurant-page .btn{min-height:44px;}
 }
+html[data-large-text="true"] body { font-size:18px; }
+html[data-large-text="true"] button,
+html[data-large-text="true"] input:not([type="checkbox"]):not([type="radio"]),
+html[data-large-text="true"] select,
+html[data-large-text="true"] textarea { min-height:48px !important; font-size:16px !important; }
+html[data-large-text="true"] main p,
+html[data-large-text="true"] main label { font-size:16px !important; line-height:1.6; }

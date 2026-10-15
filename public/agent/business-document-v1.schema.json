@@ -1,0 +1,15 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://raw.githubusercontent.com/Hao0321/pos-pro/v2.8.0/public/agent/business-document-v1.schema.json",
+  "title":"Portable business document draft v1 — project specification, not UBL or Peppol certification",
+  "type":"object","additionalProperties":false,
+  "required":["protocol","id","createdAt","sender","intent","currency","items"],
+  "properties":{
+    "protocol":{"const":"business-document/v1"},"id":{"type":"string","minLength":1,"maxLength":128},"createdAt":{"type":"string","format":"date-time"},
+    "sender":{"type":"object","additionalProperties":false,"required":["id"],"properties":{"id":{"type":"string","minLength":1,"maxLength":128},"name":{"type":"string","maxLength":100}}},
+    "recipientStoreId":{"type":"string","maxLength":128},"intent":{"enum":["sale","purchase","restaurant"]},"currency":{"const":"TWD"},
+    "items":{"type":"array","minItems":1,"maxItems":100,"items":{"type":"object","additionalProperties":false,"required":["qty","unit"],"anyOf":[{"required":["sku"]},{"required":["barcode"]},{"required":["name"]}],"properties":{"sku":{"type":"string","maxLength":200},"barcode":{"type":"string","maxLength":200},"name":{"type":"string","maxLength":200},"qty":{"type":"number","minimum":0.001,"multipleOf":0.001},"unit":{"type":"string","minLength":1,"maxLength":30},"unitPrice":{"type":"number","minimum":0,"multipleOf":0.01}}}},
+    "total":{"type":"number","minimum":0,"multipleOf":0.01},"note":{"type":"string","maxLength":800},
+    "fulfilment":{"type":"object","additionalProperties":false,"properties":{"supplierId":{"type":"string"},"date":{"type":"string","format":"date"},"channel":{"enum":["preorder","walkin","delivery"]},"day":{"type":"string","format":"date"},"slot":{"type":"string"},"customer":{"type":"string","maxLength":100},"contact":{"type":"string","maxLength":100}}}
+  }
+}

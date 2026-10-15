@@ -20,6 +20,6 @@ export function commitBrowserRestaurant(request,actor){
       if(request.action==='configure')updates.pos_business_settings=[...saved.data.pos_business_settings.filter(s=>s.key!=='restaurantConfig'),{key:'restaurantConfig',value:JSON.stringify(JSON.stringify(plan.config))}]
       writeRecords(updates,saved.revision)
       return restaurantReceipt(request,plan.receipt,plan.next)
-    }catch(error){return {success:false,committed:historyChecked&&!replay?false:null,error:error.message}}
+    }catch(error){return {success:false,committed:error.operationConflict===true||historyChecked&&!replay?false:null,error:error.message}}
   })
 }

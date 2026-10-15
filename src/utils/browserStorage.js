@@ -1,6 +1,7 @@
 // One atomic record replaces coordinated writes to separate localStorage keys.
 // Legacy keys remain intact for recovery; reads use this record after migration.
 import {validateRestaurantRecords,readRestaurantConfig} from '../../electron/restaurantRules.mjs'
+import {validateProcurementRecords} from '../../electron/procurementRules.mjs'
 export const RECORD_KEY = 'pos_atomic_records_v1'
 export const DATA_KEYS = ['pos2_products','pos2_members','pos2_orders','pos2_manual_j',
   'pos_users','pos_suppliers','pos_purchases','pos_promotions','pos2_held_orders',
@@ -42,6 +43,7 @@ export function writeRecords(updates, expectedRevision) {
     validArray(value)
   }
   const next = {version:1,revision:current.revision+1,data:{...current.data,...updates}}
+  validateProcurementRecords(next.data.pos_purchases,next.data.pos2_cash_log)
   validateRestaurantRecords(next.data.pos_restaurant_orders,next.data.pos_restaurant_operations,next.data.pos2_orders,next.data.pos2_products)
   const rawConfig=next.data.pos_business_settings.find(s=>s.key==='restaurantConfig')?.value
   readRestaurantConfig(rawConfig==null?null:JSON.parse(rawConfig),next.data.pos2_products)

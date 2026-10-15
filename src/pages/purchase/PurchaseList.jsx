@@ -3,7 +3,7 @@ import { X, Truck, Package, ChevronLeft, CheckCircle } from "lucide-react"
 import useIsMobile from "../../hooks/useIsMobile"
 import { STATUS, poItemKey, ps } from "./controls.jsx"
 
-export function PurchaseList({ purchases, selected, onSelect, onReceive }) {
+export function PurchaseList({ purchases, selected, onSelect, onReceive,renderProcurement }) {
   const isMobile = useIsMobile()
   // mobile：選中就只看詳情，未選看列表
   const showList   = !isMobile || !selected
@@ -17,15 +17,15 @@ export function PurchaseList({ purchases, selected, onSelect, onReceive }) {
           <div style={{textAlign:'center', padding:'40px', color:'var(--text-tertiary)', fontSize:13}}>尚無進貨單</div>
         )}
         {purchases.map(po => {
-          const st = STATUS[po.status]
+          const st = STATUS[po.status]||STATUS.draft
           return (
             <button key={po.id} onClick={()=>onSelect(po)} style={{
               ...ps.poCard,
               border: `1px solid ${selected?.id===po.id?'var(--border-mid)':'var(--border-dim)'}`,
               background: selected?.id===po.id?'var(--bg-active)':'var(--bg-raised)',
             }}>
-              <div style={{display:'flex', justifyContent:'space-between', marginBottom:6}}>
-                <span style={{fontFamily:'var(--font-mono)', fontSize:12, color:'var(--text-secondary)'}}>{po.id}</span>
+              <div style={{display:'flex', justifyContent:'space-between', marginBottom:6,gap:6,flexWrap:'wrap'}}>
+                <span style={{fontFamily:'var(--font-mono)', fontSize:12, color:'var(--text-secondary)',overflowWrap:'anywhere'}}>{po.id}</span>
                 <span style={{...ps.statusBadge, background:st.bg, color:st.color}}>{st.label}</span>
               </div>
               <div style={{fontWeight:600, fontSize:14, marginBottom:4}}>{po.supplierName}</div>
@@ -61,12 +61,12 @@ export function PurchaseList({ purchases, selected, onSelect, onReceive }) {
               </button>
             )}
           </div>
-          <div className="card" style={{overflow:'hidden', marginBottom:14}}>
-            <div style={{display:'grid', gridTemplateColumns:'1fr 70px 70px 70px 70px', gap:8, padding:'9px 14px', background:'var(--bg-overlay)', fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.05em'}}>
+          <div className="card" style={{overflowX:'auto', marginBottom:14}}>
+            <div style={{display:'grid',minWidth:420, gridTemplateColumns:'1fr 70px 70px 70px 70px', gap:8, padding:'9px 14px', background:'var(--bg-overlay)', fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.05em'}}>
               <span>商品</span><span style={{textAlign:'right'}}>叫貨量</span><span style={{textAlign:'right'}}>單價</span><span style={{textAlign:'right'}}>到貨量</span><span style={{textAlign:'right'}}>小計</span>
             </div>
             {selected.items.map((item,i) => (
-              <div key={i} style={{display:'grid', gridTemplateColumns:'1fr 70px 70px 70px 70px', gap:8, padding:'10px 14px', borderTop:'1px solid var(--border-dim)', fontSize:13, alignItems:'center'}}>
+              <div key={i} style={{display:'grid',minWidth:420, gridTemplateColumns:'1fr 70px 70px 70px 70px', gap:8, padding:'10px 14px', borderTop:'1px solid var(--border-dim)', fontSize:13, alignItems:'center'}}>
                 <span style={{fontWeight:500}}>{item.name}</span>
                 <span style={{textAlign:'right', fontFamily:'var(--font-mono)'}}>{item.qty}</span>
                 <span style={{textAlign:'right', fontFamily:'var(--font-mono)', color:'var(--text-secondary)'}}>{item.unitCost}</span>
@@ -80,6 +80,7 @@ export function PurchaseList({ purchases, selected, onSelect, onReceive }) {
             </div>
           </div>
           {selected.note && <div style={{fontSize:13, color:'var(--text-secondary)', padding:'10px 14px', background:'var(--bg-overlay)', borderRadius:8}}>備註：{selected.note}</div>}
+          {renderProcurement?.(selected)}
         </div>
       ) : !isMobile && (
         <div style={ps.emptyDetail}>
@@ -111,7 +112,7 @@ export function ReceiveModal({ po, products, onConfirm, onClose, saving, error }
 
   return (
     <div style={ps.overlay}>
-      <div style={ps.modal} className="animate-scale">
+      <div style={ps.modal} className="animate-scale" role="dialog" aria-modal="true" aria-label="確認到貨">
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18}}>
           <div>
             <div style={{fontWeight:700, fontSize:15, fontFamily:'var(--font-serif)'}}>確認到貨</div>
@@ -142,11 +143,11 @@ export function ReceiveModal({ po, products, onConfirm, onClose, saving, error }
                 叫貨 {item.qty}{(item.received||0) > 0 && <div style={{fontSize:10, color:'var(--amber)'}}>已收 {item.received}</div>}
               </div>
               <input
-                type="number" min={0} max={item.qty * 2} step="0.001" disabled={saving}
+                aria-label={'本次到貨量 '+item.name+' '+(idx+1)} type="number" min={0} max={remaining(item)} step="0.001" disabled={saving}
                 className="field"
                 value={qtys[key] ?? item.qty}
                 onChange={e=>setQtys(q=>({...q,[key]:Number(e.target.value)||0}))}
-                style={{textAlign:'right', fontFamily:'var(--font-mono)', padding:'8px 10px'}}
+                style={{textAlign:'right', fontFamily:'var(--font-mono)', padding:'8px 10px',fontSize:16,minHeight:44}}
               />
             </div>
           )

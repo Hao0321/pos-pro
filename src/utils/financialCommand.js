@@ -1,6 +1,9 @@
 import { browserStorage } from './browserStorage'
+import {PROCUREMENT_KINDS,isProcurement,procurementEvent,validateProcurement} from '../../electron/procurementRules.mjs'
+import {operationHeader} from '../../electron/operationRules.mjs'
 export const FINANCIAL_PENDING='pos_pending_financial_v1'
 const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt'}
+for(const kind of PROCUREMENT_KINDS)fields[kind]='receipt'
 let running=false
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value
 function finiteTree(value,depth=0){if(depth>16)throw Error('異動紀錄需要核對');if(typeof value==='number'&&!Number.isFinite(value))throw Error('異動紀錄含無效數字');if(value&&typeof value==='object')for(const v of Object.values(value))finiteTree(v,depth+1)}
@@ -28,10 +31,17 @@ function assertReceipt(kind,request,result){
     if(request.action==='pay'&&(result.order.shiftId!==request.shiftId||result.order.total!==result.entry.total||result.order.payMethod!==request.payMethod))throw Error('預訂回覆收款內容不符')
     if(request.action==='cancel'&&row.refundId&&(result.refund?.id!==row.refundId||result.refund.shiftId!==request.shiftId||result.refund.total!==-result.entry.total))throw Error('預訂回覆缺少退款流水')
   }
-  if(['stocktake','receive'].includes(kind)){
-    if(row.kind!==kind||row.signature!==JSON.stringify(canonical(request))||!Array.isArray(row.productIds)||!row.productIds.length||!Array.isArray(result.products)||result.products.length!==row.productIds.length||new Set(row.productIds).size!==row.productIds.length||row.productIds.some(id=>!result.products.some(p=>p.id===id)))throw Error('庫存保存結果尚未確認：回覆內容不符')
+  if(['stocktake','receive',...PROCUREMENT_KINDS].includes(kind)){
+    if(row.kind!==kind||row.signature!==JSON.stringify(canonical(request))||!Array.isArray(row.productIds)||!row.productIds.length&&!PROCUREMENT_KINDS.includes(kind)||!Array.isArray(result.products)||result.products.length!==row.productIds.length||new Set(row.productIds).size!==row.productIds.length||row.productIds.some(id=>!result.products.some(p=>p.id===id)))throw Error('庫存保存結果尚未確認：回覆內容不符')
     if(kind==='stocktake'&&(row.productIds.length!==request.counts.length||request.counts.some(c=>!row.productIds.includes(c.id))))throw Error('盤點回覆缺少原品項')
     if(kind==='receive'&&(row.purchaseId!==request.purchaseId||result.purchase?.id!==request.purchaseId))throw Error('到貨回覆缺少原進貨單')
+    if(PROCUREMENT_KINDS.includes(kind)||row.document){
+      const po=result.purchase
+      if(!isProcurement(po)||po.id!==(kind==='purchase-create'?request.purchase.id:request.purchaseId)||row.purchaseId!==po.id||!Number.isSafeInteger(row.purchaseVersion)||po.procurement.revision<row.purchaseVersion)throw Error('採購回覆缺少原進貨單或保存版本')
+      validateProcurement(po)
+      if(JSON.stringify(canonical(procurementEvent(po,request)))!==JSON.stringify(canonical(row.document)))throw Error('採購回覆缺少正確的保存文件')
+      if(row.cashLogId&&result.cashLog?.id!==row.cashLogId)throw Error('採購回覆缺少現金流水')
+    }
   }
 }
 function clearOriginal(pending){
@@ -41,7 +51,7 @@ function clearOriginal(pending){
 }
 // A lost reply retains the original ID. Retrying identical input is safe only
 // because every participating persistence adapter deduplicates that ID.
-export async function executeFinancial(kind, input, persist,onState=()=>{}) {
+export async function executeFinancial(kind, input, persist,onState=()=>{},identity=null) {
   if(running)throw Error('正在保存異動，請勿重複提交')
   if(!Object.hasOwn(fields,kind))throw Error('異動類型不正確')
   finiteTree(input);running=true;let pending
@@ -51,7 +61,8 @@ export async function executeFinancial(kind, input, persist,onState=()=>{}) {
   pending=readPendingFinancial()
   if (pending && JSON.stringify(canonical(JSON.parse(pending.signature)))!==JSON.stringify(canonical({kind,input}))) throw new Error('上一筆異動結果尚未確認。請以原內容重試並核對紀錄，勿建立另一筆。')
   if (!pending) {
-    pending={signature,kind,request:{...input,id:kind+'-'+crypto.randomUUID(),time:new Date().toISOString()}}
+    if(identity)operationHeader(identity)
+    pending={signature,kind,request:{...input,id:identity?.id||kind+'-'+crypto.randomUUID(),time:identity?.time||new Date().toISOString()}}
     browserStorage.setItem(FINANCIAL_PENDING,JSON.stringify(pending))
   }
   notify('saving','保存中，請勿重複異動')

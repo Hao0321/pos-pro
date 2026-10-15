@@ -13,6 +13,7 @@ export const ACCOUNTS = {
   '1501': { name: '設備',         type: 'asset',    normal: 'debit',  group: '非流動資產' },
   // 負債 Liabilities (2xxx)
   '2101': { name: '應付帳款',     type: 'liability', normal: 'credit', group: '流動負債' },
+  '2102': { name: '進貨暫估應付', type: 'liability', normal: 'credit', group: '流動負債' },
   '2111': { name: '銷項稅額',     type: 'liability', normal: 'credit', group: '流動負債' },
   '2191': { name: '預收款',       type: 'liability', normal: 'credit', group: '流動負債' },
   // 業主權益 Equity (3xxx)

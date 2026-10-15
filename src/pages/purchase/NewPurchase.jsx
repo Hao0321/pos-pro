@@ -3,6 +3,7 @@ import { Plus, Check, X, ChevronRight, Zap, Camera } from "lucide-react"
 import { DEFAULT_CATEGORIES, CATEGORY_META, groupByCategory } from "../../utils/categories"
 import { computeSalesVelocity, suggestReorderQty } from "../../utils/analytics"
 import { localDate } from "../../utils/checkoutSafety.mjs"
+import {procurementLineCents} from '../../../electron/procurementRules.mjs'
 import { FL, ps } from "./controls.jsx"
 
 export const BarcodeScannerModal = lazy(() => import('../../components/BarcodeScannerModal'))
@@ -176,11 +177,11 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
   function updateItem(i, key, val) {
     // audit #12: qty 至少 1，避免 qty=0 通過驗證造成空進貨單
     const num = parseFloat(val) || 0
-    const safe = key === 'qty' ? Math.max(1, num) : num
+    const safe = num
     setItems(prev=>prev.map((it,idx)=>idx===i?{...it,[key]:safe}:it))
   }
 
-  const total = items.reduce((s,i)=>s+i.qty*i.unitCost,0)
+  const total = items.reduce((s,i)=>{try{return s+procurementLineCents(i.qty,i.unitCost)/100}catch{return s}},0)
   const unaddedLow = lowStockForSupplier.filter(p => !items.find(i => i.productId === p.id)).length
   // v2.6: 貨源目錄裡還沒加入清單的品項（給下拉的「📋 貨源目錄」群組）
   const pickableCatalog = catalogOnly.filter(c => !items.find(i => i.catalogId === c.catalogId))
@@ -195,7 +196,8 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
     if (!supplier) { toast('✗ 找不到這家廠商，請重新選擇'); return }
     // audit #12: 過濾掉 qty<=0 的品項
     const validItems = items.filter(i => i.qty > 0 && i.unitCost >= 0)
-    if (validItems.length === 0) { toast('✗ 商品數量或單價不對，請檢查後再送出'); return }
+    if (validItems.length !== items.length) { toast('✗ 每項商品都需要有效數量與單價，請檢查後再送出'); return }
+    try{items.forEach(i=>procurementLineCents(i.qty,i.unitCost))}catch(e){toast('✗ '+e.message);return}
     setConfirming(true) // v2.6: 先確認再送出，避免誤觸
   }
 
@@ -207,7 +209,7 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
       id: pendingId.current, supplierId, supplierName: supplier.name || '',
       status:'ordered', date, receivedDate:null,
       items: validItems.map(({_fromHistory, _autoFilled, _aiSuggested, _dailyAvg, ...rest}) => rest),
-      note, total: validItems.reduce((s,i)=>s+i.qty*i.unitCost,0),
+      note, total,
     }
     try {await onSave(po);setConfirming(false)}
     catch(e) {submitOnce.current=false;toast('✗ '+e.message)}
@@ -230,14 +232,14 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
       <div style={np.topGrid}>
         <div>
           <FL>供應商 *</FL>
-          <select className="field" value={supplierId} onChange={e=>{setSupplierId(e.target.value);setAddProdId('')}} style={{cursor:'pointer'}}>
+          <select aria-label="採購供應商" className="field" value={supplierId} onChange={e=>{setSupplierId(e.target.value);setAddProdId('')}} style={{cursor:'pointer',fontSize:16,minHeight:44}}>
             <option value="">— 選擇供應商 —</option>
             {suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <div>
           <FL>叫貨日期</FL>
-          <input type="date" className="field" value={date} onChange={e=>setDate(e.target.value)}/>
+          <input aria-label="採購日期" type="date" className="field" value={date} onChange={e=>setDate(e.target.value)}/>
         </div>
       </div>
 
@@ -329,6 +331,7 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
             <Camera size={14}/>掃條碼
           </button>
           <select
+            aria-label="採購商品"
             className="field"
             value={addProdId}
             onChange={e=>setAddProdId(e.target.value)}
@@ -387,8 +390,8 @@ export function NewPurchase({ products, suppliers, purchases, orders = [], onSav
                   {daysOfStock && <span style={{fontSize:10, color:'var(--text-tertiary)'}}>可賣 ~{daysOfStock} 天</span>}
                 </div>
               </div>
-              <input type="number" className="field" value={item.qty} min={1} onChange={e=>updateItem(i,'qty',e.target.value)} style={{textAlign:'right', padding:'6px 8px', fontFamily:'var(--font-mono)', fontSize:13}}/>
-              <input type="number" className="field" value={item.unitCost} min={0} onChange={e=>updateItem(i,'unitCost',e.target.value)} style={{textAlign:'right', padding:'6px 8px', fontFamily:'var(--font-mono)', fontSize:13}}/>
+              <input aria-label={'訂購數量 '+item.name} type="number" className="field" value={item.qty} min={0.001} step="0.001" onChange={e=>updateItem(i,'qty',e.target.value)} style={{textAlign:'right', padding:'6px 8px', fontFamily:'var(--font-mono)', fontSize:16,minHeight:44}}/>
+              <input aria-label={'採購單價 '+item.name} type="number" className="field" value={item.unitCost} min={0} step="0.01" onChange={e=>updateItem(i,'unitCost',e.target.value)} style={{textAlign:'right', padding:'6px 8px', fontFamily:'var(--font-mono)', fontSize:16,minHeight:44}}/>
               <span style={{textAlign:'right', fontFamily:'var(--font-mono)', fontSize:13}}>{(item.qty*item.unitCost).toLocaleString()}</span>
               <button className="btn-icon btn-sm" style={{color:'var(--red)'}} onClick={()=>setItems(prev=>prev.filter((_,idx)=>idx!==i))}><X size={13}/></button>
             </div>

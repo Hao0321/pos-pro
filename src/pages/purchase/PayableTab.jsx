@@ -1,8 +1,10 @@
+import {isProcurement,procurementSummary} from '../../../electron/procurementRules.mjs'
 
-export function PayableTab({ purchases, suppliers, onMarkPaid }) {
+export function PayableTab({ purchases, suppliers, onMarkPaid,onOpen }) {
+  const managed=purchases.filter(isProcurement),legacy=purchases.filter(p=>!isProcurement(p))
   // 已到貨（含部分到貨）且未付款 = 應付帳款
-  const unpaid = purchases.filter(p => (p.status === 'received' || p.status === 'partial') && !p.paidDate)
-  const paid = purchases.filter(p => p.paidDate)
+  const unpaid = legacy.filter(p => (p.status === 'received' || p.status === 'partial') && !p.paidDate)
+  const paid = legacy.filter(p => p.paidDate)
   // 部分到貨只欠「已到貨部分」的錢；全到貨欠全額
   const owedOf = (p) => p.status === 'partial'
     ? (p.items || []).reduce((s,i) => s + (i.received || 0) * (i.unitCost || 0), 0)
@@ -22,6 +24,8 @@ export function PayableTab({ purchases, suppliers, onMarkPaid }) {
 
   return (
     <div style={{flex:1, overflowY:'auto', padding:'4px 0'}}>
+      {managed.length>0&&<div className="card" style={{padding:16,marginBottom:16}}><h3>採購請款與付款</h3><p>應付餘額 NT$ {managed.reduce((n,p)=>n+procurementSummary(p).owed,0).toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>{managed.map(po=>{const s=procurementSummary(po);return <button className="btn btn-ghost" key={po.id} style={{display:'flex',width:'100%',justifyContent:'space-between',minHeight:44,gap:12,flexWrap:'wrap',marginTop:6}} onClick={()=>onOpen(po)}><span>{po.supplierName} · {po.id}</span><span>未付 {s.owed.toFixed(2)} · 待請款 {s.unbilled.toFixed(2)}{s.overdue>0?' · 已逾期':''}</span></button>})}</div>}
+      {managed.length>0&&legacy.length>0&&<h3>歷史進貨單（保留原帳）</h3>}
       <div className="card" style={{padding:'18px 20px', marginBottom:14, borderTop:'2px solid var(--red)'}}>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline'}}>
           <span style={{fontSize:12, color:'var(--text-tertiary)', textTransform:'uppercase', letterSpacing:'.05em'}}>未付款總額</span>

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Hao0321/pos-pro/v2.8.0/public/agent/document-draft-v1.schema.json",
+  "title": "POS Pro document draft v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "id", "issuedAt", "storeId", "catalogueRevision", "kind", "items"],
+  "properties": {
+    "protocol": {"const": "pos-document-draft/v1"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{8,80}$"},
+    "issuedAt": {"type": "string", "format": "date-time"},
+    "storeId": {"type": "string", "minLength": 1, "maxLength": 128},
+    "catalogueRevision": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "kind": {"enum": ["sale", "restaurant", "purchase"]},
+    "items": {"type": "array", "minItems": 1, "maxItems": 100, "items": {"type": "object", "additionalProperties": false, "required": ["productId", "qty"], "properties": {"productId": {"type": "string", "minLength": 1, "maxLength": 128}, "qty": {"type": "number", "minimum": 0.001, "maximum": 1000000000, "multipleOf": 0.001}, "unitCost": {"type": "number", "minimum": 0, "maximum": 1000000000, "multipleOf": 0.01}}}},
+    "supplierId": {"type": "string", "maxLength": 128},
+    "date": {"type": "string", "format": "date"},
+    "channel": {"enum": ["preorder", "walkin", "delivery"]},
+    "day": {"type": "string", "format": "date"},
+    "slot": {"type": "string", "pattern": "^([01][0-9]|2[0-3]):(00|15|30|45)$"},
+    "customer": {"type": "string", "maxLength": 100},
+    "contact": {"type": "string", "maxLength": 100},
+    "note": {"type": "string", "maxLength": 1000}
+  },
+  "allOf": [
+    {"if": {"properties": {"kind": {"const": "purchase"}}}, "then": {"required": ["supplierId", "date"]}},
+    {"if": {"properties": {"kind": {"const": "restaurant"}}}, "then": {"required": ["channel", "day", "slot"]}},
+    {"if": {"properties": {"kind": {"enum": ["sale", "restaurant"]}}}, "then": {"properties": {"items": {"items": {"properties": {"qty": {"type": "integer", "minimum": 1}}, "not": {"required": ["unitCost"]}}}}}}
+  ]
+}

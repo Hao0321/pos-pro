@@ -5,9 +5,11 @@ import { prepareCheckout } from '../utils/checkoutSafety.mjs'
 import { createCheckoutCoordinator } from '../utils/checkoutCoordinator.mjs'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { orderToJournalEntries, topupToJournalEntries,wasteToJournalEntries } from '../utils/accounting'
+import {PROCUREMENT_KINDS,procurementToJournalEntries} from '../../electron/procurementRules.mjs'
 import {
   isElectron,isSharedStore, checkAndMigrate,
   loadProducts, saveProducts, dbAddProduct, dbUpdateProduct, dbDeleteProduct,
+  loadPurchases,
   loadMembers, saveMembers, dbAddMember, dbUpdateMember, dbDeleteMember,
   loadOrders, saveOrders, dbCheckout, lookupCheckout, dbRefund,
   loadManualJournal, saveManualJournal, dbAddManualEntry, dbDeleteManualEntry,
@@ -34,6 +36,7 @@ export function useStore(session){
   const [products,      setProducts]      = useState([])
   const [members,       setMembers]       = useState([])
   const [orders,        setOrders]        = useState([])
+  const [purchases,setPurchases]=useState([])
   const [manualEntries, setManualEntries] = useState([])
   const [cart,          setCart]          = useState([])
   const [view,          setView]          = useState('dashboard')
@@ -90,10 +93,11 @@ export function useStore(session){
         loadTopups(),
         getOpenShift(),
         loadRestaurantState(),
+        session.role==='owner'?loadPurchases([]):Promise.resolve([]),
       ])
       if(cancelled)return
-      const fallbacks = [[], [], [], [], [], [], [], null,{config:defaultRestaurantConfig()}]
-      const [p, m, o, j, held, waste, tps, shift,restaurant] = results.map((r, i) => {
+      const fallbacks = [[], [], [], [], [], [], [], null,{config:defaultRestaurantConfig()},[]]
+      const [p, m, o, j, held, waste, tps, shift,restaurant,po] = results.map((r, i) => {
         if (r.status === 'fulfilled') return r.value
         setDataError('資料載入失敗，請保留原資料並重試：' + String(r.reason?.message || '讀取失敗'))
         console.error('[POS] init load failed:', i, r.reason)
@@ -102,6 +106,7 @@ export function useStore(session){
       setProducts(Array.isArray(p) ? p : [])
       setMembers(Array.isArray(m) ? m : [])
       setOrders(Array.isArray(o) ? o : [])
+      setPurchases(Array.isArray(po)?po:[])
       setManualEntries(Array.isArray(j) ? j : [])
       setHeldOrders(Array.isArray(held) ? held : [])
       setWasteLog(Array.isArray(waste) ? waste : [])
@@ -158,7 +163,8 @@ export function useStore(session){
     ...orders.flatMap(o=>orderToJournalEntries(o,products)),
     ...topups.flatMap(topupToJournalEntries),   // 會員儲值（加值 + 折抵）一併入帳，損益表才完整
     ...wasteLog.flatMap(wasteToJournalEntries),
-  ],[orders,products,topups,wasteLog])
+    ...purchases.flatMap(procurementToJournalEntries),
+  ],[orders,products,topups,wasteLog,purchases])
   const allJournal  = useMemo(()=>[...autoJournal,...manualEntries].sort((a,b)=>b.date.localeCompare(a.date)),[autoJournal,manualEntries])
 
   const addManualEntry = useCallback(async e=>{
@@ -176,6 +182,13 @@ export function useStore(session){
   },[])
 
   const ensureCartEditable=()=>{if(checkoutRef.current.getState().phase!=='idle')throw new Error('請先確認原交易結果')}
+  function stageQuickSale(items){
+    ensureCartEditable();if(dataError)throw Error(dataError)
+    if(financialState.phase!=='idle')throw Error('請先確認上一筆單據')
+    if(cart.length)throw Error('收銀台已有商品，已保留原購物車。請先完成或處理原單')
+    const rows=items.map(item=>{const p=products.find(p=>p.id===item.id);if(!p||p.price!==item.price||!Number.isSafeInteger(item.qty)||item.qty<1||item.qty>p.stock)throw Error('商品價格或可售數量已改變，請重新核對');return {...p,qty:item.qty}})
+    setCart(rows);setActiveMember(null);setManualDiscount(0);setView('pos')
+  }
   const addToCart = useCallback((product,qty=1)=>{
     ensureCartEditable()
     setCart(prev=>{
@@ -318,29 +331,32 @@ export function useStore(session){
 
   function applyInventoryResult(result){
     setProducts(previous=>[...previous.map(p=>result.products.find(n=>n.id===p.id)||p),...result.products.filter(p=>!previous.some(old=>old.id===p.id))])
+    if(result.purchase)setPurchases(previous=>[result.purchase,...previous.filter(p=>p.id!==result.purchase.id)])
+    if(result.cashLog)window.dispatchEvent(new Event('pos-cash-operation'))
     window.dispatchEvent(new CustomEvent('pos-inventory-operation',{detail:result}))
     return result
   }
-  async function commitInventory(kind,input){
+  async function commitInventory(kind,input,identity=null){
     if(dataError)throw Error(dataError)
-    const result=await executeFinancial(kind,{...input,kind},request=>applyInventoryOperation(request,session),setFinancialState)
+    const result=await executeFinancial(kind,{...input,kind},request=>applyInventoryOperation(request,session),setFinancialState,identity)
     return applyInventoryResult(result)
   }
-  async function commitRestaurant(input){
+  async function commitRestaurant(input,identity=null){
     if(dataError)throw Error(dataError)
     if(checkoutRef.current.getState().phase!=='idle')throw Error('請先確認原收款交易')
-    const result=await executeFinancial('restaurant',{...input,kind:'restaurant'},request=>applyRestaurantOperation(request,session),setFinancialState)
+    const result=await executeFinancial('restaurant',{...input,kind:'restaurant'},request=>applyRestaurantOperation(request,session),setFinancialState,identity)
     await applyRestaurantResult(result)
     return result
   }
   async function retryFinancial(){
     const pending=readPendingFinancial();if(!pending)return
     const ports={restaurant:r=>applyRestaurantOperation(r,session),refund:r=>dbRefund(r.refundOf,r),topup:addTopup,waste:addWaste,cashlog:addCashLog,stocktake:r=>applyInventoryOperation(r,session),receive:r=>applyInventoryOperation(r,session)}
+    for(const kind of PROCUREMENT_KINDS)ports[kind]=r=>applyInventoryOperation(r,session)
     const result=await executeFinancial(pending.kind,JSON.parse(pending.signature).input,ports[pending.kind],setFinancialState)
     if(pending.kind==='topup'){setMembers(p=>p.map(m=>m.id===result.member.id?result.member:m));setTopups(p=>[result.topup,...p.filter(t=>t.id!==result.topup.id)])}
     if(pending.kind==='refund'){setOrders(p=>[result.order,...p.filter(o=>o.id!==result.order.id).map(o=>o.id===result.original.id?result.original:o)]);setProducts(p=>p.map(i=>result.products.find(n=>n.id===i.id)||i));if(result.member)setMembers(p=>p.map(m=>m.id===result.member.id?result.member:m))}
     if(pending.kind==='waste'){setWasteLog(p=>[result.waste,...p.filter(w=>w.id!==result.waste.id)]);setProducts(p=>p.map(i=>i.id===result.product.id?result.product:i))}
-    if(['stocktake','receive'].includes(pending.kind))applyInventoryResult(result)
+    if(['stocktake','receive',...PROCUREMENT_KINDS].includes(pending.kind))applyInventoryResult(result)
     if(pending.kind==='cashlog')window.dispatchEvent(new Event('pos-cash-operation'))
     if(pending.kind==='restaurant')await applyRestaurantResult(result)
     return result
@@ -348,6 +364,7 @@ export function useStore(session){
 
   // 點數規則設定
   async function applyRestaurantResult(result){
+    window.dispatchEvent(new CustomEvent('pos-restaurant-operation',{detail:result}))
     setProducts(p=>p.map(i=>result.products.find(n=>n.id===i.id)||i))
     const rows=[result.refund,result.order].filter(Boolean)
     if(rows.length)setOrders(p=>[...rows,...p.filter(o=>!rows.some(n=>n.id===o.id))])
@@ -419,7 +436,7 @@ export function useStore(session){
   const reloadFromDB = useCallback(async () => {
     if(isElectron&&window.electronAPI.db.getStoreSnapshot){
       const s=await window.electronAPI.db.getStoreSnapshot()
-      setProducts(s.products);setMembers(s.members);setOrders(s.orders);setManualEntries(s.manualEntries);setHeldOrders(s.heldOrders);setWasteLog(s.wasteLog);setTopups(s.topups);setOpenShiftState(s.openShift)
+      setProducts(s.products);setMembers(s.members);setOrders(s.orders);setManualEntries(s.manualEntries);setHeldOrders(s.heldOrders);setWasteLog(s.wasteLog);setTopups(s.topups);setOpenShiftState(s.openShift);setPurchases(s.purchases||[])
       setRestaurantConfig(s.restaurantConfig||defaultRestaurantConfig())
       setPointsRule({earn:s.rules.earn==null?10:Number(s.rules.earn),redeem:s.rules.redeem==null?1:Number(s.rules.redeem)});setBirthdayBonus(s.rules.birthdayBonus==null?100:Number(s.rules.birthdayBonus));return
     }
@@ -433,6 +450,7 @@ export function useStore(session){
     setMembers(m)
     setOrders(o)
     setManualEntries(j)
+    if(session.role==='owner')setPurchases(await loadPurchases([]))
     setWasteLog(await loadWasteLog());setRestaurantConfig((await loadRestaurantState()).config)
   }, [])
   useEffect(()=>{
@@ -453,7 +471,7 @@ export function useStore(session){
   return {
     products,members,orders,cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitInventory,commitRestaurant,restaurantConfig,
     activeMember,setActiveMember:value=>{ensureCartEditable();setActiveMember(value)},
-    addToCart,removeFromCart,updateCartQty,updateCartItemPrice,clearCart,
+    addToCart,removeFromCart,updateCartQty,updateCartItemPrice,clearCart,stageQuickSale,
     cartSubtotal,cartCount,checkout,refund,
     addProduct,updateProduct,deleteProduct,findByBarcode,
     addMember,updateMember,deleteMember,findMember,

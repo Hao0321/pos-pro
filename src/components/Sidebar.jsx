@@ -5,6 +5,7 @@ import SyncStatusBadge from './SyncStatusBadge'
 
 const NAV = [
   { key:'dashboard',  label:'首頁',     Icon:LayoutDashboard, perm:'pos.use', accent:'gold' },
+  { key:'quick',label:'快速建單',Icon:Sparkles,perm:'pos.use',accent:'green' },
   { key:'pos',        label:'收銀台',   Icon:ShoppingCart,    perm:'pos.use', accent:'green' },
   { key:'restaurant',label:'預訂出餐',Icon:ClipboardList,perm:'pos.use',accent:'green' },
   { key:'shifts',     label:'班別交班', Icon:Clock,           perm:'pos.use', accent:'teal' },
@@ -23,7 +24,7 @@ const NAV = [
   { key:'scenarios',  label:'情境模板', Icon:Sparkles,        perm:'settings.edit', accent:'green' },
 ]
 
-export default function Sidebar({ view, setView, session, lowStockCount, todayRevenue, todayOrders, onLogout, pendingOrders = 0, openShift = null }) {
+export default function Sidebar({ view, setView, session, lowStockCount, todayRevenue, todayOrders, onLogout, pendingOrders = 0, openShift = null,largeText=false,toggleLargeText }) {
   const [now, setNow] = useState(new Date())
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
@@ -48,6 +49,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
       </div>
 
       {/* 今日營收卡 */}
+      <button className="btn btn-ghost" aria-label="切換大字模式（選單）" aria-pressed={largeText} onClick={toggleLargeText} style={{minHeight:48,fontSize:16,margin:'0 12px 8px'}}>大字好按 {largeText?'✓':''}</button>
       <div style={s.todayCard} className="animate-up">
         <div style={s.todayTop}>
           <div>

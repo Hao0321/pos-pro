@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   // ----- Products -----
   db: {
+    getAgentContext:()=>ipcRenderer.invoke('db:getAgentContext'),
+    rememberAgentMappings:input=>ipcRenderer.invoke('db:rememberAgentMappings',input),
     getRestaurantState:()=>ipcRenderer.invoke('db:getRestaurantState'),
     applyRestaurantOperation:input=>ipcRenderer.invoke('db:applyRestaurantOperation',input),
     getStoreSnapshot:()=>ipcRenderer.invoke('db:getStoreSnapshot'),

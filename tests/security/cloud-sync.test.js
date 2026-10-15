@@ -3,6 +3,7 @@ import { browserStorage, writeRecords, readRecords, RECORD_KEY } from '../../src
 const fixture=vi.hoisted(()=>({client:null}))
 vi.mock('../../src/utils/supabaseClient',()=>({getSupabase:()=>fixture.client,isCloudEnabled:()=>true}))
 import { pushAll, pullAll, SYNC_TABLES } from '../../src/utils/cloudSync'
+import {commitBrowserInventory} from '../../src/utils/browserInventory'
 let map,queries,uploads,authenticated,onRead
 beforeEach(()=>{
   map=new Map();queries=[];uploads=[];authenticated=true;onRead=null
@@ -34,4 +35,10 @@ test('malformed local data is reported instead of uploading empty collections',a
 test('an enabled formal restaurant cannot upload or replace an incomplete cloud snapshot',async()=>{
   browserStorage.setItem('pos_settings_restaurantConfig',JSON.stringify(JSON.stringify({enabled:true,dailyCapacity:30,slotCapacity:5,recipes:{}})))
   const before=map.get(RECORD_KEY);await expect(pushAll()).rejects.toThrow('完整預訂');await expect(pullAll()).rejects.toThrow('完整預訂');expect(map.get(RECORD_KEY)).toBe(before);expect(queries).toEqual([])
+})
+test('ERP purchasing blocks lossy legacy cloud upload and replacement before any query',async()=>{
+  writeRecords({pos_suppliers:[{id:'s',name:'fixture'}]})
+  const r=await commitBrowserInventory({id:'erp-create',kind:'purchase-create',time:new Date().toISOString(),purchase:{id:'po',supplierId:'s',date:'2026-10-15',items:[{productId:'p',name:'fixture',qty:1,unitCost:10}]}},{role:'owner'})
+  expect(r.success,r.error).toBe(true);const before=map.get(RECORD_KEY)
+  await expect(pushAll()).rejects.toThrow('完整採購');await expect(pullAll()).rejects.toThrow('完整採購');expect(map.get(RECORD_KEY)).toBe(before);expect(queries).toEqual([])
 })

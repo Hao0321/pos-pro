@@ -183,6 +183,7 @@ async function readLocal() {
   return all
 }
 function guardRestaurantCloud(data){
+  if(data.pos_purchases?.some(p=>p.procurement))throw Error('目前雲端快照不包含完整採購、請款及付款文件，已停止同步。請使用完整 JSON 備份；手機共用店面可照常使用。')
   if(data._restaurantEnabled||data._restaurantOrders.length||data._restaurantOperations.length)throw Error('目前雲端快照不包含完整預訂與原料回執，已停止同步以保護資料。請使用完整 JSON 備份；手機共用店面可照常使用。')
 }
 

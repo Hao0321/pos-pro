@@ -150,6 +150,12 @@ module.exports = function initDatabase(dbPath) {
 
   // ===== Public API =====
   return {
+    async getAgentContext(actor){
+      if(!actor||!['owner','staff'].includes(actor.role))throw Error('請先登入')
+      let storeId=this.getSetting('sharedStoreId');if(!storeId){storeId=require('node:crypto').randomUUID();this.setSetting('sharedStoreId',storeId)}
+      return require('./agentDraftRules.mjs').makeAgentContext({storeId,products:this.getProducts(),suppliers:actor.role==='owner'?this.getSuppliers():[],restaurantConfig:this.getRestaurantState().config,role:actor.role,mappings:require('./businessDocument.mjs').readAgentMappings(this.getSetting('agentMappings'))})
+    },
+    rememberAgentMappings(input,actor){return db.transaction(()=>{const mappings=require('./businessDocument.mjs').mergeAgentMappings(stmts.getSetting.get('agentMappings')?.value,input,this.getProducts(),actor);stmts.setSetting.run('agentMappings',JSON.stringify(mappings));return {success:true,mappings}})()},
     ...require('./restaurantOperations.cjs')(db,stmts,readOrder,orderInsertParams),
     ...require('./scenarioTemplates.cjs')(db, stmts),
     ...require('./inventoryOperations.cjs')(db,stmts,supplierParams),
@@ -202,6 +208,7 @@ module.exports = function initDatabase(dbPath) {
       return { success: true }
     },
     deleteProduct(id) {
+      if(stmts.getAllPurchases.all().some(p=>p.procurement&&JSON.parse(p.items||'[]').some(i=>i.productId===id)))throw Error('品項仍被採購文件使用，請保留以供核對')
       const cfg=JSON.parse(stmts.getSetting.get('restaurantConfig')?.value||'{}')
       if(Object.hasOwn(cfg.recipes||{},id)||Object.values(cfg.recipes||{}).some(rows=>rows.some(r=>r.id===id))||db.prepare('SELECT data FROM restaurant_orders').all().some(r=>{const e=JSON.parse(r.data);return e.items.some(i=>i.id===id)||e.allocations.some(i=>i.id===id)}))throw Error('品項仍被預訂或配方使用，請保留以供核對')
       stmts.deleteProduct.run(id)
@@ -326,13 +333,14 @@ module.exports = function initDatabase(dbPath) {
       stmts.updateSupplier.run(supplierParams({...old,...data}, id))
       return { success: true }
     },
-    deleteSupplier(id) {if(stmts.getAllProducts.all().some(p=>p.supplierId===id)||stmts.getAllPurchases.all().some(p=>p.supplierId===id&&['draft','ordered','partial'].includes(p.status)))return {success:false,error:'供應商仍有商品或未完成進貨單，請先核對'};stmts.deleteSupplier.run(id); return { success: true } },
+    deleteSupplier(id) {if(stmts.getAllProducts.all().some(p=>p.supplierId===id)||stmts.getAllPurchases.all().some(p=>p.supplierId===id&&(p.procurement||['draft','ordered','partial'].includes(p.status))))return {success:false,error:'供應商仍有商品或採購文件，請先核對'};stmts.deleteSupplier.run(id); return { success: true } },
 
     // Purchases
     getPurchases() {
-      return stmts.getAllPurchases.all().map(p => ({ ...p, items: JSON.parse(p.items || '[]') }))
+      return stmts.getAllPurchases.all().map(require('./procurementRules.mjs').parsePurchase)
     },
     addPurchase(data) {
+      if(data.procurement)throw Error('新採購請使用可追溯的採購流程')
       const params={
         id: data.id || 'po' + Date.now(),
         supplierId: data.supplierId || '',
@@ -344,6 +352,7 @@ module.exports = function initDatabase(dbPath) {
         note: data.note || '',
         total: data.total || 0,
         items: JSON.stringify(data.items || []),
+        procurement:null,
       }
       const old=stmts.getAllPurchases.all().find(p=>p.id===params.id)
       if(old){if(Object.keys(params).some(k=>params[k]!==old[k]))throw Error('進貨單編號已存在且內容不同');return {success:true,purchase:{...old,items:JSON.parse(old.items)}}}
@@ -353,6 +362,7 @@ module.exports = function initDatabase(dbPath) {
     updatePurchase(id, data) {
       const existing = stmts.getAllPurchases.all().find(p => p.id === id)
       if (!existing) return { success: false }
+      if(existing.procurement||data.procurement)throw Error('採購文件不可直接改寫，請使用收貨、請款或付款流程')
       stmts.updatePurchase.run({
         id,
         supplierId: data.supplierId ?? existing.supplierId,
@@ -364,10 +374,11 @@ module.exports = function initDatabase(dbPath) {
         note: data.note ?? existing.note,
         total: data.total ?? existing.total,
         items: JSON.stringify(data.items || JSON.parse(existing.items || '[]')),
+        procurement:null,
       })
       return { success: true,purchase:this.getPurchases().find(p=>p.id===id) }
     },
-    deletePurchase(id) { stmts.deletePurchase.run(id); return { success: true } },
+    deletePurchase(id) {if(stmts.getAllPurchases.all().find(p=>p.id===id)?.procurement)throw Error('採購歷史不可刪除，未收貨請使用取消採購');stmts.deletePurchase.run(id); return { success: true } },
 
     // Promotions
     getPromotions() {
@@ -525,7 +536,7 @@ module.exports = function initDatabase(dbPath) {
         members: stmts.getAllMembers.all(),
         orders: stmts.getAllOrders.all().map(o=>readOrder(o.id)),
         suppliers: stmts.getAllSuppliers.all().map(parseSupplier),
-        purchases: stmts.getAllPurchases.all().map(p => ({ ...p, items: JSON.parse(p.items || '[]') })),
+        purchases: stmts.getAllPurchases.all().map(require('./procurementRules.mjs').parsePurchase),
         promotions: stmts.getAllPromotions.all().map(p => ({
           ...p, condition: JSON.parse(p.condition_data || '{}'), enabled: !!p.enabled,
         })),

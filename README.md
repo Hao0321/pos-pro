@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-2.7.1-b8895a">
+  <img alt="version" src="https://img.shields.io/badge/version-2.8.0-b8895a">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20PWA-555">
   <img alt="tests" src="https://img.shields.io/badge/tests-vitest%20%2B%20native-3f9c5e">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
@@ -20,7 +20,7 @@
 
 ## 這是什麼
 
-目前版本：v2.7.1。正式預訂出餐、原料預留與手機／電腦共用店面，加入小數原料損耗、保存失敗與原編號復原、跨日／跨月帳務及活動時間修正。Windows 安裝檔未簽章；本機安裝包與 GitHub Release 的交付範圍見 [2.7.1 安裝說明](docs/INSTALLER_2_7_1.md)。
+目前版本：v2.8.0。新增免費 ERP 採購基礎、Agent／跨公司快速建單與大字模式：分批收貨、採購／收貨／請款核對、分次付款、付款沖銷、班次現金連動與自動分錄。手機與電腦使用同一店面資料；舊單保留歷史模式。Windows 安裝檔未簽章；本機安裝包與 GitHub Release 的交付範圍見 [2.8.0 安裝說明](docs/INSTALLER_2_8_0.md)。
 
 POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模與店型，不設訂閱或進階功能解鎖費。資料預設存在本機（桌面版走 SQLite、瀏覽器版走 localStorage），雲端同步是選用。
 
@@ -35,6 +35,9 @@ POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模�
 - [正式預訂與出餐](docs/RESTAURANT_WORKFLOW.md)：原料／包材預留、產能、取餐號、收款、交付、取消退款與完整復原。
 - [營業可靠性驗收](docs/OPERATING_READINESS.md)：已執行範圍、實機待驗項目及使用限制。
 - [手機與電腦共用店面](docs/SHARED_STORE.md)：電腦資料庫、私人區網 HTTPS、一次性配對、帳號權限與斷線核對。
+- [ERP 採購到付款](docs/ERP-FOUNDATION.md)：分批收貨、請款核對、分次付款、沖銷與帳務；保留免費政策及已驗證能力界線。
+- [Agent 快速建單協議](docs/AGENT_DOCUMENT_PROTOCOL.md)：同一入口支援文字、點選商品與 Agent 草稿，預覽後一次建單。
+- [跨公司交換與採用理由](docs/BUSINESS_EXCHANGE.md)：其他公司的 Agent 可輸出開放 JSON；品項對照記住後同店面裝置共用。
 
 正式預訂可由店員登記預訂、現場或外送單；LINE 自動接單與外部外送平台串接仍在後續規劃。
 
@@ -46,6 +49,8 @@ POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模�
 - 📦 **庫存** — 即時扣庫、安全庫存提醒、批量改價、CSV 匯入匯出、商品變動歷史、過期警示
 - 👥 **會員** — 點數、分級、儲值卡、生日贈點、RFM 自動分群
 - 🚚 **進貨訂貨** — 廠商管理、依供應商一鍵建單、AI 智慧補貨建議、歷史單價
+- 📒 **採購帳務** — 不超收的分批收貨、供應商請款、到期與欠款、銀行／班次現金分次付款、原付款沖銷
+- ✨ **快速建單** — 文字／商品大按鈕、Agent 草稿、跨公司 JSON 匯入、品項對照、大字模式；銷售先帶入購物車，預訂與採購一次建立
 - 🧮 **複式記帳** — 銷售/成本/儲值自動入帳、損益表、資產負債表、日記帳、CSV 匯出
 - 📊 **報表** — 每日營收、毛利、熱賣滯銷、客單價、員工績效
 - 📱 **顧客掃碼點餐**　☁️ **雲端同步（Supabase，選用）**　🔔 **Discord / Slack 通知（選用）**
@@ -63,7 +68,7 @@ POS Pro 的產品原則是**所有店家、全部功能免費**，不限規模�
 
 首次啟動由你建立管理員名稱與至少 8 字元密碼。既有帳號會保留；舊的短密碼必須在驗證後更換，登入流程不再重建預設帳號。
 
-最新版的本機產物與更新方式見 [2.7.0 安裝檔說明](docs/INSTALLER_2_7_0.md)；[2.6.1 安裝檔紀錄](docs/INSTALLER_2_6_1.md)保留為歷史資料。
+最新版的本機產物與更新方式見 [2.8.0 安裝檔說明](docs/INSTALLER_2_8_0.md)；[2.7.1 安裝檔紀錄](docs/INSTALLER_2_7_1.md)保留為歷史資料。
 
 ### 自行編譯 / 開發
 

@@ -1,10 +1,11 @@
 import {canonicalSignature,operationHeader,quantityValue,moneyValue} from './operationRules.mjs'
+import {PROCUREMENT_KINDS,isProcurement,planProcurement,recordProcurementReceipt,procurementEvent,validateProcurement,procurementDate} from './procurementRules.mjs'
 export const INVENTORY_ACTION='INVENTORY_OPERATION'
 export const INVENTORY_PREFIX='stock-operation:'
-export function planInventory(request,data){
+export function planInventory(request,data,actor){
   operationHeader(request)
   const products=new Map(data.products.map(p=>[p.id,{...p}])),changed=new Set(),created=new Set()
-  let purchase=null,supplier=null
+  let purchase=null,supplier=null,cashLog=null
   if(request.kind==='stocktake'){
     if(!Array.isArray(request.counts)||!request.counts.length||request.counts.length>10000)throw Error('請確認盤點品項')
     for(const count of request.counts){
@@ -23,7 +24,7 @@ export function planInventory(request,data){
     const links=[]
     const items=original.items.map((item,index)=>{
       const qty=request.quantities[index];quantityValue(qty,'本次到貨量');quantityValue(item.qty,'叫貨量',.001);quantityValue(item.received??0,'已到貨量');moneyValue(item.unitCost,'進貨單價')
-      if(qty>item.qty*2-(item.received||0))throw Error('本次到貨超過可接收數量，請核對進貨單')
+      if(Math.round(qty*1000)>Math.round(item.qty*1000)-Math.round((item.received||0)*1000))throw Error('本次到貨超過可接收數量，請核對進貨單')
       let id=item.productId
       if(qty>0){
         if(id){
@@ -47,15 +48,24 @@ export function planInventory(request,data){
     if(supplier&&links.length)supplier.catalog=(supplier.catalog||[]).map(c=>({...c,...(links.find(l=>l.catalogId===c.id)?{productId:links.find(l=>l.catalogId===c.id).productId}:{})}))
     else supplier=null
     const full=items.every(i=>i.received>=i.qty)
-    purchase={...original,items,status:full?(original.paidDate?'paid':'received'):'partial',receivedDate:request.time.slice(0,10)}
+    purchase=recordProcurementReceipt(original,{...original,items,status:full?(isProcurement(original)?'received':original.paidDate?'paid':'received'):'partial',receivedDate:procurementDate(request.time)},request)
+  }else if(PROCUREMENT_KINDS.includes(request.kind)){
+    ;({purchase,cashLog}=planProcurement(request,data,actor))
   }else throw Error('庫存異動類型不正確')
   const receipt={id:request.id,kind:request.kind,signature:canonicalSignature(request),productIds:[...changed],purchaseId:purchase?.id||null,supplierId:supplier?.id||null,time:request.time}
-  return {receipt,products:[...changed].map(id=>products.get(id)),created:[...created],purchase,supplier}
+  if(isProcurement(purchase)){receipt.purchaseVersion=purchase.procurement.revision;receipt.document=procurementEvent(purchase,request)}
+  if(cashLog)receipt.cashLogId=cashLog.id
+  return {receipt,products:[...changed].map(id=>products.get(id)),created:[...created],purchase,supplier,cashLog,createPurchase:request.kind==='purchase-create'}
 }
 export function inventoryReceipt(request,row,data){
-  if(row.signature!==canonicalSignature(request)||!Array.isArray(row.productIds)||!row.productIds.length)throw Error('庫存異動編號內容不一致')
+  if(row.signature!==canonicalSignature(request))throw Object.assign(Error('原操作編號已存在且內容不同，請核對已建立單據；新單請重新整理草稿'),{operationConflict:true})
+  if(!Array.isArray(row.productIds)||!row.productIds.length&&!PROCUREMENT_KINDS.includes(request.kind))throw Error('庫存異動編號內容不一致')
   const products=row.productIds.map(id=>data.products.find(p=>p.id===id))
   if(products.some(p=>!p))throw Error('原異動商品已不存在，請先核對')
   if(row.purchaseId&&!data.purchases.some(p=>p.id===row.purchaseId)||row.supplierId&&!data.suppliers.some(s=>s.id===row.supplierId))throw Error('原異動進貨單或供應商已不存在，請先核對')
-  return {success:true,receipt:row,products,purchase:row.purchaseId?data.purchases.find(p=>p.id===row.purchaseId):null,supplier:row.supplierId?data.suppliers.find(s=>s.id===row.supplierId):null}
+  const purchase=row.purchaseId?data.purchases.find(p=>p.id===row.purchaseId):null
+  if(row.document){validateProcurement(purchase);if(!isProcurement(purchase)||purchase.procurement.revision<row.purchaseVersion||canonicalSignature(procurementEvent(purchase,request))!==canonicalSignature(row.document))throw Error('採購歷史文件缺失，請保留原編號核對')}
+  const cashLog=row.cashLogId?data.cashLogs?.find(l=>l.id===row.cashLogId):null
+  if(row.cashLogId&&!cashLog)throw Error('原付款現金流水已不存在，請保留原編號核對')
+  return {success:true,receipt:row,products,purchase,supplier:row.supplierId?data.suppliers.find(s=>s.id===row.supplierId):null,cashLog}
 }

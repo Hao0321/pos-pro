@@ -249,6 +249,7 @@ module.exports=function initializeSchema(db){
     ensureColumn('members','note',"TEXT DEFAULT ''")
     ensureColumn('member_topups','shiftId',"TEXT DEFAULT ''")
     ensureColumn('purchases', 'paidDate', "TEXT DEFAULT ''")
+    ensureColumn('purchases', 'procurement', 'TEXT DEFAULT NULL')
     ensureColumn('promotions','note',"TEXT DEFAULT ''")
   } catch(e){db.close();throw new Error('資料庫結構更新未完成，已保留原始資料：'+e.message)}
 

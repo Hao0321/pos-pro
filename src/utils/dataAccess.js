@@ -5,12 +5,24 @@ import { summarizeShift } from '../../electron/shiftReconciliation.mjs'
 import {moneyValue,quantityValue,operationHeader,sameCommand} from '../../electron/operationRules.mjs'
 import {commitBrowserInventory} from './browserInventory'
 import {commitBrowserRestaurant,browserRestaurantState} from './browserRestaurant'
+import {makeAgentContext} from '../../electron/agentDraftRules.mjs'
+import {readAgentMappings,mergeAgentMappings} from '../../electron/businessDocument.mjs'
 // 資料存取抽象層 — 自動判斷 Electron (SQLite) 或 瀏覽器 (localStorage)
 export const isElectron = !!(typeof window !== 'undefined' && window.electronAPI)
 export const isSharedStore = !!(typeof window !== 'undefined' && window.electronAPI?.sharedStore)
 export async function applyInventoryOperation(request,actor){return isElectron?window.electronAPI.db.applyInventoryOperation(request):commitBrowserInventory(request,actor)}
 export async function loadRestaurantState(){return isElectron?window.electronAPI.db.getRestaurantState():browserRestaurantState()}
 export async function applyRestaurantOperation(request,actor){return isElectron?window.electronAPI.db.applyRestaurantOperation(request):commitBrowserRestaurant(request,actor)}
+export async function getAgentContext(actor){
+  if(isElectron)return window.electronAPI.db.getAgentContext()
+  if(!actor||!['owner','staff'].includes(actor.role))throw Error('請先登入')
+  let storeId=await getSetting('sharedStoreId');if(!storeId){storeId=crypto.randomUUID();await setSetting('sharedStoreId',storeId)}
+  return makeAgentContext({storeId,products:await loadProducts([]),suppliers:actor.role==='owner'?await loadSuppliers([]):[],restaurantConfig:browserRestaurantState().config,role:actor.role,mappings:readAgentMappings(await getSetting('agentMappings'))})
+}
+export async function rememberAgentMappings(input,actor){
+  if(isElectron)return window.electronAPI.db.rememberAgentMappings(input)
+  return withSalesLock(()=>{const data=readRecords().data,raw=data.pos_business_settings.find(r=>r.key==='agentMappings')?.value;const mappings=mergeAgentMappings(raw==null?null:JSON.parse(raw),input,data.pos2_products,actor);writeBusinessSettings({agentMappings:JSON.stringify(mappings)});return {success:true,mappings}})
+}
 
 function loadLS(key, fallback) { const value=browserStorage.getItem(key);return value==null?fallback:JSON.parse(value) }
 

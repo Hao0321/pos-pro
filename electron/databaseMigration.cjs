@@ -1,6 +1,7 @@
 module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierParams){
   // ===== Migration =====
   const migrateTx = db.transaction((data) => {
+    require('./procurementRules.mjs').validateProcurementRecords(data.purchases||[],data.cashLog||[])
     const restaurantConfig=data.settings?.find(s=>s.key==='restaurantConfig')
     if(restaurantConfig)require('./restaurantRules.mjs').readRestaurantConfig(restaurantConfig.value,data.products||[])
     if(data.restaurantOrders||data.restaurantOperations){
@@ -116,6 +117,7 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
           note: p.note || '',
           total: p.total || 0,
           items: JSON.stringify(p.items || []),
+          procurement:p.procurement?JSON.stringify(p.procurement):null,
         })
       }
     }

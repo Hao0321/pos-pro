@@ -28,7 +28,7 @@ module.exports=function restaurantOperations(db,stmts,readOrder,orderInsertParam
         db.prepare('INSERT INTO restaurant_operations (id,data) VALUES (?,?)').run(request.id,JSON.stringify(plan.receipt))
         validateRestaurantRecords(plan.next.entries,[...data.operations,plan.receipt],plan.next.orders,plan.next.products)
         return restaurantReceipt(request,plan.receipt,plan.next)
-      })()}catch(error){return {success:false,committed:historyChecked&&!replay?false:null,error:error.message}}
+      })()}catch(error){return {success:false,committed:error.operationConflict===true||historyChecked&&!replay?false:null,error:error.message}}
     },
   }
 }

@@ -16,7 +16,7 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
   function storeIdentity(){let id=db.getSetting('sharedStoreId');if(!id){id=randomUUID();db.setSetting('sharedStoreId',id)}return id}
   function changed(){revision++;onChanged()}
   // Every native and companion mutation participates in the same revision stream.
-  for(const name of Object.keys(db).filter(k=>/^(add|update|delete|set|apply|checkout$|refundOrder$|openShift$|closeShift$|importData$|restoreBackup$|migrateFromLocalStorage$)/.test(k))){
+  for(const name of Object.keys(db).filter(k=>/^(add|update|delete|set|apply|rememberAgentMappings$|checkout$|refundOrder$|openShift$|closeShift$|importData$|restoreBackup$|migrateFromLocalStorage$)/.test(k))){
     const original=db[name];db[name]=function(...args){const result=original.apply(db,args);if(result?.success!==false)changed();return result}
   }
   const status=()=>({running:!!server?.listening,addresses:addresses(),host,port,url:server?.listening?`https://${host}:${port}/shop/`:null,fingerprint:cert?.fingerprint||null,validTo:cert?.validTo||null,devices:[...devices].map(([id,d])=>({id,username:d.session?.username||'尚未登入',role:d.session?.role||'',pairedAt:d.pairedAt})),revision})
@@ -53,6 +53,8 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     authorizeActor(db,actor,method,args)
     if(method==='db:getStoreSnapshot')return snapshot(db,actor)
     if(method==='db:getRestaurantState')return db.getRestaurantState()
+    if(method==='db:getAgentContext')return db.getAgentContext(actor)
+    if(method==='db:rememberAgentMappings')return db.rememberAgentMappings(args[0],actor)
     if(method==='db:applyRestaurantOperation')return db.applyRestaurantOperation(args[0],actor)
     if(method==='db:applyInventoryOperation')return db.applyInventoryOperation(args[0],actor)
     if(method==='db:applyScenarioTemplate')return db.applyScenarioTemplate(args[0],actor)
@@ -106,7 +108,7 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
       if(relative.split('/').some(p=>!p||p==='.'||p==='..')||relative.includes('\\')||relative.includes(':'))throw Object.assign(Error('頁面不存在'),{status:404})
       const root=path.resolve(distRoot),file=path.resolve(root,relative)
       if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||fs.lstatSync(file).isSymbolicLink()||!fs.statSync(file).isFile())throw Object.assign(Error('頁面不存在'),{status:404})
-      const ext=path.extname(file),mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.svg':'image/svg+xml','.ico':'image/x-icon'}[ext]
+      const ext=path.extname(file),mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.txt':'text/plain; charset=utf-8','.webmanifest':'application/manifest+json','.png':'image/png','.svg':'image/svg+xml','.ico':'image/x-icon'}[ext]
       if(!mime)throw Object.assign(Error('檔案不存在'),{status:404})
       res.writeHead(200,{'Content-Type':mime,'Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self'; worker-src 'self' blob:; frame-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"})
       if(req.method==='HEAD')return res.end();fs.createReadStream(file).pipe(res)

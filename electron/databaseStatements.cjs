@@ -68,13 +68,13 @@ module.exports=function prepareStatements(db){
     // --- Purchases ---
     getAllPurchases: db.prepare('SELECT * FROM purchases ORDER BY date DESC'),
     insertPurchase: db.prepare(`
-      INSERT INTO purchases (id, supplierId, supplierName, status, date, receivedDate, paidDate, note, total, items)
-      VALUES (@id, @supplierId, @supplierName, @status, @date, @receivedDate, @paidDate, @note, @total, @items)
+      INSERT INTO purchases (id, supplierId, supplierName, status, date, receivedDate, paidDate, note, total, items,procurement)
+      VALUES (@id, @supplierId, @supplierName, @status, @date, @receivedDate, @paidDate, @note, @total, @items,@procurement)
     `),
     updatePurchase: db.prepare(`
       UPDATE purchases SET supplierId=@supplierId, supplierName=@supplierName,
       status=@status, date=@date, receivedDate=@receivedDate, paidDate=@paidDate, note=@note,
-      total=@total, items=@items WHERE id=@id
+      total=@total, items=@items,procurement=@procurement WHERE id=@id
     `),
     deletePurchase: db.prepare('DELETE FROM purchases WHERE id = ?'),
 

@@ -1,0 +1,15 @@
+{
+  "name": "POS Pro Agent document drafts",
+  "protocol": "pos-document-draft/v1",
+  "portableProtocol": "business-document/v1",
+  "portableSchema": "/agent/business-document-v1.schema.json",
+  "schema": "/agent/document-draft-v1.schema.json",
+  "guide": "/llms.txt",
+  "context": {"surface": "authenticated application browser or desktop preload", "method": "window.electronAPI.db.getAgentContext()", "authentication": "existing login and paired-device session; no credentials in drafts"},
+  "delivery": {"paste": "快速建單", "linkFragment": "agentDraft=<encodeURIComponent(JSON)>"},
+  "kinds": ["sale", "restaurant", "purchase"],
+  "humanReviewRequired": true,
+  "moneyMovement": false,
+  "arbitraryExecution": false,
+  "featurePrice": "free"
+}

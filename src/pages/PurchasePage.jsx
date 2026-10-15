@@ -9,6 +9,8 @@ import { PurchaseList, ReceiveModal } from "./purchase/PurchaseList.jsx"
 import { NewPurchase } from "./purchase/NewPurchase.jsx"
 import { SupplierList } from "./purchase/SupplierList.jsx"
 import { PayableTab } from "./purchase/PayableTab.jsx"
+import {ProcurementPanel} from './purchase/ProcurementPanel.jsx'
+import {isProcurement,procurementSummary} from '../../electron/procurementRules.mjs'
 
 export default function PurchasePage({ store, session }) {
   const { products, commitInventory, orders = [] } = store
@@ -19,10 +21,11 @@ export default function PurchasePage({ store, session }) {
   const [receiving,  setReceiving]  = useState(null)
   const [saveError,setSaveError]=useState(''),[saving,setSaving]=useState(false)
   const receivingBusy=useRef(false)
+  const creatingId=useRef(null)
 
   useEffect(() => {
-    const reload=()=>{loadSuppliers([]).then(setSuppliers).catch(e=>setSaveError(e.message));loadPurchases([]).then(setPurchases).catch(e=>setSaveError(e.message))};reload()
-    const changed=event=>{const r=event.detail;if(r?.purchase)setPurchases(p=>p.map(po=>po.id===r.purchase.id?r.purchase:po));if(r?.supplier)setSuppliers(p=>p.map(s=>s.id===r.supplier.id?r.supplier:s))}
+    const reload=()=>{loadSuppliers([]).then(setSuppliers).catch(e=>setSaveError(e.message));loadPurchases([]).then(rows=>{setPurchases(rows);setSelected(p=>p?rows.find(row=>row.id===p.id)||null:p)}).catch(e=>setSaveError(e.message))};reload()
+    const changed=event=>{const r=event.detail;if(r?.purchase){setPurchases(p=>[r.purchase,...p.filter(po=>po.id!==r.purchase.id)]);setSelected(p=>p?.id===r.purchase.id?r.purchase:p);if(r.receipt?.kind==='receive')setReceiving(p=>p?.id===r.purchase.id?null:p);if(r.receipt?.kind==='purchase-create'&&creatingId.current===r.purchase.id){creatingId.current=null;setTab('list');setSelected(r.purchase)}}if(r?.supplier)setSuppliers(p=>p.map(s=>s.id===r.supplier.id?r.supplier:s))}
     window.addEventListener('pos-inventory-operation',changed);window.addEventListener('pos-data-refreshed',reload);return()=>{window.removeEventListener('pos-inventory-operation',changed);window.removeEventListener('pos-data-refreshed',reload)}
   }, [])
 
@@ -64,7 +67,7 @@ export default function PurchasePage({ store, session }) {
   const DONE_STATUS = ['received', 'partial', 'paid']
   const pending  = purchases.filter(p => !DONE_STATUS.includes(p.status))
   const done     = purchases.filter(p => DONE_STATUS.includes(p.status))
-  const totalOwed = purchases.filter(p=>p.status!=='draft'&&!p.paidDate&&p.status!=='paid').reduce((s,p)=>s+p.total,0)
+  const totalOwed = purchases.reduce((sum,p)=>sum+(isProcurement(p)?procurementSummary(p).owed:p.status!=='draft'&&!p.paidDate&&p.status!=='paid'?p.total:0),0)
 
   return (
     <div style={ps.root}>
@@ -82,11 +85,11 @@ export default function PurchasePage({ store, session }) {
         </div>
       </div>
 
-      {tab === 'list'      && <PurchaseList purchases={purchases} selected={selected} onSelect={setSelected} onReceive={setReceiving}/>}
+      {tab === 'list'      && <PurchaseList purchases={purchases} selected={selected} onSelect={setSelected} onReceive={setReceiving} renderProcurement={po=><ProcurementPanel key={po.id} po={po} onCommand={commitInventory} openShift={store.openShift}/>}/>}
       {saveError&&!receiving&&<p role="alert" style={{color:'var(--red)'}}>{saveError}</p>}
-      {tab === 'new'       && <NewPurchase  products={products} suppliers={suppliers} purchases={purchases} orders={orders} onSave={async po=>{const saved=await persistPurchase(po,true)||po;savePurchases([saved,...purchases.filter(p=>p.id!==po.id)]);setTab('list');writeAuditLog('PURCHASE_CREATE',session,{id:po.id})}}/>}
+      {tab === 'new'       && <NewPurchase  products={products} suppliers={suppliers} purchases={purchases} orders={orders} onSave={async po=>{creatingId.current=po.id;const r=await commitInventory('purchase-create',{purchase:po});setSelected(r.purchase);setTab('list')}}/>}
       {tab === 'suppliers' && <SupplierList suppliers={suppliers} products={products} purchases={purchases} onSave={saveSuppliers} onGoInventory={()=>store.setView?.('inventory')}/>}
-      {tab === 'payable'   && <PayableTab   purchases={purchases} suppliers={suppliers} onMarkPaid={async(id)=>{
+      {tab === 'payable'   && <PayableTab purchases={purchases} suppliers={suppliers} onOpen={po=>{setSelected(po);setTab('list')}} onMarkPaid={async(id)=>{
         const target = purchases.find(p => p.id === id)
         if (!target) return
         // 保底：部分到貨不改 status（否則「補收到貨」按鈕會消失、貨永遠收不齊）
