@@ -1,4 +1,4 @@
-import {readRecords,writeRecords,withSalesLock} from './browserStorage'
+import {readRecords,writeRecords,withSalesLock,assertOriginalOperationAvailable} from './browserStorage'
 import {readExchangeTextSetting,readExchangeStore,EXCHANGE_SETTING} from '../../electron/businessExchange.mjs'
 import {salesDate} from '../../electron/salesRules.mjs'
 import {planSales,salesReceipt,validateSalesRecords} from '../../electron/salesPlan.mjs'
@@ -28,12 +28,13 @@ export function commitBrowserSalesDocument(request,actor){
     let replay=false,checked=false
     try{
       const record=readRecords(),data=read(record),old=data.operations.find(row=>row.id===request?.id);replay=!!old;checked=true
+      assertOriginalOperationAvailable('applySalesOperation',request.id,record,request)
       if(old)return salesReceipt(request,old,data)
       const plan=planSales(request,data,actor)
       const next=writeRecords({pos_sales_documents:[plan.document,...data.documents.filter(d=>d.id!==plan.document.id)],
         pos_sales_operations:[...data.operations,plan.receipt],pos2_products:data.products.map(p=>plan.products.find(n=>n.id===p.id)||p),
         pos2_cash_log:[...data.cashLogs,...(plan.cashLog?[plan.cashLog]:[])]},record.revision,{ensureSalesEpoch:true})
       return salesReceipt(request,plan.receipt,read(next))
-    }catch(error){return {success:false,committed:error.historyUncertain?null:error.operationConflict===true||checked&&!replay?false:null,error:error.message}}
+    }catch(error){return {success:false,committed:error.historyUncertain?null:error.operationConflict===true||checked&&!replay?false:null,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
   })
 }

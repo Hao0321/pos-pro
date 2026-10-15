@@ -58,7 +58,7 @@ export default function SettingsPage({ session, onLogout, store }) {
         {tab==='users'    && <UsersTab    session={session}/>}
         {tab==='hardware' && <HardwareTab session={session}/>}
         {tab==='security' && <SecurityTab session={session}/>}
-        {tab==='backup'   && <BackupTab   session={session}/>}
+        {tab==='backup'   && <BackupTab   session={session} store={store}/>}
         {tab==='cloud'    && <CloudSyncTab session={session}/>}
         {tab==='webhook'  && <WebhookTab  session={session}/>}
         {tab==='audit'    && <AuditTab    session={session}/>}

@@ -110,9 +110,17 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   // ----- Backups -----
   handle('db:getBackups', () => db.getBackups())
   handle('db:createBackup', (_e, label, createdBy) => db.createBackup(label, createdBy))
-  handle('db:restoreBackup', (_e, id) => db.restoreBackup(id))
+  handle('db:restoreBackup', (_e, id, options) => db.restoreBackup(id,options,ipcSecurity.current()))
   handle('db:exportData', () => db.exportData())
-  handle('db:importData', (_e, data, expectedRevision) => db.importData(data, expectedRevision))
+  handle('db:importData', (_e, data, expectedRevision) => db.importData(data, expectedRevision,ipcSecurity.current()))
+  handle('db:previewRestore',(_e,input)=>db.previewRestore(input,ipcSecurity.current()))
+  handle('db:applyRestorePreview',(_e,id)=>db.applyRestorePreview(id,ipcSecurity.current()))
+  handle('db:lookupRestorePreview',(_e,id)=>db.lookupRestorePreview(id,ipcSecurity.current()))
+  handle('db:getRecoveryState',(_e,pending)=>db.getRecoveryState(pending,ipcSecurity.current()))
+  handle('db:applyRecoveryOperation',(_e,input)=>db.applyRecoveryOperation(input,ipcSecurity.current()))
+  handle('db:lookupRecoveryOperation',(_e,input)=>db.lookupRecoveryOperation(input,ipcSecurity.current()))
+  handle('db:exportRecoverySource',(_e,id)=>db.exportRecoverySource(id,ipcSecurity.current()))
+  handle('db:exportRecoveryDiagnostics',()=>db.exportRecoveryDiagnostics(ipcSecurity.current()))
 
   // ----- Settings -----
   handle('settings:get', (_e, key) => db.getSetting(key))
@@ -121,7 +129,7 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('settings:getAll', () => db.getAllSettings())
 
   // ----- Migration -----
-  handle('db:migrateFromLocalStorage', (_e, data) => db.migrateFromLocalStorage(data))
+  handle('db:migrateFromLocalStorage', (_e, data) => db.migrateFromLocalStorage(data,ipcSecurity.current()))
   handle('db:isEmpty', () => db.isEmpty())
 
   // ----- Refund -----

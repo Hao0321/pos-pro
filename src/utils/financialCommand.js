@@ -60,7 +60,7 @@ function clearOriginal(pending){
 }
 // A lost reply retains the original ID. Retrying identical input is safe only
 // because every participating persistence adapter deduplicates that ID.
-export async function executeFinancial(kind, input, persist,onState=()=>{},identity=null) {
+export async function executeFinancial(kind, input, persist,onState=()=>{},identity=null,verifyLegacy=null) {
   if(running)throw Error('正在保存異動，請勿重複提交')
   if(!Object.hasOwn(fields,kind))throw Error('異動類型不正確')
   finiteTree(input);running=true;let pending
@@ -71,8 +71,12 @@ export async function executeFinancial(kind, input, persist,onState=()=>{},ident
   if (pending && JSON.stringify(canonical(JSON.parse(pending.signature)))!==JSON.stringify(canonical({kind,input}))) throw new Error('上一筆異動結果尚未確認。請以原內容重試並核對紀錄，勿建立另一筆。')
   if (!pending) {
     if(identity)operationHeader(identity)
-    pending={signature,kind,request:{...input,id:identity?.id||kind+'-'+crypto.randomUUID(),time:identity?.time||new Date().toISOString()}}
+    pending={signature,kind,recoveryProtocol:'pos-recovery-v1',request:{...input,id:identity?.id||kind+'-'+crypto.randomUUID(),time:identity?.time||new Date().toISOString()}}
     browserStorage.setItem(FINANCIAL_PENDING,JSON.stringify(pending))
+  }else if(pending.recoveryProtocol!=='pos-recovery-v1'){
+    // An old release may have already replaced the book. Never silently create
+    // a missing historical operation just because its old pending ID is absent.
+    if(!verifyLegacy||await verifyLegacy(pending)!==true)throw Error('舊版原紀錄仍需要核對，請店主使用復原引導確認，勿重新收款')
   }
   notify('saving','保存中，請勿重複異動')
   let result
@@ -82,6 +86,7 @@ export async function executeFinancial(kind, input, persist,onState=()=>{},ident
     pending=null;notify('idle')
     throw new Error(result.error||'資料保存失敗')
   }
+  if(result?.success===false&&result.committed===null&&result.errorCode==='RECOVERY_REQUIRED')throw new Error(result.error)
   assertReceipt(kind,pending.request,result)
   clearOriginal(pending)
   notify('idle')

@@ -1,5 +1,5 @@
 import './sharedBridge'
-import { browserStorage, writeRecords, readRecords, withSalesLock,writeBusinessSettings } from './browserStorage'
+import {browserStorage, writeRecords, readRecords, withSalesLock,writeBusinessSettings,assertOriginalOperationAvailable} from './browserStorage'
 import { commitBrowserSale, browserReceipt, commitBrowserRefund } from './browserSales'
 import { summarizeShift } from '../../electron/shiftReconciliation.mjs'
 import {moneyValue,quantityValue,operationHeader,sameCommand} from '../../electron/operationRules.mjs'
@@ -335,12 +335,13 @@ export async function addCashLog(data) {
   return withSalesLock(()=>{
     try{
       operationHeader(data);const current=readRecords(),records=current.data,old=records.pos2_cash_log.find(l=>l.id===data.id)
+      assertOriginalOperationAvailable('addCashLog',data.id,current,data)
       if(old){if(!sameCommand(old,data,['shiftId','time','type','amount','reason','cashier']))throw Error('現金流水編號內容不一致');return {success:true,cashLog:old}}
       moneyValue(data.amount,'現金流水',.01)
       if(!['in','out'].includes(data.type)||records.pos2_shifts.find(s=>s.id===data.shiftId)?.status!=='open')throw Error('現金異動或班別不正確')
       writeRecords({pos2_cash_log:[data,...records.pos2_cash_log]},current.revision)
       return {success:true,cashLog:data}
-    }catch(error){return {success:false,committed:false,error:error.message}}
+    }catch(error){return {success:false,committed:error.historyUncertain?null:false,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
   })
 }
 
@@ -354,6 +355,7 @@ export async function addWaste(data) {
   return withSalesLock(()=>{
     try{
     const current=readRecords(),records=current.data,p=records.pos2_products.find(p=>p.id===data.productId)
+    assertOriginalOperationAvailable('addWaste',data.id,current,data)
     operationHeader(data);const old=records.pos2_waste.find(w=>w.id===data.id)
     if(old){if(!sameCommand(old,data,['productId','qty','reason','time','cashier']))throw Error('損耗編號內容不一致');return {success:true,waste:old,product:p||null}}
     quantityValue(data.qty,'損耗數量',.001)
@@ -361,7 +363,7 @@ export async function addWaste(data) {
     const product={...p,stock:p.stock-data.qty},waste={...data,productName:p.name,cost:p.cost||0}
     writeRecords({pos2_waste:[waste,...records.pos2_waste],pos2_products:records.pos2_products.map(x=>x.id===p.id?product:x)},current.revision)
     return {success:true,product,waste}
-    }catch(error){return {success:false,committed:false,error:error.message}}
+    }catch(error){return {success:false,committed:error.historyUncertain?null:false,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
   })
 }
 export async function deleteWaste(id) {
@@ -379,6 +381,7 @@ export async function addTopup(data) {
   return withSalesLock(()=>{
     try {
       const current=readRecords(),records=current.data,old=records.pos2_topups.find(t=>t.id===data.id)
+      assertOriginalOperationAvailable('addTopup',data.id,current,data)
       const member=records.pos2_members.find(m=>m.id===data.memberId)
       if (old) {
         if(!sameCommand(old,data,['memberId','amount','bonus','payMethod','time','cashier','note','shiftId']))throw new Error('儲值單號內容不一致')
@@ -392,6 +395,6 @@ export async function addTopup(data) {
       const next={...member,balance:Math.round(((member.balance||0)+data.amount+data.bonus)*100)/100}
       writeRecords({pos2_topups:[data,...records.pos2_topups],pos2_members:records.pos2_members.map(m=>m.id===next.id?next:m)},current.revision)
       return {success:true,member:next,topup:data}
-    }catch(error){return {success:false,committed:false,error:error.message}}
+    }catch(error){return {success:false,committed:error.historyUncertain?null:false,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
   })
 }

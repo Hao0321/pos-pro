@@ -24,6 +24,7 @@ app.whenReady().then(async()=>{try{
   await input('input[placeholder="建立管理員名稱"]','測試管理員');await input('input[type="password"]','fixture-password');await js('document.querySelector("form").requestSubmit()')
   await waitFor('!!document.querySelector("button[aria-label=開啟功能選單]")','phone navigation')
   await js(`(()=>{const r=JSON.parse(localStorage.getItem('pos_atomic_records_v1'));r.data.pos2_products=[{id:'p',name:'測試丼飯',price:95,cost:40,stock:5}];r.data.pos2_shifts=[{id:'s',status:'open',openCash:200}];r.revision++;localStorage.setItem('pos_atomic_records_v1',JSON.stringify(r))})()`)
+  const duration=await js('(()=>{const s=JSON.parse(sessionStorage.getItem("pos_session"));return s.expiresAt-s.loginAt})()');assert.equal(duration,8*60*60*1000);console.log(JSON.stringify({diagnostic:'browser-session-before-reload',durationMs:duration}));
   await waitFor('!!navigator.serviceWorker.controller','offline controller');w.webContents.reload()
   await waitFor('!!document.querySelector("button[aria-label=開啟功能選單]")','reload')
   await nav('收銀台');await waitFor('document.querySelectorAll(".pos-card").length===1','catalogue')

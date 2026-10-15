@@ -71,6 +71,7 @@ module.exports = function initDatabase(dbPath) {
     const order=readOrder(id)
     if (!order) return {protocol:PROTOCOL,success:true,found:false}
     return {protocol:PROTOCOL,success:true,orderId:id,order,
+      ...(order.status==='refunded'&&!order.refundOf?{refunds:db.prepare('SELECT id FROM orders WHERE refundOf=?').all(id).map(row=>readOrder(row.id))}:{}),
       products:order.items.map(i=>stmts.getProductById.get(i.id)).filter(Boolean),
       member:order.memberId ? stmts.getMemberById.get(order.memberId) || null : null}
   }
@@ -149,7 +150,7 @@ module.exports = function initDatabase(dbPath) {
   const {migrateTx,replaceAllTx}=require('./databaseMigration.cjs')(db,stmts,orderInsertParams,supplierParams)
 
   // ===== Public API =====
-  return {
+  const api={
     async getAgentContext(actor){
       if(!actor||!['owner','staff'].includes(actor.role))throw Error('請先登入')
       let storeId=this.getSetting('sharedStoreId');if(!storeId){storeId=require('node:crypto').randomUUID();this.setSetting('sharedStoreId',storeId)}
@@ -521,19 +522,6 @@ module.exports = function initDatabase(dbPath) {
       }
       return { success: true, id }
     },
-    restoreBackup(id) {
-      const backup = stmts.getBackupById.get(id)
-      if (!backup) return { success: false, error: 'backup not found' }
-      const data = JSON.parse(backup.data)
-      // 清空所有表再匯入 — 包在「單一 transaction」內：若匯入中途 throw，DELETE 會一起 rollback，
-      // 不會發生「舊資料已清掉、新資料卻沒匯入」的整庫遺失。
-      if(!data||typeof data!=='object')throw new Error('備份格式錯誤')
-      const current=this.exportData(),merged={...current,...data,salesDocuments:data.salesDocuments??[],salesOperations:data.salesOperations??[]}
-      for(const key of Object.keys(current).filter(k=>k!=='_revision'))if(!Array.isArray(merged[key]))throw new Error('備份資料集合格式錯誤：'+key)
-      if(current.users.length && !merged.users.some(u=>u.role==='owner'))throw new Error('備份必須保留管理員帳號')
-      replaceAllTx(merged)
-      return { success: true }
-    },
     exportData() {
       const data = {
         products: stmts.getAllProducts.all().map(p => ({ ...p, noBarcode: !!p.noBarcode })),
@@ -563,17 +551,6 @@ module.exports = function initDatabase(dbPath) {
       for(const rows of Object.values(data))rows.sort((a,b)=>String(a.id??a.key).localeCompare(String(b.id??b.key)))
       return {...data,_revision:createHash('sha256').update(canonicalSignature(data)).digest('hex')}
     },
-    importData(data, expectedRevision) {
-      // 同 restoreBackup：清空＋重匯包成單一 transaction，避免匯入失敗造成整庫遺失
-      if (expectedRevision && this.exportData()._revision!==expectedRevision) throw new Error('本機資料已改變，已取消覆蓋')
-      if(!data||typeof data!=='object')throw new Error('備份格式錯誤')
-      const current=this.exportData(),merged={...current,...data,salesDocuments:data.salesDocuments??[],salesOperations:data.salesOperations??[]}
-      for(const key of Object.keys(current).filter(k=>k!=='_revision'))if(!Array.isArray(merged[key]))throw new Error('備份資料集合格式錯誤：'+key)
-      if(current.users.length && !merged.users.some(u=>u.role==='owner'))throw new Error('備份必須保留管理員帳號')
-      replaceAllTx(merged)
-      return { success: true }
-    },
-
     // Settings
     getSetting(key) {
       const row = stmts.getSetting.get(key)
@@ -593,11 +570,14 @@ module.exports = function initDatabase(dbPath) {
     },
 
     // Migration
-    migrateFromLocalStorage(data) {
+    migrateFromLocalStorage(data,actor) {
+      // Renderer migrations are a first-run path, never an alternate restore
+      // endpoint. Account-only bootstrap is validated by ipcSecurity.list.
+      if(actor&&(!api.isEmpty()||data?.users?.length))throw Error('已有營運資料或帳號，請透過備份還原預覽匯入')
       return migrateTx(data)
     },
     isEmpty() {
-      return ['products','members','orders','suppliers','purchases','promotions','manual_journal','held_orders','shifts','cash_log','waste_log','member_topups','sales_documents','sales_operations'].every(t=>db.prepare('SELECT 1 FROM '+t+' LIMIT 1').get()==null)
+      return ['products','members','orders','suppliers','purchases','promotions','manual_journal','held_orders','shifts','cash_log','waste_log','member_topups','sales_documents','sales_operations','restaurant_orders','restaurant_operations'].every(t=>db.prepare('SELECT 1 FROM '+t+' LIMIT 1').get()==null)
     },
 
     // ===== Held Orders 掛單 =====
@@ -721,4 +701,5 @@ module.exports = function initDatabase(dbPath) {
       db.close()
     },
   }
+  return require('./recoveryOperations.cjs')(db,api,replaceAllTx)
 }

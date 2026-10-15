@@ -52,6 +52,7 @@ test('legacy records migrate without deleting the source or resetting account ve
 test('all business collections restore atomically, including restaurant orders, receipts, shifts and audit',async()=>{
   const data=Object.fromEntries(DATA_KEYS.map(key=>[key,[{id:key}]])),time='2026-10-14T01:00:00Z'
   data.pos2_products=[{id:'pos2_products',name:'fixture',stock:1,price:95,cost:40}]
+  data.pos_users=[{id:'restore-owner',username:'測試',role:'owner',password:'fixture-hash'}]
   data.pos_business_settings=[{id:'pos_business_settings',key:'storeName',value:'"fixture"'}]
   data.pos_restaurant_orders=[{id:'pos_restaurant_orders',version:1,status:'reserved',channel:'walkin',day:'2026-10-14',slot:'12:00',customer:'',contact:'',note:'',createdAt:time,startedAt:'',saleId:'',refundId:'',quantity:1,total:95,items:[{id:'pos2_products',name:'fixture',price:95,cost:40,qty:1}],allocations:[{id:'pos2_products',name:'fixture',qty:1,unitCost:40}]}]
   data.pos_restaurant_operations=[{id:'pos_restaurant_operations',kind:'restaurant',action:'create',entityId:'pos_restaurant_orders',productIds:['pos2_products'],signature:canonicalSignature({id:'pos_restaurant_operations',kind:'restaurant',action:'create',time})}]
@@ -61,7 +62,7 @@ test('all business collections restore atomically, including restaurant orders, 
   data.pos_sales_documents=[plan.document];data.pos_sales_operations=[plan.receipt]
   writeRecords(data)
   const backup=await createBackup({username:'測試'},'完整備份');expect(await getBackupList()).toHaveLength(1)
-  writeRecords(Object.fromEntries(DATA_KEYS.map(key=>[key,[]])));await restoreBackup(backup.id,{username:'測試'})
+  writeRecords({...Object.fromEntries(DATA_KEYS.map(key=>[key,[]])),pos_users:data.pos_users});await restoreBackup(backup.id,{userId:'restore-owner',username:'測試',role:'owner'})
   for(const key of DATA_KEYS)expect(readRecords().data[key]).toEqual(expect.arrayContaining(data[key]))
 })
 test('failed backup does not return a fabricated ID or add an empty snapshot',async()=>{

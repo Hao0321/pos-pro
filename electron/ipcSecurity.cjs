@@ -57,8 +57,9 @@ function createIpcSecurity({db,getWindow,rendererPath,now=Date.now}) {
   }
   function grant(user) {
     credential=user.password
+    const grantedAt=now()
     session={token:randomBytes(32).toString('hex'),userId:user.id,username:user.username,role:user.role,
-      loginAt:now(),expiresAt:now()+8*60*60*1000}
+      loginAt:grantedAt,expiresAt:grantedAt+8*60*60*1000}
     failures=0;lockedUntil=0
     return {...session}
   }

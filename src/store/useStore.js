@@ -3,6 +3,7 @@ import { executeFinancial, FINANCIAL_PENDING,readPendingFinancial } from '../uti
 import { browserStorage, writeRecords, acquireBrowserEditor } from '../utils/browserStorage'
 import { prepareCheckout } from '../utils/checkoutSafety.mjs'
 import { createCheckoutCoordinator } from '../utils/checkoutCoordinator.mjs'
+import {getRecoveryState} from '../utils/recoveryClient'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { orderToJournalEntries, topupToJournalEntries,wasteToJournalEntries } from '../utils/accounting'
 import {PROCUREMENT_KINDS,procurementToJournalEntries} from '../../electron/procurementRules.mjs'
@@ -382,7 +383,7 @@ export function useStore(session){
     ports.exchange=r=>applyExchangeOperation(r,session)
     ports.sales=r=>applySalesOperation(r,session)
     for(const kind of PROCUREMENT_KINDS)ports[kind]=r=>applyInventoryOperation(r,session)
-    const result=await executeFinancial(pending.kind,JSON.parse(pending.signature).input,ports[pending.kind],setFinancialState)
+    const result=await executeFinancial(pending.kind,JSON.parse(pending.signature).input,ports[pending.kind],setFinancialState,null,async original=>(await getRecoveryState(original,session)).active==='matched')
     if(pending.kind==='topup'){setMembers(p=>p.map(m=>m.id===result.member.id?result.member:m));setTopups(p=>[result.topup,...p.filter(t=>t.id!==result.topup.id)])}
     if(pending.kind==='refund'){setOrders(p=>[result.order,...p.filter(o=>o.id!==result.order.id).map(o=>o.id===result.original.id?result.original:o)]);setProducts(p=>p.map(i=>result.products.find(n=>n.id===i.id)||i));if(result.member)setMembers(p=>p.map(m=>m.id===result.member.id?result.member:m))}
     if(pending.kind==='waste'){setWasteLog(p=>[result.waste,...p.filter(w=>w.id!==result.waste.id)]);setProducts(p=>p.map(i=>i.id===result.product.id?result.product:i))}
@@ -487,6 +488,10 @@ export function useStore(session){
     else setSales({documents:[]})
     setWasteLog(await loadWasteLog());setRestaurantConfig((await loadRestaurantState()).config)
   }, [session?.userId,session?.role])
+  async function reloadAfterRecovery(){
+    try{await reloadFromDB();setDataError('');window.dispatchEvent(new Event('pos-data-refreshed'))}
+    catch(error){setDataError('復原已保存，但重新讀取未完成。請保持原單號並重新載入：'+error.message);throw error}
+  }
   useEffect(()=>{
     if(!ready||!session||!isElectron||!window.electronAPI.onStoreChanged)return
     let cancelled=false,timer,running=false,again=false
@@ -513,7 +518,7 @@ export function useStore(session){
     categories,todayOrders,todayRevenue,lowStockCount,todayProfit,todaySales,todayBusinessCount:todayOrders.length+todaySales.deliveries,
     allJournal,autoJournal,manualEntries,
     addManualEntry,deleteManualEntry,
-    reloadFromDB,
+    reloadFromDB,reloadAfterRecovery,
     // v2.1
     heldOrders, holdCart, recallHeld, removeHeld,
     wasteLog, recordWaste, removeWaste,

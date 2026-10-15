@@ -50,7 +50,7 @@ async function pair(username){const result=await request('pair',{token:new URLSe
   assert.equal(db.restoreBackup(backup.id).success,true);assert.notEqual(state().epoch,epoch);assert.deepEqual(db.exportData(),full);assert.equal(run(original).document.revision,doc(id).revision)
   pass('complete native backup round trip preserves source and all receipts while atomically rotating the local restore fence')
   const earlier=db.exportData(),later=command(id,'pay',{deliveryId:delivery.id,amount:1,method:'cash',shiftId:'shift',reference:''});run(later);db.importData(earlier);before=db.exportData()
-  assert.deepEqual(db.applySalesOperation(later,owner),{success:false,committed:null,error:'資料已還原或更換，請先核對原銷售操作，不要重新收款'});assert.deepEqual(db.exportData(),before)
+  assert.deepEqual(db.applySalesOperation(later,owner),{success:false,committed:null,errorCode:'RECOVERY_REQUIRED',error:'原編號曾經保存，目前帳本無法確認這筆內容。請使用復原引導核對。'});assert.deepEqual(db.exportData(),before)
   pass('restoring before a lost payment makes that missing historical operation uncertain instead of collecting again')
   const corrupt=structuredClone(before);corrupt.salesOperations.pop();epoch=state().epoch
   assert.throws(()=>db.importData(corrupt),/不完整/);assert.deepEqual(db.exportData(),before);assert.equal(state().epoch,epoch)

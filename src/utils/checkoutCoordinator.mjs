@@ -1,5 +1,6 @@
 // R5 commit-first coordinator. All I/O is supplied by the data-access layer.
 // This records a sale; it never calls a payment processor or charges a card.
+import {assertFullRefund} from './checkoutHistory.mjs'
 export const CHECKOUT_PROTOCOL = 'pos-checkout-v5'
 export class CheckoutError extends Error {
   constructor(code, message) { super(message); this.name = 'CheckoutError'; this.code = code }
@@ -49,16 +50,16 @@ export function validatePending(value) {
 export function createCheckoutCoordinator(ports) {
   for (const key of ['prepare','persist','lookup','readPending','writePending','clearPending','apply'])
     if (typeof ports[key] !== 'function') throw new TypeError(`Missing checkout port: ${key}`)
-  let pending = null, running = false, restored = false
+  let pending = null, running = false, restored = false,legacyPending=false
   let state = {phase:'idle', orderId:null, total:null, message:''}
   function notify(phase, message = '') {
     state = {phase, orderId:pending?.order.id || null, total:pending?.order.total ?? null, message}
     try { ports.onState?.({...state}) } catch (error) { console.error('[checkout status]',error) }
   }
   function uncertain(error) {
-    const message = `交易結果尚未確認${pending ? `（${pending.order.id}）` : ''}。請勿再次收款，先查詢此單號。`
+    const message = pending ? '交易結果尚未確認（{0}）。請勿再次收款，先查詢此單號。'.replace('{0}',pending.order.id) : '交易結果尚未確認。請勿再次收款，先查詢原單號。'
     notify('uncertain', message)
-    return failure('OUTCOME_UNKNOWN', `${message}${error?.message ? ` ${error.message}` : ''}`)
+    const result=failure('OUTCOME_UNKNOWN',message);result.cause=error;return result
   }
   async function finish(result) {
     if (!result || result.protocol !== CHECKOUT_PROTOCOL || result.success !== true ||
@@ -67,11 +68,16 @@ export function createCheckoutCoordinator(ports) {
       throw uncertain(failure('ACK_INVALID','存檔回覆不完整或單號不符。'))
     try {
       assertFiniteTree(result)
-      validatePending({version:1,protocol:CHECKOUT_PROTOCOL,plan:{...pending,order:result.order}})
+      const refunded=result.order.status==='refunded'
+      if(refunded)assertFullRefund(result.order,result.refunds)
+      // Validate the original positive payment while preserving the authority's
+      // current refunded status in the returned order and UI.
+      validatePending({version:1,protocol:CHECKOUT_PROTOCOL,plan:{...pending,order:refunded?{...result.order,status:'completed'}:result.order}})
       const canonical = value => Array.isArray(value) ? value.map(canonical) : value && typeof value==='object'
         ? Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])) : value
-      const echoed = Object.fromEntries(Object.keys(pending.order).map(k=>[k,result.order[k]]))
-      if (JSON.stringify(canonical(echoed))!==JSON.stringify(canonical(pending.order)))
+      const original=Object.fromEntries(Object.entries(pending.order).filter(([key])=>!refunded||key!=='status'))
+      const echoed = Object.fromEntries(Object.keys(original).map(k=>[k,result.order[k]]))
+      if (JSON.stringify(canonical(echoed))!==JSON.stringify(canonical(original)))
         throw failure('ACK_INVALID','回覆的訂單內容與待確認訂單不同。')
       const expected = new Set(pending.stockUpdates.map(u=>u.id)),seen = new Set()
       for (const product of result.products) {
@@ -121,10 +127,23 @@ export function createCheckoutCoordinator(ports) {
         const saved = ports.readPending()
         if (saved && typeof saved.then === 'function') throw failure('JOURNAL_INVALID','readPending 必須同步完成。')
         pending = saved == null ? null : validatePending(saved).plan
+        legacyPending=!!saved&&saved.recoveryProtocol!=='pos-recovery-v1'
         restored = true
         notify(pending ? 'uncertain' : 'idle', pending ? '找到上一筆未確認交易。請先查詢，不要重新收款。' : '')
       } catch (error) { notify('blocked',error.message); throw error }
       return {...state}
+  }
+  async function reconcile(){
+    assertFree()
+    if(!pending)return null
+    running=true;notify('saving','正在查詢原單號，不會新增收款。')
+    try{
+      let result
+      try{result=await ports.lookup(pending.order.id)}catch(error){throw uncertain(error)}
+      if(result?.protocol===CHECKOUT_PROTOCOL&&result.success===true&&result.found===false)
+        throw uncertain(failure('NOT_FOUND','目前查無此單號。請保留原紀錄，使用復原引導核對。'))
+      return await finish(result)
+    }finally{running=false}
   }
   return {
     getState: () => ({...state}),
@@ -136,38 +155,31 @@ export function createCheckoutCoordinator(ports) {
       // Re-read before preparing so another existing journal is never silently overwritten.
       const saved = ports.readPending()
       if (saved != null) {
-        try { pending = validatePending(saved).plan } catch (error) { notify('blocked',error.message); throw error }
+        try { pending = validatePending(saved).plan;legacyPending=saved.recoveryProtocol!=='pos-recovery-v1' } catch (error) { notify('blocked',error.message); throw error }
       }
       if (pending) throw failure('OUTCOME_UNKNOWN','上一筆交易尚未確認；請查詢或使用同一單號重試存檔，勿再次收款。')
       running = true
       try {
         const prepared = ports.prepare(input)
         const plan = {order:prepared.order,stockUpdates:prepared.stockUpdates,memberUpdate:prepared.memberUpdate}
-        const envelope = validatePending({version:1,protocol:CHECKOUT_PROTOCOL,plan})
+        const envelope = validatePending({version:1,protocol:CHECKOUT_PROTOCOL,recoveryProtocol:'pos-recovery-v1',plan})
         // If the journal cannot be written, no request is sent to the database.
         const written = ports.writePending(envelope)
         if (written && typeof written.then === 'function') throw failure('JOURNAL_INVALID','writePending 必須同步完成。')
         pending = envelope.plan
+        legacyPending=false
         notify('saving','正在存檔，請勿關閉程式或再次收款。')
         return await send()
       } finally { running = false }
     },
-    async reconcile() {
-      assertFree()
-      if (!pending) return null
-      running = true; notify('saving','正在查詢原單號，不會新增收款。')
-      try {
-        let result
-        try { result = await ports.lookup(pending.order.id) } catch (error) { throw uncertain(error) }
-        if (result?.protocol === CHECKOUT_PROTOCOL && result.success === true && result.found === false)
-          throw uncertain(failure('NOT_FOUND','目前查無此單號。可使用同一單號重試存檔；請勿再次收款。'))
-        return await finish(result)
-      } finally { running = false }
-    },
+    reconcile,
     async retry() {
       assertFree()
       if (!pending) return null
+      // Pre-protection journals cannot prove that a previous release did not
+      // restore away this original. Only read a matching committed receipt.
       if (ports.replayVerified !== true) throw failure('RETRY_UNVERIFIED','原生資料庫冪等重播尚未驗證，已停用重試；請先查詢原單號。')
+      if(legacyPending)return reconcile()
       running = true; notify('saving','使用原單號重試存檔；不會再次收取款項。')
       try { return await send() } finally { running = false }
     },

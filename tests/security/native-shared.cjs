@@ -16,6 +16,17 @@ async function start(){server=sharedFactory({db,distRoot:path.resolve(__dirname,
   assert.equal((await request('bootstrap')).status,401);assert.equal((await request('rpc',{method:'db:getProducts',args:[]})).status,401);pass('unpaired HTTPS clients cannot read the business database')
   const token=new URLSearchParams(new URL(server.pair().url).hash.slice(1)).get('pair');const paired=await request('pair',{token});assert.equal(paired.status,200);assert.match(paired.cookie,/pos_device=/);assert.equal((await request('pair',{token})).status,401);pass('one-time pairing sets a device cookie and cannot be replayed')
   const owner=await pair('owner fixture','owner'),staff=await pair('staff fixture','staff');pass('paired clients authenticate against the actual SQLite owner and staff records')
+  const recoveryPending={kind:'cashlog',request:{id:'review-original',shiftId:'shift',time:new Date().toISOString(),type:'in',amount:1,reason:'Review',cashier:'owner fixture'}}
+  let recoveryBefore=db.exportData()
+  assert.equal((await rpc(owner,'db:getRecoveryState',recoveryPending)).value.result.active,'missing')
+  assert.equal((await rpc(owner,'db:exportRecoveryDiagnostics')).value.result.importable,false)
+  for(const method of ['getRecoveryState','applyRecoveryOperation','lookupRecoveryOperation','exportRecoverySource','exportRecoveryDiagnostics']){
+    assert.equal((await rpc(staff,'db:'+method,recoveryPending,{role:'owner',userId:'owner'})).status,400)
+    assert.equal((await request('rpc',{method:'db:'+method,args:[recoveryPending]},{...owner,csrf:'forged'})).status,403)
+    assert.equal((await request('rpc',{method:'db:'+method,args:[recoveryPending]},owner,{Origin:'https://untrusted.example'})).status,403)
+  }
+  for(const method of ['previewRestore','applyRestorePreview','importData','restoreBackup','migrateFromLocalStorage'])assert.equal((await rpc(owner,'db:'+method,{users:[]})).status,400)
+  assert.deepEqual(db.exportData(),recoveryBefore);pass('each recovery RPC enforces authenticated owner, server-bound actor, CSRF and origin while generic whole-book replacement stays desktop-only')
   assert.equal((await rpc(owner,'db:getProducts')).value.result.length,2);assert.equal((await request('rpc',{method:'db:getProducts',args:[]},{...owner,csrf:'forged'})).status,403);assert.equal((await request('rpc',{method:'db:getProducts',args:[]},owner,{Origin:'https://untrusted.example'})).status,403);assert.equal((await request('rpc',{method:'db:getProducts',args:[]},owner,{Host:'untrusted.example'})).status,403);pass('CSRF, foreign origin and foreign Host each fail at the HTTPS boundary')
   const baseline=db.exportData();assert.equal((await rpc(staff,'db:deleteProduct','one')).status,400);assert.equal((await rpc(owner,'db:close')).status,400);assert.equal((await rpc(staff,'settings:get','orderTrackingSecret')).status,400);assert.deepEqual(db.exportData(),baseline);pass('remote dispatch uses a fixed allowlist and the same verified role policy as IPC')
   const a=order('phone-a'),b=order('phone-b');const sales=await Promise.all([rpc(owner,'db:checkout',a),rpc(staff,'db:checkout',b)]);assert.equal(sales.filter(r=>r.value.result?.success).length,1);assert.equal(db.getProducts().find(p=>p.id==='one').stock,0);assert.equal(db.getOrders().length,1);assert.equal((await rpc(staff,'db:getStoreSnapshot')).value.result.products.find(p=>p.id==='one').stock,0);pass('two simultaneous HTTPS clients sell the last bowl once without overselling')

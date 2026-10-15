@@ -1,5 +1,5 @@
 import {prepareScenarioTemplate,makeTemplateReceipt,scenarioTemplates} from '../../electron/scenarioTemplateRules.mjs'
-import {readRecords,writeRecords,withSalesLock} from './browserStorage'
+import {readRecords,writeRecords,withSalesLock,assertOriginalOperationAvailable} from './browserStorage'
 import {isElectron} from './dataAccess'
 export {scenarioTemplates}
 export async function loadScenarioTemplateReceipt(templateId,actor){
@@ -13,6 +13,7 @@ export async function loadScenarioTemplateReceipt(templateId,actor){
 export function applyBrowserTemplate(input,actor){
   if(actor?.role!=='owner')throw Error('只有管理員可以套用情境模板')
   const prepared=prepareScenarioTemplate(input),current=readRecords(),existing=current.data.pos2_products
+  assertOriginalOperationAvailable('applyScenarioTemplate',input.operationId,current)
   const prior=existing.map(p=>p.scenarioTemplateReceipt).find(r=>r?.templateId===prepared.template.id)
   if(prior){
     if(!Array.isArray(prior.productIds)||prior.productIds.some(id=>!existing.some(p=>p.id===id)))throw Error('模板紀錄與目前品項不一致，請先核對備份與庫存')

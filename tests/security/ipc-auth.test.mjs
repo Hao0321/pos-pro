@@ -1,4 +1,4 @@
-import { test, expect } from 'vitest'
+import { test, expect,vi } from 'vitest'
 import { createRequire } from 'node:module'
 import { pbkdf2Sync } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
@@ -47,4 +47,20 @@ test('repeated credential failures enforce the native cooldown',()=>{
   const f=fixture([{id:'o',username:'o',role:'owner',password:password('owner-pass')}])
   for(let n=0;n<5;n++)expect(()=>f.security.login(f.event,{username:'o',password:'wrong'})).toThrow('錯誤')
   expect(()=>f.security.login(f.event,{username:'o',password:'owner-pass'})).toThrow('一分鐘')
+})
+test('every recovery channel binds the current owner and rejects missing login, forged actor, frame, sender or page',()=>{
+ const owner={id:'o',username:'owner',role:'owner',password:password('owner-pass')},staff={id:'s',username:'staff',role:'staff',password:password('staff-pass')}
+ for(const channel of ['previewRestore','applyRestorePreview','lookupRestorePreview','getRecoveryState','applyRecoveryOperation','lookupRecoveryOperation','exportRecoverySource','exportRecoveryDiagnostics']){
+  const f=fixture([owner,staff]),name='db:'+channel
+  expect(()=>f.security.authorize(f.event,name,[{},owner])).toThrow('登入')
+  f.security.login(f.event,{username:'owner',password:'owner-pass'});expect(f.security.authorize(f.event,name).userId).toBe('o')
+  expect(()=>f.security.authorize({...f.event,senderFrame:{url:f.event.senderFrame.url}},name)).toThrow('來源')
+  expect(()=>f.security.authorize({...f.event,sender:{}},name)).toThrow('來源')
+  const url=f.event.senderFrame.url;f.event.senderFrame.url='https://untrusted.example';expect(()=>f.security.authorize(f.event,name)).toThrow('頁面');f.event.senderFrame.url=url
+  f.security.login(f.event,{username:'staff',password:'staff-pass'});expect(()=>f.security.authorize(f.event,name,[{},owner])).toThrow('權限')
+ }
+})
+test('native grants use one clock instant so a millisecond tick cannot invalidate the displayed session',()=>{
+ const base=Date.now();let tick=0;const clock=vi.spyOn(Date,'now').mockImplementation(()=>base+tick++)
+ try{const f=fixture([{id:'o',username:'owner',role:'owner',password:password('owner-pass')}]);const session=f.security.login(f.event,{username:'owner',password:'owner-pass'});expect(session.expiresAt-session.loginAt).toBe(8*60*60*1000)}finally{clock.mockRestore()}
 })

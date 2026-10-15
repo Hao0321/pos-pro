@@ -4,6 +4,10 @@ import {validateRestaurantRecords,readRestaurantConfig} from '../../electron/res
 import {validateProcurementRecords} from '../../electron/procurementRules.mjs'
 import {validateExchangeSettings,readExchangeTextSetting,readExchangeStore,EXCHANGE_SETTING} from '../../electron/businessExchange.mjs'
 import {validateSalesRecords} from '../../electron/salesPlan.mjs'
+import {canonicalSignature} from '../../electron/operationRules.mjs'
+import {signature as checkoutSignature} from '../../electron/checkoutSignature.mjs'
+import {refundSignature} from './refundSafety.mjs'
+import {RECOVERY_PROTOCOL,browserToBook,bookToBrowser,materialSignature,protectedRestoreBook,operationRecords,recoveryStoreId,recoveryOperationId,originalMatches} from '../../electron/recoveryRules.mjs'
 export const RECORD_KEY = 'pos_atomic_records_v1'
 export const DATA_KEYS = ['pos2_products','pos2_members','pos2_orders','pos2_manual_j',
   'pos_users','pos_suppliers','pos_purchases','pos_promotions','pos2_held_orders',
@@ -28,6 +32,8 @@ export function readRecords() {
     if(!Object.hasOwn(record.data,'pos_business_settings'))record.data.pos_business_settings=readLegacySettings()
     for(const key of ['pos_restaurant_orders','pos_restaurant_operations','pos_sales_documents','pos_sales_operations'])if(!Object.hasOwn(record.data,key))record.data[key]=[]
     for (const key of DATA_KEYS) validArray(record.data[key])
+    if(Object.keys(record.data).some(key=>!keys.has(key)))throw Error('備份含有目前版本不支援的資料，請保留原檔並使用相容版本')
+    recoveryMetadata(record)
     return record
   }
   const data = {}
@@ -37,7 +43,23 @@ export function readRecords() {
   }
   return {version:1,revision:0,data}
 }
-export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false}={}) {
+export function recoveryMetadata(record=readRecords()){
+  const value=record.recovery??{version:1,snapshots:[],originalIds:[],events:[]}
+  if(value.version!==1||!Array.isArray(value.snapshots)||!Array.isArray(value.originalIds)||!Array.isArray(value.events)
+    ||value.snapshots.some(s=>typeof s.id!=='string'||!s.data||typeof s.contentSignature!=='string'||typeof s.afterMaterial!=='string')
+    ||value.originalIds.some(row=>!Array.isArray(row)||row.length!==3||row.some(v=>typeof v!=='string'))
+    ||value.events.some(row=>typeof row.id!=='string'||typeof row.signature!=='string'||!row.receipt))throw Error('復原保護索引損壞，請保留原資料核對')
+  return value
+}
+export function assertOriginalOperationAvailable(method,id,record=readRecords(),request=null){
+  id=recoveryOperationId(id)
+  if(!recoveryMetadata(record).originalIds.some(row=>row[0]===method&&row[1]===id))return
+  const active=operationRecords(browserToBook(record.data)).find(row=>row.method===method&&row.id===id)
+  if(active&&(!request||originalMatches(active,{method,id,request},{checkoutSignature,refundSignature})))return
+  const error=new Error('原編號曾經保存，目前帳本無法確認這筆內容。請使用復原引導核對。')
+  error.historyUncertain=true;throw error
+}
+export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false,recoveryCommand=null}={}) {
   const current = readRecords()
   if (expectedRevision != null && current.revision !== expectedRevision)
     throw new Error('本機資料已改變，請重新載入後再操作。')
@@ -45,7 +67,24 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
     if (!keys.has(key)) throw new Error('未知資料集合')
     validArray(value)
   }
-  const next = {version:1,revision:current.revision+1,data:{...current.data,...updates}}
+  const next = {...current,version:1,revision:current.revision+1,data:{...current.data,...updates}}
+  const protection=recoveryMetadata(current)
+  if(current.recovery)next.recovery=protection
+  if(restore){
+    const before=browserToBook(current.data),target=protectedRestoreBook(before,browserToBook(next.data))
+    next.data=bookToBrowser(target)
+    const snapshotId='rescue-'+crypto.randomUUID(),snapshot={id:snapshotId,createdAt:new Date().toISOString(),actorId:recoveryCommand?.actorId||'local-owner',
+      storeId:recoveryStoreId(before),data:current.data,contentSignature:canonicalSignature(current.data),afterMaterial:materialSignature(target)}
+    const originalIds=operationRecords(before).map(row=>[row.method,row.id,snapshotId])
+    const receipt=recoveryCommand?{protocol:RECOVERY_PROTOCOL,success:true,id:recoveryCommand.id,sourceId:snapshotId,revision:String(next.revision),storeId:recoveryStoreId(target),
+      ...(recoveryCommand.restoredSourceId?{restoredSourceId:recoveryCommand.restoredSourceId,originalOperationId:recoveryCommand.originalOperationId}:{})}:null
+    next.recovery={version:1,snapshots:[...protection.snapshots,snapshot],originalIds:[...protection.originalIds,...originalIds],
+      events:[...protection.events,...(receipt?[{id:recoveryCommand.id,actorId:recoveryCommand.actorId,signature:recoveryCommand.signature,receipt}]:[])]}
+  }else if(protection.originalIds.length){
+    const existing=new Set(operationRecords(browserToBook(current.data)).map(row=>JSON.stringify([row.method,row.id])))
+    const known=new Set(protection.originalIds.map(row=>JSON.stringify(row.slice(0,2))))
+    for(const row of operationRecords(browserToBook(next.data))){const key=JSON.stringify([row.method,row.id]);if(!existing.has(key)&&known.has(key))assertOriginalOperationAvailable(row.method,row.id,current)}
+  }
   // The restore fence is local runtime metadata, excluded from business backups.
   // Rotate it in the SAME atomic write as a restore, never as a later side effect.
   if(restore||ensureSalesEpoch||current.salesEpoch||next.data.pos_sales_documents.length)
@@ -60,11 +99,11 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
   nativeStorage().setItem(RECORD_KEY, JSON.stringify(next))
   return next
 }
-export function restoreRecords(data,expectedRevision){
+export function restoreRecords(data,expectedRevision,recoveryCommand=null){
   if(!data||typeof data!=='object'||Array.isArray(data))throw new Error('備份格式錯誤')
   const updates=Object.fromEntries(DATA_KEYS.filter(key=>Object.hasOwn(data,key)).map(key=>[key,data[key]]))
   for(const key of ['pos_sales_documents','pos_sales_operations'])if(!Object.hasOwn(updates,key))updates[key]=[]
-  return writeRecords(updates,expectedRevision,{restore:true})
+  return writeRecords(updates,expectedRevision,{restore:true,recoveryCommand})
 }
 export const browserStorage = {
   getItem(key) {if(key.startsWith(SETTINGS_PREFIX))return readRecords().data.pos_business_settings.find(s=>s.key===key.slice(SETTINGS_PREFIX.length))?.value??null;return keys.has(key) ? JSON.stringify(readRecords().data[key]) : nativeStorage().getItem(key) },

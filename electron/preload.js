@@ -72,7 +72,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     getBackups: () => ipcRenderer.invoke('db:getBackups'),
     createBackup: (label, createdBy) => ipcRenderer.invoke('db:createBackup', label, createdBy),
-    restoreBackup: (id) => ipcRenderer.invoke('db:restoreBackup', id),
+    restoreBackup: (id,options) => ipcRenderer.invoke('db:restoreBackup', id,options),
+    previewRestore: input=>ipcRenderer.invoke('db:previewRestore',input),
+    applyRestorePreview: id=>ipcRenderer.invoke('db:applyRestorePreview',id),
+    lookupRestorePreview: id=>ipcRenderer.invoke('db:lookupRestorePreview',id),
+    getRecoveryState: pending=>ipcRenderer.invoke('db:getRecoveryState',pending),
+    applyRecoveryOperation: input=>ipcRenderer.invoke('db:applyRecoveryOperation',input),
+    lookupRecoveryOperation: input=>ipcRenderer.invoke('db:lookupRecoveryOperation',input),
+    exportRecoverySource: id=>ipcRenderer.invoke('db:exportRecoverySource',id),
+    exportRecoveryDiagnostics: ()=>ipcRenderer.invoke('db:exportRecoveryDiagnostics'),
     exportData: () => ipcRenderer.invoke('db:exportData'),
     importData: (data, expectedRevision) => ipcRenderer.invoke('db:importData', data, expectedRevision),
 

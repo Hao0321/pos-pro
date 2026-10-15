@@ -1,4 +1,4 @@
-import {readRecords,writeRecords,withSalesLock} from './browserStorage'
+import {readRecords,writeRecords,withSalesLock,assertOriginalOperationAvailable} from './browserStorage'
 import {planInventory,inventoryReceipt,INVENTORY_PREFIX,INVENTORY_ACTION} from '../../electron/inventoryOperations.mjs'
 import {readExchangeTextSetting} from '../../electron/businessExchange.mjs'
 export function commitBrowserInventory(request,actor){
@@ -7,6 +7,7 @@ export function commitBrowserInventory(request,actor){
     let replay=false,historyChecked=false
     try{
       const saved=readRecords(),r=saved.data,key=INVENTORY_PREFIX+request.id
+      assertOriginalOperationAvailable('applyInventoryOperation',request.id,saved,request)
       const data={products:r.pos2_products,purchases:r.pos_purchases,suppliers:r.pos_suppliers,openShift:r.pos2_shifts.find(s=>s.status==='open'),cashLogs:r.pos2_cash_log,storeId:readExchangeTextSetting(r.pos_business_settings,'sharedStoreId')}
       const old=r.pos_audit_log.find(l=>l.id===key)
       replay=!!old;historyChecked=true
@@ -16,6 +17,6 @@ export function commitBrowserInventory(request,actor){
       const purchases=plan.createPurchase?[plan.purchase,...r.pos_purchases]:r.pos_purchases.map(p=>p.id===plan.purchase?.id?plan.purchase:p),suppliers=r.pos_suppliers.map(s=>s.id===plan.supplier?.id?plan.supplier:s),cashLogs=plan.cashLog?[plan.cashLog,...r.pos2_cash_log]:r.pos2_cash_log
       writeRecords({pos2_products:products,pos_purchases:purchases,pos_suppliers:suppliers,pos2_cash_log:cashLogs,pos_audit_log:[{id:key,action:INVENTORY_ACTION,detail:plan.receipt,timestamp:new Date().toISOString(),userId:actor.userId||'',username:actor.username||'',role:actor.role},...r.pos_audit_log]},saved.revision)
       return inventoryReceipt(request,plan.receipt,{products,purchases,suppliers,cashLogs})
-    }catch(error){return {success:false,committed:error.operationConflict===true||historyChecked&&!replay?false:null,error:error.message}}
+    }catch(error){return {success:false,committed:error.historyUncertain?null:error.operationConflict===true||historyChecked&&!replay?false:null,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
   })
 }

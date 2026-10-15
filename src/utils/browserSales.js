@@ -1,9 +1,11 @@
-import { readRecords, writeRecords, withSalesLock, browserStorage } from './browserStorage'
+import {readRecords, writeRecords, withSalesLock, browserStorage,assertOriginalOperationAvailable} from './browserStorage'
 import { prepareCheckout } from './checkoutSafety.mjs'
 import { prepareRefund, refundSignature } from './refundSafety.mjs'
+import {signature} from '../../electron/checkoutSignature.mjs'
 export const SALES_PROTOCOL='pos-checkout-v5'
 function receipt(order,data) {
   return {protocol:SALES_PROTOCOL,success:true,orderId:order.id,order,
+    ...(order.status==='refunded'&&!order.refundOf?{refunds:data.pos2_orders.filter(row=>row.refundOf===order.id)}:{}),
     products:data.pos2_products.filter(p=>order.items.some(i=>i.id===p.id)),
     member:order.memberId ? data.pos2_members.find(m=>m.id===order.memberId) : null}
 }
@@ -11,6 +13,7 @@ export async function commitBrowserRefund(request) {
   return withSalesLock(()=>{
     try {
       const current=readRecords(),data=current.data,existing=data.pos2_orders.find(o=>o.id===request.id)
+      assertOriginalOperationAvailable('refundOrder',request.id,current,request)
       if (existing) {
         if(existing.requestSignature!==refundSignature(request)) throw new Error('退貨單號內容不一致')
         return {...receipt(existing,data),original:data.pos2_orders.find(o=>o.id===existing.refundOf)}
@@ -24,7 +27,7 @@ export async function commitBrowserRefund(request) {
         pos2_products:data.pos2_products.map(p=>{const u=plan.stockUpdates.find(u=>u.id===p.id);return u?{...p,stock:p.stock+u.delta}:p}),
         pos2_members:data.pos2_members.map(m=>m.id===plan.member?.id?plan.member:m)},current.revision)
       return {...receipt(plan.order,next.data),original:orig}
-    }catch(error){return {success:false,committed:false,error:error.message}}
+    }catch(error){return {success:false,committed:error.historyUncertain?null:false,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
   })
 }
 export function browserReceipt(id) {
@@ -35,8 +38,9 @@ export async function commitBrowserSale(request) {
   return withSalesLock(()=>{
     try {
       const current=readRecords(),data=current.data,existing=data.pos2_orders.find(o=>o.id===request.id)
+      assertOriginalOperationAvailable('checkout',request.id,current,request)
       if (existing) {
-        if (Object.keys(request).some(k=>JSON.stringify(request[k])!==JSON.stringify(existing[k]))) throw new Error('單號內容不一致')
+        if(existing.refundOf||!['completed','refunded'].includes(existing.status)||signature(request)!==signature(existing)||Object.keys(request).some(k=>k!=='status'&&JSON.stringify(request[k])!==JSON.stringify(existing[k]))) throw new Error('單號內容不一致')
         return receipt(existing,data)
       }
       const setting=(key,fallback)=>{const raw=browserStorage.getItem('pos_settings_'+key);return raw==null ? fallback : Number(JSON.parse(raw))}
@@ -55,6 +59,6 @@ export async function commitBrowserSale(request) {
         ...(plan.memberUpdate.lastBirthdayBonus?{lastBirthdayBonus:plan.memberUpdate.lastBirthdayBonus}:{})} : m)
       const next=writeRecords({pos2_products:products,pos2_members:members,pos2_orders:[plan.order,...data.pos2_orders]},current.revision)
       return receipt(plan.order,next.data)
-    } catch(error) {return {protocol:SALES_PROTOCOL,success:false,committed:false,orderId:request.id,error:error.message}}
+    } catch(error) {return {protocol:SALES_PROTOCOL,success:false,committed:error.historyUncertain?null:false,orderId:request.id,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
   })
 }

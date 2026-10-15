@@ -10,3 +10,11 @@ it('every directly declared interface translation key has all three translations
     if(/\p{Script=Han}/u.test(key)&&!Object.hasOwn(messages,key))missing.push({file,key})
   }}expect(missing).toEqual([])
 })
+it('durable transaction controller messages have all three translations',()=>{
+  const missing=[]
+  for(const file of ['src/utils/financialCommand.js','src/utils/checkoutCoordinator.mjs']){
+    for(const match of fs.readFileSync(file,'utf8').matchAll(/(['"])([^'"\r\n]*[\p{Script=Han}][^'"\r\n]*)\1/gu))
+      if(!Object.hasOwn(messages,match[2]))missing.push({file,key:match[2]})
+  }
+  expect(missing).toEqual([])
+})

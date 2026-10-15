@@ -1,4 +1,4 @@
-import {readRecords,writeRecords,withSalesLock} from './browserStorage'
+import {readRecords,writeRecords,withSalesLock,assertOriginalOperationAvailable} from './browserStorage'
 import {planRestaurant,restaurantReceipt,readRestaurantConfig,validateRestaurantRecords} from '../../electron/restaurantRules.mjs'
 import {prepareCheckout} from './checkoutSafety.mjs'
 import {prepareRefund} from './refundSafety.mjs'
@@ -14,12 +14,13 @@ export function commitBrowserRestaurant(request,actor){
     let replay=false,historyChecked=false
     try{
       const {saved,data}=read(),old=data.operations.find(r=>r.id===request?.id);replay=!!old;historyChecked=true
+      assertOriginalOperationAvailable('applyRestaurantOperation',request.id,saved,request)
       if(old)return restaurantReceipt(request,old,data)
       const plan=planRestaurant(request,data,actor,{prepareCheckout,prepareRefund})
       const updates={pos2_products:plan.next.products,pos2_orders:plan.next.orders,pos2_waste:plan.next.waste,pos_restaurant_orders:plan.next.entries,pos_restaurant_operations:[...data.operations,plan.receipt]}
       if(request.action==='configure')updates.pos_business_settings=[...saved.data.pos_business_settings.filter(s=>s.key!=='restaurantConfig'),{key:'restaurantConfig',value:JSON.stringify(JSON.stringify(plan.config))}]
       writeRecords(updates,saved.revision)
       return restaurantReceipt(request,plan.receipt,plan.next)
-    }catch(error){return {success:false,committed:error.operationConflict===true||historyChecked&&!replay?false:null,error:error.message}}
+    }catch(error){return {success:false,committed:error.historyUncertain?null:error.operationConflict===true||historyChecked&&!replay?false:null,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
   })
 }

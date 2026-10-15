@@ -10,7 +10,7 @@ let map,queries,uploads,authenticated,onRead
 beforeEach(()=>{
   map=new Map();queries=[];uploads=[];authenticated=true;onRead=null
   vi.stubGlobal('localStorage',{getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,String(v)),removeItem:k=>map.delete(k)})
-  writeRecords({pos2_products:[{id:'p',name:'before',price:10,stock:1}],pos_users:[{id:'private-owner',password:'local-only'}]})
+  writeRecords({pos2_products:[{id:'p',name:'before',price:10,stock:1}],pos_users:[{id:'private-owner',username:'Owner',role:'owner',password:'local-only'}]})
   fixture.client={auth:{getUser:async()=>({data:{user:authenticated?{id:'cloud-owner'}:null}})},from:table=>{
     queries.push(table)
     return {upsert:async rows=>{uploads.push({table,rows});return {}},select:()=>({order:()=>({range:async()=>{

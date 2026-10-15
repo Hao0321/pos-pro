@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createCheckoutCoordinator, CHECKOUT_PROTOCOL as protocol } from '../../src/utils/checkoutCoordinator.mjs'
 const copy = x => JSON.parse(JSON.stringify(x))
 const plan = {order:{id:'O-test-1',items:[{id:'p1',name:'測試商品',price:30,qty:2}],total:60,subtotal:60,discount:0,manualDiscount:0,balanceUsed:0,paid:100,change:40,payMethod:'cash',payments:[{method:'cash',amount:60}],pointsUsed:0,pointsEarned:0,memberId:null,shiftId:'s1',status:'completed',time:'2026-10-05T04:00:00.000Z'},stockUpdates:[{id:'p1',delta:-2}],memberUpdate:null}
-const envelope = () => ({version:1,protocol,plan:copy(plan)})
+const envelope = () => ({version:1,protocol,recoveryProtocol:'pos-recovery-v1',plan:copy(plan)})
 const receipt = () => ({protocol,success:true,found:true,orderId:plan.order.id,order:copy(plan.order),products:[{id:'p1',stock:8}],member:null})
 function fixture(overrides = {}, saved = null) {
  let journal = saved, applied = 0, sends = 0, looks = 0
@@ -126,5 +126,10 @@ test('pending access returns a copy and cannot mutate the request identity',()=>
 test('idle retry and reconcile are read-only no-ops',async()=>{
  const f=fixture();f.c.restore();assert.equal(await f.c.retry(),null);assert.equal(await f.c.reconcile(),null)
  assert.equal(f.sends,0);assert.equal(f.looks,0)
+})
+test('a missing legacy pending checkout only queries its original ID and can never recreate a sale',async()=>{
+ const old=envelope();delete old.recoveryProtocol
+ const f=fixture({replayVerified:true,lookup:async()=>({protocol,success:true,found:false}),persist:async()=>{throw Error('must not write')}},old)
+ f.c.restore();await assert.rejects(f.c.retry(),errorCode('OUTCOME_UNKNOWN'));assert.equal(f.sends,0);assert.ok(f.journal)
 })
 test('required ports are enforced',()=>assert.throws(()=>createCheckoutCoordinator({}),/Missing checkout port/))

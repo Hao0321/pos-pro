@@ -1,8 +1,4 @@
 import {tr} from "../../i18n"
-import { useState, useEffect } from "react"
-import { Database, Download, Upload, RefreshCw } from "lucide-react"
-import { createBackup, getBackupList, restoreBackup, exportBackupFile, importBackupFile } from "../../utils/security"
-import { ss } from "./controls.jsx"
 import { isElectron } from '../../utils/dataAccess'
 
 export function SecurityTab({ session }) {
@@ -39,76 +35,4 @@ export function SecurityTab({ session }) {
   )
 }
 
-export function BackupTab({ session }) {
-  const [backups,setBackups]=useState([])
-  useEffect(()=>{getBackupList().then(setBackups).catch(e=>setMsg(e.message))},[])
-  const [restoring,setRestoring]= useState(null)
-  const [msg,      setMsg]      = useState('')
-
-  async function doBackup() {
-    try{await createBackup(session,`手動備份 ${new Date().toLocaleString('zh-TW')}`);setBackups(await getBackupList());setMsg('備份建立成功')}
-    catch(e){setMsg('備份未完成：'+e.message)}
-  }
-  async function doRestore(id) {
-    try{await restoreBackup(id,session);setRestoring(null);setMsg('✓ 還原成功，請重新整理頁面')}
-    catch(e){setMsg('還原未完成：'+e.message)}
-  }
-  async function doExport() {
-    try{await exportBackupFile(session);setMsg('已開啟備份下載，請確認檔案實際保存完成')}catch(e){setMsg('匯出未完成：'+e.message)}
-  }
-
-  function handleImport(e) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    importBackupFile(file, session).then(()=>{
-      setMsg('匯入成功，請重新整理頁面')
-    }).catch(()=>setMsg('匯入失敗，格式錯誤'))
-  }
-
-  return (
-    <div style={{display:'flex',flexDirection:'column',gap:14,height:'100%'}}>
-      <div style={{display:'flex',gap:10,flexShrink:0,flexWrap:'wrap'}}>
-        <button className="btn btn-primary btn-sm" onClick={doBackup}><Database size={14}/>{tr("立即備份")}</button>
-        <button className="btn btn-ghost btn-sm"  onClick={doExport}><Download size={14}/>{tr("匯出 JSON 檔")}</button>
-        <label className="btn btn-ghost btn-sm" style={{cursor:'pointer'}}>
-          <Upload size={14}/>{tr("匯入備份")}<input type="file" accept=".json" style={{display:'none'}} onChange={handleImport}/>
-        </label>
-      </div>
-      {msg && <div style={{background:'var(--green-dim)',border:'1px solid rgba(22,163,74,0.25)',color:'var(--green)',borderRadius:8,padding:'8px 14px',fontSize:13,flexShrink:0}}>{msg}</div>}
-
-      <div style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:8}}>
-        {backups.length===0 ? (
-          <div style={{textAlign:'center',padding:'40px',color:'var(--text-tertiary)',fontSize:13}}>{tr("尚無備份記錄")}</div>
-        ) : backups.map(b=>(
-          <div key={b.id} className="card" style={{padding:'12px 16px',display:'flex',alignItems:'center',gap:14}}>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:500,fontSize:13}}>{b.label}</div>
-              <div style={{fontSize:11,color:'var(--text-tertiary)',marginTop:3,fontFamily:'var(--font-mono)'}}>
-                {new Date(b.createdAt).toLocaleString('zh-TW')} · {b.createdBy}
-                · {Math.round((b.size||0)/1024)}KB
-              </div>
-            </div>
-            <button className="btn btn-ghost btn-sm" style={{color:'var(--amber)'}} onClick={()=>setRestoring(b.id)}>
-              <RefreshCw size={13}/>{tr("還原")}</button>
-          </div>
-        ))}
-      </div>
-
-      {restoring && (
-        <div style={ss.overlay}>
-          <div style={{...ss.modal,maxWidth:360}} className="animate-scale">
-            <div style={{textAlign:'center',padding:'8px 0 20px'}}>
-              <div style={{fontSize:36,marginBottom:12}}>⚠️</div>
-              <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>{tr("確認還原？")}</div>
-              <div style={{fontSize:13,color:'var(--text-secondary)'}}>{tr("目前所有資料將被備份覆蓋，此操作無法復原")}</div>
-            </div>
-            <div style={{display:'flex',gap:10}}>
-              <button className="btn btn-danger" style={{flex:1}} onClick={()=>doRestore(restoring)}>{tr("確認還原")}</button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setRestoring(null)}>{tr("取消")}</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+export {BackupTab} from './BackupPanel'

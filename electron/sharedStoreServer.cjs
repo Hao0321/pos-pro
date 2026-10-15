@@ -47,7 +47,7 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
       const input=args[0]||{},user=db.getUsers().find(u=>u.username===input.username)
       if(!user||!['owner','staff'].includes(user.role)||!verifyPassword(input.password,user.password))throw Object.assign(Error('帳號或密碼錯誤'),{status:401})
       if(input.password.length<8)throw Error('請先在店面電腦更新至少 8 字元密碼')
-      device.credential=user.password;device.session={userId:user.id,username:user.username,role:user.role,loginAt:now(),expiresAt:now()+8*3600000};return device.session
+      const grantedAt=now();device.credential=user.password;device.session={userId:user.id,username:user.username,role:user.role,loginAt:grantedAt,expiresAt:grantedAt+8*3600000};return device.session
     }
     const actor=current(device);if(!actor)throw Object.assign(Error('請重新登入店面帳號'),{status:401})
     authorizeActor(db,actor,method,args)
@@ -57,6 +57,11 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(method==='db:getExchangeContext')return db.getExchangeContext(actor)
     if(method==='db:applyExchangeOperation')return db.applyExchangeOperation(args[0],actor)
     if(method==='db:getSalesState')return db.getSalesState(actor)
+    if(method==='db:getRecoveryState')return db.getRecoveryState(args[0],actor)
+    if(method==='db:applyRecoveryOperation')return db.applyRecoveryOperation(args[0],actor)
+    if(method==='db:lookupRecoveryOperation')return db.lookupRecoveryOperation(args[0],actor)
+    if(method==='db:exportRecoverySource')return db.exportRecoverySource(args[0],actor)
+    if(method==='db:exportRecoveryDiagnostics')return db.exportRecoveryDiagnostics(actor)
     if(method==='db:applySalesOperation')return db.applySalesOperation(args[0],actor)
     if(method==='db:rememberAgentMappings')return db.rememberAgentMappings(args[0],actor)
     if(method==='db:applyRestaurantOperation')return db.applyRestaurantOperation(args[0],actor)

@@ -27,9 +27,10 @@ if(sharedStoreMode&&!window.electronAPI){
   db.applyExchangeOperation=input=>rpc('db:applyExchangeOperation',input)
   db.getSalesState=()=>rpc('db:getSalesState')
   db.applySalesOperation=input=>rpc('db:applySalesOperation',input)
+  for(const method of ['getRecoveryState','applyRecoveryOperation','lookupRecoveryOperation','exportRecoverySource','exportRecoveryDiagnostics'])db[method]=input=>rpc('db:'+method,input)
   db.getRestaurantState=()=>rpc('db:getRestaurantState')
   db.applyRestaurantOperation=input=>rpc('db:applyRestaurantOperation',input)
-  for(const method of ['migrateFromLocalStorage','importData','restoreBackup','deleteWaste','addOrder','getUsers','addUser','updateUser','deleteUser'])db[method]=async()=>{throw Error('此項管理操作請在店面電腦執行')}
+  for(const method of ['migrateFromLocalStorage','importData','restoreBackup','previewRestore','applyRestorePreview','lookupRestorePreview','deleteWaste','addOrder','getUsers','addUser','updateUser','deleteUser'])db[method]=async()=>{throw Error('此項管理操作請在店面電腦執行')}
   const unavailable=async()=>{throw Error('此設備操作請在店面電腦執行')}
   window.electronAPI={sharedStore:true,db,
     auth:{list:()=>rpc('auth:list'),session:()=>rpc('auth:session'),login:input=>rpc('auth:login',input),logout:()=>rpc('auth:logout'),setup:unavailable},

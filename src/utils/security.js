@@ -1,4 +1,5 @@
-import { browserStorage, DATA_KEYS, restoreRecords } from './browserStorage'
+import { browserStorage, DATA_KEYS } from './browserStorage'
+import {previewRestore,applyRestorePreview} from './recoveryClient'
 import {retainAuditLogs} from './auditRetention'
 // ═══════════════════════════════════════════════════════════════════
 // 資安核心模組 — POS Pro Security Layer
@@ -86,13 +87,14 @@ const SESSION_TTL  = 8 * 60 * 60 * 1000
 export function createSession(user) {
   const token = Array.from(crypto.getRandomValues(new Uint8Array(32)))
     .map(b => b.toString(16).padStart(2,'0')).join('')
+  const now=Date.now()
   const session = {
     token,
     userId:    user.id,
     username:  user.username,
     role:      user.role,
-    loginAt:   Date.now(),
-    expiresAt: Date.now() + SESSION_TTL,
+    loginAt:   now,
+    expiresAt: now + SESSION_TTL,
   }
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
   return session
@@ -118,8 +120,9 @@ export function destroySession() {
 export function extendSession() {
   const s = getSession()
   if (!s) return
-  s.expiresAt = Date.now() + SESSION_TTL
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(s))
+  // This renews only the standalone browser display session. Native/paired
+  // permissions still come from the server's independently bounded session.
+  return createSession({id:s.userId,username:s.username,role:s.role})
 }
 
 // ── 4. 權限檢查 ──────────────────────────────────────────────────────
@@ -281,15 +284,10 @@ export async function getBackupList() {
   return raw?JSON.parse(raw).map(({data,...meta})=>meta):[]
 }
 
-export async function restoreBackup(backupId, session) {
-  if(isElectron){
-    const result=await window.electronAPI.db.restoreBackup(backupId)
-    if(result?.success!==true)throw new Error(result?.error||'還原失敗')
-  }else{
-    const backups=JSON.parse(browserStorage.getItem(BACKUP_KEY)||'[]'),backup=backups.find(b=>b.id===backupId)
-    if(!backup?.data)throw new Error('備份不存在')
-    restoreRecords(backup.data)
-  }
+export async function restoreBackup(backupId, session, prepared=null) {
+  const preview=prepared||await previewRestore({kind:'backup',id:backupId},session)
+  if(preview.kind!=='backup'||preview.backupId!==backupId)throw Error('還原預覽與備份不符')
+  await applyRestorePreview(preview,session)
   writeAuditLog('BACKUP_RESTORE',session,{backupId})
   return true
 }
@@ -305,7 +303,9 @@ export async function exportBackupFile(session) {
 }
 
 export function importBackupFile(file,session) {
+  // Reading a file prepares a preview. Applying it requires the review screen.
   return new Promise((resolve,reject)=>{
+    if(file.size>64*1024*1024){reject(Error('備份太大，請保留原檔並在店面電腦核對'));return}
     const reader=new FileReader()
     reader.onload=async e=>{
       try{
@@ -313,15 +313,10 @@ export function importBackupFile(file,session) {
         if(!data||typeof data!=='object')throw new Error('備份格式錯誤')
         if(isElectron){
           if(!Array.isArray(data.products)||storage==='browser')throw new Error('請選擇桌面版匯出的備份')
-          await createBackup(session,'匯入前備份')
-          const result=await window.electronAPI.db.importData(data)
-          if(result?.success!==true)throw new Error(result?.error||'匯入失敗')
         }else{
           if(!Array.isArray(data.pos2_products)||storage==='sqlite')throw new Error('請選擇瀏覽器版匯出的備份')
-          await createBackup(session,'匯入前備份')
-          restoreRecords(data)
         }
-        writeAuditLog('BACKUP_RESTORE',session,{source:'file'});resolve(true)
+        resolve(await previewRestore({kind:'import',data},session))
       }catch(error){reject(error)}
     }
     reader.onerror=()=>reject(new Error('備份檔案無法讀取'))
