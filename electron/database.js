@@ -20,6 +20,7 @@ module.exports = function initDatabase(dbPath) {
   if(db.prepare('SELECT 1 FROM customer_entries LIMIT 1').get())require('./databaseFeatureFence.cjs').installCustomerFence(db)
   if(db.prepare('SELECT 1 FROM supplier_entries LIMIT 1').get())require('./databaseFeatureFence.cjs').installSupplierFence(db)
   const stmts = require('./databaseStatements.cjs')(db)
+  const kitchenStore=require('./kitchenPrintStorage.cjs')(db,stmts)
 
   const orderInsertParams = (o) => ({
     id: o.id,
@@ -571,6 +572,7 @@ module.exports = function initDatabase(dbPath) {
         require('./stockOpeningPlan.mjs').assertStockCustodyMatchesBook(stock.projection.custody,data.products,data.restaurantOrders)
       }
       data.stockCostEntries=stock.entries;data.stockCostOperations=stock.operations
+      const kitchen=kitchenStore.read();if(require('./kitchenPrint.mjs').usesKitchenPrinting(kitchen.data.config,kitchen.jobs,kitchen.operations)){data.kitchenPrintJobs=kitchen.jobs;data.kitchenPrintOperations=kitchen.operations}
       data=recordShapes.project(data)
       require('./stockBackup.mjs').validateStockCostBook(data,stock)
       // A backup round trip may change insertion order for tied timestamps.
@@ -738,5 +740,6 @@ module.exports = function initDatabase(dbPath) {
   require('./recoveryOperations.cjs')(db,api,replaceAllTx,recordShapes)
   recordShapes.attachFinancial(api)
   require('./tableOrderingOperations.cjs')(db,api)
+  require('./kitchenPrintOperations.cjs')(db,api,kitchenStore)
   return api
 }

@@ -1,4 +1,5 @@
 module.exports=function initializeSchema(db){
+  db.exec('CREATE TABLE IF NOT EXISTS kitchen_print_jobs (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS kitchen_print_operations (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS kitchen_print_runtime (id TEXT PRIMARY KEY,value TEXT NOT NULL);')
   db.exec('CREATE TABLE IF NOT EXISTS supplier_entries (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS supplier_operations (id TEXT PRIMARY KEY,data TEXT NOT NULL);')
   db.exec('CREATE TABLE IF NOT EXISTS customer_entries (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS customer_operations (id TEXT PRIMARY KEY,data TEXT NOT NULL);')
   db.exec('CREATE TABLE IF NOT EXISTS sales_documents (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS sales_operations (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS sales_runtime (id TEXT PRIMARY KEY,value TEXT NOT NULL);')

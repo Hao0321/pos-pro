@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getRestaurantState:()=>ipcRenderer.invoke('db:getRestaurantState'),
     getTableOrderingContext:()=>ipcRenderer.invoke('db:getTableOrderingContext'),
     getCustomerIntakeContext:id=>ipcRenderer.invoke('db:getCustomerIntakeContext',id),
+    getKitchenPrintState:()=>ipcRenderer.invoke('db:getKitchenPrintState'),
+    applyKitchenPrintOperation:input=>ipcRenderer.invoke('db:applyKitchenPrintOperation',input),
     applyRestaurantOperation:input=>ipcRenderer.invoke('db:applyRestaurantOperation',input),
     getStoreSnapshot:()=>ipcRenderer.invoke('db:getStoreSnapshot'),
     getProducts: () => ipcRenderer.invoke('db:getProducts'),

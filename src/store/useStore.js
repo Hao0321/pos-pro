@@ -61,6 +61,7 @@ export function useStore(session){
   const [manualEntries, setManualEntries] = useState([])
   const [cart,          setCart]          = useState([])
   const [view,          setView]          = useState('dashboard')
+  const [settingsTarget,setSettingsTarget]=useState(null)
   const [activeMember,  setActiveMember]  = useState(null)
   const [ready,         setReady]         = useState(false)
   const [dataError, setDataError] = useState('')
@@ -574,6 +575,7 @@ export function useStore(session){
   const todayProfit= Math.round((todayOrders.reduce((sum,o)=>sum+netSale(o)-orderCost(o,products),0)+todaySales.profit)*100)/100
 
   return {
+    settingsTarget,openHardwareSettings:()=>{setSettingsTarget({tab:'hardware'});setView('settings')},consumeSettingsTarget:()=>setSettingsTarget(null),
     stockSetupEnabled,commitStockSetup,
     supplierState,supplierTarget,openSupplierLedger:(supplierId='',purchaseId='')=>{setSupplierTarget({supplierId,purchaseId});setView('suppliers')},consumeSupplierTarget:()=>setSupplierTarget(null),purchaseTarget,openPurchaseSuppliers:()=>{setPurchaseTarget({tab:'suppliers'});setView('purchase')},openPurchaseDocument:id=>{setPurchaseTarget({id});setView('purchase')},consumePurchaseTarget:()=>setPurchaseTarget(null),commitSupplierLedger,refreshSuppliers,
     products,members,orders,purchases,sales,salesQuote,openSalesQuote:quote=>{setSalesQuote({id:quote.id,revision:quote.revision});setView('sales')},consumeSalesQuote:()=>setSalesQuote(null),cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitInventory,commitRestaurant,commitExchange,commitSales,commitCustomerLedger,refreshTrading,customerTarget,openCustomerLedger:id=>{setCustomerTarget(id);setView("customers")},consumeCustomerTarget:()=>setCustomerTarget(""),salesTarget,openSalesDocument:id=>{setSalesTarget(id);setView("sales")},consumeSalesTarget:()=>setSalesTarget(""),restaurantConfig,

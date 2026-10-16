@@ -19,6 +19,11 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
     for(const [key,table]of [['salesDocuments','sales_documents'],['salesOperations','sales_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
     const restaurantConfig=data.settings?.find(s=>s.key==='restaurantConfig')
     const checkedConfig=require('./restaurantRules.mjs').readRestaurantConfig(restaurantConfig?.value??null,data.products||[])
+    if(Object.hasOwn(data,'kitchenPrintJobs')!==Object.hasOwn(data,'kitchenPrintOperations'))throw Error('廚房列印紀錄需要核對，請保留原單')
+    if(Object.hasOwn(checkedConfig,'kitchenPrinting')&&!Object.hasOwn(data,'kitchenPrintJobs'))throw Error('廚房列印紀錄需要核對，請保留原單')
+    require('./kitchenPrint.mjs').validateKitchenRecords(data.kitchenPrintJobs||[],data.kitchenPrintOperations||[],{entries:data.restaurantOrders||[],restaurantOperations:data.restaurantOperations||[]})
+    if(require('./kitchenPrint.mjs').usesKitchenPrinting(checkedConfig,data.kitchenPrintJobs,data.kitchenPrintOperations))require('./databaseFeatureFence.cjs').installKitchenPrintFence(db)
+    for(const [key,table]of [['kitchenPrintJobs','kitchen_print_jobs'],['kitchenPrintOperations','kitchen_print_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
     if(require('./tableOrdering.mjs').usesRestaurantIntake(checkedConfig,data.restaurantOrders||[],data.orders||[]))require('./databaseFeatureFence.cjs').installIntakeFence(db)
     if(data.restaurantOrders||data.restaurantOperations){
       require('./restaurantRules.mjs').validateRestaurantRecords(data.restaurantOrders||[],data.restaurantOperations||[],data.orders||[],data.products||[])
@@ -281,6 +286,7 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
       DELETE FROM restaurant_orders; DELETE FROM restaurant_operations;
       DELETE FROM sales_documents; DELETE FROM sales_operations; DELETE FROM customer_entries; DELETE FROM customer_operations;
       DELETE FROM supplier_entries; DELETE FROM supplier_operations;
+      DELETE FROM kitchen_print_jobs; DELETE FROM kitchen_print_operations;
     `)
     migrateTx(data,{costRestore:true})
     db.prepare('UPDATE sales_runtime SET value=? WHERE id=?').run(require('node:crypto').randomUUID(),'epoch')

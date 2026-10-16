@@ -7,10 +7,11 @@ let db = null
 let orderServer = null
 let ipcSecurity = null
 let sharedStore = null
+let kitchenPrintWorker = null
 let closing = false
 let shutdownComplete = false
 const stop = require('./shutdown.cjs')({
-  stopServices: () => [() => sharedStore?.stop(), () => orderServer?.close()],
+  stopServices: () => [() => kitchenPrintWorker?.stop(), () => sharedStore?.stop(), () => orderServer?.close()],
   closeDatabase: () => { if (db) { db.close(); db = null } },
 })
 const rendererPath = path.resolve(__dirname, '../dist/index.html')
@@ -84,6 +85,8 @@ if (gotLock) app.whenReady().then(async () => {
   const dbPath = path.join(app.getPath('userData'), 'pos-data.db')
   db = initDatabase(dbPath)
   sharedStore=require('./sharedStoreServer.cjs')({db,distRoot:path.resolve(__dirname,'../dist'),certificateRoot:path.join(app.getPath('userData'),'shared-store'),orderingStatus:()=>({running:orderServer?.isRunning?.()===true,ip:getLocalIP(),port:orderServer?.getActualPort?.()||null,tunnelUrl:orderServer?.getTunnelUrl?.()||null}),onChanged:()=>{if(mainWindow&&!mainWindow.isDestroyed())mainWindow.webContents.send('store:changed')}})
+  kitchenPrintWorker=require('./kitchenPrintWorker.cjs')({db,onError:error=>console.error('[POS] 廚房送印結果需核對:',error.message)})
+  kitchenPrintWorker.start()
 
   // 啟動顧客點餐伺服器
   try {

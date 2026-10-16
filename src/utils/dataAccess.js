@@ -5,6 +5,7 @@ import { summarizeShift } from '../../electron/shiftReconciliation.mjs'
 import {moneyValue,quantityValue,operationHeader,sameCommand} from '../../electron/operationRules.mjs'
 import {commitBrowserInventory,getBrowserStocktakeState} from './browserInventory'
 import {commitBrowserRestaurant,browserRestaurantState,browserCustomerIntakeContext} from './browserRestaurant'
+import {browserKitchenPrintState,commitBrowserKitchenPrint} from './browserKitchenPrint'
 import {makeAgentContext} from '../../electron/agentDraftRules.mjs'
 import {readAgentMappings,mergeAgentMappings} from '../../electron/businessDocument.mjs'
 import {retainAuditLogs} from './auditRetention'
@@ -17,6 +18,8 @@ import {hasBrowserStockCost,commitBrowserStockBusiness,commitBrowserProduct,asse
 export const isElectron = !!(typeof window !== 'undefined' && window.electronAPI)
 export const isSharedStore = !!(typeof window !== 'undefined' && window.electronAPI?.sharedStore)
 export async function loadCustomerIntakeContext(id){return isElectron?window.electronAPI.db.getCustomerIntakeContext(id):browserCustomerIntakeContext(id)}
+export async function loadKitchenPrintState(actor){return isElectron?window.electronAPI.db.getKitchenPrintState():browserKitchenPrintState(actor)}
+export async function applyKitchenPrintOperation(request,actor){return isElectron?window.electronAPI.db.applyKitchenPrintOperation(request):commitBrowserKitchenPrint(request,actor)}
 export async function loadStockSetupAccess(){return isElectron?window.electronAPI.db.getStockSetupAccess():{enabled:stockSetupBrowserEnabled()}}
 export async function loadStockSetupState(actor){return isElectron?window.electronAPI.db.getStockSetupState():(await import('./browserStockSetup')).getBrowserStockSetupState(actor)}
 export async function previewStockSetup(input,actor){return isElectron?window.electronAPI.db.previewStockSetup(input):(await import('./browserStockSetup')).previewBrowserStockSetup(input,actor)}

@@ -102,6 +102,6 @@ export async function exportRecoveryDiagnostics(_input,actor){
   // A standalone browser is device-local, not an authentication boundary. Keep
   // raw bytes available when parsing this device's record fails. No writes.
   if(actor?.role!=='owner')throw Error('權限不足')
-  const keys=[RECORD_KEY,...DATA_KEYS,'pos_backups','pos_pending_financial_v1','pos_pending_checkout_v1','pos_pending_restore_v1','pos_pending_recovery_v1']
+  const keys=[RECORD_KEY,...DATA_KEYS,'pos_backups','pos_pending_financial_v1','pos_pending_checkout_v1','pos_pending_kitchen_print_v1','pos_pending_restore_v1','pos_pending_recovery_v1']
   return {format:'pos-recovery-diagnostics/v1',importable:false,createdAt:new Date().toISOString(),storage:'browser',raw:Object.fromEntries(keys.map(key=>[key,globalThis.localStorage.getItem(key)]))}
 }

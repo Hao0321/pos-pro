@@ -7,7 +7,7 @@ let w,phone,attacker,db,shared,checks=0;const errors=[]
 const pass=name=>{checks++;console.log('PASS '+name)}
 async function js(target,code){const r=await target.webContents.executeJavaScript('(async()=>{try{return {ok:true,value:await ('+code+')}}catch(e){return {ok:false,error:e.stack}}})()');if(!r.ok)throw Error(r.error);return r.value}
 async function wait(target,expression,label){const end=Date.now()+14000;while(Date.now()<end){if(await js(target,expression))return;await new Promise(r=>setTimeout(r,45))}throw Error('Timeout '+label+': '+(await js(target,'document.body.innerText')).slice(-1600))}
-async function input(target,selector,value,type='HTMLInputElement',event='input'){await js(target,'(()=>{const el=document.querySelector('+q(selector)+');if(!el)throw Error("missing "+'+q(selector)+');Object.getOwnPropertyDescriptor('+type+'.prototype,"value").set.call(el,'+q(value)+');el.dispatchEvent(new Event('+q(event)+',{bubbles:true}))})()')}
+async function input(target,selector,value,type='HTMLInputElement',event='input'){await wait(target,'!!document.querySelector('+q(selector)+')&&!document.querySelector('+q(selector)+').disabled','editable '+selector);await js(target,'(()=>{const el=document.querySelector('+q(selector)+');if(!el)throw Error("missing "+'+q(selector)+');Object.getOwnPropertyDescriptor('+type+'.prototype,"value").set.call(el,'+q(value)+');el.dispatchEvent(new Event('+q(event)+',{bubbles:true}))})()')}
 const select=(w,selector,value)=>input(w,selector,value,'HTMLSelectElement','change')
 async function tap(target,selector){
   await js(target,'document.querySelector('+q(selector)+').scrollIntoView({block:"center"})')

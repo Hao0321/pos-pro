@@ -6,6 +6,9 @@ import {defaultRestaurantConfig,restaurantAvailability} from '../../electron/res
 import useVisibleViewport from '../hooks/useVisibleViewport'
 import CustomerIntakePanel from './restaurant/CustomerIntakePanel'
 import TableOrderingPanel from './restaurant/TableOrderingPanel'
+import useKitchenPrinting from '../hooks/useKitchenPrinting'
+import KitchenPrintPanel from './restaurant/KitchenPrintPanel'
+import KitchenPrintStatus from './restaurant/KitchenPrintStatus'
 
 const labels={reserved:'已預留',cooking:'製作中',ready:'可取餐',dispatched:'配送中',completed:'已交付',cancelled:'已取消'}
 const channels={preorder:'預訂',walkin:'現場',delivery:'外送'}
@@ -14,6 +17,7 @@ const initialForm=()=>({channel:'preorder',day:dateText(),slot:'12:00',customer:
 const grid={display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12}
 function Field({label,children}){return <label style={{display:'flex',flexDirection:'column',gap:5,fontSize:13}}>{tr(label)}{children}</label>}
 export default function RestaurantPage({store,session}){
+  const printing=useKitchenPrinting(session)
   const [showCreate,setShowCreate]=useState(false),viewport=useVisibleViewport()
   const panel={...modal,top:viewport.top+16,bottom:'auto',maxHeight:Math.max(120,viewport.height-32)}
   const [data,setData]=useState(null),[draft,setDraft]=useState(defaultRestaurantConfig),[form,setForm]=useState(initialForm),[chosen,setChosen]=useState(''),[recipeTarget,setRecipeTarget]=useState(''),[ingredient,setIngredient]=useState(''),[pay,setPay]=useState(null),[cancel,setCancel]=useState(null),[error,setError]=useState(''),[message,setMessage]=useState(''),[saving,setSaving]=useState(false),[filter,setFilter]=useState('active')
@@ -42,6 +46,7 @@ export default function RestaurantPage({store,session}){
     {!data&&<p>{tr("載入正式預訂紀錄中…")}</p>}
     {data&&<CustomerIntakePanel data={data} store={store} commit={commit} reload={()=>reloadRef.current?.()}/>}
     {data&&owner&&<TableOrderingPanel config={config} store={store} settingsDirty={dirty.current} reload={()=>reloadRef.current?.()}/>}
+    {data&&<KitchenPrintPanel printing={printing} store={store} session={session} entries={data.entries} settingsDirty={dirty.current}/>}
     {owner&&data&&<details className="card" style={{padding:14,marginBottom:16}} open={!config.enabled}>
       <summary>{tr("產能與原料配方設定")}{dirty.current?tr("（尚未儲存）"):''}</summary>
       <p>{tr("設定配方前，先在庫存管理建立原料／包材並填寫單位、成本與實際庫存。未設定配方的品項直接預留成品庫存；有配方的品項按原料可用量接單。")}</p>
@@ -89,6 +94,7 @@ export default function RestaurantPage({store,session}){
         </div>
         {status==='completed'&&!e.saleId&&<p>{tr('先登記收款，再交給客人')}</p>}
         <details style={{marginTop:12}}><summary>{tr('原單資料')}</summary><p>{e.day} {e.slot} · {tr(channels[e.channel])}</p><small>{tr("單號 ")}{e.id}{tr(" · 版本 ")}{e.version}{e.saleId?tr(" · 收款 {0}", {0: e.saleId}):''}{e.refundId?tr(" · 退款 {0}", {0: e.refundId}):''}</small></details>
+        <KitchenPrintStatus printing={printing} entry={e}/>
         {!e.saleId&&e.status!=='cancelled'&&!store.openShift&&<p>{tr("請先到班別交班開班，再登記收款。")}</p>}
       </article>
     })}

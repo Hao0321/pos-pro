@@ -9,7 +9,7 @@ if(sharedStoreMode&&!window.electronAPI){
     catch{signal('pos-shared-connection',{connected:false});throw Error('連不上店面電腦。已停止保存；恢復連線後請查詢原交易，勿重新收款。')}
     const value=await response.json()
     if(!response.ok){if(response.status===401&&body.method!=='auth:login')signal('pos-shared-auth-expired');throw Error(value.error||'共用店面連線失敗')}
-    if(value.storeId){const old=localStorage.getItem('pos_shared_store_id');if(old&&old!==value.storeId&&(localStorage.getItem('pos_pending_checkout_v1')||localStorage.getItem('pos_pending_financial_v1')))throw Error('這個網址的店面資料庫已更換。請回到原店面核對未確認交易，勿重送到新店面。');localStorage.setItem('pos_shared_store_id',value.storeId)}
+    if(value.storeId){const old=localStorage.getItem('pos_shared_store_id');if(old&&old!==value.storeId&&(localStorage.getItem('pos_pending_checkout_v1')||localStorage.getItem('pos_pending_financial_v1')||localStorage.getItem('pos_pending_kitchen_print_v1')))throw Error('這個網址的店面資料庫已更換。請回到原店面核對未確認交易，勿重送到新店面。');localStorage.setItem('pos_shared_store_id',value.storeId)}
     signal('pos-shared-connection',{connected:true})
     if(value.csrf)csrf=value.csrf
     if(value.revision!=null){if(revision!=null&&revision!==value.revision)signal('pos-store-changed');revision=value.revision}
@@ -46,6 +46,8 @@ if(sharedStoreMode&&!window.electronAPI){
   db.getRestaurantState=()=>rpc('db:getRestaurantState')
   db.getTableOrderingContext=()=>rpc('db:getTableOrderingContext')
   db.getCustomerIntakeContext=id=>rpc('db:getCustomerIntakeContext',id)
+  db.getKitchenPrintState=()=>rpc('db:getKitchenPrintState')
+  db.applyKitchenPrintOperation=input=>rpc('db:applyKitchenPrintOperation',input)
   db.applyRestaurantOperation=input=>rpc('db:applyRestaurantOperation',input)
   for(const method of ['migrateFromLocalStorage','importData','restoreBackup','deleteWaste','addOrder','getUsers','addUser','updateUser','deleteUser'])db[method]=async()=>{throw Error('此項管理操作請在店面電腦執行')}
   const unavailable=async()=>{throw Error('此設備操作請在店面電腦執行')}

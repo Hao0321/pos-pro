@@ -56,6 +56,9 @@ test('all business collections restore atomically, including restaurant orders, 
   // Nonempty immutable cost history is covered by the native-derived fixture
   // and complete browser recovery tests; placeholder rows are invalid ledgers.
   data.pos_stock_cost_entries=[];data.pos_stock_cost_operations=[]
+  // Nonempty print history is exercised with the complete native-derived
+  // graph5 in kitchen-print-browser.test.js, rather than placeholder jobs.
+  data.pos_kitchen_print_jobs=[];data.pos_kitchen_print_operations=[]
   data.pos2_products=[{id:'pos2_products',name:'fixture',stock:1,price:95,cost:40}]
   data.pos_users=[{id:'restore-owner',username:'測試',role:'owner',password:'fixture-hash'}]
   data.pos_business_settings=[{id:'pos_business_settings',key:'storeName',value:'"fixture"'}]

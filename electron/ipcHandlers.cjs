@@ -23,6 +23,8 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:getRestaurantState',()=>db.getRestaurantState())
   handle('db:getTableOrderingContext',()=>db.getTableOrderingContext(ipcSecurity.current()))
   handle('db:getCustomerIntakeContext',(_e,id)=>db.getCustomerIntakeContext(id,ipcSecurity.current()))
+  handle('db:getKitchenPrintState',()=>db.getKitchenPrintState(ipcSecurity.current()))
+  handle('db:applyKitchenPrintOperation',(_e,input)=>db.applyKitchenPrintOperation(input,ipcSecurity.current()))
   handle('db:getAgentContext',()=>db.getAgentContext(ipcSecurity.current()))
   handle('db:getExchangeContext',()=>db.getExchangeContext(ipcSecurity.current()))
   handle('db:applyExchangeOperation',(_e,input)=>db.applyExchangeOperation(input,ipcSecurity.current()))
@@ -178,7 +180,11 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   // ----- Printer -----
   handle('printer:printReceipt', async (_e, orderData) => {
     const printer = require('./printer')
-    return printer.printReceipt(orderData, db.getAllSettings())
+    const original=db.getOrder(orderData?.id)
+    if(!original||original.source==='customer'||original.payMethod==='pending'||!['completed','refunded'].includes(original.status))throw Error('請先核對已保存的正式收款單')
+    const saved=db.checkoutReceipt(original.id)
+    if(saved?.success!==true||saved.order?.id!==original.id)throw Error('正式收款原單尚未確認，請先核對')
+    return printer.printReceipt(saved.order, db.getAllSettings())
   })
   handle('printer:openCashDrawer', async () => {
     const printer = require('./printer')

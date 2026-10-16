@@ -1,5 +1,6 @@
 import {operationHeader,moneyValue,quantityValue,canonicalSignature} from './operationRules.mjs'
 import {normalizeTableOrdering,customerIntakeSource,assertCustomerOrderLink,validateTableOrderSources} from './tableOrdering.mjs'
+import {normalizeKitchenPrinting} from './kitchenPrint.mjs'
 
 export const RESTAURANT_KIND='restaurant'
 export const RESTAURANT_STATES=['reserved','cooking','ready','dispatched','completed','cancelled']
@@ -25,7 +26,7 @@ export function normalizeRestaurantConfig(input,products){
   // Recipe outputs cannot also be ingredient inputs: production has one explicit level.
   const outputs=new Set(recipes.map(([target])=>target))
   if(recipes.some(([,rows])=>rows.some(r=>outputs.has(r.id))))throw Error('配方不支援相互引用；請以原料與包材建檔')
-  return {enabled:input.enabled,dailyCapacity:positiveInt(input.dailyCapacity,'每日產能'),slotCapacity:positiveInt(input.slotCapacity,'時段產能'),recipes:Object.fromEntries(recipes),...(Object.hasOwn(input,'tableOrdering')?{tableOrdering:normalizeTableOrdering(input.tableOrdering)}:{})}
+  return {enabled:input.enabled,dailyCapacity:positiveInt(input.dailyCapacity,'每日產能'),slotCapacity:positiveInt(input.slotCapacity,'時段產能'),recipes:Object.fromEntries(recipes),...(Object.hasOwn(input,'tableOrdering')?{tableOrdering:normalizeTableOrdering(input.tableOrdering)}:{}),...(Object.hasOwn(input,'kitchenPrinting')?{kitchenPrinting:normalizeKitchenPrinting(input.kitchenPrinting)}:{})}
 }
 export function readRestaurantConfig(raw,products){
   return raw==null?defaultRestaurantConfig():normalizeRestaurantConfig(typeof raw==='string'?JSON.parse(raw):raw,products)

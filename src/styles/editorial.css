@@ -83,7 +83,7 @@ tbody tr:hover{background:var(--bg-hover)}
 .login-poster>i{position:absolute;width:120%;height:18px;background:#141414;transform:rotate(-12deg);left:-10%;top:18px}
 .login-poster>i:nth-of-type(2){top:79px;transform:rotate(9deg);height:10px}.login-poster>i:nth-of-type(3){top:135px;transform:rotate(-12deg);height:11px}
 .login-meta{display:flex;justify-content:space-between;gap:16px;margin-top:23px;font-size:13px;color:#c6c4bb}.login-version{font-size:12px;color:#aaa89e;margin-top:12px;letter-spacing:.06em}
-.login-right{flex:0 0 460px;width:460px;display:flex;align-items:center;justify-content:center;padding:36px;background:var(--bg-base);border-left:1px solid var(--border-strong)}
+.login-right{flex:0 0 460px;width:460px;display:flex;align-self:flex-start;min-height:100dvh;align-items:center;justify-content:center;padding:36px;background:var(--bg-base);border-left:1px solid var(--border-strong)}
 .login-card{width:100%;max-width:400px;border:1px solid var(--border-strong);border-top:5px solid var(--accent);padding:32px 28px;background:var(--bg-raised)}
 .login-form-heading{margin-bottom:28px}.login-form-heading h2{font-size:34px;font-weight:900;letter-spacing:-.05em;margin:8px 0 12px}.login-form-heading>p{font-size:15px;color:var(--text-secondary);line-height:1.7}
 .login-form-heading .login-kicker{font-size:12px;font-weight:750;color:var(--accent-deep);letter-spacing:.06em}

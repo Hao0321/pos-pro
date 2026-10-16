@@ -1,5 +1,14 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--login-reachability':['native-login-reachability.cjs','POS_LOGIN_REACHABILITY_PASS',true],
+  '--customer-key-continuity':['native-customer-key-continuity.cjs','POS_CUSTOMER_KEY_CONTINUITY_PASS',false],
+  '--kitchen-print-browser-ui':['native-kitchen-print-browser-ui.cjs','POS_KITCHEN_PRINT_BROWSER_UI_PASS',true],
+  '--kitchen-print-atomic':['native-kitchen-print-atomic.cjs','POS_KITCHEN_PRINT_ATOMIC_PASS',false],
+  '--kitchen-print-ipc':['native-kitchen-print-ipc.cjs','POS_KITCHEN_PRINT_IPC_PASS',true],
+  '--kitchen-print-shared-ui':['native-kitchen-print-shared-ui.cjs','POS_KITCHEN_PRINT_SHARED_UI_PASS',true],
+  '--kitchen-print-ui':['native-kitchen-print-ui.cjs','POS_KITCHEN_PRINT_UI_PASS',true],
+  '--kitchen-print':['native-kitchen-print.cjs','POS_KITCHEN_PRINT_PASS',false],
+  '--kitchen-print-worker':['native-kitchen-print-worker.cjs','POS_KITCHEN_PRINT_WORKER_PASS',false],
   '--table-kitchen':['native-table-kitchen.cjs','POS_TABLE_KITCHEN_PASS',false],
   '--table-kitchen-ui':['native-table-kitchen-ui.cjs','POS_TABLE_KITCHEN_UI_PASS',true],
   '--table-kitchen-shared-ui':['native-table-kitchen-shared-ui.cjs','POS_TABLE_KITCHEN_SHARED_UI_PASS',true],

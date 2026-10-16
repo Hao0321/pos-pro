@@ -3,8 +3,8 @@ const {randomBytes,randomUUID,timingSafeEqual}=require('node:crypto')
 const {verifyPassword,authorizeActor}=require('./ipcSecurity.cjs')
 const snapshot=require('./storeSnapshot.cjs')
 const businessKeys=new Set(['pointsEarnRate','pointsRedeemRate','birthdayBonus','dailySalesGoal','storeName','storePhone','storeAddress','receiptFooter'])
-const readMethods=['getProducts','findByBarcode','getMembers','getOrders','getOrderItems','checkoutReceipt','getCustomerOrders','getSuppliers','getPurchases','getPromotions','getManualJournal','getAuditLogs','getHeldOrders','getShifts','getOpenShift','getCashLog','getWasteLog','getTopups','getBackups','exportData','getScenarioTemplateReceipt']
-const writeMethods=['addProduct','updateProduct','deleteProduct','addMember','updateMember','deleteMember','checkout','refundOrder','updateOrderStatus','addSupplier','updateSupplier','deleteSupplier','addPurchase','updatePurchase','deletePurchase','addPromotion','updatePromotion','deletePromotion','addManualEntry','deleteManualEntry','writeAuditLog','addHeldOrder','deleteHeldOrder','openShift','closeShift','addCashLog','addWaste','addTopup','createBackup']
+const readMethods=['getKitchenPrintState','getProducts','findByBarcode','getMembers','getOrders','getOrderItems','checkoutReceipt','getCustomerOrders','getSuppliers','getPurchases','getPromotions','getManualJournal','getAuditLogs','getHeldOrders','getShifts','getOpenShift','getCashLog','getWasteLog','getTopups','getBackups','exportData','getScenarioTemplateReceipt']
+const writeMethods=['applyKitchenPrintOperation','addProduct','updateProduct','deleteProduct','addMember','updateMember','deleteMember','checkout','refundOrder','updateOrderStatus','addSupplier','updateSupplier','deleteSupplier','addPurchase','updatePurchase','deletePurchase','addPromotion','updatePromotion','deletePromotion','addManualEntry','deleteManualEntry','writeAuditLog','addHeldOrder','deleteHeldOrder','openShift','closeShift','addCashLog','addWaste','addTopup','createBackup']
 const exposed=new Set([...readMethods,...writeMethods].map(k=>'db:'+k))
 const random=()=>randomBytes(32).toString('hex')
 const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b))
@@ -87,6 +87,8 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(method==='db:applyRestaurantOperation')return db.applyRestaurantOperation(args[0],actor)
     if(method==='db:getTableOrderingContext')return db.getTableOrderingContext(actor)
     if(method==='db:getCustomerIntakeContext')return db.getCustomerIntakeContext(args[0],actor)
+    if(method==='db:getKitchenPrintState')return db.getKitchenPrintState(actor)
+    if(method==='db:applyKitchenPrintOperation')return db.applyKitchenPrintOperation(args[0],actor)
     if(method==='db:applyInventoryOperation')return db.applyInventoryOperation(args[0],actor)
     if(method==='db:applyScenarioTemplate')return db.applyScenarioTemplate(args[0],actor)
     if(method==='shared:getStatus')return {running:true,host,port,revision,shared:true}
