@@ -1,5 +1,7 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--stock-setup':['native-stock-setup.cjs','POS_STOCK_SETUP_PASS',false],
+  '--stock-setup-ui':['native-stock-setup-ui.cjs','POS_STOCK_SETUP_UI_PASS',true],
   '--refund-review':['native-refund-review.cjs','POS_REFUND_REVIEW_PASS',false],
   '--refund-review-ui':['native-refund-review-ui.cjs','POS_REFUND_REVIEW_UI_PASS',true],
   '--browser-stock-business':['native-browser-stock-business.cjs','POS_BROWSER_STOCK_BUSINESS_PASS',false],

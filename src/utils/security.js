@@ -17,7 +17,7 @@ export const ROLES = {
     color: 'var(--gold)',
     permissions: [
       'pos.use', 'pos.discount', 'pos.refund',
-      'inventory.view', 'inventory.edit', 'inventory.delete',
+      'inventory.view', 'inventory.edit', 'inventory.delete', 'inventory.cost',
       'members.view', 'members.edit', 'members.delete',
       'reports.view', 'reports.export',
       'accounting.view', 'accounting.edit',

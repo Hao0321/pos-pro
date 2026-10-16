@@ -10,7 +10,7 @@ const random=()=>randomBytes(32).toString('hex')
 const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b))
 function privateIPv4(host){const n=host.split('.').map(Number);return n.length===4&&n.every((v,i)=>Number.isInteger(v)&&v>=0&&v<=255&&String(v)===host.split('.')[i])&&(n[0]===10||n[0]===192&&n[1]===168||n[0]===172&&n[1]>=16&&n[1]<=31)}
 function addresses(){return [...new Set(Object.values(os.networkInterfaces()).flat().filter(i=>i?.family==='IPv4'&&!i.internal&&privateIPv4(i.address)).map(i=>i.address))]}
-module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{},now=Date.now,allowLoopback=false}){
+module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{},now=Date.now,allowLoopback=false,stockSetupEnabled=false}){
   let server=null,host='',port=0,cert=null,revision=0,startTask=null,stopTask=null,stopServer=null,stopping=false
   const devices=new Map(),pairs=new Map(),attempts=new Map()
   function storeIdentity(){let id=db.getSetting('sharedStoreId');if(!id){id=randomUUID();db.setSetting('sharedStoreId',id)}return id}
@@ -64,6 +64,10 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(method==='db:exportFullBackup')return db.exportFullBackup(actor)
     if(method==='db:getProtectedBackups')return db.getProtectedBackups(actor)
     if(method==='db:getStocktakeState')return db.getStocktakeState(actor)
+    if(method==='db:getStockSetupAccess')return {enabled:stockSetupEnabled===true}
+    if(method==='db:getStockSetupState'){if(!stockSetupEnabled)throw Error('成本設定尚未開放新保存，請保留原編號核對');return db.getStockSetupState(actor)}
+    if(method==='db:previewStockSetup'){if(!stockSetupEnabled)throw Error('成本設定尚未開放新保存，請保留原編號核對');return db.previewStockSetup(args[0],actor)}
+    if(method==='db:applyStockSetupOperation')return db.applyStockSetupOperation(args[0],actor,{allowNew:stockSetupEnabled===true})
     if(method==='db:getRefundContext')return db.getRefundContext(actor)
     if(method==='db:previewRefund')return db.previewRefund(args[0],actor)
     if(method==='db:exportRecoveryDiagnostics')return db.exportRecoveryDiagnostics(actor)

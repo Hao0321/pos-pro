@@ -1,4 +1,4 @@
-module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrderServer, getLocalIP,sharedStore }) {
+module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrderServer, getLocalIP,sharedStore,stockSetupEnabled=false }) {
   const orderServer = getOrderServer()
   function handle(channel, handler) {
     ipcMain.handle(channel, (event, ...args) => {
@@ -15,6 +15,10 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:getStoreSnapshot',()=>require('./storeSnapshot.cjs')(db,ipcSecurity.current()))
   handle('db:getStockAccountingState',()=>db.getStockAccountingState(ipcSecurity.current()))
   handle('db:getStockSalesState',()=>db.getStockSalesState(ipcSecurity.current()))
+  handle('db:getStockSetupAccess',()=>({enabled:stockSetupEnabled===true}))
+  handle('db:getStockSetupState',()=>{if(!stockSetupEnabled)throw Error('成本設定尚未開放新保存，請保留原編號核對');return db.getStockSetupState(ipcSecurity.current())})
+  handle('db:previewStockSetup',(_e,input)=>{if(!stockSetupEnabled)throw Error('成本設定尚未開放新保存，請保留原編號核對');return db.previewStockSetup(input,ipcSecurity.current())})
+  handle('db:applyStockSetupOperation',(_e,input)=>db.applyStockSetupOperation(input,ipcSecurity.current(),{allowNew:stockSetupEnabled===true}))
   handle('db:getRestaurantState',()=>db.getRestaurantState())
   handle('db:getAgentContext',()=>db.getAgentContext(ipcSecurity.current()))
   handle('db:getExchangeContext',()=>db.getExchangeContext(ipcSecurity.current()))

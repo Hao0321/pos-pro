@@ -3,6 +3,7 @@ import {isProcurement,procurementSummary} from '../../electron/procurementRules.
 import {tr} from '../../public/i18n/core.mjs'
 
 export const WORKSPACE_TASKS=[
+  {id:'stocksetup',title:'核對庫存成本',detail:'看庫存、填成本，系統自動計算。',view:'stocksetup',perm:'inventory.cost',needsStockSetup:true,words:'期初 開帳 補成本 單價 整批 Agent cost opening'},
   {id:'sale',title:'賣東西、收款',detail:'點商品，確認金額，再收款。',view:'pos',perm:'pos.use',words:'收銀 結帳 現場'},
   {id:'quick',title:'幫我建單',detail:'點商品、貼內容，或交給 Agent。',view:'quick',perm:'pos.use',words:'開單 匯入 agent AI'},
   {id:'restaurant',title:'接預訂、準備出餐',detail:'預訂、現場與外送放在一起看。',view:'restaurant',perm:'pos.use',words:'丼飯 餐飲 交付 取餐'},
@@ -29,12 +30,12 @@ export const WORKSPACE_TASKS=[
 ]
 export const WORKSPACE_AREAS=[
   {id:'crm',title:'顧客與點餐',code:'CRM',intro:'幫你照顧客人',detail:'會員、點數、儲值、點餐與預訂。',description:'會員、點數、儲值、點餐和預訂，讓接單與經營回頭客更方便。',taskIds:['customers','sales','members','orders','restaurant','exchange','quick','sale','refunds','promotions','reports']},
-  {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['customers','sales','sale','refunds','quick','exchange','inventory','purchase','suppliers','shifts','stocktake','waste','accounting','reports','readiness','devices','settings','recovery','scenarios']},
+  {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['customers','sales','sale','refunds','quick','exchange','inventory','purchase','suppliers','shifts','stocktake','stocksetup','waste','accounting','reports','readiness','devices','settings','recovery','scenarios']},
 ]
-export function workspaceTasks(session,query='',area='all'){
+export function workspaceTasks(session,query='',area='all',options={}){
   const terms=query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
   const group=WORKSPACE_AREAS.find(a=>a.id===area)
-  const matched=WORKSPACE_TASKS.filter(t=>hasPermission(session,t.perm)&&(area==='all'||group?.taskIds.includes(t.id))&&terms.every(term=>(t.title+' '+t.detail+' '+t.words+' '+tr(t.title)+' '+tr(t.detail)).toLocaleLowerCase().includes(term)))
+  const matched=WORKSPACE_TASKS.filter(t=>hasPermission(session,t.perm)&&(!t.needsStockSetup||options.stockSetupEnabled===true)&&(area==='all'||group?.taskIds.includes(t.id))&&terms.every(term=>(t.title+' '+t.detail+' '+t.words+' '+tr(t.title)+' '+tr(t.detail)).toLocaleLowerCase().includes(term)))
   return group?matched.sort((a,b)=>group.taskIds.indexOf(a.id)-group.taskIds.indexOf(b.id)):matched
 }
 export function workspaceReminders(store,session){

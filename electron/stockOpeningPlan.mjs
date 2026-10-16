@@ -1,6 +1,7 @@
 import {canonicalSignature,operationHeader} from './operationRules.mjs'
 import {createCostCustody,costCustodySummary,planCostCustody} from './stockCustody.mjs'
 import {costSource} from './stockCost.mjs'
+import {assertStockSetupReview} from './stockSetupReview.mjs'
 
 export const STOCK_LEDGER_PROTOCOL='pos-stock-cost/v1'
 export const STOCK_LEDGER_ERRORS={
@@ -25,10 +26,11 @@ function amount(value){if(value!==null&&(!Number.isSafeInteger(value)||value<0))
 export function stockCostCommand(input){
  const kind=input&&Object.getOwnPropertyDescriptor(input,'action')
  if(!kind||!Object.hasOwn(kind,'value')||!['open','price'].includes(kind.value))throw stockLedgerError('INPUT')
- shape(input,['protocol','id','action','time','storeId','epoch','reviewed',...(input.action==='open'?['snapshotDigest','overrides']:['expectedSequence','sourceId','valueCents'])])
+ shape(input,['protocol','id','action','time','storeId','epoch','reviewed',...(input.action==='open'?['snapshotDigest','overrides']:['expectedSequence','sourceId','valueCents']),...(Object.hasOwn(input,'review')?['review']:[])])
  operationHeader(input);text(input.storeId);text(input.epoch)
  if(input.protocol!==STOCK_LEDGER_PROTOCOL||typeof input.time!=='string'||new Date(input.time).toISOString()!==input.time)throw stockLedgerError('INPUT')
  if(input.reviewed!==true)throw stockLedgerError('REVIEW')
+ if(Object.hasOwn(input,'review'))assertStockSetupReview(input.review)
  if(input.action==='open'){
   if(typeof input.snapshotDigest!=='string'||!/^sha256:[0-9a-f]{64}$/.test(input.snapshotDigest)||!Array.isArray(input.overrides))throw stockLedgerError('INPUT')
   const seen=new Set()

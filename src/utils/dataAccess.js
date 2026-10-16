@@ -10,10 +10,15 @@ import {readAgentMappings,mergeAgentMappings} from '../../electron/businessDocum
 import {retainAuditLogs} from './auditRetention'
 import {readExchangeTextSetting} from '../../electron/businessExchange.mjs'
 import {getBrowserRefundContext,previewBrowserRefund} from './browserRefundReview'
+import {stockSetupBrowserEnabled} from './stockSetupAvailability.mjs'
 import {hasBrowserStockCost,commitBrowserStockBusiness,commitBrowserProduct,assertStoredBrowserCostReceipt} from './browserStockBusiness'
 // 資料存取抽象層 — 自動判斷 Electron (SQLite) 或 瀏覽器 (localStorage)
 export const isElectron = !!(typeof window !== 'undefined' && window.electronAPI)
 export const isSharedStore = !!(typeof window !== 'undefined' && window.electronAPI?.sharedStore)
+export async function loadStockSetupAccess(){return isElectron?window.electronAPI.db.getStockSetupAccess():{enabled:stockSetupBrowserEnabled()}}
+export async function loadStockSetupState(actor){return isElectron?window.electronAPI.db.getStockSetupState():(await import('./browserStockSetup')).getBrowserStockSetupState(actor)}
+export async function previewStockSetup(input,actor){return isElectron?window.electronAPI.db.previewStockSetup(input):(await import('./browserStockSetup')).previewBrowserStockSetup(input,actor)}
+export async function applyStockSetupOperation(input,actor){return isElectron?window.electronAPI.db.applyStockSetupOperation(input):(await import('./browserStockSetup')).commitBrowserStockSetup(input,actor)}
 export async function loadStockAccountingState(actor){return isElectron?window.electronAPI.db.getStockAccountingState():(await import('./browserStockReports')).getBrowserStockAccountingState(actor)}
 export async function loadStockSalesState(actor){return isElectron?window.electronAPI.db.getStockSalesState():(await import('./browserStockReports')).getBrowserStockSalesState(actor)}
 export async function applyInventoryOperation(request,actor){return isElectron?window.electronAPI.db.applyInventoryOperation(request):commitBrowserInventory(request,actor)}

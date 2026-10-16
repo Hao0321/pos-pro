@@ -4,6 +4,7 @@ import {canonicalSignature} from './operationRules.mjs'
 import {costCustodySummary} from './stockCustody.mjs'
 import {planStockOpening,planOpeningCostPrice,stockCostCommand,stockLedgerError,STOCK_LEDGER_PROTOCOL} from './stockOpeningPlan.mjs'
 import {planStockBusiness,clearStockReturnSuspense,STOCK_BUSINESS_METHODS} from './stockBusinessPlan.mjs'
+import {assertStockSetupProjection} from './stockSetupReview.mjs'
 
 export const STOCK_COST_METHOD='applyStockCostOperation'
 // The same bytes and model verify native and browser backups. This remains an
@@ -17,11 +18,13 @@ export function projectStockLedger(previous,body,digest=stockLedgerDigest){
   const material=JSON.parse(body.openingMaterial)
   if(material.profile!=='pos-stock-opening-preview/v1')throw stockLedgerError('HISTORY')
   const plan=planStockOpening(material.preview,input,body.date)
-  return {version:1,custody:plan.custody,sourceEvidence:plan.sourceEvidence,legacyJournals:material.legacyJournal,legacyCostReviews:material.preview.legacyCostReviews,journals:[plan.journal],...(material.legacyOperationIds?{legacyOperationIds:material.legacyOperationIds}:{})}
+  const projection={version:1,custody:plan.custody,sourceEvidence:plan.sourceEvidence,legacyJournals:material.legacyJournal,legacyCostReviews:material.preview.legacyCostReviews,journals:[plan.journal],...(material.legacyOperationIds?{legacyOperationIds:material.legacyOperationIds}:{})}
+  assertStockSetupProjection(input,body,projection,costCustodySummary(projection.custody));return projection
  }
  if(!previous||body.openingMaterial!==null)throw stockLedgerError('HISTORY')
  const plan=planOpeningCostPrice(previous,input,body.date)
- return clearStockReturnSuspense({...previous,custody:plan.state,journals:[...previous.journals,plan.journal]},body.date,input.id)
+ const projection=clearStockReturnSuspense({...previous,custody:plan.state,journals:[...previous.journals,plan.journal]},body.date,input.id)
+ assertStockSetupProjection(input,body,projection,costCustodySummary(projection.custody),previous);return projection
 }
 export function stockLedgerAcknowledgement(body,hash,projection){
  const method=body.method||STOCK_COST_METHOD,common={protocol:STOCK_LEDGER_PROTOCOL,success:true,id:body.input.id,eventId:body.id,eventHash:hash,stateDigest:body.afterDigest,sequence:body.sequence}

@@ -9,8 +9,10 @@ import {assertSupplierLedgerResult} from '../../electron/supplierLedger.mjs'
 import {assertSupplierInventoryResult} from '../../electron/supplierInventory.mjs'
 import {PHYSICAL_STOCKTAKE,assertPhysicalStocktakeResult} from '../../electron/physicalStocktake.mjs'
 import {assertReviewedRefundResult} from '../../electron/refundReview.mjs'
+import {assertStockSetupResult} from '../../electron/stockSetupReview.mjs'
+import {assertStoredBrowserStockSetupResult} from './browserStockSetup'
 export const FINANCIAL_PENDING='pos_pending_financial_v1'
-const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt'}
+const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt','stock-cost':'receipt'}
 for(const kind of PROCUREMENT_KINDS)fields[kind]='receipt'
 let running=false
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value
@@ -34,6 +36,10 @@ function assertReceipt(kind,request,result){
   if(kind==='topup'&&(['memberId','amount','bonus','payMethod','shiftId'].some(k=>(row[k]??'')!==(request[k]??''))||result.member?.id!==request.memberId))throw Error('儲值保存結果尚未確認：回覆內容不符')
   if(kind==='refund'&&(row.refundOf!==request.refundOf||result.original?.id!==request.refundOf))throw Error('退款保存結果尚未確認：原單不符')
   if(kind==='refund')assertReviewedRefundResult(request,result)
+  if(kind==='stock-cost'){
+    assertStockSetupResult(request,result)
+    if(!globalThis.window?.electronAPI)assertStoredBrowserStockSetupResult(request,result)
+  }
   if(kind==='cashlog'&&['shiftId','type','amount','reason'].some(k=>(row[k]??'')!==(request[k]??'')))throw Error('現金流水保存結果尚未確認：回覆內容不符')
   if(kind==='waste'&&(row.productId!==request.productId||row.qty!==request.qty||result.product?.id!==request.productId))throw Error('損耗保存結果尚未確認：回覆內容不符')
   if(kind==='restaurant'){

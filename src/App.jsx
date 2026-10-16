@@ -12,6 +12,7 @@ import POSPage from './pages/POSPage'
 import InventoryPage from './pages/InventoryPage'
 import MembersPage from './pages/MembersPage'
 const RefundPage=lazy(()=>import('./pages/RefundPage'))
+const StockSetupPage=lazy(()=>import('./pages/StockSetupPage'))
 const ReportsPage=lazy(()=>import('./pages/ReportsPage'))
 import AccountingPage from './pages/AccountingPage'
 import PurchasePage from './pages/PurchasePage'
@@ -57,6 +58,7 @@ export default function App() {
   useEffect(()=>{setWorkspaceArea('all')},[session?.userId,session?.role])
   const store = useStore(session)
   const { view, setView, lowStockCount, todayRevenue, todayOrders } = store
+  useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='stock-cost'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'stocksetup')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
   useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='refund'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'refunds')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
   useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='exchange'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'exchange')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
   useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='sales'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'sales')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
@@ -137,7 +139,7 @@ export default function App() {
   return (
     <div style={{ display:'flex', height:'100dvh', background:'var(--bg-base)', overflow:'hidden' }}>
       {!isMobile && (
-        <Sidebar view={view} setView={setView} session={session}
+        <Sidebar stockSetupEnabled={store.stockSetupEnabled} view={view} setView={setView} session={session}
           lowStockCount={lowStockCount} todayRevenue={todayRevenue}
           todayOrders={todayOrders} todayBusinessCount={store.todayBusinessCount} onLogout={handleLogout}
           pendingOrders={pendingOrders} openShift={store.openShift} largeText={largeText} toggleLargeText={()=>setLargeText(v=>!v)} simpleMode={simpleMode} toggleSimpleMode={()=>setSimpleMode(v=>!v)}/>
@@ -148,7 +150,7 @@ export default function App() {
       )}
       {isMobile && (
         <div style={{...mob.drawer, transform: menuOpen ? 'translateX(0)' : 'translateX(-100%)'}}>
-          <Sidebar view={view} setView={handleNavChange} session={session}
+          <Sidebar stockSetupEnabled={store.stockSetupEnabled} view={view} setView={handleNavChange} session={session}
             lowStockCount={lowStockCount} todayRevenue={todayRevenue}
             todayOrders={todayOrders} todayBusinessCount={store.todayBusinessCount} onLogout={handleLogout}
             pendingOrders={pendingOrders} openShift={store.openShift} largeText={largeText} toggleLargeText={()=>setLargeText(v=>!v)} simpleMode={simpleMode} toggleSimpleMode={()=>setSimpleMode(v=>!v)}/>
@@ -176,7 +178,7 @@ export default function App() {
           </div>
         )}
         {/* Quick entry locks its fields while retaining the same-document recovery action. */}
-        <main className="workspace-content" data-view={view} inert={store.checkoutState.phase!=='idle'&&view!=='recovery'||store.financialState.phase!=='idle'&&!['quick','exchange','sales','customers','suppliers','stocktake','refunds','recovery'].includes(view)?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+        <main className="workspace-content" data-view={view} inert={store.checkoutState.phase!=='idle'&&view!=='recovery'||store.financialState.phase!=='idle'&&!['quick','exchange','sales','customers','suppliers','stocktake','refunds','stocksetup','recovery'].includes(view)?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
           {view==='recovery'&&session.role==='owner'&&<Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><RecoveryPage store={store} session={session}/></Suspense>}
           {view === 'dashboard' && can('pos.use') && (simpleMode?<SimpleHomePage store={store} session={session} area={workspaceArea} onAreaChange={setWorkspaceArea}/>:<Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><DashboardPage store={store} session={session}/></Suspense>)}
           {view === 'overview' && can('reports.view') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><DashboardPage store={store} session={session}/></Suspense>}
@@ -196,6 +198,7 @@ export default function App() {
           {view === 'accounting' && can('accounting.view') && <AccountingPage store={store} session={session}/>}
           {view === 'purchase'   && can('purchase.view')   && <PurchasePage   store={store} session={session}/>}
           {view === 'stocktake'  && can('stocktake.view')  && <StocktakePage  store={store} session={session}/>}
+          {view === 'stocksetup' && can('inventory.cost') && (store.stockSetupEnabled||store.financialState.kind==='stock-cost') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><StockSetupPage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
           {view === 'promotions' && can('promotions.view') && <PromotionsPage store={store} session={session}/>}
           {view === 'orders'     && can('pos.use')         && <OrdersPage />}
           {view === 'settings'   && can('settings.view')   && <SettingsPage   session={session} onLogout={handleLogout} store={store}/>}

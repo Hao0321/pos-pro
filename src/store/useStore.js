@@ -1,6 +1,7 @@
 import { settledOrders, netSale, orderCost } from '../utils/orderLedger'
 import { executeFinancial, FINANCIAL_PENDING,readPendingFinancial } from '../utils/financialCommand'
 import {loadRefundContext} from '../utils/dataAccess'
+import {loadStockSetupAccess,loadStockSetupState,applyStockSetupOperation} from '../utils/dataAccess'
 import { browserStorage, writeRecords, acquireBrowserEditor } from '../utils/browserStorage'
 import { prepareCheckout } from '../utils/checkoutSafety.mjs'
 import { createCheckoutCoordinator } from '../utils/checkoutCoordinator.mjs'
@@ -44,6 +45,8 @@ const logDbErr = op => e => { console.error(`[POS DB] ${op} failed:`,e);window.d
 
 export function useStore(session){
   const sessionRef=useRef(session);sessionRef.current=session
+  const [stockSetupEnabled,setStockSetupEnabled]=useState(false)
+  useEffect(()=>{let active=true;setStockSetupEnabled(false);if(session?.role==='owner')loadStockSetupAccess().then(result=>{if(active)setStockSetupEnabled(result?.enabled===true)}).catch(()=>{});return()=>{active=false}},[session?.userId,session?.role])
   const [products,      setProducts]      = useState([])
   const [members,       setMembers]       = useState([])
   const [orders,        setOrders]        = useState([])
@@ -431,6 +434,7 @@ export function useStore(session){
     const pending=readPendingFinancial();if(!pending)return
     const ports={restaurant:r=>applyRestaurantOperation(r,session),refund:r=>dbRefund(r.refundOf,r,null,null,sessionRef.current),topup:addTopup,waste:r=>addWaste(r,sessionRef.current),cashlog:addCashLog,stocktake:r=>applyInventoryOperation(r,session),receive:r=>applyInventoryOperation(r,session)}
     ports.exchange=r=>applyExchangeOperation(r,session)
+    ports['stock-cost']=r=>applyStockSetupOperation(r,sessionRef.current)
     ports.sales=r=>applySalesOperation(r,session)
     ports['customer-ledger']=r=>applyCustomerLedgerOperation(r,session)
     ports['supplier-ledger']=r=>applySupplierLedgerOperation(r,session)
@@ -446,6 +450,15 @@ export function useStore(session){
     if(pending.kind==='sales')applySalesResult(result)
     if(pending.kind==='customer-ledger')applyCustomerLedgerResult(result)
     if(pending.kind==='supplier-ledger')applySupplierResult(result)
+    return result
+  }
+  async function commitStockSetup(input){
+    if(dataError)throw Error(dataError)
+    const state=await loadStockSetupState(sessionRef.current)
+    if(state.context.storeId!==input.storeId||state.context.epoch!==input.epoch||state.context.reviewId!==input.review.sourceDigest)throw Object.assign(Error('庫存或成本已更新，請保留輸入重新核對'),{notCommitted:true})
+    const identity={id:'stock-cost-'+crypto.randomUUID(),time:state.context.now}
+    const result=await executeFinancial('stock-cost',input,request=>applyStockSetupOperation(request,sessionRef.current),setFinancialState,identity)
+    window.dispatchEvent(new CustomEvent('pos-stock-cost-changed',{detail:{id:result.receipt.id}}))
     return result
   }
 
@@ -561,6 +574,7 @@ export function useStore(session){
   const todayProfit= Math.round((todayOrders.reduce((sum,o)=>sum+netSale(o)-orderCost(o,products),0)+todaySales.profit)*100)/100
 
   return {
+    stockSetupEnabled,commitStockSetup,
     supplierState,supplierTarget,openSupplierLedger:(supplierId='',purchaseId='')=>{setSupplierTarget({supplierId,purchaseId});setView('suppliers')},consumeSupplierTarget:()=>setSupplierTarget(null),purchaseTarget,openPurchaseSuppliers:()=>{setPurchaseTarget({tab:'suppliers'});setView('purchase')},openPurchaseDocument:id=>{setPurchaseTarget({id});setView('purchase')},consumePurchaseTarget:()=>setPurchaseTarget(null),commitSupplierLedger,refreshSuppliers,
     products,members,orders,purchases,sales,salesQuote,openSalesQuote:quote=>{setSalesQuote({id:quote.id,revision:quote.revision});setView('sales')},consumeSalesQuote:()=>setSalesQuote(null),cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitInventory,commitRestaurant,commitExchange,commitSales,commitCustomerLedger,refreshTrading,customerTarget,openCustomerLedger:id=>{setCustomerTarget(id);setView("customers")},consumeCustomerTarget:()=>setCustomerTarget(""),salesTarget,openSalesDocument:id=>{setSalesTarget(id);setView("sales")},consumeSalesTarget:()=>setSalesTarget(""),restaurantConfig,
     activeMember,setActiveMember:value=>{ensureCartEditable();setActiveMember(value)},

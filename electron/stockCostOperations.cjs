@@ -2,6 +2,7 @@ const {stockCostCommand,stockLedgerError,assertStockCustodyMatchesBook}=require(
 const {readStockOpening}=require('./stockOpeningOperations.cjs')
 const {salesDate}=require('./salesRules.mjs')
 const {createHash}=require('node:crypto')
+const {verifyStockSetupReview}=require('./stockSetup.mjs')
 module.exports=function stockCostOperations(db,api,store){
  const owner=actor=>{const user=actor?.userId&&api.getUsers().find(row=>row.id===actor.userId);if(actor?.role!=='owner'||user?.role!=='owner'||user.username!==actor.username)throw Error('權限不足');return actor}
  function current(){const state=store.read();if(state.projection){if(!store.matchesEpoch(state))throw stockLedgerError('HISTORY');assertStockCustodyMatchesBook(state.projection.custody,api.getProducts(),api.getRestaurantState().entries)}return state}
@@ -40,13 +41,15 @@ module.exports=function stockCostOperations(db,api,store){
     if(saved)return saved
     const state=current(),sales=api.getSalesState(actor)
     if(input.storeId!==sales.storeId||input.epoch!==sales.epoch||Math.abs(Date.now()-Date.parse(input.time))>300000)throw stockLedgerError('STALE')
-    let openingMaterial=null
+    let openingMaterial=null,openingPreview=null
     if(input.action==='open'){
      if(state.projection)throw stockLedgerError('ACTIVE')
      const snapshot=readStockOpening(api,actor,db),hash='sha256:'+createHash('sha256').update(snapshot.material).digest('hex')
      if(hash!==input.snapshotDigest)throw stockLedgerError('STALE')
      openingMaterial=snapshot.material
+     openingPreview={...snapshot.preview,snapshotDigest:hash}
     }else if(!state.projection)throw stockLedgerError('HISTORY')
+    verifyStockSetupReview(input,{state,preview:openingPreview,products:api.getProducts(),storeId:sales.storeId,epoch:sales.epoch})
     const now=new Date(),receipt=store.append(input,actor,{openingMaterial,time:now.toISOString(),date:salesDate(now)})
     current()
     return receipt

@@ -9,7 +9,7 @@ export default function SimpleHomePage({store,session,area='all',onAreaChange}){
   const [query,setQuery]=useState(''),[showAll,setShowAll]=useState(false)
   const heading=useRef(null),areaHeading=useRef(null),lastArea=useRef(area)
   const activeArea=WORKSPACE_AREAS.find(a=>a.id===area)
-  const tasks=workspaceTasks(session,query,query?'all':area),visible=query||showAll||activeArea?tasks:tasks.filter(t=>icons[t.id]),reminders=workspaceReminders(store,session)
+  const tasks=workspaceTasks(session,query,query?'all':area,{stockSetupEnabled:store.stockSetupEnabled}),visible=query||showAll||activeArea?tasks:tasks.filter(t=>icons[t.id]),reminders=workspaceReminders(store,session)
   useEffect(()=>{if(lastArea.current!==area){lastArea.current=area;const target=area==='all'?areaHeading.current:heading.current;target?.scrollIntoView?.({block:'start'});target?.focus({preventScroll:true})}},[area])
   function chooseArea(id){setQuery('');setShowAll(false);onAreaChange(id)}
   return <div className="easy-home"><div className="easy-home-inner">

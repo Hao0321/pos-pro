@@ -1,3 +1,5 @@
+import {appendBrowserStockSetup} from '../../electron/browserStockSetup.mjs'
+import {stockSetupBrowserEnabled} from './stockSetupAvailability.mjs'
 // One atomic record replaces coordinated writes to separate localStorage keys.
 // Legacy keys remain intact for recovery; reads use this record after migration.
 import {validateRestaurantRecords,readRestaurantConfig} from '../../electron/restaurantRules.mjs'
@@ -78,7 +80,8 @@ export function assertOriginalOperationAvailable(method,id,record=readRecords(),
   const error=new Error('原編號曾經保存，目前帳本無法確認這筆內容。請使用復原引導核對。')
   error.historyUncertain=true;throw error
 }
-export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false,recoveryCommand=null,transfer=null,physicalStocktake=null,stockBusiness=null}={}) {
+export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false,recoveryCommand=null,transfer=null,physicalStocktake=null,stockBusiness=null,stockSetup=null}={}) {
+  if(restore&&stockSetup)throw Error('請一次保存一個原操作')
   const current = readRecords()
   if (expectedRevision != null && current.revision !== expectedRevision)
     throw new Error('本機資料已改變，請重新載入後再操作。')
@@ -94,8 +97,9 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
     if(canonicalSignature(oldFlag)!==canonicalSignature(newFlag))throw Error('成本資料的版本保護由完整備份流程管理')
     if(canonicalSignature(before.settings.find(row=>row.key===STOCK_BOOK_HEAD)||null)!==canonicalSignature(after.settings.find(row=>row.key===STOCK_BOOK_HEAD)||null))throw Error('成本帳的最後紀錄由正式交易或完整備份流程管理')
     const state=validateStockCostBook(before)
-    if(physicalStocktake&&stockBusiness)throw Error('請一次保存一個原操作')
-    if(stockBusiness)next.data=bookToBrowser(appendBrowserStockBusiness(before,after,state,stockBusiness,{epoch:current.salesEpoch,supplierFence:current.supplierFence}))
+    if([physicalStocktake,stockBusiness,stockSetup].filter(Boolean).length>1)throw Error('請一次保存一個原操作')
+    if(stockSetup)next.data=bookToBrowser(appendBrowserStockSetup(before,after,state,stockSetup,{epoch:current.salesEpoch,stockSetupEnabled:stockSetupBrowserEnabled()}))
+    else if(stockBusiness)next.data=bookToBrowser(appendBrowserStockBusiness(before,after,state,stockBusiness,{epoch:current.salesEpoch,supplierFence:current.supplierFence}))
     else if(physicalStocktake)next.data=bookToBrowser(appendPhysicalStocktakeBook(before,after,state,physicalStocktake,{storeId:readExchangeTextSetting(before.settings,'sharedStoreId'),epoch:current.salesEpoch,costMode:state.projection?'active':'reference',restaurantEntries:before.restaurantOrders}))
     else guardUnintegratedStockWrite(before,after,state)
   }
