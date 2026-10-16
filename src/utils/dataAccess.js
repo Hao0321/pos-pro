@@ -12,6 +12,7 @@ import {readExchangeTextSetting} from '../../electron/businessExchange.mjs'
 // 資料存取抽象層 — 自動判斷 Electron (SQLite) 或 瀏覽器 (localStorage)
 export const isElectron = !!(typeof window !== 'undefined' && window.electronAPI)
 export const isSharedStore = !!(typeof window !== 'undefined' && window.electronAPI?.sharedStore)
+export async function loadStockAccountingState(){return isElectron?window.electronAPI.db.getStockAccountingState():{status:'reference-only-not-activated'}}
 export async function applyInventoryOperation(request,actor){return isElectron?window.electronAPI.db.applyInventoryOperation(request):commitBrowserInventory(request,actor)}
 export async function getExchangeContext(actor){return isElectron?window.electronAPI.db.getExchangeContext():(await import('./browserExchange')).getBrowserExchangeContext(actor)}
 export async function applyExchangeOperation(request,actor){return isElectron?window.electronAPI.db.applyExchangeOperation(request):(await import('./browserExchange')).commitBrowserExchange(request,actor)}

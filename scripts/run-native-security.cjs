@@ -1,5 +1,7 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--stock-accounting':['native-stock-accounting.cjs','POS_STOCK_ACCOUNTING_PASS',false],
+ '--cost-pricing-ui':['native-cost-pricing-ui.cjs','POS_COST_PRICING_UI_PASS',true],
   '--stock-sources':['native-stock-sources.cjs','POS_STOCK_SOURCES_PASS',false],
   '--stock-sources-ui':['native-stock-sources-ui.cjs','POS_STOCK_SOURCES_UI_PASS',true],
   '--stock-ledger':['native-stock-ledger.cjs','POS_STOCK_LEDGER_PASS',false],

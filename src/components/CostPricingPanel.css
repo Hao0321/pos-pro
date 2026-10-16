@@ -1,0 +1,24 @@
+.cost-pricing{padding:16px;border:1px solid var(--border);background:var(--bg-overlay);border-radius:12px;overflow-wrap:anywhere;font-size:14px;line-height:1.6}
+.cost-pricing p{margin:10px 0;color:var(--text-secondary);font-size:13px}
+.cost-pricing fieldset{border:0;margin:20px 0 0;padding:0;min-width:0}
+.cost-pricing .cost-pricing-unit{margin:0 0 10px;font-size:14px}
+.cost-pricing-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.cost-pricing-steps button{font-size:13px;margin:0;padding:8px 2px;line-height:1.4;border-bottom:2px solid var(--border-dim);color:var(--text-secondary)}
+.cost-pricing-steps button[aria-current=step]{color:var(--gold-bright);border-color:var(--gold);font-weight:700}
+.cost-pricing-results{margin:14px 0}
+.cost-pricing-details{margin-top:12px}
+.cost-pricing legend{font-weight:700;margin-bottom:12px;font-size:15px}
+.cost-pricing label{display:flex;flex-direction:column;gap:6px;min-width:0}
+.cost-pricing .field{min-height:46px;min-width:0;width:100%;font-size:16px}
+.cost-pricing button{min-height:46px;white-space:normal;margin-top:10px}
+.cost-pricing summary{cursor:pointer;padding:12px 0;min-height:44px}
+.cost-pricing-line,.cost-pricing-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cost-pricing-line{border-top:1px solid var(--border-dim);padding:14px 0}
+.cost-pricing-wide{grid-column:1/-1}
+.cost-pricing-amount{display:grid;grid-template-columns:minmax(0,1fr) minmax(80px,1fr);gap:8px;min-width:0}
+.cost-pricing-results{display:flex;gap:16px;flex-wrap:wrap;background:var(--bg-active);padding:14px;border-radius:8px}
+.cost-pricing-results>div{flex:1;min-width:120px}
+.cost-pricing-results strong{display:block;font-size:22px;color:var(--gold-bright);font-variant-numeric:tabular-nums}
+.cost-pricing .cost-pricing-review{display:flex;flex-direction:row;align-items:flex-start;margin:14px 0}
+.cost-pricing-review input{width:24px;height:24px;flex-shrink:0;margin-top:2px;accent-color:var(--gold)}
+@media(max-width:520px){.cost-pricing{padding:12px}.cost-pricing-line,.cost-pricing-grid{grid-template-columns:minmax(0,1fr)}.cost-pricing button{width:100%}}

@@ -6,6 +6,7 @@ import { createCheckoutCoordinator } from '../utils/checkoutCoordinator.mjs'
 import {getRecoveryState} from '../utils/recoveryClient'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {automaticBusinessJournal} from '../../electron/businessJournal.mjs'
+import {assertProductPricingUnchanged} from '../../electron/costPricing.mjs'
 import {PROCUREMENT_KINDS} from '../../electron/procurementRules.mjs'
 import {salesDayMetrics} from '../../electron/salesJournal.mjs'
 import {finalizeSupplierDraft} from '../utils/supplierDraftReceipt.mjs'
@@ -471,18 +472,18 @@ export function useStore(session){
   const acknowledge=result=>{if(result?.success===false)throw Error(result.error||'資料保存失敗');return result}
   const addProduct = useCallback(async p=>{
     // id 加亂數後綴：到貨自動建檔會在迴圈連續建多筆，純 Date.now() 同毫秒會撞號互蓋
-    const n={...p,id:p._creationId||'p'+crypto.randomUUID()};delete n._creationId;delete n._expectedStock
+    const n={...p,id:p._creationId||'p'+crypto.randomUUID()};delete n._creationId;delete n._expectedStock;delete n._expectedPricing
     if (isElectron) acknowledge(await dbAddProduct(n))
     else saveLS('pos2_products',[...loadLS('pos2_products',[]),n])
     setProducts(x=>[...x.filter(p=>p.id!==n.id),n])
     return n
   },[])
   const updateProduct = useCallback(async(id,u)=>{
-    const input={...u}
+    const input={...u},clean={...u};delete clean._expectedStock;delete clean._expectedPricing;delete clean._creationId
     if(Object.hasOwn(input,'stock')&&!Object.hasOwn(input,'_expectedStock'))input._expectedStock=products.find(p=>p.id===id)?.stock
     if (isElectron) acknowledge(await dbUpdateProduct(id,input))
-    else {const current=loadLS('pos2_products',[]);if(Object.hasOwn(input,'stock')&&current.find(p=>p.id===id)?.stock!==input._expectedStock)throw Error('庫存已變更，請重新核對');saveLS('pos2_products',current.map(p=>p.id===id?{...p,...u}:p))}
-    setProducts(p=>p.map(x=>x.id===id?{...x,...u}:x))
+    else {const current=loadLS('pos2_products',[]);assertProductPricingUnchanged(current.find(p=>p.id===id),input._expectedPricing);if(Object.hasOwn(input,'stock')&&current.find(p=>p.id===id)?.stock!==input._expectedStock)throw Error('庫存已變更，請重新核對');saveLS('pos2_products',current.map(p=>p.id===id?{...p,...clean}:p))}
+    setProducts(p=>p.map(x=>x.id===id?{...x,...clean}:x))
   },[products])
   const deleteProduct = useCallback(async id=>{
     if (isElectron) acknowledge(await dbDeleteProduct(id))

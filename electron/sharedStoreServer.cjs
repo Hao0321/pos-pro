@@ -62,6 +62,7 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(method==='db:lookupRecoveryOperation')return db.lookupRecoveryOperation(args[0],actor)
     if(method==='db:exportRecoverySource')return db.exportRecoverySource(args[0],actor)
     if(method==='db:exportRecoveryDiagnostics')return db.exportRecoveryDiagnostics(actor)
+    if(method==='db:getStockAccountingState')return db.getStockAccountingState(actor)
     if(method==='db:applySalesOperation')return db.applySalesOperation(args[0],actor)
     if(method==='db:applyCustomerLedgerOperation')return db.applyCustomerLedgerOperation(args[0],actor)
     if(method==='db:getSupplierState')return db.getSupplierState(actor)
@@ -87,7 +88,7 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(name==='getScenarioTemplateReceipt')return db[name](args[0],actor)
     if(name==='checkout')return db.checkout(args[0],args[1],args[2],actor)
     if(name==='refundOrder')return db.refundOrder(args[0],args[1],actor)
-    if(['addProduct','addWaste','deleteProduct'].includes(name))return db[name](args[0],actor)
+    if(['addProduct','addWaste','deleteProduct','addManualEntry','deleteManualEntry'].includes(name))return db[name](args[0],actor)
     if(['updateProduct','updateOrderStatus'].includes(name))return db[name](args[0],args[1],actor)
     return db[name](...args)
   }

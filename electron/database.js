@@ -197,6 +197,7 @@ module.exports = function initDatabase(dbPath) {
     updateProduct(id, data) {
       const existing = stmts.getProductById.get(id)
       if (!existing) return { success: false, error: 'not found' }
+      require('./costPricing.mjs').assertProductPricingUnchanged(existing,data._expectedPricing)
       for(const key of ['price','cost'])if(data[key]!=null)moneyValue(data[key],key)
       for(const key of ['stock','reorderLevel'])if(data[key]!=null)quantityValue(data[key],key)
       if(Object.hasOwn(data,'_expectedStock')&&data.stock!=null&&existing.stock!==data._expectedStock)return {success:false,error:'庫存已變更，請重新核對'}

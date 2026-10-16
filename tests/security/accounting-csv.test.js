@@ -26,6 +26,6 @@ test('finite negative numbers remain numeric while negative-looking strings are 
 })
 
 test('P&L exports preserve the original financial signs and quoted date labels',()=>{
- const pnl=buildPnL([{id:'j',date:'2026-10-16',lines:[{account:'5208',debit:5,credit:0}]}],'2026-10-16','2026-10-16'),csv=exportPnLCSV(pnl,'2026-10-16','2026-10-16')
+ const pnl=buildPnL([{id:'j',date:'2026-10-16',lines:[{account:'5208',debit:5,credit:0},{account:'1101',debit:0,credit:5}]}],'2026-10-16','2026-10-16'),csv=exportPnLCSV(pnl,'2026-10-16','2026-10-16')
  expect(csv).toContain('"營業費用",-5');expect(csv).toContain('"本期淨利",-5');expect(csv).toContain('"2026-10-16 ~ 2026-10-16"')
 })

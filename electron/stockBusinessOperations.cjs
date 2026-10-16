@@ -8,7 +8,7 @@ const {salesDate}=require('./salesRules.mjs')
 // Integrate the real business writers, including their original receipts, in
 // the same SQLite transaction. This scope is never exposed over IPC or HTTPS.
 module.exports=function installStockBusinessOperations(db,api,store){
- const originals=Object.fromEntries([...STOCK_BUSINESS_METHODS,'updateProduct','deleteProduct','addOrder','updateOrderStatus','checkoutReceipt'].map(method=>[method,api[method]]))
+ const originals=Object.fromEntries([...STOCK_BUSINESS_METHODS,'updateProduct','deleteProduct','addOrder','updateOrderStatus','checkoutReceipt','addManualEntry','deleteManualEntry'].map(method=>[method,api[method]]))
  const actorAt={checkout:3,refundOrder:2,addProduct:1,addWaste:1,applyInventoryOperation:1,applyRestaurantOperation:1,applySalesOperation:1}
  function actor(value,owner=false){
   const account=value?.userId&&api.getUsers().find(row=>row.id===value.userId)
@@ -131,6 +131,23 @@ module.exports=function installStockBusinessOperations(db,api,store){
  }
  api.updateProduct=function(id,data,who){return store.active()?metadata('updateProduct',id,data,who):originals.updateProduct.call(api,id,data)}
  api.deleteProduct=function(id,who){return store.active()?metadata('deleteProduct',id,null,who):originals.deleteProduct.call(api,id)}
+ api.addManualEntry=function(data,who){
+  if(!store.active())return originals.addManualEntry.call(api,data)
+  actor(who,true)
+  return db.transaction(()=>{
+   const state=current()
+   if(typeof data?.id!=='string'||!data.id)throw Error('帳務分錄需要核對')
+   const frozen=state.projection.legacyJournals.find(row=>row.id===data.id)
+   if(frozen){const old=api.getManualJournal().find(row=>row.id===data.id);if(!old||canonicalSignature(old)!==canonicalSignature({...old,...data}))throw Error('開帳前的帳務已保留，請新增更正分錄');return {success:true}}
+   if(data.lines?.some(line=>['1211','2291'].includes(line.account)))throw Error('存貨與待核對成本請由進貨、盤點或成本確認處理')
+   const result=store.scope(()=>originals.addManualEntry.call(api,data));current();return result
+  })()
+ }
+ api.deleteManualEntry=function(id,who){
+  if(!store.active())return originals.deleteManualEntry.call(api,id)
+  actor(who,true)
+  return db.transaction(()=>{const state=current();if(state.projection.legacyJournals.some(row=>row.id===id))throw Error('開帳前的帳務已保留，請新增更正分錄');const result=store.scope(()=>originals.deleteManualEntry.call(api,id));current();return result})()
+ }
  api.addOrder=function(data){
   if(!store.active())return originals.addOrder.call(api,data)
   // This anonymous route only records a pending customer request. It cannot

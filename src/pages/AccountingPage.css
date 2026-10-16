@@ -1,0 +1,3 @@
+.accounting-page{min-width:0;overflow-wrap:anywhere}
+.accounting-notice{font-size:13px;padding:12px;background:var(--bg-active);line-height:1.6;margin-bottom:12px}
+@media(max-width:720px){.accounting-page .accounting-columns{grid-template-columns:minmax(0,1fr)!important}.accounting-page>div:first-child{flex-wrap:wrap;gap:12px}.accounting-page>div:first-child>div:last-child{flex-wrap:wrap}.accounting-page input[type=date]{min-width:0;width:125px}}

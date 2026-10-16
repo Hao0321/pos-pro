@@ -26,6 +26,7 @@ if(sharedStoreMode&&!window.electronAPI){
   db.getExchangeContext=()=>rpc('db:getExchangeContext')
   db.applyExchangeOperation=input=>rpc('db:applyExchangeOperation',input)
   db.getSalesState=()=>rpc('db:getSalesState')
+  db.getStockAccountingState=()=>rpc('db:getStockAccountingState')
   db.applySalesOperation=input=>rpc('db:applySalesOperation',input)
   db.applyCustomerLedgerOperation=input=>rpc('db:applyCustomerLedgerOperation',input)
   db.getSupplierState=()=>rpc('db:getSupplierState')

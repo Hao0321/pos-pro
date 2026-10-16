@@ -13,6 +13,7 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   ipcMain.handle('auth:logout', e => ipcSecurity.logout(e))
   handle('db:checkoutReceipt', (_e, id) => db.checkoutReceipt(id))
   handle('db:getStoreSnapshot',()=>require('./storeSnapshot.cjs')(db,ipcSecurity.current()))
+  handle('db:getStockAccountingState',()=>db.getStockAccountingState(ipcSecurity.current()))
   handle('db:getRestaurantState',()=>db.getRestaurantState())
   handle('db:getAgentContext',()=>db.getAgentContext(ipcSecurity.current()))
   handle('db:getExchangeContext',()=>db.getExchangeContext(ipcSecurity.current()))
@@ -107,8 +108,8 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
 
   // ----- Manual Journal -----
   handle('db:getManualJournal', () => db.getManualJournal())
-  handle('db:addManualEntry', (_e, data) => db.addManualEntry(data))
-  handle('db:deleteManualEntry', (_e, id) => db.deleteManualEntry(id))
+  handle('db:addManualEntry', (_e, data) => db.addManualEntry(data,ipcSecurity.current()))
+  handle('db:deleteManualEntry', (_e, id) => db.deleteManualEntry(id,ipcSecurity.current()))
 
   // ----- Backups -----
   handle('db:getBackups', () => db.getBackups())

@@ -2,11 +2,13 @@ import {tr,trMessage,getLocale} from "../i18n"
 import { useState, useRef, useEffect, useMemo, lazy, Suspense } from 'react'
 import { Plus, Pencil, Trash2, X, Check, AlertTriangle, ChevronUp, ChevronDown, Barcode, Printer, Tag, Truck, Camera, Upload, Download, FileText, Search, MoreHorizontal, CheckSquare } from 'lucide-react'
 import JsBarcode from 'jsbarcode'
-import { loadSuppliers, loadPurchases } from '../utils/dataAccess'
+import { loadSuppliers, loadPurchases, getAgentContext } from '../utils/dataAccess'
+import {costDraftKey} from '../utils/costPricingDraft'
 import { DEFAULT_CATEGORIES, CATEGORY_META, mergeCategories, groupByCategory } from '../utils/categories'
 import { getExpiringProducts, getProductHistory } from '../utils/analytics'
 import { parseCSV, stringifyCSV, downloadCSV, readFileAsText, PRODUCT_CSV_HEADERS, productToCSVRow, csvRowToProduct } from '../utils/csv'
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
+const CostPricingPanel = lazy(() => import('../components/CostPricingPanel'))
 
 function BarcodeDisplay({ value }) {
   const ref = useRef(null)
@@ -34,7 +36,7 @@ const EMPTY = { name:'', category:'', price:'', cost:'', stock:'', barcode:'', u
 // 低庫存判斷：有設安全庫存就用安全庫存，沒設就用 5（零庫存另計）
 const isLowStock = p => p.stock > 0 && (p.reorderLevel > 0 ? p.stock <= p.reorderLevel : p.stock <= 5)
 
-export default function InventoryPage({ store }) {
+export default function InventoryPage({ store,session }) {
   const { products, addProduct, updateProduct, deleteProduct, categories, orders = [], wasteLog = [] } = store
   const [editing,   setEditing]   = useState(null)
   const [form,      setForm]      = useState(EMPTY)
@@ -56,11 +58,15 @@ export default function InventoryPage({ store }) {
   const [csvImport, setCsvImport] = useState(null) // { records, toAdd, toUpdate, errors }
   const [purchases, setPurchases] = useState([])
   const [showHistory, setShowHistory] = useState(false)
+  const [pricingOpen,setPricingOpen]=useState(false)
+  const [pricingContext,setPricingContext]=useState({ready:false,context:null})
   const csvFileRef = useRef(null)
   const savingRef=useRef(false)
+  const pricingInputRef=useRef(null),pricingAppliedRef=useRef(null)
 
   useEffect(() => { loadSuppliers([]).then(s => setSuppliers(Array.isArray(s) ? s : [])) }, [])
   useEffect(() => { loadPurchases([]).then(p => setPurchases(Array.isArray(p) ? p : [])) }, [])
+  useEffect(()=>{let cancelled=false;setPricingContext({ready:false,context:null});getAgentContext(session).then(context=>{if(!cancelled)setPricingContext({ready:true,context})}).catch(()=>{if(!cancelled)setPricingContext({ready:true,context:null})});return()=>{cancelled=true}},[session?.userId,session?.role])
 
   function handleExportCSV() {
     const supplierMap = new Map(suppliers.map(s => [s.id, s]))
@@ -288,12 +294,13 @@ export default function InventoryPage({ store }) {
     return list.map(p => ({ type: 'product', p }))
   }, [filtered, sortMode, sortKey, sortAsc])
 
-  function startNew()  { setEditing('new'); setForm({...EMPTY,_creationId:'p'+crypto.randomUUID()}) }
-  function startEdit(p){ setEditing(p.id);  setForm({...p,_expectedStock:p.stock}) }
+  function startNew()  { pricingAppliedRef.current=null;setPricingOpen(false);setEditing('new'); setForm({...EMPTY,_creationId:'p'+crypto.randomUUID()}) }
+  function startEdit(p){ pricingAppliedRef.current=null;setPricingOpen(false);setEditing(p.id);  setForm({...p,_expectedStock:p.stock,_expectedPricing:{price:p.price,cost:p.cost,unit:p.unit}}) }
 
   async function save() {
     if(savingRef.current)return
-    if (!form.name || !form.price) return
+    if (!form.name?.trim() || form.price===''||form.price===null||form.price===undefined){alert(tr('請先填商品名稱與售價，內容會保留。'));return}
+    if(pricingAppliedRef.current&&(pricingAppliedRef.current.stale||pricingAppliedRef.current.signature!==pricingInputRef.current||pricingAppliedRef.current.unit!==form.unit)){alert(tr('試算已改動，請重新核對並帶入；若改用手動定價，請直接修改商品成本或售價。'));return}
     const data = {
       ...form,
       price: parseFloat(form.price) || 0,
@@ -302,10 +309,12 @@ export default function InventoryPage({ store }) {
       reorderLevel: parseInt(form.reorderLevel) || 0,
       noBarcode: !form.barcode || form.noBarcode,
     }
+    // A price/cost edit must not resend an unchanged quantity from an old form.
+    if(editing!=='new'&&Number(form.stock)===form._expectedStock){delete data.stock;delete data._expectedStock}
     savingRef.current=true
     try{if (editing === 'new') await addProduct(data)
     else await updateProduct(editing, data)
-    setEditing(null)}catch(e){alert(tr("商品未確認保存，請保留內容並核對：{0}", {0: e.message}))}finally{savingRef.current=false}
+    setEditing(null)}catch(e){alert(tr("商品未確認保存，請保留內容並核對：{0}", {0: trMessage(e.message)}))}finally{savingRef.current=false}
   }
 
   async function handleDelete(id) {
@@ -547,7 +556,7 @@ export default function InventoryPage({ store }) {
                   {window.electronAPI && (
                     <button className="btn-icon btn-sm" title={tr("產生條碼")} onClick={()=>handleGenerateBarcode(p)} style={{color:'var(--teal)'}}><Barcode size={13}/></button>
                   )}
-                  <button className="btn-icon btn-sm" onClick={()=>startEdit(p)}><Pencil size={13}/></button>
+                  <button className="btn-icon btn-sm" aria-label={tr('編輯商品')} data-product-edit={p.id} onClick={()=>startEdit(p)}><Pencil size={13}/></button>
                   <button className="btn-icon btn-sm" style={{color:'var(--red)'}} onClick={()=>setConfirmDel(p.id)}><Trash2 size={13}/></button>
                 </div>
               </div>
@@ -562,7 +571,7 @@ export default function InventoryPage({ store }) {
           <div style={iv.drawer} className="animate-scale">
             <div style={iv.drawerHeader}>
               <span style={{fontWeight:600, fontSize:15}}>{editing==='new'?tr("新增商品"):tr("編輯商品")}</span>
-              <button className="btn-icon" onClick={()=>setEditing(null)}><X size={16}/></button>
+              <button className="btn-icon" data-product-editor-close aria-label={tr('關閉')} onClick={()=>setEditing(null)}><X size={16}/></button>
             </div>
             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14}}>
               <div style={{gridColumn:'1/-1'}}>
@@ -594,15 +603,19 @@ export default function InventoryPage({ store }) {
               </div>
               <div>
                 <FieldLabel>{tr("單位")}</FieldLabel>
-                <input className="field" value={form.unit} onChange={e=>setForm(f=>({...f,unit:e.target.value}))} placeholder={tr("包 / 瓶 / kg")}/>
+                <input className="field" value={form.unit} onChange={e=>{if(pricingAppliedRef.current)pricingAppliedRef.current.stale=true;setForm(f=>({...f,unit:e.target.value}))}} placeholder={tr("包 / 瓶 / kg")}/>
               </div>
               <div>
                 <FieldLabel>{tr("售價 (NT$) *")}</FieldLabel>
-                <input className="field" type="number" value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} placeholder="0"/>
+                <input className="field" type="number" name="productPrice" aria-label={tr('售價')} value={form.price} onChange={e=>{pricingAppliedRef.current=null;setForm(f=>({...f,price:e.target.value}))}} placeholder="0"/>
               </div>
               <div>
                 <FieldLabel>{tr("成本 (NT$)")}</FieldLabel>
-                <input className="field" type="number" value={form.cost} onChange={e=>setForm(f=>({...f,cost:e.target.value}))} placeholder="0"/>
+                <input className="field" type="number" name="productCost" aria-label={tr('成本')} value={form.cost} onChange={e=>{pricingAppliedRef.current=null;setForm(f=>({...f,cost:e.target.value}))}} placeholder="0"/>
+              </div>
+              <div style={{gridColumn:'1/-1'}}>
+                <button type="button" className="btn btn-ghost" data-cost-pricing-open style={{minHeight:46,width:'100%',whiteSpace:'normal'}} aria-expanded={pricingOpen} onClick={()=>setPricingOpen(value=>!value)}>{tr('自動算成本與售價')}</button>
+                {pricingOpen&&(pricingContext.ready?<Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><CostPricingPanel key={editing==='new'?form._creationId||'new':editing} unit={form.unit} cacheKey={costDraftKey(pricingContext.context,session,editing==='new'?form._creationId:editing)} currentInputRef={pricingInputRef} onDraftEdited={()=>{if(pricingAppliedRef.current)pricingAppliedRef.current.stale=true}} onApply={(values,signature)=>{pricingAppliedRef.current={signature,unit:form.unit,stale:false};setForm(old=>({...old,...values}))}}/></Suspense>:<p role="status">{tr('正在載入…')}</p>)}
               </div>
               <div>
                 <FieldLabel>{tr("庫存數量")}</FieldLabel>
@@ -963,6 +976,6 @@ const iv = {
   colHead:{ display:'flex', alignItems:'center', gap:4, fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.06em', textTransform:'uppercase', cursor:'pointer', background:'none', fontFamily:'var(--font-sans)' },
   empty:{ textAlign:'center', padding:'48px', color:'var(--text-tertiary)', fontSize:13 },
   overlay:{ position:'fixed', inset:0, background:'rgba(23,37,60,0.30)', backdropFilter:'blur(2px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100 },
-  drawer:{ background:'var(--bg-raised)', border:'1px solid var(--border-dim)', borderRadius:16, padding:24, width:'90%', maxWidth:460, boxShadow:'var(--shadow-lg)' },
+  drawer:{ background:'var(--bg-raised)', border:'1px solid var(--border-dim)', borderRadius:16, padding:24, width:'90%', maxWidth:460, maxHeight:'calc(100dvh - 32px)',overflowY:'auto',boxShadow:'var(--shadow-lg)' },
   drawerHeader:{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 },
 }

@@ -6,6 +6,16 @@ module.exports=function stockCostOperations(db,api,store){
  const owner=actor=>{const user=actor?.userId&&api.getUsers().find(row=>row.id===actor.userId);if(actor?.role!=='owner'||user?.role!=='owner'||user.username!==actor.username)throw Error('權限不足');return actor}
  function current(){const state=store.read();if(state.projection)assertStockCustodyMatchesBook(state.projection.custody,api.getProducts(),api.getRestaurantState().entries);return state}
  return {
+  getStockAccountingState(actor){
+   owner(actor)
+   return db.transaction(()=>{
+    owner(actor)
+    const state=current()
+    if(!state.projection)return {status:'reference-only-not-activated'}
+    const sales=api.getSalesState(actor),supplier=api.getSupplierState(actor)
+    return require('./stockAccounting.mjs').makeStockAccountingReport(state,{products:api.getProducts(),orders:api.getOrders(),topups:api.getTopups(),wasteLog:api.getWasteLog(),purchases:api.getPurchases(),salesDocuments:sales.documents,customerEntries:sales.customerLedger.entries,supplierEntries:supplier.supplierLedger.entries,manualJournal:api.getManualJournal()})
+   })()
+  },
   getStockCostState(actor){owner(actor);return db.transaction(()=>{owner(actor);const state=current();return {status:state.projection?'active':'reference-only-not-activated',sequence:state.entries.length,stateDigest:state.stateDigest,projection:state.projection,valuation:state.valuation}})()},
   applyStockCostOperation(raw,actor){
    owner(actor)

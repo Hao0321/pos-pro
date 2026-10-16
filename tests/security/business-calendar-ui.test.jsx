@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react'
 import {beforeEach,afterEach,test,expect,vi} from 'vitest'
-import {render,screen,fireEvent,cleanup} from '@testing-library/react'
+import {render,screen,fireEvent,cleanup,waitFor} from '@testing-library/react'
 import AccountingPage from '../../src/pages/AccountingPage'
 import {NewPurchase} from '../../src/pages/purchase/NewPurchase'
 
@@ -12,9 +12,9 @@ test('the accounting month starts and ends within the same local calendar',()=>{
   accounting()
   expect([...document.querySelectorAll('input[type=date]')].map(i=>i.value)).toEqual(['2026-10-01','2026-10-01'])
 })
-test('a new manual expense defaults to the local business day',()=>{
+test('a new manual expense defaults to the local business day',async()=>{
   accounting();fireEvent.click(screen.getByText('記錄費用'))
-  expect([...document.querySelectorAll('input[type=date]')].map(i=>i.value)).toEqual(['2026-10-01','2026-10-01','2026-10-01'])
+  await waitFor(()=>expect([...document.querySelectorAll('input[type=date]')].map(i=>i.value)).toEqual(['2026-10-01','2026-10-01','2026-10-01']))
 })
 test('a new purchase defaults to the local business day',()=>{
   render(<NewPurchase products={[]} suppliers={[]} purchases={[]} orders={[]} onSave={vi.fn()}/>)

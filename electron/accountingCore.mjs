@@ -1,6 +1,9 @@
 // ═══════════════════════════════════════════════════════════
 import {salesDate as localDate} from './salesRules.mjs'
 import {spreadsheetRowsCSV} from './spreadsheetCsv.mjs'
+import {financialPnL,financialBalance} from './ledgerReports.mjs'
+import {journalLineCents,spreadsheetMoneyCents} from './journalAmounts.mjs'
+export {formatMoneyCents,centsDecimal,journalLineCents} from './journalAmounts.mjs'
 // 會計引擎 — 複式記帳 + 科目表 + 報表生成
 // ═══════════════════════════════════════════════════════════
 
@@ -19,6 +22,7 @@ export const ACCOUNTS = {
   '2111': { name: '銷項稅額',     type: 'liability', normal: 'credit', group: '流動負債' },
   '2191': { name: '預收款',       type: 'liability', normal: 'credit', group: '流動負債' },
   '2192': { name: '客戶預收款',   type: 'liability', normal: 'credit', group: '流動負債' },
+  '2291': { name: '待核對成本暫記', type: 'liability', normal: 'credit', group: '流動負債' },
   // 業主權益 Equity (3xxx)
   '3101': { name: '業主資本',     type: 'equity',   normal: 'credit', group: '業主權益' },
   '3901': { name: '保留盈餘',     type: 'equity',   normal: 'credit', group: '業主權益' },
@@ -151,86 +155,10 @@ export function wasteToJournalEntries(waste){
   return [{id:'JW'+waste.id,orderId:waste.id,date,description:'庫存損耗 — '+(waste.productName||waste.id),type:'auto_waste',lines:[{account:'5208',debit:value/100,credit:0,note:waste.reason||''},{account:'1211',debit:0,credit:value/100,note:'已扣除的存貨'}]}]
 }
 // ── 損益表 ─────────────────────────────────────────────────
-export function buildPnL(journalEntries, from, to) {
-  const inRange = journalEntries.filter(j => j.date >= from && j.date <= to)
-
-  const totals = {}
-  inRange.forEach(j => {
-    j.lines.forEach(l => {
-      if (!totals[l.account]) totals[l.account] = { debit: 0, credit: 0 }
-      totals[l.account].debit  += l.debit
-      totals[l.account].credit += l.credit
-    })
-  })
-
-  function netBalance(acc) {
-    const t = totals[acc] || { debit: 0, credit: 0 }
-    const info = ACCOUNTS[acc]
-    return info?.normal === 'debit' ? t.debit - t.credit : t.credit - t.debit
-  }
-
-  const revenue   = Object.keys(ACCOUNTS).filter(k => ACCOUNTS[k].type === 'revenue').reduce((s, k) => s + netBalance(k), 0)
-  const cogs      = netBalance('5101')
-  const grossProfit = revenue - cogs
-  const opExpenses  = Object.keys(ACCOUNTS).filter(k => ACCOUNTS[k].type === 'expense' && k !== '5101').reduce((s, k) => s + netBalance(k), 0)
-  const netIncome   = grossProfit - opExpenses
-  const grossMargin = revenue > 0 ? (grossProfit / revenue * 100).toFixed(1) : '0.0'
-  const netMargin   = revenue > 0 ? (netIncome   / revenue * 100).toFixed(1) : '0.0'
-
-  // Revenue breakdown
-  const revenueLines = Object.keys(ACCOUNTS)
-    .filter(k => ACCOUNTS[k].type === 'revenue')
-    .map(k => ({ code: k, name: ACCOUNTS[k].name, amount: netBalance(k) }))
-    .filter(l => l.amount !== 0)
-
-  // Expense breakdown
-  const expenseLines = Object.keys(ACCOUNTS)
-    .filter(k => ACCOUNTS[k].type === 'expense')
-    .map(k => ({ code: k, name: ACCOUNTS[k].name, amount: netBalance(k) }))
-    .filter(l => l.amount !== 0)
-
-  return { revenue, cogs, grossProfit, grossMargin, opExpenses, netIncome, netMargin, revenueLines, expenseLines, totals, netBalance }
-}
+export function buildPnL(journalEntries, from, to, options={}) {return financialPnL(journalEntries,from,to,ACCOUNTS,options)}
 
 // ── 資產負債表 ──────────────────────────────────────────────
-export function buildBalanceSheet(journalEntries, asOf) {
-  const inRange = journalEntries.filter(j => j.date <= asOf)
-  const totals  = {}
-  inRange.forEach(j => {
-    j.lines.forEach(l => {
-      if (!totals[l.account]) totals[l.account] = { debit: 0, credit: 0 }
-      totals[l.account].debit  += l.debit
-      totals[l.account].credit += l.credit
-    })
-  })
-
-  function netBalance(acc) {
-    const t    = totals[acc] || { debit: 0, credit: 0 }
-    const info = ACCOUNTS[acc]
-    return info?.normal === 'debit' ? t.debit - t.credit : t.credit - t.debit
-  }
-
-  const sections = {
-    asset:     { label: '資產', items: [] },
-    liability: { label: '負債', items: [] },
-    equity:    { label: '業主權益', items: [] },
-  }
-
-  Object.keys(ACCOUNTS).forEach(code => {
-    const info   = ACCOUNTS[code]
-    const amount = netBalance(code)
-    if (amount === 0) return
-    if (sections[info.type]) {
-      sections[info.type].items.push({ code, name: info.name, group: info.group, amount })
-    }
-  })
-
-  const totalAssets      = sections.asset.items.reduce((s, i) => s + i.amount, 0)
-  const totalLiabilities = sections.liability.items.reduce((s, i) => s + i.amount, 0)
-  const totalEquity      = sections.equity.items.reduce((s, i) => s + i.amount, 0)
-
-  return { sections, totalAssets, totalLiabilities, totalEquity }
-}
+export function buildBalanceSheet(journalEntries, asOf, options={}) {return financialBalance(journalEntries,asOf,ACCOUNTS,options)}
 
 // ── 日記帳摘要（依日期分組）─────────────────────────────────
 export function groupJournalByDate(journalEntries) {
@@ -250,23 +178,27 @@ export function exportJournalCSV(journalEntries) {
       rows.push([
         j.date, j.id, j.description,
         l.account, ACCOUNTS[l.account]?.name || l.account,
-        l.debit || '', l.credit || '', j.type,
+        j.amountUnit==='cents'?spreadsheetMoneyCents(journalLineCents(j,l,'debit')):l.debit||'',
+        j.amountUnit==='cents'?spreadsheetMoneyCents(journalLineCents(j,l,'credit')):l.credit||'',j.type,
       ])
     })
   })
   return spreadsheetRowsCSV(rows)
 }
 export function exportPnLCSV(pnl, from, to) {
+  const value=(key,negative=false)=>pnl.exact[key]===null?'成本待確認':spreadsheetMoneyCents(BigInt(pnl.exact[key])*(negative?-1n:1n))
   const rows = [
     ['損益表', `${from} ~ ${to}`], [''],
     ['項目', '金額'],
-    ['營業收入', pnl.revenue],
-    ['銷貨成本', -pnl.cogs],
-    ['毛利', pnl.grossProfit],
-    [`毛利率`, `${pnl.grossMargin}%`],
-    ['營業費用', -pnl.opExpenses],
-    ['本期淨利', pnl.netIncome],
-    [`淨利率`, `${pnl.netMargin}%`],
+    ['報表狀態', pnl.complete?'已列分錄可核對':'成本或帳務待核對'],
+    ['營業收入', value('revenue')],
+    ['銷貨成本', value('cogs',true)],
+    ['毛利', value('grossProfit')],
+    [`毛利率`, pnl.grossMargin===null?'成本待確認':`${pnl.grossMargin}%`],
+    ['營業費用', value('opExpenses',true)],
+    ['本期淨利', value('netIncome')],
+    [`淨利率`, pnl.netMargin===null?'成本待確認':`${pnl.netMargin}%`],
   ]
+  if(!pnl.complete)rows.push(['已知銷貨成本（非完整成本）',spreadsheetMoneyCents(pnl.knownExact.cogs)],['已知營業費用',spreadsheetMoneyCents(pnl.knownExact.opExpenses)])
   return spreadsheetRowsCSV(rows)
 }

@@ -1,6 +1,7 @@
 import {canonicalSignature,moneyValue,quantityValue} from './operationRules.mjs'
 import {automaticBusinessJournal} from './businessJournal.mjs'
 import {STOCK_COST_ERRORS} from './stockCost.mjs'
+import {aggregateJournal} from './journalAmounts.mjs'
 
 // This is a reference-only preview, not activation or authoritative valuation.
 // The native/browser adapter owns hashing and must keep `material` private.
@@ -48,17 +49,17 @@ export function prepareStockOpening(data){
     }
   }
   const automatic=automaticBusinessJournal(data),journals=[...automatic,...data.manualJournal],inventoryRows=[]
-  let legacyBalance=0
   for(const journal of journals){
     if(!Array.isArray(journal.lines))fail()
     for(const line of journal.lines.filter(line=>line.account==='1211')){
       const debit=line.debit??0,credit=line.credit??0
       if(typeof debit!=='number'||!Number.isFinite(debit)||typeof credit!=='number'||!Number.isFinite(credit))fail()
-      legacyBalance+=debit-credit;inventoryRows.push({journalId:journal.id,date:journal.date,type:journal.type,debit,credit})
+      inventoryRows.push({journalId:journal.id,date:journal.date,type:journal.type,debit,credit})
       if([debit,credit].some(value=>Math.abs(value*100-Math.round(value*100))>1e-7))flags.add('legacy-subcent-cost-needs-review')
     }
   }
-  const referenceInventoryBalanceCents=Math.round(legacyBalance*100),safeBalance=Number.isSafeInteger(referenceInventoryBalanceCents)?referenceInventoryBalanceCents:null
+  const inventoryTotals=aggregateJournal(journals.map(row=>({...row,lines:row.lines.filter(line=>line.account==='1211')}))),balance=BigInt(inventoryTotals.accounts['1211']?.netDebitCents||0)
+  const safeBalance=balance<=MAX&&balance>= -MAX&&!inventoryTotals.issues.some(row=>row.code==='legacy-precision-review')?Number(balance):null
   if(safeBalance===null)flags.add('legacy-reference-value-out-of-range')
   const referenceAvailableValueCents=total(rows.map(row=>row.referenceValueCents)),referenceReservedValueCents=total(unpaid.flatMap(entry=>entry.allocations.map(row=>row.referenceValueCents))),referenceOwnedValueCents=total([referenceAvailableValueCents,referenceReservedValueCents])
   if(referenceOwnedValueCents===null||referenceOwnedValueCents!==safeBalance)flags.add('inventory-reference-reconciliation-needed')
