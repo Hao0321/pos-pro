@@ -3,7 +3,7 @@ const { spawnSync, execFileSync } = require('node:child_process')
 const { build, Platform } = require('electron-builder'), { Arch } = require('builder-util')
 const asar = require('@electron/asar')
 const {delivery,sourceInputs,frontendInputs}=require('./delivery/pipeline.cjs')
-const {outputPath,claim}=require('./delivery/build-state.cjs')
+const {outputPath,claim,buildArguments,upgradeFixtures}=require('./delivery/build-state.cjs')
 const root = path.resolve(__dirname, '..'), hash = data => crypto.createHash('sha256').update(data).digest('hex')
 function filesIn(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
@@ -26,9 +26,8 @@ async function main() {
   if (Number(process.versions.node.split('.')[0]) < 24) throw new Error('Installer builds require Node.js 24 or newer')
   process.env.PATH = path.dirname(process.execPath) + path.delimiter + process.env.PATH
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
-  const args=process.argv.slice(2)
-  if(args.length&&!(args.length===2&&args[0]==='--out'&&args[1]))throw Error('Usage: build-installer.cjs [--out release/<fresh-generation>]')
-  const output = outputPath(root,args[1]||null,pkg.version)
+  const options=buildArguments(process.argv.slice(2)),upgrades=upgradeFixtures(root,options['--upgrade-fixtures'])
+  const output = outputPath(root,options['--out']||null,pkg.version)
   const state=claim(root)
   let completed,primaryFailure
   try{
@@ -77,7 +76,7 @@ async function main() {
     },
   } })
   const installers=artifacts.filter(file=>file.toLowerCase().endsWith('.exe'));if(installers.length!==1)throw Error('Exactly one installer envelope is required')
-  const verification=await delivery({root,output,installer:installers[0],inputs,frontend,sourceRevision,version:pkg.version,electronVersion:require('electron/package.json').version,automatic:true})
+  const verification=await delivery({root,output,installer:installers[0],inputs,frontend,sourceRevision,version:pkg.version,electronVersion:require('electron/package.json').version,automatic:true,upgradeFixtures:upgrades})
   const receipt={ schemaVersion: 1, inputs,
     outputs: filesIn(output).sort().map(file => identity(file)),
     artifacts: artifacts.map(file => identity(file)), nodeExecutable: identity(process.execPath, path.dirname(process.execPath)),

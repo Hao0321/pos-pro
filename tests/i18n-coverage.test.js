@@ -2,6 +2,10 @@ import {it,expect} from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import messages from '../public/i18n/messages.mjs'
+import {ACCOUNTS} from '../src/utils/accounting.js'
+it('every system chart-of-accounts name has translations while account codes stay stable',()=>{
+  expect(Object.entries(ACCOUNTS).filter(([code,row])=>!/^\d{4}$/.test(code)||!Object.hasOwn(messages,row.name))).toEqual([])
+})
 it('every directly declared interface translation key has all three translations',()=>{
   const files=['src','public/menu','public/scenarios/donburi'].flatMap(dir=>fs.readdirSync(dir,{recursive:true}).filter(f=>/\.(js|jsx|mjs)$/.test(f)).map(f=>path.join(dir,f)))
   const missing=[]

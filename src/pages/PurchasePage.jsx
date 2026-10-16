@@ -12,18 +12,21 @@ import { SupplierList } from "./purchase/SupplierList.jsx"
 import { PayableTab } from "./purchase/PayableTab.jsx"
 import {ProcurementPanel} from './purchase/ProcurementPanel.jsx'
 import {isProcurement,procurementSummary} from '../../electron/procurementRules.mjs'
+import SupplierPurchaseStatus,{purchaseApprovalBlocked} from './suppliers/SupplierPurchaseStatus'
 
 export default function PurchasePage({ store, session }) {
   const { products, commitInventory, orders = [] } = store
   const canEdit=session?.role==='owner'
   const [suppliers,  setSuppliers]  = useState([])
-  const [purchases,  setPurchases]  = useState([])
+  const [purchases,  setPurchases]  = useState(()=>store.purchases||[])
   const [tab,        setTab]        = useState('list')
   const [selected,   setSelected]   = useState(null)
   const [receiving,  setReceiving]  = useState(null)
   const [saveError,setSaveError]=useState(''),[saving,setSaving]=useState(false)
   const receivingBusy=useRef(false)
   const creatingId=useRef(null)
+  const supplierCredits=store.supplierState?.supplierLedger.entries||[]
+  useEffect(()=>{const target=store.purchaseTarget;if(!target)return;if(target.tab){setTab(target.tab);setSelected(null);store.consumePurchaseTarget()}else{const po=purchases.find(row=>row.id===target.id);if(po){setSelected(po);setTab('list');store.consumePurchaseTarget()}}},[store.purchaseTarget,purchases])
 
   useEffect(() => {
     const reload=()=>{loadSuppliers([]).then(setSuppliers).catch(e=>setSaveError(e.message));loadPurchases([]).then(rows=>{setPurchases(rows);setSelected(p=>p?rows.find(row=>row.id===p.id)||null:p)}).catch(e=>setSaveError(e.message))};reload()
@@ -34,6 +37,7 @@ export default function PurchasePage({ store, session }) {
   function saveSuppliers(s) {
     if (!isElectron) browserStorage.setItem('pos_suppliers', JSON.stringify(s))
     setSuppliers(s)
+    store.refreshSuppliers?.().catch(error=>setSaveError(error.message))
   }
   function savePurchases(p) {
     if (!isElectron) browserStorage.setItem('pos_purchases', JSON.stringify(p))
@@ -69,7 +73,7 @@ export default function PurchasePage({ store, session }) {
   const DONE_STATUS = ['received', 'partial', 'paid']
   const pending  = purchases.filter(p => !DONE_STATUS.includes(p.status))
   const done     = purchases.filter(p => DONE_STATUS.includes(p.status))
-  const totalOwed = purchases.reduce((sum,p)=>sum+(isProcurement(p)?procurementSummary(p).owed:p.status!=='draft'&&!p.paidDate&&p.status!=='paid'?p.total:0),0)
+  const totalOwed = purchases.reduce((sum,p)=>sum+(isProcurement(p)?procurementSummary(p,undefined,supplierCredits).owed:p.status!=='draft'&&!p.paidDate&&p.status!=='paid'?p.total:0),0)
 
   return (
     <div style={ps.root}>
@@ -81,17 +85,18 @@ export default function PurchasePage({ store, session }) {
           </div>
         </div>
         <div style={{display:'flex', gap:8,flexWrap:'wrap',minWidth:0}}>
+          {canEdit&&<button className="btn btn-ghost btn-sm" data-purchase-supplier-ledger onClick={()=>store.openSupplierLedger(selected?.supplierId||'')}>{tr('供應商與預付款')}</button>}
           {[['list','進貨單'],...(canEdit?[['new','+ 新增'],['suppliers','供應商']]:[]),['payable','應付帳款']].map(([k,l])=>(
             <button key={k} onClick={()=>{setTab(k);setSelected(null)}} className={`btn btn-sm ${tab===k?'btn-primary':'btn-ghost'}`}>{tr(l)}</button>
           ))}
         </div>
       </div>
 
-      {tab === 'list'      && <PurchaseList purchases={purchases} selected={selected} onSelect={setSelected} onReceive={canEdit?setReceiving:null} renderProcurement={po=><ProcurementPanel key={po.id} po={po} onCommand={commitInventory} openShift={store.openShift} readOnly={!canEdit}/>}/>}
+      {tab === 'list'      && <PurchaseList purchases={purchases} selected={selected} onSelect={setSelected} onReceive={canEdit?setReceiving:null} canReceive={po=>!purchaseApprovalBlocked(po,store.supplierState)} renderProcurement={po=><><SupplierPurchaseStatus po={po} state={store.supplierState} onOpen={store.openSupplierLedger}/><ProcurementPanel key={po.id} po={po} onCommand={commitInventory} openShift={store.openShift} readOnly={!canEdit} approvalBlocked={purchaseApprovalBlocked(po,store.supplierState)} supplierCredits={supplierCredits} onSupplierLedger={()=>store.openSupplierLedger(po.supplierId)}/></>}/>}
       {saveError&&!receiving&&<p role="alert" style={{color:'var(--red)'}}>{trMessage(saveError)}</p>}
       {tab === 'new'       && <NewPurchase  products={products} suppliers={suppliers} purchases={purchases} orders={orders} onSave={async po=>{creatingId.current=po.id;const r=await commitInventory('purchase-create',{purchase:po});setSelected(r.purchase);setTab('list')}}/>}
       {tab === 'suppliers' && <SupplierList suppliers={suppliers} products={products} purchases={purchases} onSave={saveSuppliers} onGoInventory={()=>store.setView?.('inventory')}/>}
-      {tab === 'payable'   && <PayableTab purchases={purchases} suppliers={suppliers} readOnly={!canEdit} onOpen={po=>{setSelected(po);setTab('list')}} onMarkPaid={async(id)=>{
+      {tab === 'payable'   && <PayableTab purchases={purchases} suppliers={suppliers} supplierCredits={supplierCredits} readOnly={!canEdit||store.supplierState?.legacyReadOnly} onOpen={po=>{setSelected(po);setTab('list')}} onMarkPaid={async(id)=>{
         if(!canEdit)return
         const target = purchases.find(p => p.id === id)
         if (!target) return

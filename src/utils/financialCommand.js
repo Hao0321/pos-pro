@@ -4,8 +4,10 @@ import {operationHeader} from '../../electron/operationRules.mjs'
 import {assertExchangeReceipt} from '../../electron/businessExchange.mjs'
 import {assertSalesResult} from '../../electron/salesPlan.mjs'
 import {assertCustomerLedgerResult} from '../../electron/customerLedger.mjs'
+import {assertSupplierLedgerResult} from '../../electron/supplierLedger.mjs'
+import {assertSupplierInventoryResult} from '../../electron/supplierInventory.mjs'
 export const FINANCIAL_PENDING='pos_pending_financial_v1'
-const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt'}
+const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt'}
 for(const kind of PROCUREMENT_KINDS)fields[kind]='receipt'
 let running=false
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value
@@ -25,6 +27,7 @@ function assertReceipt(kind,request,result){
   if(kind==='exchange')assertExchangeReceipt(request,result)
   if(kind==='sales')assertSalesResult(request,result)
   if(kind==='customer-ledger')assertCustomerLedgerResult(request,result)
+  if(kind==='supplier-ledger')assertSupplierLedgerResult(request,result)
   if(kind==='topup'&&(['memberId','amount','bonus','payMethod','shiftId'].some(k=>(row[k]??'')!==(request[k]??''))||result.member?.id!==request.memberId))throw Error('儲值保存結果尚未確認：回覆內容不符')
   if(kind==='refund'&&(row.refundOf!==request.refundOf||result.original?.id!==request.refundOf))throw Error('退款保存結果尚未確認：原單不符')
   if(kind==='cashlog'&&['shiftId','type','amount','reason'].some(k=>(row[k]??'')!==(request[k]??'')))throw Error('現金流水保存結果尚未確認：回覆內容不符')
@@ -38,6 +41,7 @@ function assertReceipt(kind,request,result){
     if(request.action==='cancel'&&row.refundId&&(result.refund?.id!==row.refundId||result.refund.shiftId!==request.shiftId||result.refund.total!==-result.entry.total))throw Error('預訂回覆缺少退款流水')
   }
   if(['stocktake','receive',...PROCUREMENT_KINDS].includes(kind)){
+    assertSupplierInventoryResult(request,result)
     if(row.kind!==kind||row.signature!==JSON.stringify(canonical(request))||!Array.isArray(row.productIds)||!row.productIds.length&&!PROCUREMENT_KINDS.includes(kind)||!Array.isArray(result.products)||result.products.length!==row.productIds.length||new Set(row.productIds).size!==row.productIds.length||row.productIds.some(id=>!result.products.some(p=>p.id===id)))throw Error('庫存保存結果尚未確認：回覆內容不符')
     if(kind==='stocktake'&&(row.productIds.length!==request.counts.length||request.counts.some(c=>!row.productIds.includes(c.id))))throw Error('盤點回覆缺少原品項')
     if(kind==='receive'&&(row.purchaseId!==request.purchaseId||result.purchase?.id!==request.purchaseId))throw Error('到貨回覆缺少原進貨單')

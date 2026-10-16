@@ -4,7 +4,7 @@ import { X, Truck, Package, ChevronLeft, CheckCircle } from "lucide-react"
 import useIsMobile from "../../hooks/useIsMobile"
 import { STATUS, poItemKey, ps } from "./controls.jsx"
 
-export function PurchaseList({ purchases, selected, onSelect, onReceive,renderProcurement }) {
+export function PurchaseList({ purchases, selected, onSelect, onReceive,renderProcurement,canReceive=()=>true }) {
   const isMobile = useIsMobile()
   // mobile：選中就只看詳情，未選看列表
   const showList   = !isMobile || !selected
@@ -55,7 +55,7 @@ export function PurchaseList({ purchases, selected, onSelect, onReceive,renderPr
                 </div>
               </div>
             </div>
-            {onReceive&&(selected.status === 'ordered' || selected.status === 'partial') && (
+            {onReceive&&canReceive(selected)&&(selected.status === 'ordered' || selected.status === 'partial') && (
               <button className="btn btn-primary btn-sm" onClick={()=>onReceive(selected)}>
                 <Truck size={14}/>{selected.status === 'partial' ? tr("補收到貨") : tr("確認到貨")}
               </button>

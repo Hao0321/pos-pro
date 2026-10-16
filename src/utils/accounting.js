@@ -10,6 +10,7 @@ export const ACCOUNTS = {
   '1103': { name: '銀行存款',     type: 'asset',    normal: 'debit',  group: '流動資產' },
   '1141': { name: '應收帳款',     type: 'asset',    normal: 'debit',  group: '流動資產' },
   '1211': { name: '存貨',         type: 'asset',    normal: 'debit',  group: '流動資產' },
+  '1261': { name: '供應商預付款', type: 'asset',    normal: 'debit',  group: '流動資產' },
   '1501': { name: '設備',         type: 'asset',    normal: 'debit',  group: '非流動資產' },
   // 負債 Liabilities (2xxx)
   '2101': { name: '應付帳款',     type: 'liability', normal: 'credit', group: '流動負債' },

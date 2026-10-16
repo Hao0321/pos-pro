@@ -104,7 +104,7 @@ module.exports=function installRecovery(db,api,replaceAllTx){
       const who=actor||internalActor(),id='import-'+randomUUID()
       // The legacy cloud projection imports named collections. Full backup/file
       // restores use previewRestore instead and replace the complete business book.
-      const projected={...current,...data,salesDocuments:data.salesDocuments??[],salesOperations:data.salesOperations??[],customerEntries:data.customerEntries??[],customerOperations:data.customerOperations??[]}
+      const projected={...current,...data,salesDocuments:data.salesDocuments??[],salesOperations:data.salesOperations??[],customerEntries:data.customerEntries??[],customerOperations:data.customerOperations??[],supplierEntries:data.supplierEntries??[],supplierOperations:data.supplierOperations??[]}
       return replace(id,projected,current._revision,who,canonicalSignature({kind:'import',id,hash:sha(data)}))
     })()
   }
@@ -165,18 +165,19 @@ module.exports=function installRecovery(db,api,replaceAllTx){
     applyRestaurantOperation:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM restaurant_operations WHERE id=?').get(id)},
     applySalesOperation:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM sales_operations WHERE id=?').get(id)},
     applyCustomerLedgerOperation:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM customer_operations WHERE id=?').get(id)},
+    applySupplierLedgerOperation:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM supplier_operations WHERE id=?').get(id)},
     applyScenarioTemplate:{id:a=>a[0]?.operationId,active:(_id,a)=>db.prepare('SELECT 1 FROM audit_log WHERE id=?').get('scenario-template:'+a[0]?.templateId)},
   }
   for(const [method,descriptor] of Object.entries(descriptors)){
     const original=api[method]
     api[method]=function(...args){
-      if(method.startsWith('apply')&&(!args[1]||!['owner','staff'].includes(args[1].role)||['applySalesOperation','applyCustomerLedgerOperation','applyExchangeOperation','applyScenarioTemplate'].includes(method)&&args[1].role!=='owner'))return original.apply(api,args)
+      if(method.startsWith('apply')&&(!args[1]||!['owner','staff'].includes(args[1].role)||['applySalesOperation','applyCustomerLedgerOperation','applySupplierLedgerOperation','applyExchangeOperation','applyScenarioTemplate'].includes(method)&&args[1].role!=='owner'))return original.apply(api,args)
       return db.transaction(()=>{
         const id=recoveryOperationId(descriptor.id(args))
         if(typeof id!=='string')return original.apply(api,args)
         const known=typeof id==='string'&&db.prepare('SELECT 1 FROM recovery_original_ids WHERE method=? AND operation_id=? LIMIT 1').get(method,id)
         let available=!!descriptor.active(id,args)
-        if(known&&available&&['checkout','refundOrder','addTopup','addCashLog','addWaste','applyInventoryOperation','applyExchangeOperation','applyRestaurantOperation','applySalesOperation','applyCustomerLedgerOperation'].includes(method)){
+        if(known&&available&&['checkout','refundOrder','addTopup','addCashLog','addWaste','applyInventoryOperation','applyExchangeOperation','applyRestaurantOperation','applySalesOperation','applyCustomerLedgerOperation','applySupplierLedgerOperation'].includes(method)){
           const active=operationRecords(api.exportData()).find(row=>row.method===method&&row.id===id)
           const request=method==='refundOrder'?{...args[1],refundOf:args[0]}:args[0]
           available=!!active&&originalMatches(active,{method,id,request},proof)

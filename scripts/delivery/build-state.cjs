@@ -1,5 +1,20 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{randomUUID}=require('node:crypto')
-const {inside,noLinks}=require('./files.cjs')
+const {inside,noLinks,identity}=require('./files.cjs')
+function buildArguments(args){
+  const options={}
+  for(let index=0;index<args.length;index+=2){const flag=args[index],value=args[index+1];assert.ok(['--out','--upgrade-fixtures'].includes(flag)&&typeof value==='string'&&value.length>0&&!value.startsWith('--')&&!Object.hasOwn(options,flag),'Usage: build-installer.cjs [--out release/<fresh-generation>] [--upgrade-fixtures .rd/<verified-fixtures.json>]');options[flag]=value}
+  return options
+}
+function upgradeFixtures(root,requested){
+  if(!requested)return []
+  const directory=path.join(root,'.rd'),config=inside(directory,path.resolve(root,requested));assert.ok(fs.statSync(config).isFile()&&fs.statSync(config).size<=65536,'bounded upgrade fixture config required')
+  const rows=JSON.parse(fs.readFileSync(config,'utf8'));assert.ok(Array.isArray(rows)&&rows.length>0&&rows.length<=4,'one to four verified upgrade fixtures required')
+  const versions=new Set()
+  return rows.map(row=>{
+    assert.ok(row&&Object.keys(row).sort().join(',')==='sha256,source,version'&&/^\d+\.\d+\.\d+$/.test(row.version)&&!versions.has(row.version)&&typeof row.source==='string'&&/^[a-f0-9]{64}$/.test(row.sha256),'invalid upgrade fixture identity');versions.add(row.version)
+    const source=inside(directory,path.resolve(root,row.source));assert.equal(identity(source,directory).sha256,row.sha256,'upgrade source digest mismatch');noLinks(source+'-wal');assert.ok(!fs.existsSync(source+'-wal')||fs.statSync(source+'-wal').size===0,'closed upgrade source database required');return {...row,source}
+  })
+}
 function outputPath(root,requested,version){
   const output=inside(path.join(root,'release'),path.resolve(root,requested||path.join('release',version)))
   assert.ok(!fs.existsSync(output)||fs.readdirSync(output).length===0,'installer output already contains a generation; choose a fresh output directory')
@@ -19,4 +34,4 @@ function claim(root){
   const invocation=fs.mkdtempSync(path.join(directory,'invocation-'))
   return {invocation,release(){noLinks(file);const saved=JSON.parse(fs.readFileSync(file,'utf8'));assert.equal(saved.token,token,'build lock changed');assert.equal(saved.pid,process.pid,'build lock owner changed');fs.unlinkSync(file)}}
 }
-module.exports={outputPath,claim}
+module.exports={outputPath,claim,buildArguments,upgradeFixtures}

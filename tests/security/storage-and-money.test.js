@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, test, expect, vi } from 'vitest'
-import { browserStorage, readRecords, writeRecords, RECORD_KEY, DATA_KEYS, acquireBrowserEditor } from '../../src/utils/browserStorage'
+import { browserStorage, readRecords, writeRecords, restoreRecords, RECORD_KEY, DATA_KEYS, acquireBrowserEditor } from '../../src/utils/browserStorage'
 import { commitBrowserSale, commitBrowserRefund } from '../../src/utils/browserSales'
 import { prepareCheckout } from '../../src/utils/checkoutSafety.mjs'
 import { executeFinancial, FINANCIAL_PENDING } from '../../src/utils/financialCommand'
@@ -9,6 +9,7 @@ import { createBackup, restoreBackup, getBackupList } from '../../src/utils/secu
 import {canonicalSignature} from '../../electron/operationRules.mjs'
 import {planSales} from '../../electron/salesPlan.mjs'
 import {planCustomerLedger} from '../../electron/customerLedger.mjs'
+import {planSupplierLedger} from '../../electron/supplierLedger.mjs'
 import {salesDate} from '../../electron/salesRules.mjs'
 import {productReference} from '../../electron/businessExchange.mjs'
 let map, failWrite
@@ -66,9 +67,12 @@ test('all business collections restore atomically, including restaurant orders, 
   ledgerData.customerEntries=[created.event]
   const received=planCustomerLedger({id:'restore-receipt',kind:'customer-ledger',action:'receive',storeId:'restore-fixture',epoch:'fixture-epoch',time:new Date().toISOString(),date:salesDate(new Date()),expectedRevision:1,customerId:'restore-buyer',amount:125.50,method:'bank',shiftId:'',confirmed:true},ledgerData,actor)
   data.pos_customer_entries=[created.event,received.event];data.pos_customer_operations=[created.receipt,received.receipt]
+  data.pos_suppliers=[{id:'pos_suppliers',name:'restored supplier',catalog:[]}]
+  const supplier=planSupplierLedger({id:'restore-supplier-pay',kind:'supplier-ledger',action:'pay',storeId:'restore-fixture',epoch:'fixture-epoch',time:new Date().toISOString(),date:salesDate(new Date()),expectedRevision:0,supplierId:'pos_suppliers',expectedSupplierName:'restored supplier',amount:25,method:'bank',confirmed:true},{storeId:'restore-fixture',epoch:'fixture-epoch',suppliers:data.pos_suppliers,supplierEntries:[]},actor)
+  data.pos_supplier_entries=[supplier.event];data.pos_supplier_operations=[supplier.receipt]
   writeRecords(data)
   const backup=await createBackup({username:'測試'},'完整備份');expect(await getBackupList()).toHaveLength(1)
-  writeRecords({...Object.fromEntries(DATA_KEYS.map(key=>[key,[]])),pos_users:data.pos_users});await restoreBackup(backup.id,{userId:'restore-owner',username:'測試',role:'owner'})
+  restoreRecords({...Object.fromEntries(DATA_KEYS.map(key=>[key,[]])),pos_users:data.pos_users});await restoreBackup(backup.id,{userId:'restore-owner',username:'測試',role:'owner'})
   for(const key of DATA_KEYS)expect(readRecords().data[key]).toEqual(expect.arrayContaining(data[key]))
 })
 test('failed backup does not return a fabricated ID or add an empty snapshot',async()=>{

@@ -1,10 +1,10 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path')
-const keys=['products','members','orders','purchases','salesDocuments','salesOperations','customerEntries','customerOperations','cashLog','restaurantOrders','restaurantOperations','memberTopups','wasteLog']
+const keys=require('./packaged-business-book.cjs').keys
 module.exports=async function check({js,wait,click,input,renderer,profile,restart=false}){
   const q=JSON.stringify,read=()=>js('window.electronAPI.db.getSalesState()'),book=()=>js('window.electronAPI.db.exportData()'),file=path.join(profile,'delivered-customers-evidence.json')
   if(restart){
-    const expected=JSON.parse(fs.readFileSync(file,'utf8')),before=await book(),state=await read()
-    for(const key of keys)assert.deepEqual(before[key],expected.book[key],'delivered restart: '+key)
+    const expected=JSON.parse(fs.readFileSync(file,'utf8')),finalBook=require('./packaged-business-book.cjs').expected(profile),before=await book(),state=await read()
+    for(const key of keys)assert.deepEqual(before[key],finalBook[key],'delivered restart: '+key)
     assert.equal(state.customerLedger.receipts.length,2);assert.equal(state.customerLedger.customers.find(row=>row.id===expected.customerId).available,6.75)
     assert.equal((await js('window.electronAPI.db.applyCustomerLedgerOperation('+q(expected.original.request)+')')).success,true)
     for(const key of keys)assert.deepEqual((await book())[key],before[key],'delivered original receipt replay: '+key)

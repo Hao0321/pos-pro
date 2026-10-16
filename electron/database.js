@@ -15,6 +15,7 @@ module.exports = function initDatabase(dbPath) {
 
   require('./databaseSchema.cjs')(db)
   if(db.prepare('SELECT 1 FROM customer_entries LIMIT 1').get())require('./databaseFeatureFence.cjs').installCustomerFence(db)
+  if(db.prepare('SELECT 1 FROM supplier_entries LIMIT 1').get())require('./databaseFeatureFence.cjs').installSupplierFence(db)
   const stmts = require('./databaseStatements.cjs')(db)
 
   const orderInsertParams = (o) => ({
@@ -165,6 +166,7 @@ module.exports = function initDatabase(dbPath) {
     ...require('./exchangeOperations.cjs')(db,stmts),
     ...require('./salesOperations.cjs')(db,stmts),
     ...require('./customerOperations.cjs')(db,stmts),
+    ...require('./supplierOperations.cjs')(db,stmts),
     // Products
     getProducts() {
       return stmts.getAllProducts.all().map(p => ({ ...p, noBarcode: !!p.noBarcode }))
@@ -340,7 +342,7 @@ module.exports = function initDatabase(dbPath) {
       stmts.updateSupplier.run(supplierParams({...old,...data}, id))
       return { success: true }
     },
-    deleteSupplier(id) {if(stmts.getAllProducts.all().some(p=>p.supplierId===id)||stmts.getAllPurchases.all().some(p=>p.supplierId===id&&(p.procurement||['draft','ordered','partial'].includes(p.status))))return {success:false,error:'供應商仍有商品或採購文件，請先核對'};stmts.deleteSupplier.run(id); return { success: true } },
+    deleteSupplier(id) {if(db.prepare('SELECT data FROM supplier_entries').all().some(row=>JSON.parse(row.data).supplierId===id)||stmts.getAllProducts.all().some(p=>p.supplierId===id)||stmts.getAllPurchases.all().some(p=>p.supplierId===id&&(p.procurement||['draft','ordered','partial'].includes(p.status))))return {success:false,error:'供應商仍有商品、採購或款項文件，請先核對'};stmts.deleteSupplier.run(id); return { success: true } },
 
     // Purchases
     getPurchases() {
@@ -348,6 +350,7 @@ module.exports = function initDatabase(dbPath) {
     },
     addPurchase(data) {
       if(data.procurement)throw Error('新採購請使用可追溯的採購流程')
+      if(require('./databaseFeatureFence.cjs').hasSupplierFence(db))throw Error('歷史進貨單保留原帳，請使用新採購的正式收貨與付款流程')
       const params={
         id: data.id || 'po' + Date.now(),
         supplierId: data.supplierId || '',
@@ -370,6 +373,7 @@ module.exports = function initDatabase(dbPath) {
       const existing = stmts.getAllPurchases.all().find(p => p.id === id)
       if (!existing) return { success: false }
       if(existing.procurement||data.procurement)throw Error('採購文件不可直接改寫，請使用收貨、請款或付款流程')
+      if(require('./databaseFeatureFence.cjs').hasSupplierFence(db))throw Error('歷史進貨單保留原帳，請使用新採購的正式收貨與付款流程')
       stmts.updatePurchase.run({
         id,
         supplierId: data.supplierId ?? existing.supplierId,
@@ -385,7 +389,7 @@ module.exports = function initDatabase(dbPath) {
       })
       return { success: true,purchase:this.getPurchases().find(p=>p.id===id) }
     },
-    deletePurchase(id) {if(stmts.getAllPurchases.all().find(p=>p.id===id)?.procurement)throw Error('採購歷史不可刪除，未收貨請使用取消採購');stmts.deletePurchase.run(id); return { success: true } },
+    deletePurchase(id) {if(stmts.getAllPurchases.all().find(p=>p.id===id)?.procurement)throw Error('採購歷史不可刪除，未收貨請使用取消採購');if(require('./databaseFeatureFence.cjs').hasSupplierFence(db))throw Error('歷史進貨單保留原帳，請使用新採購的正式收貨與付款流程');stmts.deletePurchase.run(id); return { success: true } },
 
     // Promotions
     getPromotions() {
@@ -550,6 +554,8 @@ module.exports = function initDatabase(dbPath) {
         salesOperations:db.prepare('SELECT data FROM sales_operations ORDER BY id').all().map(r=>JSON.parse(r.data)),
         customerEntries:db.prepare('SELECT data FROM customer_entries ORDER BY id').all().map(r=>JSON.parse(r.data)),
         customerOperations:db.prepare('SELECT data FROM customer_operations ORDER BY id').all().map(r=>JSON.parse(r.data)),
+        supplierEntries:db.prepare('SELECT data FROM supplier_entries ORDER BY id').all().map(r=>JSON.parse(r.data)),
+        supplierOperations:db.prepare('SELECT data FROM supplier_operations ORDER BY id').all().map(r=>JSON.parse(r.data)),
       }
       // A backup round trip may change insertion order for tied timestamps.
       // Stable collection ordering keeps the revision tied to business content.
@@ -582,7 +588,7 @@ module.exports = function initDatabase(dbPath) {
       return migrateTx(data)
     },
     isEmpty() {
-      return ['products','members','orders','suppliers','purchases','promotions','manual_journal','held_orders','shifts','cash_log','waste_log','member_topups','sales_documents','sales_operations','customer_entries','customer_operations','restaurant_orders','restaurant_operations'].every(t=>db.prepare('SELECT 1 FROM '+t+' LIMIT 1').get()==null)
+      return ['products','members','orders','suppliers','purchases','promotions','manual_journal','held_orders','shifts','cash_log','waste_log','member_topups','sales_documents','sales_operations','customer_entries','customer_operations','supplier_entries','supplier_operations','restaurant_orders','restaurant_operations'].every(t=>db.prepare('SELECT 1 FROM '+t+' LIMIT 1').get()==null)
     },
 
     // ===== Held Orders 掛單 =====

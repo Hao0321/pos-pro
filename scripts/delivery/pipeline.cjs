@@ -28,7 +28,7 @@ async function delivery({root,output,installer,inputs,frontend,sourceRevision,ve
   const log=path.join(run,'runtime.log');fs.writeFileSync(log,(result.stdout||'')+(result.stderr||'')+(result.error?.stack||''),{flag:'wx'})
   assert.ok(!result.error&&result.status===0,'delivered runtime failed; preserve '+log)
   const runtimeFile=path.join(current.run,'runtime-report.json'),runtime=JSON.parse(fs.readFileSync(runtimeFile,'utf8'))
-  assert.ok(runtime.status==='PASS'&&runtime.marker==='POS_DELIVERED_RUNTIME_PASS'&&runtime.tests>=25,'delivered runtime success marker absent')
+  assert.ok(runtime.status==='PASS'&&runtime.marker==='POS_DELIVERED_RUNTIME_PASS'&&runtime.tests>=31&&runtime.supplierLedger?.fresh===true&&runtime.supplierLedger?.restart===true,'delivered runtime or supplier journey success marker absent')
   assert.equal(runtime.version,version,'runtime product version drift')
   equalInventory(inputs,sourceInputs(root),'source changed during delivered runtime');equalInventory(frontend,frontendInputs(root),'frontend changed during delivered runtime')
   const envelope=JSON.parse(fs.readFileSync(current.report)),rawReceipt=path.join(current.payload,'resources/build-receipt.json')

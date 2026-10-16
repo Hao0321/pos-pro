@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Hao0321/pos-pro/v2.16.0/public/agent/supplier-payment-draft-v1.schema.json",
+  "title": "POS Pro supplier advance payment draft v1",
+  "description": "TWD data for authenticated owner review. This draft never executes a transfer or supplies an approver or actual-payment confirmation. The store decides whether another owner account must approve. The application validates current supplier identity, time, precision and original operation IDs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "id", "issuedAt", "storeId", "supplierId", "amount", "method"],
+  "properties": {
+    "protocol": {"const": "pos-supplier-payment-draft/v1"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$"},
+    "issuedAt": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?(?:Z|[+-]\\d{2}:\\d{2})$"},
+    "storeId": {"type": "string", "pattern": "^[A-Za-z0-9:_-]{1,128}$"},
+    "supplierId": {"type": "string", "pattern": "^[A-Za-z0-9:_-]{1,128}$"},
+    "amount": {"type": "number", "exclusiveMinimum": 0, "maximum": 1000000000, "multipleOf": 0.01},
+    "method": {"enum": ["cash", "bank"]},
+    "reference": {"type": "string", "maxLength": 100, "x-pos-utf16MaxLength": 100},
+    "note": {"type": "string", "maxLength": 1000, "x-pos-utf16MaxLength": 1000}
+  },
+  "x-pos-maxUtf8Bytes": 16384,
+  "x-pos-maxAgeSeconds": 86400,
+  "x-pos-maxClockLeadSeconds": 300,
+  "x-pos-textLimit": "Application inputs also enforce UTF-16 code-unit lengths. A duplicate ID opens the original record for review and cannot create another payment."
+}

@@ -121,7 +121,7 @@ function PnLView({ pnl, from, to }) {
             <div style={{fontSize:11,color:'var(--text-tertiary)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:12}}>{tr("費用明細")}</div>
             {expenseLines.map(l=>(
               <div key={l.code} style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid var(--border-dim)',fontSize:13}}>
-                <span style={{color:'var(--text-secondary)'}}>{l.name}</span>
+                <span style={{color:'var(--text-secondary)'}}>{tr(l.name)}</span>
                 <span style={{fontFamily:'var(--font-mono)',color:'var(--red)'}}>({l.amount.toLocaleString()})</span>
               </div>
             ))}
@@ -216,7 +216,7 @@ function JournalView({ grouped, manualEntries, deleteManualEntry }) {
                   <div key={j.id} style={{borderBottom:'1px solid var(--border-dim)',padding:'10px 16px'}}>
                     <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
                       <span style={{...ac.typeBadge,...TYPE_STYLE[j.type]||TYPE_STYLE.manual}}>{tr(TYPE_LABEL[j.type]||'手動')}</span>
-                      <span style={{fontSize:13,fontWeight:500}}>{['auto_business_sale','auto_customer_ledger'].includes(j.type)?tr(j.descriptionKey,j.descriptionValues):j.description}</span>
+                      <span style={{fontSize:13,fontWeight:500}}>{['auto_business_sale','auto_customer_ledger','auto_supplier_ledger'].includes(j.type)?tr(j.descriptionKey,j.descriptionValues):j.description}</span>
                       {manualIds.has(j.id) && (
                         <button className="btn-icon btn-sm" style={{marginLeft:'auto',color:'var(--red)'}} onClick={()=>deleteManualEntry(j.id).catch(e=>alert(trMessage(e.message)))}>
                           <Trash2 size={13}/>
@@ -230,7 +230,7 @@ function JournalView({ grouped, manualEntries, deleteManualEntry }) {
                       {j.lines.map((l,i)=>(
                         <>
                           <span key={i+'a'} style={{color:'var(--text-secondary)',paddingLeft:l.debit===0?16:0}}>
-                            {ACCOUNTS[l.account]?.name||l.account}
+                            {tr(ACCOUNTS[l.account]?.name||l.account)}
                             {l.note && <span style={{color:'var(--text-tertiary)',marginLeft:6}}>— {l.note}</span>}
                           </span>
                           <span key={i+'d'} style={{fontFamily:'var(--font-mono)',textAlign:'right',color:l.debit?'var(--blue)':'var(--text-disabled)'}}>
@@ -253,10 +253,11 @@ function JournalView({ grouped, manualEntries, deleteManualEntry }) {
   )
 }
 
-const TYPE_LABEL = { auto_sale:'銷售', auto_cogs:'成本', auto_discount:'折抵', auto_balance:'儲值折抵', auto_topup:'會員儲值', auto_business_sale:'客戶銷售與應收',auto_customer_ledger:'客戶預收與抵付',manual:'手動', }
+const TYPE_LABEL = { auto_sale:'銷售', auto_cogs:'成本', auto_discount:'折抵', auto_balance:'儲值折抵', auto_topup:'會員儲值', auto_business_sale:'客戶銷售與應收',auto_customer_ledger:'客戶預收與抵付',auto_supplier_ledger:'供應商預付與抵付',manual:'手動', }
 const TYPE_STYLE = {
   auto_business_sale:{background:'var(--blue-dim)',color:'var(--blue)'},
   auto_customer_ledger:{background:'var(--teal-dim)',color:'var(--teal)'},
+  auto_supplier_ledger:{background:'var(--blue-dim)',color:'var(--blue)'},
   auto_sale:     { background:'var(--teal-dim)',   color:'var(--teal)'  },
   auto_cogs:     { background:'var(--amber-dim)',  color:'var(--amber)' },
   auto_discount: { background:'var(--gold-dim)',   color:'var(--gold-bright)' },
@@ -300,7 +301,7 @@ function BSSection({ items, color }) {
       {items.map((item,i)=>(
         <div key={item.code} style={{display:'flex',justifyContent:'space-between',padding:'9px 14px',borderBottom:i<items.length-1?'1px solid var(--border-dim)':'none',fontSize:13,alignItems:'center'}}>
           <div>
-            <span style={{color:'var(--text-primary)'}}>{item.name}</span>
+            <span style={{color:'var(--text-primary)'}}>{tr(item.name)}</span>
             <span style={{fontSize:10,color:'var(--text-tertiary)',marginLeft:6,fontFamily:'var(--font-mono)'}}>{item.code}</span>
           </div>
           <span style={{fontFamily:'var(--font-mono)',fontWeight:500,color}}>{item.amount.toLocaleString()}</span>
@@ -399,7 +400,7 @@ function ExpenseView({ addManualEntry }) {
             <FieldLabel>{tr("費用科目")}</FieldLabel>
             <select className="field" value={form.expenseAccount} onChange={e=>setForm(f=>({...f,expenseAccount:e.target.value}))} style={{cursor:'pointer'}}>
               {Object.entries(ACCOUNTS).filter(([,v])=>v.type==='expense'||v.code==='1211').map(([k,v])=>(
-                <option key={k} value={k}>{k} {v.name}</option>
+                <option key={k} value={k}>{k} {tr(v.name)}</option>
               ))}
               <option value="1211">{tr("1211 存貨（進貨）")}</option>
             </select>

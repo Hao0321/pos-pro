@@ -1,0 +1,10 @@
+.supplier-page .supplier-approval {padding:20px;margin:12px 0;min-width:0}
+.supplier-page .supplier-approval h3 {margin:0;font-size:1.05rem}
+.supplier-page .supplier-proposal-details {overflow-wrap:anywhere;line-height:1.65}
+.supplier-page .supplier-proposal-details ul {padding-left:1.3em;margin:8px 0}
+.supplier-page .supplier-settings {padding:20px;line-height:1.65}
+.supplier-page .supplier-settings summary,.supplier-page .customer-agent summary {cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}
+.supplier-page .supplier-form input[readonly] {background:var(--bg-overlay);color:var(--text-primary)}
+.supplier-page .supplier-review-board {min-width:0}
+.supplier-page .customer-actions p {flex-basis:100%;margin:0}
+@media(max-width:600px){.supplier-page .supplier-approval,.supplier-page .supplier-settings{padding:16px}.supplier-page .customer-actions{align-items:stretch}.supplier-page .customer-actions>.btn{flex:1;min-width:0;white-space:normal}}

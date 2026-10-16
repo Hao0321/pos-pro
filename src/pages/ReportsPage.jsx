@@ -15,6 +15,7 @@ export default function ReportsPage({ store }) {
   // 排除完整退貨配對；部分退貨保留兩邊（原訂單 + 負數退貨訂單），總額自動抵銷正確
   const businessDocuments=store.sales?.documents||[]
   const customerEntries=store.sales?.customerLedger?.entries
+  const supplierEntries=store.supplierState?.supplierLedger.entries
   const orders = useMemo(()=>[...settledOrders(rawOrders),...businessReportRows(businessDocuments)],[rawOrders,businessDocuments])
   const today=store.sales?.today||salesDate(now)
   function inRange(day){const age=(Date.parse(today)-Date.parse(day))/86400000;return range==='today'?day===today:range==='week'?age>=0&&age<7:range==='month'?day.slice(0,7)===today.slice(0,7):true}
@@ -80,9 +81,9 @@ export default function ReportsPage({ store }) {
         }
       } else card += o.total
     }
-    for(const row of businessCashFlows(businessDocuments,customerEntries).filter(row=>inRange(row.date))){if(row.method==='cash')cash+=row.amount;else bank+=row.amount}
+    for(const row of businessCashFlows(businessDocuments,customerEntries,store.purchases,supplierEntries).filter(row=>inRange(row.date))){if(row.method==='cash')cash+=row.amount;else bank+=row.amount}
     return { cash, card,bank, total: cash+card+bank }
-  }, [filtered,businessDocuments,customerEntries,range,today])
+  }, [filtered,businessDocuments,customerEntries,store.purchases,supplierEntries,range,today])
 
   // 30 天商品表現分析（基於 store.orders 全部訂單，獨立於 range filter）
   const perf30d = useMemo(() => productPerformance(products, orders, 30), [products, orders])
@@ -133,9 +134,9 @@ export default function ReportsPage({ store }) {
       ['毛利率(%)', revenue > 0 ? (profit/revenue*100).toFixed(1) : 0],
       ['銷售筆數', saleCount],
       ['每筆銷售平均', avgOrder],
-      ['現金收入', payBreakdown.cash],
-      ['電子支付', payBreakdown.card],
-      ['銀行收款',payBreakdown.bank],
+      ['現金淨收付', payBreakdown.cash],
+      ['電子支付淨收付', payBreakdown.card],
+      ['銀行淨收付',payBreakdown.bank],
       [],
       ['暢銷商品 Top 8'],
       ['排名', '商品', '數量', '營收'],
@@ -235,23 +236,24 @@ export default function ReportsPage({ store }) {
         </div>
 
         {/* Pay breakdown */}
-        <div className="card" style={{padding:'18px 20px'}}>
+        <div className="card" data-pay-breakdown style={{padding:'18px 20px'}}>
           <div style={rs.cardTitle}>{tr('實際收付淨額')}</div>
+          <p style={{fontSize:12,color:'var(--text-secondary)',marginTop:8}}>{tr('包含客戶收款與供應商收付；預收、預付的抵付不會重複計入。')}</p>
           <div style={{marginTop:20, display:'flex', flexDirection:'column', gap:14}}>
             {[
-              ['現金', payBreakdown.cash, 'var(--green)'],
-              ['電子支付', payBreakdown.card, 'var(--blue)'],
-              ['銀行收款',payBreakdown.bank,'var(--teal)'],
-            ].map(([label, val, color])=>{
+              ['cash','現金', payBreakdown.cash, 'var(--green)'],
+              ['card','電子支付', payBreakdown.card, 'var(--blue)'],
+              ['bank','銀行',payBreakdown.bank,'var(--teal)'],
+            ].map(([method,label, val, color])=>{
               const scale=Math.max(Math.abs(payBreakdown.cash),Math.abs(payBreakdown.card),Math.abs(payBreakdown.bank),1),pct=Math.abs(val)/scale*100
               return (
-                <div key={label}>
+                <div key={method} data-pay-method={method}>
                   <div style={{display:'flex', justifyContent:'space-between', marginBottom:6, fontSize:13}}>
                     <span style={{color:'var(--text-secondary)'}}>{tr(label)}</span>
-                    <span style={{fontFamily:'var(--font-mono)', fontSize:12,color:val<0?'var(--red)':undefined}}>NT$ {Math.round(val*100)/100}</span>
+                    <span data-pay-amount style={{fontFamily:'var(--font-mono)', fontSize:12,color:val<0?'var(--red)':undefined}}>NT$ {Math.round(val*100)/100}</span>
                   </div>
                   <div style={{height:6, background:'var(--border-dim)', borderRadius:3}}>
-                    <div style={{height:'100%', width:`${pct}%`, background:color, borderRadius:3, transition:'width .6s var(--ease)'}}/>
+                    <div data-pay-bar style={{height:'100%', width:`${pct}%`, background:color, borderRadius:3, transition:'width .6s var(--ease)'}}/>
                   </div>
                 </div>
               )

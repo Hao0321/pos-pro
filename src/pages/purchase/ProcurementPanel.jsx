@@ -10,7 +10,7 @@ import {availableForReturn,quoteProcurementAllocation} from '../../../electron/p
 const money=value=>'NT$ '+value.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2})
 const fieldStyle={minHeight:44,fontSize:16,width:'100%'}
 const actionStyle={minHeight:44}
-export function ProcurementPanel({po,onCommand,openShift,readOnly=false}){
+export function ProcurementPanel({po,onCommand,openShift,readOnly=false,approvalBlocked=false,supplierCredits=[],onSupplierLedger}){
   const [dialog,setDialog]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false)
   const saving=useRef(false)
   useEffect(()=>{
@@ -19,7 +19,7 @@ export function ProcurementPanel({po,onCommand,openShift,readOnly=false}){
     return()=>window.removeEventListener('pos-inventory-operation',committed)
   },[dialog,po.id])
   if(!isProcurement(po))return <p style={{fontSize:12,color:'var(--text-secondary)'}}>{tr("歷史進貨單保留原帳。新增採購使用收貨、請款、分次付款與自動分錄流程。")}</p>
-  const summary=procurementSummary(po),p=po.procurement,billed=procurementQuantities(po,'bills')
+  const summary=procurementSummary(po,undefined,supplierCredits),p=po.procurement,billed=procurementQuantities(po,'bills')
   const billable=availableForReturn(po).quantities
   const open=(kind,extra={})=>{setError('');setDialog({kind,expectedPurchase:canonicalSignature(po),quantities:billable.map(String),reference:'',dueDate:localDate(),method:'bank',amount:'',note:'',reason:'',...extra})}
   const update=(key,value)=>setDialog(d=>({...d,[key]:value}))
@@ -40,18 +40,20 @@ export function ProcurementPanel({po,onCommand,openShift,readOnly=false}){
   if(dialog?.kind==='purchase-bill')try{billPreview=p.valuation?quoteProcurementAllocation(po,dialog.quantities.map(Number)):po.items.reduce((n,item,i)=>n+procurementLineCents(Math.round((billed[i]+Number(dialog.quantities[i]))*1000)/1000,item.unitCost)-procurementLineCents(billed[i],item.unitCost),0)/100}catch{billPreview=0}
   return <section className="procurement-flow" aria-label={tr("採購帳務流程")} style={{marginTop:16,paddingBottom:24}}>
     <h3 style={{fontSize:16}}>{tr("採購帳務流程")}</h3>
+    {approvalBlocked&&<p role="status">{tr('先完成採購核准，再收貨、請款或付款。')}</p>}
+    {summary.prepaid>0&&<div className="card" style={{padding:14}}><p>{tr('已有供應商預付款抵付 {0}，應付餘額已扣除。退貨後的預付部分，先解除原抵付再記錄退回。',{0:money(summary.prepaid)})}</p>{onSupplierLedger&&<button className="btn btn-ghost" onClick={onSupplierLedger}>{tr('查看供應商預付款')}</button>}</div>}
     <p style={{fontSize:16,lineHeight:1.6}}>{readOnly?tr("目前為查看模式，請由老闆確認收貨與帳款。"):p.cancel?tr("這張採購已取消。"):billable.some(q=>q>0)?tr("接著：核對供應商單據，登錄已收到的貨款。"):summary.owed>0?tr("接著：實際付款後，在請款單下方記錄付款。"):summary.credit>0?tr("接著：核對供應商是否已退回款項。"):po.status==='received'?tr("這張採購的收貨與帳款已核對。"):tr("接著：貨到了，再按「確認到貨」。")}</p>
     <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:8,margin:'12px 0'}}>
       {[['已收貨',summary.received],['待請款',summary.unbilled],['已付淨額',summary.paid],['應付餘額',summary.owed],['逾期未付',summary.overdue]].map(([label,value])=><div key={label} className="card" style={{padding:12}}><div style={{fontSize:12}}>{tr(label)}</div><strong>{money(value)}</strong></div>)}
     </div>
     <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
-      {!readOnly&&!p.cancel&&billable.some(q=>q>0)&&<button className="btn btn-primary" style={actionStyle} onClick={()=>open('purchase-bill')}>{tr("登錄請款")}</button>}
+      {!readOnly&&!p.cancel&&billable.some(q=>q>0)&&<button className="btn btn-primary" disabled={approvalBlocked} style={actionStyle} onClick={()=>open('purchase-bill')}>{tr("登錄請款")}</button>}
       {!readOnly&&!p.cancel&&!p.receipts.length&&<button className="btn btn-ghost" style={actionStyle} onClick={()=>open('purchase-cancel')}>{tr("取消採購")}</button>}
     </div>
     {p.cancel&&<p role="status">{tr("已取消：")}{p.cancel.reason}</p>}
     {summary.bills.map(b=><div key={b.id} className="card" style={{padding:14,marginBottom:8}}>
       <strong>{tr("請款單 ")}{b.reference}</strong><div style={{fontSize:12,margin:'6px 0'}}>{tr("到期 ")}{b.dueDate}{tr(" · 請款 ")}{money(b.amount)}{tr(" · 未付 ")}{money(Math.max(0,b.balance))}{b.credit>0?tr(" · 供應商待退 {0}", {0: money(b.credit)}):''}{b.overdue?tr(" · 已逾期"):''}</div>
-      {!readOnly&&b.balance>0&&<button className="btn btn-primary" style={actionStyle} onClick={()=>open('purchase-pay',{invoiceId:b.id,reference:b.reference,amount:String(b.balance)})}>{tr("記錄付款")}</button>}
+      {!readOnly&&b.balance>0&&<button className="btn btn-primary" disabled={approvalBlocked} style={actionStyle} onClick={()=>open('purchase-pay',{invoiceId:b.id,reference:b.reference,amount:String(b.balance)})}>{tr("記錄付款")}</button>}
     </div>)}
     {p.payments.length>0&&<div style={{margin:'16px 0'}}><h4>{tr("付款與沖銷紀錄")}</h4>{p.payments.map(pay=>{
       const reverse=p.reversals.find(r=>r.paymentId===pay.id),bill=p.bills.find(b=>b.id===pay.invoiceId)

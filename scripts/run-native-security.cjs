@@ -1,5 +1,8 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--suppliers':['native-suppliers.cjs','POS_SUPPLIERS_PASS',false],
+  '--suppliers-ui':['native-suppliers-ui.cjs','POS_SUPPLIERS_UI_PASS',true],
+  '--suppliers-shared':['native-suppliers-shared.cjs','POS_SUPPLIERS_SHARED_PASS',false],
   '--customers':['native-customers.cjs','POS_CUSTOMERS_PASS',false],
   '--customers-ui':['native-customers-ui.cjs','POS_CUSTOMERS_UI_PASS',true],
   '--recovery':['native-recovery.cjs','POS_RECOVERY_PASS',false],

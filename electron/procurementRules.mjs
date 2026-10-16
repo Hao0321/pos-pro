@@ -2,6 +2,7 @@ import {canonicalSignature,moneyValue,quantityValue,operationHeader} from './ope
 import {cents,units,amount,amountUnits,procurementLineCents} from './procurementAmounts.mjs'
 import {beginProcurementValuation,appendValuation,valuationState,allocationFor} from './procurementValuation.mjs'
 import {validateQuote,validateQuotedPurchase} from './businessExchange.mjs'
+import {supplierAppliedCents} from './supplierCredit.mjs'
 export {procurementLineCents} from './procurementAmounts.mjs'
 
 export const PROCUREMENT_KINDS=['purchase-create','purchase-bill','purchase-pay','purchase-reverse','purchase-cancel','purchase-return','purchase-refund','purchase-refund-reverse']
@@ -20,21 +21,24 @@ function availableQuantities(po,quantities,ceiling,before){
 }
 function doc(request){return {id:request.id,time:request.time,date:procurementDate(request.time)}}
 function next(po){return {...po,items:po.items.map(i=>({...i})),procurement:structuredClone(po.procurement)}}
-export function procurementSummary(po,today=procurementDate(new Date().toISOString())){
+export function procurementSummary(po,today=procurementDate(new Date().toISOString()),supplierCredits=[]){
   if(!isProcurement(po))return null
   const p=po.procurement,returns=p.returns||[],refunds=p.refunds||[],refundReversals=p.refundReversals||[],refunded=sum(refunds)-sum(refundReversals)
-  const paid=sum(p.payments)-sum(p.reversals)-refunded,billed=sum(p.bills),received=sum(p.receipts)
+  const prepaid=p.bills.reduce((total,bill)=>total+supplierAppliedCents(supplierCredits,po.id,bill.id),0)
+  const paid=sum(p.payments)-sum(p.reversals)-refunded+prepaid,billed=sum(p.bills),received=sum(p.receipts)
   const bills=p.bills.map(b=>{
     const payments=p.payments.filter(v=>v.invoiceId===b.id),ids=new Set(payments.map(v=>v.id)),rs=refunds.filter(v=>v.invoiceId===b.id),rids=new Set(rs.map(r=>r.id))
-    const credited=sum(returns.filter(r=>r.invoiceId===b.id)),netPaid=sum(payments)-sum(p.reversals.filter(v=>ids.has(v.paymentId)))-sum(rs)+sum(refundReversals.filter(r=>rids.has(r.refundId)))
+    const applied=supplierAppliedCents(supplierCredits,po.id,b.id)
+    const credited=sum(returns.filter(r=>r.invoiceId===b.id)),netPaid=sum(payments)-sum(p.reversals.filter(v=>ids.has(v.paymentId)))-sum(rs)+sum(refundReversals.filter(r=>rids.has(r.refundId)))+applied
     const balance=cents(b.amount)-credited-netPaid
-    return {...b,balance:balance/100,credit:Math.max(0,-balance)/100,returned:credited/100,netPaid:netPaid/100,overdue:balance>0&&b.dueDate<today}
+    return {...b,balance:balance/100,credit:Math.max(0,-balance)/100,returned:credited/100,netPaid:netPaid/100,prepaid:applied/100,overdue:balance>0&&b.dueDate<today}
   })
-  return {received:amount(received),netReceived:amount(received-sum(returns)),returned:amount(sum(returns)),billed:amount(billed),netBilled:amount(billed-sum(returns.filter(r=>r.invoiceId))),paid:amount(paid),refunded:amount(refunded),owed:amount(bills.reduce((n,b)=>n+Math.max(0,cents(Math.max(0,b.balance))),0)),credit:amount(bills.reduce((n,b)=>n+cents(b.credit),0)),unbilled:amount(received-billed-sum(returns.filter(r=>!r.invoiceId))),overdue:amount(bills.filter(b=>b.overdue).reduce((n,b)=>n+cents(b.balance),0)),bills}
+  return {received:amount(received),netReceived:amount(received-sum(returns)),returned:amount(sum(returns)),billed:amount(billed),netBilled:amount(billed-sum(returns.filter(r=>r.invoiceId))),paid:amount(paid),prepaid:prepaid/100,refunded:amount(refunded),owed:amount(bills.reduce((n,b)=>n+Math.max(0,cents(Math.max(0,b.balance))),0)),credit:amount(bills.reduce((n,b)=>n+cents(b.credit),0)),unbilled:amount(received-billed-sum(returns.filter(r=>!r.invoiceId))),overdue:amount(bills.filter(b=>b.overdue).reduce((n,b)=>n+cents(b.balance),0)),bills}
 }
 function settle(po){const p=po.procurement,s=procurementSummary(po);po.paidDate=po.status==='received'&&s.unbilled===0&&s.owed===0&&s.credit===0&&p.bills.length?p.payments.at(-1)?.date||p.bills.at(-1).date:'';return po}
 export function createProcurement(request,data){
   const input=request.purchase;operationHeader({...request,id:input?.id})
+  if(data.purchases.some(po=>po.procurement?.createdOperationId===request.id))throw Object.assign(Error('原採購建立回執缺少，請保留原編號核對'),{historyUncertain:true})
   if(request.sourceQuote!==undefined){
     const quote=validateQuote(request.sourceQuote.document,{now:Date.now(),recipientStoreId:data.storeId})
     if(!data.storeId)throw Error('請先確認採購收件店面')
@@ -83,7 +87,7 @@ export function planProcurement(request,data,actor){
     else{availableQuantities(po,request.quantities,po.items.map(i=>i.received),before);billAmount=lineAmount(po,before,request.quantities)}
     p.bills.push({...doc(request),reference,dueDate,quantities:[...request.quantities],amount:billAmount});appendValuation(po,request.id)
   }else if(request.kind==='purchase-pay'){
-    const bill=procurementSummary(po).bills.find(b=>b.id===request.invoiceId)
+    const bill=procurementSummary(po,undefined,data.supplierCredits).bills.find(b=>b.id===request.invoiceId)
     if(!bill)throw Error('請款單不存在')
     const value=moneyValue(request.amount,'付款金額',.01)
     if(cents(value)>cents(bill.balance))throw Error('付款超過此請款單未付餘額')

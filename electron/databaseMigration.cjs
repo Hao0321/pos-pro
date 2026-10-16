@@ -4,6 +4,9 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
     require('./procurementRules.mjs').validateProcurementRecords(data.purchases||[],data.cashLog||[])
     require('./businessExchange.mjs').validateExchangeSettings(data.settings||[],data.purchases||[],data.auditLog||[])
     const exchange=require('./businessExchange.mjs')
+    require('./supplierLedger.mjs').validateSupplierLedgerRecords(data.supplierEntries||[],data.supplierOperations||[],{storeId:exchange.readExchangeTextSetting(data.settings||[],'sharedStoreId'),suppliers:data.suppliers||[],purchases:data.purchases||[],inventoryAudits:data.auditLog||[],cashLogs:data.cashLog||[]})
+    if(data.supplierEntries?.length||data.supplierOperations?.length)require('./databaseFeatureFence.cjs').installSupplierFence(db)
+    for(const [key,table]of [['supplierEntries','supplier_entries'],['supplierOperations','supplier_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
     require('./customerLedger.mjs').validateCustomerLedgerRecords(data.customerEntries||[],data.customerOperations||[],{storeId:data.settings?.find(s=>s.key==='sharedStoreId')?.value,documents:data.salesDocuments||[],salesOperations:data.salesOperations||[],cashLogs:data.cashLog||[]})
     if(data.customerEntries?.length||data.customerOperations?.length)require('./databaseFeatureFence.cjs').installCustomerFence(db)
     for(const [key,table]of [['customerEntries','customer_entries'],['customerOperations','customer_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
@@ -267,6 +270,7 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
       DELETE FROM settings;
       DELETE FROM restaurant_orders; DELETE FROM restaurant_operations;
       DELETE FROM sales_documents; DELETE FROM sales_operations; DELETE FROM customer_entries; DELETE FROM customer_operations;
+      DELETE FROM supplier_entries; DELETE FROM supplier_operations;
     `)
     migrateTx(data)
     db.prepare('UPDATE sales_runtime SET value=? WHERE id=?').run(require('node:crypto').randomUUID(),'epoch')

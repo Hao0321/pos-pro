@@ -64,3 +64,13 @@ test('debugging ports use a free dynamic port that Node fetch can actually reach
  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve)})
  try{const response=await fetch('http://127.0.0.1:'+port);expect(await response.text()).toBe('owned high-port fixture')}finally{await new Promise(resolve=>server.close(resolve))}
 })
+
+test('upgrade arguments reject duplicate or incomplete options and a fixture cannot escape its private root or change identity',()=>{
+ const {buildArguments,upgradeFixtures}=require('../../scripts/delivery/build-state.cjs'),root=fixture(),directory=path.join(root,'.rd');fs.mkdirSync(directory)
+ expect(buildArguments(['--upgrade-fixtures','.rd/upgrade.json','--out','release/candidate'])).toEqual({'--upgrade-fixtures':'.rd/upgrade.json','--out':'release/candidate'})
+ for(const args of [['--out'],['--out','release/a','--out','release/b'],['--publish','yes'],['--out','--upgrade-fixtures']])expect(()=>buildArguments(args)).toThrow(/Usage/)
+ const source=path.join(directory,'old.db'),config=path.join(directory,'upgrade.json');fs.writeFileSync(source,'verified closed fixture');const sha256=files.identity(source,directory).sha256,entry={version:'2.15.1',source:'.rd/old.db',sha256};fs.writeFileSync(config,JSON.stringify([entry]));expect(upgradeFixtures(root,'.rd/upgrade.json')).toEqual([{...entry,source}])
+ fs.writeFileSync(source+'-wal','open write');expect(()=>upgradeFixtures(root,'.rd/upgrade.json')).toThrow(/closed/);fs.unlinkSync(source+'-wal')
+ fs.writeFileSync(source,'changed original');expect(()=>upgradeFixtures(root,'.rd/upgrade.json')).toThrow(/digest/)
+ fs.writeFileSync(config,JSON.stringify([{...entry,source:'../outside.db'}]));expect(()=>upgradeFixtures(root,'.rd/upgrade.json')).toThrow(/outside/)
+})

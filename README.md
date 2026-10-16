@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version" src="https://img.shields.io/badge/version-2.15.1-2b20f4">
+  <img alt="version" src="https://img.shields.io/badge/version-2.16.0-2b20f4">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20PWA-555">
   <img alt="tests" src="https://img.shields.io/badge/tests-vitest%20%2B%20native-3f9c5e">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
@@ -23,7 +23,9 @@
 
 ## 這是什麼
 
-目前版本：v2.15.1。產品以 **POS Pro｜ERP・點餐・CRM** 呈現，從收銀延伸到採購與應付、庫存會計、顧客點餐與預訂出餐、會員經營。保留海報風格，也可切換明亮簡約與四語介面。Agent 回覆貼上就能核對單價與數量，缺少資料會引導補填；離開或重新載入後可接回同一張未完成草稿。完整 ERP 與 CRM **持續開發中**，多倉批次、關帳稅務、人事薪資、完整商機管理等仍有未完成能力，見 [完整目標清單](product-capabilities.json)。本機交付與限制見 [2.15.1 安裝說明](docs/INSTALLER_2_15_1.md)。
+目前來源版本：v2.16.0。產品以 **POS Pro｜ERP・點餐・CRM** 呈現，從收銀延伸到採購與應付、庫存會計、顧客點餐與預訂出餐、會員經營。保留海報風格，也可切換明亮簡約與四語介面。Agent 回覆貼上就能核對單價與數量，缺少資料會引導補填；離開或重新載入後可接回同一張未完成草稿。完整 ERP 與 CRM **持續開發中**，多倉批次、關帳稅務、人事薪資、完整商機管理等仍有未完成能力，見 [完整目標清單](product-capabilities.json)。本機安裝檔以成功的建置收據為準，交付與限制見 [2.16.0 安裝說明](docs/INSTALLER_2_16_0.md)。
+
+2.16.0 新增「供應商與預付款」：先記錄實際付出的訂金，再抵付同一供應商的多張請款；部分解除、原款退回與更正保留來源。預設一位管理員即可操作，需要分工才啟用另一帳號核准，兩種模式都免費。Agent 先填資料，使用者核對後保存；核准本身不付款。明亮／海報、四語與共用店面沿用同一帳本，見 [供應商簡單指南](docs/SUPPLIER_GUIDE.md)。本版新增帳本保護，使用新功能後須由支援此格式的程式繼續操作。
 
 2.15.1 修正單一熱賣商品被誤歸到低優先類的報表問題，並提供四語分級說明。
 

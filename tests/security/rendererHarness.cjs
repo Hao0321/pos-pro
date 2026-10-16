@@ -15,6 +15,7 @@ async function input(target,selector,value,type='HTMLInputElement',event='input'
 }
 const select=(target,selector,value)=>input(target,selector,value,'HTMLSelectElement','change')
 async function tap(target,selector){
+  await wait(target,`!!document.querySelector(${JSON.stringify(selector)})`,'rendered pointer target '+selector)
   await js(target,`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center'})`)
   const rect=`(()=>{const element=document.querySelector(${JSON.stringify(selector)}),r=element.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return !element.disabled&&!element.closest('[inert]')&&r.x>=0&&r.y>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1&&hit&&element.contains(hit)})()`
   await wait(target,rect,'reachable pointer '+selector)

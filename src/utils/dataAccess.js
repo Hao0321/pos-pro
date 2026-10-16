@@ -18,6 +18,8 @@ export async function applyExchangeOperation(request,actor){return isElectron?wi
 export async function loadSalesState(actor){return isElectron?window.electronAPI.db.getSalesState():(await import('./browserSalesDocuments')).getBrowserSalesState(actor)}
 export async function applySalesOperation(request,actor){return isElectron?window.electronAPI.db.applySalesOperation(request):(await import('./browserSalesDocuments')).commitBrowserSalesDocument(request,actor)}
 export async function applyCustomerLedgerOperation(request,actor){return isElectron?window.electronAPI.db.applyCustomerLedgerOperation(request):(await import('./browserCustomerLedger')).commitBrowserCustomerLedger(request,actor)}
+export async function loadSupplierState(actor){return isElectron?window.electronAPI.db.getSupplierState():(await import('./browserSupplierLedger')).getBrowserSupplierState(actor)}
+export async function applySupplierLedgerOperation(request,actor){return isElectron?window.electronAPI.db.applySupplierLedgerOperation(request):(await import('./browserSupplierLedger')).commitBrowserSupplierLedger(request,actor)}
 export async function loadRestaurantState(){return isElectron?window.electronAPI.db.getRestaurantState():browserRestaurantState()}
 export async function applyRestaurantOperation(request,actor){return isElectron?window.electronAPI.db.applyRestaurantOperation(request):commitBrowserRestaurant(request,actor)}
 export async function getAgentContext(actor){
@@ -250,6 +252,7 @@ export async function checkAndMigrate() {
       restaurantOrders:loadLS('pos_restaurant_orders',[]),restaurantOperations:loadLS('pos_restaurant_operations',[]),
       salesDocuments:loadLS('pos_sales_documents',[]),salesOperations:loadLS('pos_sales_operations',[]),
       customerEntries:loadLS('pos_customer_entries',[]),customerOperations:loadLS('pos_customer_operations',[]),
+      supplierEntries:loadLS('pos_supplier_entries',[]),supplierOperations:loadLS('pos_supplier_operations',[]),
       settings:loadLS('pos_business_settings',[]).map(s=>({key:s.key,value:readExchangeTextSetting(loadLS('pos_business_settings',[]),s.key)})),
     }
 

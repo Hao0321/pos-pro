@@ -9,6 +9,9 @@ import { orderToJournalEntries, topupToJournalEntries,wasteToJournalEntries } fr
 import {PROCUREMENT_KINDS,procurementToJournalEntries} from '../../electron/procurementRules.mjs'
 import {salesToJournalEntries,salesDayMetrics} from '../../electron/salesJournal.mjs'
 import {customerLedgerToJournalEntries} from '../../electron/customerJournal.mjs'
+import {supplierLedgerToJournalEntries} from '../../electron/supplierJournal.mjs'
+import {finalizeSupplierDraft} from '../utils/supplierDraftReceipt.mjs'
+import {supplierInventoryCommand} from '../utils/supplierInventoryCommand.mjs'
 import {salesDate} from '../../electron/salesRules.mjs'
 import {finalizeCustomerDraft} from '../utils/customerDraftReceipt.mjs'
 import {
@@ -26,6 +29,7 @@ import {
   applyInventoryOperation,
   applyExchangeOperation,
   loadSalesState,applySalesOperation,applyCustomerLedgerOperation,
+  loadSupplierState,applySupplierLedgerOperation,
   applyRestaurantOperation,
   loadRestaurantState,
 } from '../utils/dataAccess'
@@ -45,6 +49,8 @@ export function useStore(session){
   const [orders,        setOrders]        = useState([])
   const [purchases,setPurchases]=useState([])
   const [sales,setSales]=useState({documents:[]})
+  const [supplierState,setSupplierState]=useState(null),supplierRef=useRef(null)
+  const [supplierTarget,setSupplierTarget]=useState(null),[purchaseTarget,setPurchaseTarget]=useState(null)
   const salesRef=useRef(sales)
   useEffect(()=>{salesRef.current=sales},[sales])
   const [customerTarget,setCustomerTarget]=useState(''),[salesTarget,setSalesTarget]=useState('')
@@ -107,10 +113,11 @@ export function useStore(session){
         loadRestaurantState(),
         session.role==='owner'?loadPurchases([]):Promise.resolve([]),
         session.role==='owner'?loadSalesState(session):Promise.resolve({documents:[]}),
+        session.role==='owner'?loadSupplierState(session):Promise.resolve(null),
       ])
       if(cancelled)return
-      const fallbacks = [[], [], [], [], [], [], [], null,{config:defaultRestaurantConfig()},[],{documents:[]}]
-      const [p, m, o, j, held, waste, tps, shift,restaurant,po,salesState] = results.map((r, i) => {
+      const fallbacks = [[], [], [], [], [], [], [], null,{config:defaultRestaurantConfig()},[],{documents:[]},null]
+      const [p, m, o, j, held, waste, tps, shift,restaurant,po,salesState,supplierSnapshot] = results.map((r, i) => {
         if (r.status === 'fulfilled') return r.value
         setDataError('資料載入失敗，請保留原資料並重試：' + String(r.reason?.message || '讀取失敗'))
         console.error('[POS] init load failed:', i, r.reason)
@@ -121,6 +128,7 @@ export function useStore(session){
       setOrders(Array.isArray(o) ? o : [])
       setPurchases(Array.isArray(po)?po:[])
       salesRef.current=salesState;setSales(salesState)
+      supplierRef.current=supplierSnapshot;setSupplierState(supplierSnapshot)
       setManualEntries(Array.isArray(j) ? j : [])
       setHeldOrders(Array.isArray(held) ? held : [])
       setWasteLog(Array.isArray(waste) ? waste : [])
@@ -180,7 +188,8 @@ export function useStore(session){
     ...purchases.flatMap(procurementToJournalEntries),
     ...sales.documents.flatMap(salesToJournalEntries),
     ...customerLedgerToJournalEntries(sales.customerLedger?.entries||[]),
-  ],[orders,products,topups,wasteLog,purchases,sales])
+    ...supplierLedgerToJournalEntries(supplierState?.supplierLedger.entries||[]),
+  ],[orders,products,topups,wasteLog,purchases,sales,supplierState])
   const allJournal  = useMemo(()=>[...autoJournal,...manualEntries].sort((a,b)=>b.date.localeCompare(a.date)),[autoJournal,manualEntries])
 
   const addManualEntry = useCallback(async e=>{
@@ -346,6 +355,7 @@ export function useStore(session){
   }, [dataError,openShift])
 
   function applyInventoryResult(result){
+    if(result.supplierLedger){const current=supplierRef.current;const next={...current,supplierLedger:result.supplierLedger,legacyReadOnly:true,purchases:result.purchase?[result.purchase,...(current?.purchases||[]).filter(po=>po.id!==result.purchase.id)]:current?.purchases||[]};supplierRef.current=next;setSupplierState(next)}
     setProducts(previous=>[...previous.map(p=>result.products.find(n=>n.id===p.id)||p),...result.products.filter(p=>!previous.some(old=>old.id===p.id))])
     if(result.purchase)setPurchases(previous=>[result.purchase,...previous.filter(p=>p.id!==result.purchase.id)])
     if(result.cashLog)window.dispatchEvent(new Event('pos-cash-operation'))
@@ -354,9 +364,28 @@ export function useStore(session){
   }
   async function commitInventory(kind,input,identity=null){
     if(dataError)throw Error(dataError)
-    const result=await executeFinancial(kind,{...input,kind},request=>applyInventoryOperation(request,session),setFinancialState,identity)
+    const state=kind==='purchase-create'&&identity?await refreshSuppliers():supplierRef.current,original=kind==='receive'?purchases.find(po=>po.id===input.purchaseId):null
+    const controlled=kind!=='stocktake'&&!(kind==='receive'&&!original?.procurement&&!state?.legacyReadOnly)
+    if(controlled&&!state)throw Error('請先載入供應商與採購資料，再保存原草稿')
+    const command=supplierInventoryCommand(kind,input,identity,state,{controlled})
+    const result=await executeFinancial(kind,command.input,request=>applyInventoryOperation(request,session),setFinancialState,command.identity)
     return applyInventoryResult(result)
   }
+  function applySupplierResult(result){
+    result={...result,draftWarning:finalizeSupplierDraft(result,session.userId)}
+    const current=supplierRef.current,next={...current,supplierLedger:result.supplierLedger,legacyReadOnly:true,purchases:[...result.purchases,...(current?.purchases||[]).filter(po=>!result.purchases.some(row=>row.id===po.id))]}
+    supplierRef.current=next;setSupplierState(next)
+    setPurchases(previous=>[...result.purchases,...previous.filter(po=>!result.purchases.some(row=>row.id===po.id))])
+    if(result.cashLog)window.dispatchEvent(new Event('pos-cash-operation'))
+    window.dispatchEvent(new CustomEvent('pos-supplier-ledger-operation',{detail:result}));return result
+  }
+  async function commitSupplierLedger(input,identity=null,prepare=null){
+    if(dataError)throw Error(dataError)
+    if(checkoutRef.current.getState().phase!=='idle')throw Error('請先確認原收款交易')
+    const state=supplierRef.current;if(!state)throw Error('請先載入供應商與採購資料，再保存原草稿')
+    return applySupplierResult(await executeFinancial('supplier-ledger',{storeId:state.storeId,epoch:state.epoch,date:state.today,expectedRevision:state.supplierLedger.revision,...input,kind:'supplier-ledger'},request=>applySupplierLedgerOperation(request,session),setFinancialState,identity,null,prepare))
+  }
+  async function refreshSuppliers(){const next=await loadSupplierState(session);supplierRef.current=next;setSupplierState(next);setPurchases(next.purchases);return next}
   async function commitExchange(input){
     if(dataError)throw Error(dataError)
     if(checkoutRef.current.getState().phase!=='idle')throw Error('請先確認原收款交易')
@@ -406,6 +435,7 @@ export function useStore(session){
     ports.exchange=r=>applyExchangeOperation(r,session)
     ports.sales=r=>applySalesOperation(r,session)
     ports['customer-ledger']=r=>applyCustomerLedgerOperation(r,session)
+    ports['supplier-ledger']=r=>applySupplierLedgerOperation(r,session)
     for(const kind of PROCUREMENT_KINDS)ports[kind]=r=>applyInventoryOperation(r,session)
     const result=await executeFinancial(pending.kind,JSON.parse(pending.signature).input,ports[pending.kind],setFinancialState,null,async original=>(await getRecoveryState(original,session)).active==='matched')
     if(pending.kind==='topup'){setMembers(p=>p.map(m=>m.id===result.member.id?result.member:m));setTopups(p=>[result.topup,...p.filter(t=>t.id!==result.topup.id)])}
@@ -417,6 +447,7 @@ export function useStore(session){
     if(pending.kind==='exchange')window.dispatchEvent(new CustomEvent('pos-exchange-operation',{detail:result}))
     if(pending.kind==='sales')applySalesResult(result)
     if(pending.kind==='customer-ledger')applyCustomerLedgerResult(result)
+    if(pending.kind==='supplier-ledger')applySupplierResult(result)
     return result
   }
 
@@ -497,6 +528,7 @@ export function useStore(session){
       setProducts(s.products);setMembers(s.members);setOrders(s.orders);setManualEntries(s.manualEntries);setHeldOrders(s.heldOrders);setWasteLog(s.wasteLog);setTopups(s.topups);setOpenShiftState(s.openShift);setPurchases(s.purchases||[])
       setRestaurantConfig(s.restaurantConfig||defaultRestaurantConfig())
       setSales(s.sales||{documents:[]})
+      salesRef.current=s.sales||{documents:[]};supplierRef.current=s.supplierState||null;setSupplierState(s.supplierState||null)
       setPointsRule({earn:s.rules.earn==null?10:Number(s.rules.earn),redeem:s.rules.redeem==null?1:Number(s.rules.redeem)});setBirthdayBonus(s.rules.birthdayBonus==null?100:Number(s.rules.birthdayBonus));return
     }
     const [p, m, o, j] = await Promise.all([
@@ -509,8 +541,8 @@ export function useStore(session){
     setMembers(m)
     setOrders(o)
     setManualEntries(j)
-    if(session?.role==='owner'){setPurchases(await loadPurchases([]));setSales(await loadSalesState(session))}
-    else setSales({documents:[]})
+    if(session?.role==='owner'){setPurchases(await loadPurchases([]));const salesState=await loadSalesState(session);salesRef.current=salesState;setSales(salesState);const suppliers=await loadSupplierState(session);supplierRef.current=suppliers;setSupplierState(suppliers)}
+    else {setSales({documents:[]});salesRef.current={documents:[]};supplierRef.current=null;setSupplierState(null)}
     setWasteLog(await loadWasteLog());setRestaurantConfig((await loadRestaurantState()).config)
   }, [session?.userId,session?.role])
   async function reloadAfterRecovery(){
@@ -534,6 +566,7 @@ export function useStore(session){
   const todayProfit= Math.round((todayOrders.reduce((sum,o)=>sum+netSale(o)-orderCost(o,products),0)+todaySales.profit)*100)/100
 
   return {
+    supplierState,supplierTarget,openSupplierLedger:(supplierId='',purchaseId='')=>{setSupplierTarget({supplierId,purchaseId});setView('suppliers')},consumeSupplierTarget:()=>setSupplierTarget(null),purchaseTarget,openPurchaseSuppliers:()=>{setPurchaseTarget({tab:'suppliers'});setView('purchase')},openPurchaseDocument:id=>{setPurchaseTarget({id});setView('purchase')},consumePurchaseTarget:()=>setPurchaseTarget(null),commitSupplierLedger,refreshSuppliers,
     products,members,orders,purchases,sales,salesQuote,openSalesQuote:quote=>{setSalesQuote({id:quote.id,revision:quote.revision});setView('sales')},consumeSalesQuote:()=>setSalesQuote(null),cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitInventory,commitRestaurant,commitExchange,commitSales,commitCustomerLedger,refreshTrading,customerTarget,openCustomerLedger:id=>{setCustomerTarget(id);setView("customers")},consumeCustomerTarget:()=>setCustomerTarget(""),salesTarget,openSalesDocument:id=>{setSalesTarget(id);setView("sales")},consumeSalesTarget:()=>setSalesTarget(""),restaurantConfig,
     activeMember,setActiveMember:value=>{ensureCartEditable();setActiveMember(value)},
     addToCart,removeFromCart,updateCartQty,updateCartItemPrice,clearCart,stageQuickSale,

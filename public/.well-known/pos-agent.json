@@ -8,6 +8,10 @@
   "context": {"surface": "authenticated application browser or desktop preload", "method": "window.electronAPI.db.getAgentContext()", "authentication": "existing login and paired-device session; no credentials in drafts"},
   "delivery": {"paste": "快速建單", "linkFragment": "agentDraft=<encodeURIComponent(JSON)>"},
   "kinds": ["sale", "restaurant", "purchase"],
+  "financialDrafts": [
+    {"protocol":"pos-customer-receipt-draft/v1","schema":"/agent/customer-receipt-draft-v1.schema.json","role":"owner","contextMethod":"window.electronAPI.db.getSalesState()","pasteSurface":"customers","humanReviewRequired":true,"moneyMovement":false,"linkFragment":false},
+    {"protocol":"pos-supplier-payment-draft/v1","schema":"/agent/supplier-payment-draft-v1.schema.json","role":"owner","contextMethod":"window.electronAPI.db.getSupplierState()","pasteSurface":"suppliers","humanReviewRequired":true,"approvalPolicy":"store-controlled","moneyMovement":false,"linkFragment":false}
+  ],
   "humanReviewRequired": true,
   "moneyMovement": false,
   "arbitraryExecution": false,

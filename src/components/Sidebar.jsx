@@ -17,6 +17,7 @@ const NAV = [
   { key:'devices',label:'共用店面',Icon:Users,perm:'settings.edit',accent:'teal' },
   { key:'inventory',  label:'庫存管理', Icon:Package,         perm:'inventory.view', accent:'blue' },
   { key:'purchase',   label:'進貨管理', Icon:Truck,           perm:'purchase.view', accent:'purple' },
+  { key:'suppliers',label:'供應商與預付款',Icon:Truck,perm:'purchase.edit',accent:'teal' },
   { key:'exchange',label:'報價與價目表',Icon:ClipboardList,perm:'purchase.edit',accent:'blue' },
   { key:'sales',label:'銷售與應收',Icon:BookOpen,perm:'purchase.edit',accent:'green' },
   { key:'customers',label:'客戶與款項',Icon:Users,perm:'purchase.edit',accent:'teal' },
@@ -34,7 +35,7 @@ const NAV = [
 export default function Sidebar({ view, setView, session, lowStockCount, todayRevenue, todayOrders,todayBusinessCount, onLogout, pendingOrders = 0, openShift = null,largeText=false,toggleLargeText,simpleMode=false,toggleSimpleMode }) {
   const [now, setNow] = useState(new Date())
   const [showMore,setShowMore]=useState(false)
-  const common=new Set(['dashboard','quick','pos','restaurant','shifts','readiness','inventory','purchase'])
+  const common=new Set(['dashboard','quick','pos','restaurant','shifts','readiness','inventory','purchase','suppliers'])
   useEffect(()=>{if(!common.has(view))setShowMore(true)},[view])
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)

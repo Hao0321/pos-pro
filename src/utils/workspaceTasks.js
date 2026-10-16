@@ -23,10 +23,11 @@ export const WORKSPACE_TASKS=[
   {id:'scenarios',title:'套用情境模板',detail:'先在演練空間試跑，再設定店面。',view:'scenarios',perm:'settings.edit',words:'丼飯 新手 試賣'},
   {id:'sales',title:'接客戶訂單、收欠款',detail:'從客戶同意報價，到交貨、收款與退貨。',view:'sales',perm:'purchase.edit',words:'銷售 應收 請款 交付 退款 sales receivables'},
   {id:'customers',title:'管理客戶、預收與抵付',detail:'客戶建一次，收到的錢可抵付多張帳單。',view:'customers',perm:'purchase.edit',words:'客戶 預收 餘額 抵付 退款 customer advance deposit allocation'},
+  {id:'suppliers',title:'供應商訂金、抵付與退回款',detail:'記錄已付訂金，再分配到已核對的請款。',view:'suppliers',perm:'purchase.edit',words:'供應商 預付 訂金 核准 審核 抵付 退款 supplier prepayment advance approval deposit'},
 ]
 export const WORKSPACE_AREAS=[
   {id:'crm',title:'顧客與點餐',code:'CRM',intro:'幫你照顧客人',detail:'會員、點數、儲值、點餐與預訂。',description:'會員、點數、儲值、點餐和預訂，讓接單與經營回頭客更方便。',taskIds:['customers','sales','members','orders','restaurant','exchange','quick','sale','promotions','reports']},
-  {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['customers','sales','sale','quick','exchange','inventory','purchase','shifts','stocktake','waste','accounting','reports','readiness','devices','settings','scenarios']},
+  {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['customers','sales','sale','quick','exchange','inventory','purchase','suppliers','shifts','stocktake','waste','accounting','reports','readiness','devices','settings','scenarios']},
 ]
 export function workspaceTasks(session,query='',area='all'){
   const terms=query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
@@ -40,7 +41,7 @@ export function workspaceReminders(store,session){
   if(!store.openShift)reminders.push({id:'open-shift',title:'準備營業：先開班',detail:'確認零用金後就能收款。',view:'shifts'})
   if(store.cart.length)reminders.push({id:'cart',title:tr('收銀台還有 {0} 種商品',{0:store.cart.length}),detail:'接著完成這筆收款，或先掛單。',view:'pos'})
   if(hasPermission(session,'purchase.view')){
-    const rows=(store.purchases||[]).filter(isProcurement),summaries=rows.map(p=>procurementSummary(p))
+    const rows=(store.purchases||[]).filter(isProcurement),summaries=rows.map(p=>procurementSummary(p,undefined,store.supplierState?.supplierLedger.entries))
     const owed=Math.round(summaries.reduce((n,s)=>n+s.owed,0)*100)/100,credit=Math.round(summaries.reduce((n,s)=>n+s.credit,0)*100)/100
     if(owed>0)reminders.push({id:'payable',title:tr('還有 NT$ {0} 待付款',{0:owed.toLocaleString('zh-TW')}),detail:summaries.some(s=>s.overdue>0)?'其中有已逾期款項，請核對。':'依實際請款與付款紀錄計算。',view:'purchase'})
     if(credit>0)reminders.push({id:'supplier-credit',title:tr('供應商還要退回 NT$ {0}',{0:credit.toLocaleString('zh-TW')}),detail:'收到退款後，開啟原採購單記錄。',view:'purchase'})
