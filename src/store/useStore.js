@@ -6,7 +6,6 @@ import { createCheckoutCoordinator } from '../utils/checkoutCoordinator.mjs'
 import {getRecoveryState} from '../utils/recoveryClient'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {automaticBusinessJournal} from '../../electron/businessJournal.mjs'
-import {assertProductPricingUnchanged} from '../../electron/costPricing.mjs'
 import {PROCUREMENT_KINDS} from '../../electron/procurementRules.mjs'
 import {salesDayMetrics} from '../../electron/salesJournal.mjs'
 import {finalizeSupplierDraft} from '../utils/supplierDraftReceipt.mjs'
@@ -18,7 +17,7 @@ import {
   loadProducts, saveProducts, dbAddProduct, dbUpdateProduct, dbDeleteProduct,
   loadPurchases,
   loadMembers, saveMembers, dbAddMember, dbUpdateMember, dbDeleteMember,
-  loadOrders, saveOrders, dbCheckout, lookupCheckout, dbRefund,
+  loadOrders, saveOrders, dbCheckout, lookupCheckout, dbRefund,verifyCheckoutCostReceipt,
   loadManualJournal, saveManualJournal, dbAddManualEntry, dbDeleteManualEntry,
   loadHeldOrders, addHeldOrder, deleteHeldOrder,
   getOpenShift, openShift as apiOpenShift, closeShift as apiCloseShift, addCashLog,
@@ -43,6 +42,7 @@ function saveLS(k,v){browserStorage.setItem(k,JSON.stringify(v))}
 const logDbErr = op => e => { console.error(`[POS DB] ${op} failed:`,e);window.dispatchEvent(new CustomEvent('pos-persistence-error',{detail:'資料保存失敗（'+op+'），請停止異動並核對：'+e.message})) }
 
 export function useStore(session){
+  const sessionRef=useRef(session);sessionRef.current=session
   const [products,      setProducts]      = useState([])
   const [members,       setMembers]       = useState([])
   const [orders,        setOrders]        = useState([])
@@ -73,7 +73,7 @@ export function useStore(session){
 
   const checkoutRef = useRef(null)
   if (!checkoutRef.current) checkoutRef.current=createCheckoutCoordinator({
-    prepare:prepareCheckout,persist:plan=>dbCheckout(plan.order,plan.stockUpdates,plan.memberUpdate),lookup:lookupCheckout,
+    prepare:prepareCheckout,persist:plan=>dbCheckout(plan.order,plan.stockUpdates,plan.memberUpdate,sessionRef.current),lookup:id=>lookupCheckout(id,sessionRef.current),verifyReceipt:verifyCheckoutCostReceipt,
     readPending:()=>{const raw=browserStorage.getItem('pos_pending_checkout_v1');return raw?JSON.parse(raw):null},
     writePending:value=>browserStorage.setItem('pos_pending_checkout_v1',JSON.stringify(value)),
     clearPending:id=>{const raw=browserStorage.getItem('pos_pending_checkout_v1');if(raw&&JSON.parse(raw).plan.order.id!==id)throw new Error('待確認單號不符');browserStorage.removeItem('pos_pending_checkout_v1')},
@@ -242,7 +242,7 @@ export function useStore(session){
     if (!origOrder || !refundItems?.length) throw new Error('請選擇退貨品項')
     if (dataError) throw new Error(dataError)
     const result=await executeFinancial('refund',{refundOf:origOrder.id,items:refundItems.map(i=>({id:i.id,qty:i.qty})),
-      reason:opts.reason||'',cashier:opts.cashier||'',shiftId:openShift?.id||''},request=>dbRefund(request.refundOf,request),setFinancialState)
+      reason:opts.reason||'',cashier:opts.cashier||'',shiftId:openShift?.id||''},request=>dbRefund(request.refundOf,request,null,null,sessionRef.current),setFinancialState)
     setOrders(prev=>[result.order,...prev.filter(o=>o.id!==result.order.id).map(o=>o.id===result.original.id?result.original:o)])
     setProducts(prev=>prev.map(p=>result.products.find(n=>n.id===p.id)||p))
     if(result.member)setMembers(prev=>prev.map(m=>m.id===result.member.id?result.member:m))
@@ -324,7 +324,7 @@ export function useStore(session){
 
   // 損耗
   const recordWaste = useCallback(async (data) => {
-    const result=await executeFinancial('waste',data,addWaste,setFinancialState)
+    const result=await executeFinancial('waste',data,request=>addWaste(request,sessionRef.current),setFinancialState)
     if(result?.success!==true)throw new Error(result?.error||'損耗保存失敗')
     setWasteLog(p=>[result.waste,...p.filter(w=>w.id!==result.waste.id)])
     setProducts(prev=>prev.map(p=>p.id===result.product.id?result.product:p))
@@ -422,7 +422,7 @@ export function useStore(session){
   }
   async function retryFinancial(){
     const pending=readPendingFinancial();if(!pending)return
-    const ports={restaurant:r=>applyRestaurantOperation(r,session),refund:r=>dbRefund(r.refundOf,r),topup:addTopup,waste:addWaste,cashlog:addCashLog,stocktake:r=>applyInventoryOperation(r,session),receive:r=>applyInventoryOperation(r,session)}
+    const ports={restaurant:r=>applyRestaurantOperation(r,session),refund:r=>dbRefund(r.refundOf,r,null,null,sessionRef.current),topup:addTopup,waste:r=>addWaste(r,sessionRef.current),cashlog:addCashLog,stocktake:r=>applyInventoryOperation(r,session),receive:r=>applyInventoryOperation(r,session)}
     ports.exchange=r=>applyExchangeOperation(r,session)
     ports.sales=r=>applySalesOperation(r,session)
     ports['customer-ledger']=r=>applyCustomerLedgerOperation(r,session)
@@ -473,21 +473,18 @@ export function useStore(session){
   const addProduct = useCallback(async p=>{
     // id 加亂數後綴：到貨自動建檔會在迴圈連續建多筆，純 Date.now() 同毫秒會撞號互蓋
     const n={...p,id:p._creationId||'p'+crypto.randomUUID()};delete n._creationId;delete n._expectedStock;delete n._expectedPricing
-    if (isElectron) acknowledge(await dbAddProduct(n))
-    else saveLS('pos2_products',[...loadLS('pos2_products',[]),n])
-    setProducts(x=>[...x.filter(p=>p.id!==n.id),n])
-    return n
+    const result=acknowledge(await dbAddProduct(n,sessionRef.current)),saved=result?.product||n
+    setProducts(x=>[...x.filter(p=>p.id!==saved.id),saved])
+    return saved
   },[])
   const updateProduct = useCallback(async(id,u)=>{
     const input={...u},clean={...u};delete clean._expectedStock;delete clean._expectedPricing;delete clean._creationId
     if(Object.hasOwn(input,'stock')&&!Object.hasOwn(input,'_expectedStock'))input._expectedStock=products.find(p=>p.id===id)?.stock
-    if (isElectron) acknowledge(await dbUpdateProduct(id,input))
-    else {const current=loadLS('pos2_products',[]);assertProductPricingUnchanged(current.find(p=>p.id===id),input._expectedPricing);if(Object.hasOwn(input,'stock')&&current.find(p=>p.id===id)?.stock!==input._expectedStock)throw Error('庫存已變更，請重新核對');saveLS('pos2_products',current.map(p=>p.id===id?{...p,...clean}:p))}
+    acknowledge(await dbUpdateProduct(id,input,sessionRef.current))
     setProducts(p=>p.map(x=>x.id===id?{...x,...clean}:x))
   },[products])
   const deleteProduct = useCallback(async id=>{
-    if (isElectron) acknowledge(await dbDeleteProduct(id))
-    else saveLS('pos2_products',loadLS('pos2_products',[]).filter(p=>p.id!==id))
+    acknowledge(await dbDeleteProduct(id,sessionRef.current))
     setProducts(p=>p.filter(x=>x.id!==id))
   },[])
   const findByBarcode = useCallback(code=>products.find(p=>p.barcode===code),[products])

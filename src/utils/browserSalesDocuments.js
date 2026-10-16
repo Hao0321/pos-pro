@@ -3,6 +3,7 @@ import {readExchangeTextSetting,readExchangeStore,EXCHANGE_SETTING} from '../../
 import {salesDate} from '../../electron/salesRules.mjs'
 import {planSales,salesReceipt,validateSalesRecords} from '../../electron/salesPlan.mjs'
 import {validateCustomerLedgerRecords} from '../../electron/customerLedger.mjs'
+import {hasBrowserStockCost,commitBrowserStockBusiness} from './browserStockBusiness'
 
 export function readBrowserTrading(record){
   const rows=record.data,data={storeId:readExchangeTextSetting(rows.pos_business_settings,'sharedStoreId'),epoch:record.salesEpoch,
@@ -32,6 +33,7 @@ export function commitBrowserSalesDocument(request,actor){
     let replay=false,checked=false
     try{
       const record=readRecords(),data=read(record),old=data.operations.find(row=>row.id===request?.id);replay=!!old;checked=true
+      if(hasBrowserStockCost(record))return commitBrowserStockBusiness('applySalesOperation',request,actor,record)
       assertOriginalOperationAvailable('applySalesOperation',request.id,record,request)
       if(old)return salesReceipt(request,old,data)
       const plan=planSales(request,data,actor)

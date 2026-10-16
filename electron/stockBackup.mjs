@@ -4,6 +4,8 @@ import {canonicalSignature} from './operationRules.mjs'
 import {readExchangeTextSetting} from './businessExchange.mjs'
 import {STOCK_COMPAT_SETTING} from './stockCompatibility.mjs'
 import {PHYSICAL_STOCKTAKE,physicalStocktakeAudits} from './physicalStocktake.mjs'
+import {assertStockBusinessCoverage} from './stockBusinessCoverage.mjs'
+import {assertStockBookHead} from './stockBookAnchor.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 const orderFields=['id','subtotal','discount','manualDiscount','balanceUsed','total','payMethod','paid','change','payments','memberId','pointsUsed','pointsEarned','time','source','items','taxId','shiftId','refundOf','cashier','fullRefund','trackingTokenHash','requestSignature','itemCosts','tableNum','note']
@@ -18,10 +20,12 @@ export function validateStockCostBook(book,validatedState=null){
   if(!hasEntries&&(book.settings||[]).some(row=>row.key===STOCK_COMPAT_SETTING&&row.value==='1'))throw stockLedgerError('HISTORY')
   if(hasEntries&&(!Array.isArray(book.stockCostEntries)||!Array.isArray(book.stockCostOperations)))throw stockLedgerError('HISTORY')
   const state=validatedState||replayStockLedger(book.stockCostEntries||[],book.stockCostOperations||[])
+  assertStockBookHead(book,state)
   if(!state.projection){if(physicalAudits.some(row=>row.request.context.costMode==='active'))throw stockLedgerError('HISTORY');return state}
   for(const row of physicalAudits.filter(row=>row.request.context.costMode==='active')){const event=state.entries.find(event=>event.method==='applyInventoryOperation'&&event.input.id===row.request.id);if(!event||!same(event.input,row.request)||!same(event.evidence?.stocktake,row.receipt))throw stockLedgerError('HISTORY')}
   if(state.entries[0].input.storeId!==readExchangeTextSetting(book.settings||[],'sharedStoreId'))throw stockLedgerError('HISTORY')
   assertStockCustodyMatchesBook(state.projection.custody,book.products||[],book.restaurantOrders||[])
+  assertStockBusinessCoverage(book,state)
   const orders=new Map((book.orders||[]).map(row=>[row.id,row])),restaurant=new Map((book.restaurantOrders||[]).map(row=>[row.id,row]))
   const receipt=(rows,id,input)=>{const row=(rows||[]).find(row=>row.id===id);if(!row||row.signature!==canonicalSignature(input))throw stockLedgerError('HISTORY')}
   for(const body of state.entries){

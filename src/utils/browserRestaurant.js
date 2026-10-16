@@ -2,6 +2,7 @@ import {readRecords,writeRecords,withSalesLock,assertOriginalOperationAvailable}
 import {planRestaurant,restaurantReceipt,readRestaurantConfig,validateRestaurantRecords} from '../../electron/restaurantRules.mjs'
 import {prepareCheckout} from './checkoutSafety.mjs'
 import {prepareRefund} from './refundSafety.mjs'
+import {hasBrowserStockCost,commitBrowserStockBusiness} from './browserStockBusiness'
 function read(){
   const saved=readRecords(),r=saved.data,settings=Object.fromEntries(r.pos_business_settings.map(s=>[s.key,JSON.parse(s.value)]))
   const data={products:r.pos2_products,entries:r.pos_restaurant_orders,operations:r.pos_restaurant_operations,orders:r.pos2_orders,waste:r.pos2_waste,shifts:r.pos2_shifts,settings,config:readRestaurantConfig(settings.restaurantConfig,r.pos2_products)}
@@ -14,6 +15,7 @@ export function commitBrowserRestaurant(request,actor){
     let replay=false,historyChecked=false
     try{
       const {saved,data}=read(),old=data.operations.find(r=>r.id===request?.id);replay=!!old;historyChecked=true
+      if(hasBrowserStockCost(saved))return commitBrowserStockBusiness('applyRestaurantOperation',request,actor,saved)
       assertOriginalOperationAvailable('applyRestaurantOperation',request.id,saved,request)
       if(old)return restaurantReceipt(request,old,data)
       const plan=planRestaurant(request,data,actor,{prepareCheckout,prepareRefund})

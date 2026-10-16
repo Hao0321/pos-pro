@@ -2,6 +2,10 @@ import {readRecords, writeRecords, withSalesLock, browserStorage,assertOriginalO
 import { prepareCheckout } from './checkoutSafety.mjs'
 import { prepareRefund, refundSignature } from './refundSafety.mjs'
 import {signature} from '../../electron/checkoutSignature.mjs'
+import {hasBrowserStockCost,commitBrowserStockBusiness} from './browserStockBusiness'
+import {browserToBook} from '../../electron/recoveryRules.mjs'
+import {validateStockCostBook} from '../../electron/stockBackup.mjs'
+import {browserStockActor} from '../../electron/browserStockPlan.mjs'
 export const SALES_PROTOCOL='pos-checkout-v5'
 function receipt(order,data) {
   return {protocol:SALES_PROTOCOL,success:true,orderId:order.id,order,
@@ -9,10 +13,11 @@ function receipt(order,data) {
     products:data.pos2_products.filter(p=>order.items.some(i=>i.id===p.id)),
     member:order.memberId ? data.pos2_members.find(m=>m.id===order.memberId) : null}
 }
-export async function commitBrowserRefund(request) {
+export async function commitBrowserRefund(request,actor) {
   return withSalesLock(()=>{
     try {
       const current=readRecords(),data=current.data,existing=data.pos2_orders.find(o=>o.id===request.id)
+      if(hasBrowserStockCost(current))return commitBrowserStockBusiness('refundOrder',request,actor,current)
       assertOriginalOperationAvailable('refundOrder',request.id,current,request)
       if (existing) {
         if(existing.requestSignature!==refundSignature(request)) throw new Error('退貨單號內容不一致')
@@ -30,14 +35,26 @@ export async function commitBrowserRefund(request) {
     }catch(error){return {success:false,committed:error.historyUncertain?null:false,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
   })
 }
-export function browserReceipt(id) {
-  const {data}=readRecords(),order=data.pos2_orders.find(o=>o.id===id)
+export function browserReceipt(id,actor) {
+  const record=readRecords(),{data}=record,order=data.pos2_orders.find(o=>o.id===id)
+  if(hasBrowserStockCost(record)){
+    const book=browserToBook(data),state=validateStockCostBook(book)
+    if(actor)browserStockActor(book,actor,'checkout')
+    const event=state.entries.find(row=>row.evidence?.order?.id===id||row.evidence?.entry?.saleId===id&&row.input.action==='pay'||row.evidence?.entry?.refundId===id&&row.input.action==='cancel')
+    const legacy=[...(state.projection.legacyOperationIds?.checkout||[]),...(state.projection.legacyOperationIds?.refundOrder||[])]
+    if(!order&&(event||legacy.includes(id)))throw Error('原單資料需要核對，請保留原編號')
+    if(order&&order.source!=='customer'){
+      if(event){const operation=state.operations.find(row=>row.method===event.method&&row.operationId===event.input.id);if(!operation)throw Error('原單缺少成本回執');return {...receipt(order,data),costReceipt:structuredClone(operation.receipt)}}
+      if(!legacy.includes(id))throw Error('原單缺少成本回執')
+    }
+  }
   return order ? receipt(order,data) : {protocol:SALES_PROTOCOL,success:true,found:false}
 }
-export async function commitBrowserSale(request) {
+export async function commitBrowserSale(request,actor) {
   return withSalesLock(()=>{
     try {
       const current=readRecords(),data=current.data,existing=data.pos2_orders.find(o=>o.id===request.id)
+      if(hasBrowserStockCost(current))return commitBrowserStockBusiness('checkout',request,actor,current)
       assertOriginalOperationAvailable('checkout',request.id,current,request)
       if (existing) {
         if(existing.refundOf||!['completed','refunded'].includes(existing.status)||signature(request)!==signature(existing)||Object.keys(request).some(k=>k!=='status'&&JSON.stringify(request[k])!==JSON.stringify(existing[k]))) throw new Error('單號內容不一致')

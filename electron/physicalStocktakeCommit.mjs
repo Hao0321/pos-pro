@@ -4,6 +4,7 @@ import {PHYSICAL_STOCKTAKE} from './physicalStocktake.mjs'
 import {projectStockLedger,stockLedgerDigest,stockLedgerAcknowledgement} from './stockLedgerModel.mjs'
 import {salesDate} from './salesRules.mjs'
 import {STOCK_COMPAT_SETTING} from './stockCompatibility.mjs'
+import {withStockBookHead} from './stockBookAnchor.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 const fail=()=>{throw Error('盤點保存內容需要核對，原資料已保留')}
@@ -23,5 +24,5 @@ export function appendPhysicalStocktakeBook(before,after,state,command,data){
  const projection=projectStockLedger(state.projection,body);body.afterDigest=stockLedgerDigest(projection)
  const hash=stockLedgerDigest(body),receipt=stockLedgerAcknowledgement(body,hash,projection),operation={id:canonicalSignature(['applyInventoryOperation',request.id]),method:'applyInventoryOperation',operationId:request.id,actorId:actor.userId,signature:canonicalSignature(request),receipt}
  if(before.stockCostOperations.some(row=>row.id===operation.id))fail()
- return {...expected,stockCostEntries:[...before.stockCostEntries,{...body,hash}],stockCostOperations:[...before.stockCostOperations,operation]}
+ return withStockBookHead({...expected,stockCostEntries:[...before.stockCostEntries,{...body,hash}],stockCostOperations:[...before.stockCostOperations,operation]},hash)
 }

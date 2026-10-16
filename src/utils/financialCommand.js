@@ -1,4 +1,5 @@
 import { browserStorage } from './browserStorage'
+import {assertStoredBrowserCostReceipt} from './browserStockBusiness'
 import {PROCUREMENT_KINDS,isProcurement,procurementEvent,validateProcurement} from '../../electron/procurementRules.mjs'
 import {operationHeader} from '../../electron/operationRules.mjs'
 import {assertExchangeReceipt} from '../../electron/businessExchange.mjs'
@@ -59,6 +60,10 @@ function assertReceipt(kind,request,result){
       }
       if(row.cashLogId&&result.cashLog?.id!==row.cashLogId)throw Error('採購回覆缺少現金流水')
     }
+  }
+  if(!globalThis.window?.electronAPI){
+    const method={refund:'refundOrder',waste:'addWaste',restaurant:'applyRestaurantOperation',sales:'applySalesOperation',stocktake:'applyInventoryOperation',receive:'applyInventoryOperation'}[kind]||(PROCUREMENT_KINDS.includes(kind)?'applyInventoryOperation':null)
+    if(method)assertStoredBrowserCostReceipt(method,request,result)
   }
 }
 function clearOriginal(pending){

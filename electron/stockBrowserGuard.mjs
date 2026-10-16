@@ -2,9 +2,9 @@ import {canonicalSignature} from './operationRules.mjs'
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 const fail=()=>{throw Error('這份成本帳的交易請回到店面電腦；原資料與輸入已保留')}
 
-// Until the standalone browser's business writers participate in the cost
-// commit, keep complete restored books readable and reject an uncoupled write.
-// Paired phones use the native authority and do not take this path.
+// Business writers participate through their exact verified transition. Every
+// other write must leave the protected stock/business history intact. Paired
+// phones use the native authority and do not take this path.
 export function guardUnintegratedStockWrite(before,after,state){
  if(!state.projection)return
  for(const key of ['orders','purchases','wasteLog','restaurantOrders','restaurantOperations','salesDocuments','salesOperations','stockCostEntries','stockCostOperations'])if(!same(before[key],after[key]))fail()

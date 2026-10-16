@@ -3,6 +3,7 @@ const {canonicalSignature}=require('./operationRules.mjs')
 const {stockLedgerError}=require('./stockOpeningPlan.mjs')
 const {projectStockLedger,stockLedgerAcknowledgement:acknowledgement,replayStockLedger}=require('./stockLedgerModel.mjs')
 const {hasStockCostHistory,STOCK_COMPAT_SETTING}=require('./stockCompatibility.mjs')
+const {STOCK_BOOK_HEAD,assertStockBookHead}=require('./stockBookAnchor.mjs')
 const digest=value=>'sha256:'+createHash('sha256').update(typeof value==='string'?value:canonicalSignature(value)).digest('hex')
 const project=(previous,body)=>projectStockLedger(previous,body,digest)
 const METHOD='applyStockCostOperation'
@@ -33,8 +34,8 @@ module.exports=function stockLedgerStorage(db){
   for(const action of ['insert','update','delete']){
    const row=action==='delete'?'OLD':'NEW'
    const name=`pos_stock_identity_${action}`,old=db.prepare("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?").get(name)
-   if(old&&!old.sql.includes('stock_cost_entries'))db.exec('DROP TRIGGER '+name)
-   db.exec(`CREATE TRIGGER IF NOT EXISTS ${name} BEFORE ${action.toUpperCase()} ON settings WHEN ${row}.key IN ('sharedStoreId','restaurantConfig') AND EXISTS (SELECT 1 FROM stock_cost_entries) BEGIN SELECT pos_stock_write_allowed(); END;`)
+   if(old&&(!old.sql.includes('stock_cost_entries')||!old.sql.includes(STOCK_BOOK_HEAD)))db.exec('DROP TRIGGER '+name)
+   db.exec(`CREATE TRIGGER IF NOT EXISTS ${name} BEFORE ${action.toUpperCase()} ON settings WHEN ${row}.key IN ('sharedStoreId','restaurantConfig','stockCostBookHead') AND EXISTS (SELECT 1 FROM stock_cost_entries) BEGIN SELECT pos_stock_write_allowed(); END;`)
   }
   for(const table of ['stock_cost_entries','stock_cost_operations'])for(const action of ['update','delete']){
    const name=`pos_stock_immutable_${table}_${action}`,old=db.prepare("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?").get(name)
@@ -45,7 +46,10 @@ module.exports=function stockLedgerStorage(db){
  const rows=table=>db.prepare('SELECT * FROM '+table+' ORDER BY id').all().map(row=>{const data=JSON.parse(row.data);if(row.id!==data.id||table==='stock_cost_entries'&&row.sequence!==data.sequence)throw stockLedgerError('HISTORY');return data})
  function read(){
   try{
-   return replayStockLedger(rows('stock_cost_entries'),rows('stock_cost_operations'),digest)
+   const state=replayStockLedger(rows('stock_cost_entries'),rows('stock_cost_operations'),digest)
+   const anchor=db.prepare('SELECT key,value FROM settings WHERE key=?').get(STOCK_BOOK_HEAD)
+   assertStockBookHead({settings:anchor?[anchor]:[]},state)
+   return state
   }catch(error){if(error.code==='STOCK_LEDGER_HISTORY')throw error;throw stockLedgerError('HISTORY')}
  }
  function bindEpoch(){
@@ -83,6 +87,7 @@ module.exports=function stockLedgerStorage(db){
    fence()
    db.prepare('INSERT INTO stock_cost_entries (id,sequence,data) VALUES (?,?,?)').run(body.id,body.sequence,canonicalSignature({...body,hash}))
    db.prepare('INSERT INTO stock_cost_operations (id,data) VALUES (?,?)').run(operation.id,canonicalSignature(operation))
+   db.prepare('INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(STOCK_BOOK_HEAD,JSON.stringify(hash))
    if(!before.entries.length)bindEpoch()
   })
   read()

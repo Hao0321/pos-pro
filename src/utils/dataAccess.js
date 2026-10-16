@@ -9,6 +9,7 @@ import {makeAgentContext} from '../../electron/agentDraftRules.mjs'
 import {readAgentMappings,mergeAgentMappings} from '../../electron/businessDocument.mjs'
 import {retainAuditLogs} from './auditRetention'
 import {readExchangeTextSetting} from '../../electron/businessExchange.mjs'
+import {hasBrowserStockCost,commitBrowserStockBusiness,commitBrowserProduct,assertStoredBrowserCostReceipt} from './browserStockBusiness'
 // 資料存取抽象層 — 自動判斷 Electron (SQLite) 或 瀏覽器 (localStorage)
 export const isElectron = !!(typeof window !== 'undefined' && window.electronAPI)
 export const isSharedStore = !!(typeof window !== 'undefined' && window.electronAPI?.sharedStore)
@@ -48,14 +49,17 @@ export async function loadProducts(fallback) {
 export async function saveProducts(products) {
   if (!isElectron) saveLS('pos2_products', products)
 }
-export async function dbAddProduct(data) {
+export async function dbAddProduct(data,actor) {
   if (isElectron) return window.electronAPI.db.addProduct(data)
+  return commitBrowserProduct('addProduct',data,actor)
 }
-export async function dbUpdateProduct(id, data) {
+export async function dbUpdateProduct(id, data,actor) {
   if (isElectron) return window.electronAPI.db.updateProduct(id, data)
+  return commitBrowserProduct('updateProduct',{id,data},actor)
 }
-export async function dbDeleteProduct(id) {
+export async function dbDeleteProduct(id,actor) {
   if (isElectron) return window.electronAPI.db.deleteProduct(id)
+  return commitBrowserProduct('deleteProduct',{id},actor)
 }
 export async function dbFindByBarcode(code) {
   if (isElectron) return window.electronAPI.db.findByBarcode(code)
@@ -88,14 +92,15 @@ export async function loadOrders(fallback) {
 export async function saveOrders(orders) {
   if (!isElectron) saveLS('pos2_orders', orders)
 }
-export async function dbCheckout(orderData, stockUpdates, memberUpdate) {
+export async function dbCheckout(orderData, stockUpdates, memberUpdate,actor) {
   if (isElectron) return window.electronAPI.db.checkout(orderData, stockUpdates, memberUpdate)
-  return commitBrowserSale(orderData)
+  return commitBrowserSale(orderData,actor)
 }
-export async function lookupCheckout(id) {
+export async function lookupCheckout(id,actor) {
   if (isElectron) return window.electronAPI.db.checkoutReceipt(id)
-  return browserReceipt(id)
+  return browserReceipt(id,actor)
 }
+export function verifyCheckoutCostReceipt(request,result){if(!isElectron)assertStoredBrowserCostReceipt('checkout',request,result)}
 
 // ===== Manual Journal =====
 export async function loadManualJournal(fallback) {
@@ -277,9 +282,9 @@ export async function updateOrderStatus(id, status) {
 }
 
 // ===== Refund =====
-export async function dbRefund(origId, refundData, stockUpdates, memberUpdate) {
+export async function dbRefund(origId, refundData, stockUpdates, memberUpdate,actor) {
   if (isElectron) return window.electronAPI.db.refundOrder(origId, refundData, stockUpdates, memberUpdate)
-  return commitBrowserRefund(refundData)
+  return commitBrowserRefund(refundData,actor)
 }
 
 // ===== Held Orders 掛單 =====
@@ -358,11 +363,12 @@ export async function loadWasteLog() {
   if (isElectron) return window.electronAPI.db.getWasteLog()
   return loadLS('pos2_waste', [])
 }
-export async function addWaste(data) {
+export async function addWaste(data,actor) {
   if (isElectron) return window.electronAPI.db.addWaste(data)
   return withSalesLock(()=>{
     try{
     const current=readRecords(),records=current.data,p=records.pos2_products.find(p=>p.id===data.productId)
+    if(hasBrowserStockCost(current))return commitBrowserStockBusiness('addWaste',data,actor,current)
     assertOriginalOperationAvailable('addWaste',data.id,current,data)
     operationHeader(data);const old=records.pos2_waste.find(w=>w.id===data.id)
     if(old){if(!sameCommand(old,data,['productId','qty','reason','time','cashier']))throw Error('損耗編號內容不一致');return {success:true,waste:old,product:p||null}}

@@ -7,6 +7,7 @@ import {PHYSICAL_STOCKTAKE,physicalStocktakeState,assertPhysicalStocktakeResult}
 import {browserToBook} from '../../electron/recoveryRules.mjs'
 import {validateStockCostBook} from '../../electron/stockBackup.mjs'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
+import {hasBrowserStockCost,commitBrowserStockBusiness} from './browserStockBusiness'
 const countData=record=>({storeId:readExchangeTextSetting(record.data.pos_business_settings,'sharedStoreId'),epoch:record.salesEpoch,costMode:record.data.pos_stock_cost_entries.length?'active':'reference',restaurantEntries:record.data.pos_restaurant_orders})
 const verify=(actor,record)=>{if(!actor||!['owner','staff'].includes(actor.role)||!record.data.pos_users.some(row=>row.id===actor.userId&&row.username===actor.username&&row.role===actor.role))throw Error('權限不足')}
 export function getBrowserStocktakeState(actor){return withSalesLock(()=>{let record=readRecords();verify(actor,record);const storeId=countData(record).storeId;if(!storeId||!record.salesEpoch)record=writeRecords(!storeId?{pos_business_settings:[...record.data.pos_business_settings,{key:'sharedStoreId',value:JSON.stringify(crypto.randomUUID())}]}:{},record.revision,{ensureSalesEpoch:true});return physicalStocktakeState({products:record.data.pos2_products,...countData(record)})})}
@@ -25,6 +26,7 @@ export function commitBrowserInventory(request,actor){
     let replay=false,historyChecked=false,writing=false,beforeRaw=null
     try{
       const saved=readRecords(),r=saved.data,key=INVENTORY_PREFIX+request.id
+      if(request.protocol!==PHYSICAL_STOCKTAKE&&hasBrowserStockCost(saved))return commitBrowserStockBusiness('applyInventoryOperation',request,actor,saved)
       if(request.protocol===PHYSICAL_STOCKTAKE)verify(actor,saved)
       assertOriginalOperationAvailable('applyInventoryOperation',request.id,saved,request)
       const base=request.supplierContext||saved.supplierFence?readBrowserSupplier(saved):{products:r.pos2_products,purchases:r.pos_purchases,suppliers:r.pos_suppliers,openShift:r.pos2_shifts.find(s=>s.status==='open'),cashLogs:r.pos2_cash_log,storeId:readExchangeTextSetting(r.pos_business_settings,'sharedStoreId')},data=request.kind==='stocktake'?{...base,...countData(saved)}:base
