@@ -1,6 +1,9 @@
 module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierParams){
   // ===== Migration =====
   const migrateTx = db.transaction((data) => {
+    // Cost-ledger restore is not public until its complete protected replacement
+    // and original-ID recovery adapters are connected. Never discard this data.
+    if(data.stockCostEntries?.length||data.stockCostOperations?.length)throw require('./stockOpeningPlan.mjs').stockLedgerError('FLOW')
     require('./procurementRules.mjs').validateProcurementRecords(data.purchases||[],data.cashLog||[])
     require('./businessExchange.mjs').validateExchangeSettings(data.settings||[],data.purchases||[],data.auditLog||[])
     const exchange=require('./businessExchange.mjs')

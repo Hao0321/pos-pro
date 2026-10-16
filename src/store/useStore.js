@@ -5,11 +5,9 @@ import { prepareCheckout } from '../utils/checkoutSafety.mjs'
 import { createCheckoutCoordinator } from '../utils/checkoutCoordinator.mjs'
 import {getRecoveryState} from '../utils/recoveryClient'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { orderToJournalEntries, topupToJournalEntries,wasteToJournalEntries } from '../utils/accounting'
-import {PROCUREMENT_KINDS,procurementToJournalEntries} from '../../electron/procurementRules.mjs'
-import {salesToJournalEntries,salesDayMetrics} from '../../electron/salesJournal.mjs'
-import {customerLedgerToJournalEntries} from '../../electron/customerJournal.mjs'
-import {supplierLedgerToJournalEntries} from '../../electron/supplierJournal.mjs'
+import {automaticBusinessJournal} from '../../electron/businessJournal.mjs'
+import {PROCUREMENT_KINDS} from '../../electron/procurementRules.mjs'
+import {salesDayMetrics} from '../../electron/salesJournal.mjs'
 import {finalizeSupplierDraft} from '../utils/supplierDraftReceipt.mjs'
 import {supplierInventoryCommand} from '../utils/supplierInventoryCommand.mjs'
 import {salesDate} from '../../electron/salesRules.mjs'
@@ -181,15 +179,7 @@ export function useStore(session){
   // Each browser command commits before updating state. Re-saving UI snapshots
   // here could overwrite a newer durable operation when its reply is delayed.
 
-  const autoJournal = useMemo(()=>[
-    ...orders.flatMap(o=>orderToJournalEntries(o,products)),
-    ...topups.flatMap(topupToJournalEntries),   // 會員儲值（加值 + 折抵）一併入帳，損益表才完整
-    ...wasteLog.flatMap(wasteToJournalEntries),
-    ...purchases.flatMap(procurementToJournalEntries),
-    ...sales.documents.flatMap(salesToJournalEntries),
-    ...customerLedgerToJournalEntries(sales.customerLedger?.entries||[]),
-    ...supplierLedgerToJournalEntries(supplierState?.supplierLedger.entries||[]),
-  ],[orders,products,topups,wasteLog,purchases,sales,supplierState])
+  const autoJournal = useMemo(()=>automaticBusinessJournal({orders,products,topups,wasteLog,purchases,salesDocuments:sales.documents,customerEntries:sales.customerLedger?.entries||[],supplierEntries:supplierState?.supplierLedger.entries||[]}),[orders,products,topups,wasteLog,purchases,sales,supplierState])
   const allJournal  = useMemo(()=>[...autoJournal,...manualEntries].sort((a,b)=>b.date.localeCompare(a.date)),[autoJournal,manualEntries])
 
   const addManualEntry = useCallback(async e=>{

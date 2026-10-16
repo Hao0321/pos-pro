@@ -14,6 +14,8 @@ module.exports = function initDatabase(dbPath) {
   db.pragma('foreign_keys = ON')
 
   require('./databaseSchema.cjs')(db)
+  let stockStore
+  try{stockStore=require('./stockLedgerStorage.cjs')(db)}catch(error){db.close();throw error}
   if(db.prepare('SELECT 1 FROM customer_entries LIMIT 1').get())require('./databaseFeatureFence.cjs').installCustomerFence(db)
   if(db.prepare('SELECT 1 FROM supplier_entries LIMIT 1').get())require('./databaseFeatureFence.cjs').installSupplierFence(db)
   const stmts = require('./databaseStatements.cjs')(db)
@@ -530,6 +532,7 @@ module.exports = function initDatabase(dbPath) {
       return { success: true, id }
     },
     exportData() {
+      return db.transaction(()=>{
       const data = {
         products: stmts.getAllProducts.all().map(p => ({ ...p, noBarcode: !!p.noBarcode })),
         members: stmts.getAllMembers.all(),
@@ -557,10 +560,16 @@ module.exports = function initDatabase(dbPath) {
         supplierEntries:db.prepare('SELECT data FROM supplier_entries ORDER BY id').all().map(r=>JSON.parse(r.data)),
         supplierOperations:db.prepare('SELECT data FROM supplier_operations ORDER BY id').all().map(r=>JSON.parse(r.data)),
       }
+      const stock=stockStore.read()
+      if(stock.projection){
+        require('./stockOpeningPlan.mjs').assertStockCustodyMatchesBook(stock.projection.custody,data.products,data.restaurantOrders)
+        data.stockCostEntries=stock.entries;data.stockCostOperations=stock.operations
+      }
       // A backup round trip may change insertion order for tied timestamps.
       // Stable collection ordering keeps the revision tied to business content.
       for(const rows of Object.values(data))rows.sort((a,b)=>String(a.id??a.key).localeCompare(String(b.id??b.key)))
       return {...data,_revision:createHash('sha256').update(canonicalSignature(data)).digest('hex')}
+      })()
     },
     // Settings
     getSetting(key) {
@@ -712,5 +721,6 @@ module.exports = function initDatabase(dbPath) {
       db.close()
     },
   }
+  Object.assign(api,require('./stockOpeningOperations.cjs')(db,api,stockStore),require('./stockCostOperations.cjs')(db,api,stockStore))
   return require('./recoveryOperations.cjs')(db,api,replaceAllTx)
 }
