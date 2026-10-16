@@ -16,7 +16,7 @@ export const ROLES = {
     label: '老闆',
     color: 'var(--gold)',
     permissions: [
-      'pos.use', 'pos.discount',
+      'pos.use', 'pos.discount', 'pos.refund',
       'inventory.view', 'inventory.edit', 'inventory.delete',
       'members.view', 'members.edit', 'members.delete',
       'reports.view', 'reports.export',

@@ -1,0 +1,453 @@
+{
+  "provenance": {
+    "profile": "native-refund-review-source/v1",
+    "baselineRevision": "442e264f75f89fd1fecd568bfbd5001dee68681e",
+    "clock": "2026-10-16T09:10:00.000Z",
+    "realMerchantData": false,
+    "closedSourceSha256": "4e488118b735e59934afede05ffa7b04770098552df56b25b82fb2bad6b07b8c",
+    "canonicalBookSha256": "d43b286b27a45b8d04221c961e33b141a94c713d6046d3c7bb760e88c38a7344"
+  },
+  "owner": {
+    "userId": "owner",
+    "username": "Refund fixture",
+    "role": "owner"
+  },
+  "book": {
+    "products": [
+      {
+        "id": "p",
+        "name": "Refund 原文",
+        "category": "",
+        "price": 10.01,
+        "cost": 2,
+        "stock": 7,
+        "barcode": "",
+        "unit": "公斤",
+        "noBarcode": false,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-16 17:08:57",
+        "updatedAt": "2026-10-16 17:08:57"
+      }
+    ],
+    "members": [
+      {
+        "id": "member",
+        "name": "Fixture member",
+        "phone": "0000000000",
+        "points": 100,
+        "tier": "normal",
+        "totalSpent": 121.85,
+        "joinDate": "2026-10-16",
+        "createdAt": "2026-10-16 17:08:57",
+        "balance": 42.93,
+        "birthday": "",
+        "lastBirthdayBonus": "",
+        "note": ""
+      }
+    ],
+    "orders": [
+      {
+        "id": "mixed-sale",
+        "subtotal": 30.03,
+        "discount": 0.1,
+        "manualDiscount": 1.01,
+        "balanceUsed": 7.07,
+        "total": 21.85,
+        "payMethod": "mixed",
+        "paid": 21.85,
+        "change_amount": 0,
+        "payments": [
+          {
+            "method": "cash",
+            "amount": 10
+          },
+          {
+            "method": "card",
+            "amount": 11.85
+          }
+        ],
+        "memberId": "member",
+        "pointsUsed": 2,
+        "pointsEarned": 2,
+        "time": "2026-10-16T09:10:00.000Z",
+        "source": "pos",
+        "status": "completed",
+        "tableNum": "",
+        "note": "",
+        "taxId": "",
+        "shiftId": "shift",
+        "refundOf": "",
+        "cashier": "Refund fixture",
+        "fullRefund": false,
+        "itemCosts": {
+          "p": 2
+        },
+        "trackingTokenHash": "",
+        "requestSignature": "",
+        "change": 0,
+        "items": [
+          {
+            "id": "p",
+            "name": "Refund 原文",
+            "price": 10.01,
+            "qty": 3
+          }
+        ]
+      }
+    ],
+    "suppliers": [],
+    "purchases": [],
+    "promotions": [],
+    "users": [
+      {
+        "id": "owner",
+        "username": "Refund fixture",
+        "password": "{\"salt\":[4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],\"iter\":1000,\"hash\":[39,111,30,230,221,113,239,96,67,136,96,70,25,191,162,215,153,26,40,221,149,227,0,29,196,51,208,188,234,2,10,124]}",
+        "role": "owner"
+      }
+    ],
+    "manualJournal": [],
+    "heldOrders": [],
+    "shifts": [
+      {
+        "id": "shift",
+        "cashier": "Refund fixture",
+        "cashierId": "",
+        "openTime": "2026-10-16T09:10:00.000Z",
+        "closeTime": "",
+        "openCash": 0,
+        "closeCash": 0,
+        "expectedCash": 0,
+        "diff": 0,
+        "cashSales": 0,
+        "cardSales": 0,
+        "orderCount": 0,
+        "refundCount": 0,
+        "refundAmount": 0,
+        "note": "",
+        "status": "open"
+      }
+    ],
+    "cashLog": [],
+    "wasteLog": [],
+    "memberTopups": [],
+    "auditLog": [],
+    "settings": [
+      {
+        "key": "birthdayBonus",
+        "value": "0"
+      },
+      {
+        "key": "pointsRedeemRate",
+        "value": ".05"
+      },
+      {
+        "key": "sharedStoreId",
+        "value": "refund-review-store"
+      },
+      {
+        "key": "stockCostBookHead",
+        "value": "\"sha256:088ab6923ede0fbd09f88b65dfb8136253a143799d2cdb462d53b60198346f30\""
+      },
+      {
+        "key": "stockCostVersionFence",
+        "value": "1"
+      }
+    ],
+    "restaurantOrders": [],
+    "restaurantOperations": [],
+    "salesDocuments": [],
+    "salesOperations": [],
+    "customerEntries": [],
+    "customerOperations": [],
+    "supplierEntries": [],
+    "supplierOperations": [],
+    "stockCostEntries": [
+      {
+        "actor": {
+          "role": "owner",
+          "userId": "owner",
+          "username": "Refund fixture"
+        },
+        "afterDigest": "sha256:6e71a9d94ef7f65528ec5ceaf716eda3ee7ef074399626704794bc454ced8d3a",
+        "beforeDigest": "sha256:a890a33be7637e502bdab178dcd6de251963356555fc87df51bfa2a3f8bc638d",
+        "date": "2026-10-16",
+        "evidence": {
+          "order": {
+            "balanceUsed": 7.07,
+            "cashier": "Refund fixture",
+            "change": 0,
+            "change_amount": 0,
+            "discount": 0.1,
+            "fullRefund": false,
+            "id": "mixed-sale",
+            "itemCosts": {
+              "p": 2
+            },
+            "items": [
+              {
+                "id": "p",
+                "name": "Refund 原文",
+                "price": 10.01,
+                "qty": 3
+              }
+            ],
+            "manualDiscount": 1.01,
+            "memberId": "member",
+            "note": "",
+            "paid": 21.85,
+            "payMethod": "mixed",
+            "payments": [
+              {
+                "amount": 10,
+                "method": "cash"
+              },
+              {
+                "amount": 11.85,
+                "method": "card"
+              }
+            ],
+            "pointsEarned": 2,
+            "pointsUsed": 2,
+            "refundOf": "",
+            "requestSignature": "",
+            "shiftId": "shift",
+            "source": "pos",
+            "status": "completed",
+            "subtotal": 30.03,
+            "tableNum": "",
+            "taxId": "",
+            "time": "2026-10-16T09:10:00.000Z",
+            "total": 21.85,
+            "trackingTokenHash": ""
+          },
+          "products": [
+            {
+              "afterUnits": 7000,
+              "beforeUnits": 10000,
+              "id": "p",
+              "referenceUnitCostCents": 200,
+              "unit": "公斤"
+            }
+          ]
+        },
+        "hash": "sha256:088ab6923ede0fbd09f88b65dfb8136253a143799d2cdb462d53b60198346f30",
+        "id": "stock-a5d88281-42b3-4119-9395-c2d44ada2406",
+        "input": {
+          "balanceUsed": 7.07,
+          "cashier": "Refund fixture",
+          "change": 0,
+          "discount": 0.1,
+          "id": "mixed-sale",
+          "items": [
+            {
+              "id": "p",
+              "name": "Refund 原文",
+              "price": 10.01,
+              "qty": 3
+            }
+          ],
+          "manualDiscount": 1.01,
+          "memberId": "member",
+          "paid": 21.85,
+          "payMethod": "mixed",
+          "payments": [
+            {
+              "amount": 11.85,
+              "method": "card"
+            },
+            {
+              "amount": 10,
+              "method": "cash"
+            }
+          ],
+          "pointsEarned": 2,
+          "pointsUsed": 2,
+          "shiftId": "shift",
+          "subtotal": 30.03,
+          "taxId": "",
+          "time": "2026-10-16T09:10:00.000Z",
+          "total": 21.85
+        },
+        "method": "checkout",
+        "openingMaterial": null,
+        "previousHash": "sha256:0526a72906dd8489a5398d7168f7747d5ff0e78ccc0a2a03c0d82470ffc7f450",
+        "sequence": 2,
+        "time": "2026-10-16T09:10:00.000Z"
+      },
+      {
+        "actor": {
+          "role": "owner",
+          "userId": "owner",
+          "username": "Refund fixture"
+        },
+        "afterDigest": "sha256:a890a33be7637e502bdab178dcd6de251963356555fc87df51bfa2a3f8bc638d",
+        "beforeDigest": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        "date": "2026-10-16",
+        "hash": "sha256:0526a72906dd8489a5398d7168f7747d5ff0e78ccc0a2a03c0d82470ffc7f450",
+        "id": "stock-b63f70d2-6048-463b-8541-6e8b7b61c99d",
+        "input": {
+          "action": "open",
+          "epoch": "f5248aa5-2561-4710-a598-56218d0e9c4c",
+          "id": "refund-opening",
+          "overrides": [],
+          "protocol": "pos-stock-cost/v1",
+          "reviewed": true,
+          "snapshotDigest": "sha256:9c510bf384c3f3df0f80f2e28923639ac8a7305cec3e6568932e5004d6b4ced4",
+          "storeId": "refund-review-store",
+          "time": "2026-10-16T09:10:00.000Z"
+        },
+        "openingMaterial": "{\"inventoryRows\":[],\"legacyJournal\":[],\"legacyOperationIds\":{\"addProduct\":[\"p\"],\"addWaste\":[],\"applyInventoryOperation\":[],\"applyRestaurantOperation\":[],\"applySalesOperation\":[],\"checkout\":[],\"refundOrder\":[]},\"preview\":{\"authoritativeValuation\":false,\"currency\":\"TWD\",\"epoch\":\"f5248aa5-2561-4710-a598-56218d0e9c4c\",\"legacyCostReviews\":[],\"paidLegacyReservations\":[],\"products\":[{\"availableUnits\":10000,\"name\":\"Refund 原文\",\"productId\":\"p\",\"referenceUnitCostCents\":200,\"referenceValueCents\":2000,\"unit\":\"公斤\",\"zeroCostNeedsReview\":false}],\"referenceAvailableValueCents\":2000,\"referenceInventoryBalanceCents\":0,\"referenceOwnedValueCents\":2000,\"referenceReservedValueCents\":0,\"reviewFlags\":[\"inventory-reference-reconciliation-needed\"],\"status\":\"reference-only-not-activated\",\"storeId\":\"refund-review-store\",\"unpaidReservations\":[],\"version\":1},\"profile\":\"pos-stock-opening-preview/v1\"}",
+        "previousHash": null,
+        "sequence": 1,
+        "time": "2026-10-16T09:10:00.000Z"
+      }
+    ],
+    "stockCostOperations": [
+      {
+        "actorId": "owner",
+        "id": "[\"applyStockCostOperation\",\"refund-opening\"]",
+        "method": "applyStockCostOperation",
+        "operationId": "refund-opening",
+        "receipt": {
+          "eventHash": "sha256:0526a72906dd8489a5398d7168f7747d5ff0e78ccc0a2a03c0d82470ffc7f450",
+          "eventId": "stock-b63f70d2-6048-463b-8541-6e8b7b61c99d",
+          "id": "refund-opening",
+          "protocol": "pos-stock-cost/v1",
+          "sequence": 1,
+          "stateDigest": "sha256:a890a33be7637e502bdab178dcd6de251963356555fc87df51bfa2a3f8bc638d",
+          "success": true,
+          "valuation": {
+            "categories": {
+              "available": {
+                "complete": true,
+                "knownValueCents": 2000,
+                "unvalued": [],
+                "valueCents": 2000
+              },
+              "consumed": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              },
+              "reserved": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              },
+              "supplierReturned": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              },
+              "wasted": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              }
+            },
+            "complete": true,
+            "knownSourceValueCents": 2000,
+            "ownedKnownValueCents": 2000,
+            "ownedValueCents": 2000,
+            "totalSourceValueCents": 2000
+          }
+        },
+        "signature": "{\"action\":\"open\",\"epoch\":\"f5248aa5-2561-4710-a598-56218d0e9c4c\",\"id\":\"refund-opening\",\"overrides\":[],\"protocol\":\"pos-stock-cost/v1\",\"reviewed\":true,\"snapshotDigest\":\"sha256:9c510bf384c3f3df0f80f2e28923639ac8a7305cec3e6568932e5004d6b4ced4\",\"storeId\":\"refund-review-store\",\"time\":\"2026-10-16T09:10:00.000Z\"}"
+      },
+      {
+        "actorId": "owner",
+        "id": "[\"checkout\",\"mixed-sale\"]",
+        "method": "checkout",
+        "operationId": "mixed-sale",
+        "receipt": {
+          "eventHash": "sha256:088ab6923ede0fbd09f88b65dfb8136253a143799d2cdb462d53b60198346f30",
+          "eventId": "stock-a5d88281-42b3-4119-9395-c2d44ada2406",
+          "id": "mixed-sale",
+          "protocol": "pos-stock-cost/v1",
+          "sequence": 2,
+          "sourceMethod": "checkout",
+          "stateDigest": "sha256:6e71a9d94ef7f65528ec5ceaf716eda3ee7ef074399626704794bc454ced8d3a",
+          "success": true
+        },
+        "signature": "{\"balanceUsed\":7.07,\"cashier\":\"Refund fixture\",\"change\":0,\"discount\":0.1,\"id\":\"mixed-sale\",\"items\":[{\"id\":\"p\",\"name\":\"Refund 原文\",\"price\":10.01,\"qty\":3}],\"manualDiscount\":1.01,\"memberId\":\"member\",\"paid\":21.85,\"payMethod\":\"mixed\",\"payments\":[{\"amount\":11.85,\"method\":\"card\"},{\"amount\":10,\"method\":\"cash\"}],\"pointsEarned\":2,\"pointsUsed\":2,\"shiftId\":\"shift\",\"subtotal\":30.03,\"taxId\":\"\",\"time\":\"2026-10-16T09:10:00.000Z\",\"total\":21.85}"
+      }
+    ],
+    "_revision": "0dd05769540a090344329e0994198fa99d755cf35b9289472d931f2bb290d604"
+  },
+  "request": {
+    "id": "refund-fixed",
+    "refundOf": "mixed-sale",
+    "items": [
+      {
+        "id": "p",
+        "qty": 1
+      }
+    ],
+    "reason": "Fixture return",
+    "cashier": "Refund fixture",
+    "shiftId": "shift",
+    "time": "2026-10-16T09:10:00.000Z"
+  },
+  "expected": {
+    "paidCents": 728,
+    "cashCents": 333,
+    "cardCents": 395,
+    "balanceCents": 236,
+    "totalReturnedCents": 964
+  },
+  "half": {
+    "order": {
+      "id": "half-sale",
+      "source": "pos",
+      "status": "completed",
+      "items": [
+        {
+          "id": "p",
+          "name": "Half-cent",
+          "price": 1,
+          "qty": 1
+        }
+      ],
+      "subtotal": 1,
+      "discount": 0,
+      "manualDiscount": 0.5,
+      "balanceUsed": 0,
+      "total": 0.5,
+      "paid": 0.5,
+      "payMethod": "cash",
+      "payments": [
+        {
+          "method": "cash",
+          "amount": 0.5
+        }
+      ],
+      "memberId": null,
+      "pointsUsed": 0,
+      "pointsEarned": 0,
+      "time": "2026-10-16T09:10:00.000Z",
+      "shiftId": "shift"
+    },
+    "request": {
+      "id": "half-return",
+      "refundOf": "half-sale",
+      "items": [
+        {
+          "id": "p",
+          "qty": 0.29
+        }
+      ],
+      "time": "2026-10-16T09:10:00.000Z",
+      "shiftId": "shift"
+    },
+    "expectedPaidCents": 15,
+    "oldPaidCents": 14
+  }
+}

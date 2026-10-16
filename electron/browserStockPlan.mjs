@@ -10,6 +10,7 @@ import {assertProductPricingUnchanged} from './costPricing.mjs'
 import {captureRestaurantCostBasis} from './stockReportBasis.mjs'
 import {stockUnits} from './stockBusinessPlan.mjs'
 import {validateCustomerLedgerRecords} from './customerLedger.mjs'
+import {verifyRefundReview} from './refundReview.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 export function browserStockActor(book,actor,method,input=null){
@@ -67,6 +68,10 @@ export function planBrowserStockBusiness(book,runtime,method,request,actor){
     next.orders=[order,...book.orders]
     result.order=order
   }else if(method==='refundOrder'){
+    if(request.review!==undefined){
+      if(request.cashier!==actor.username)throw Error('退款帳號已更新，請重新登入')
+      verifyRefundReview(request,{storeId:readExchangeTextSetting(book.settings,'sharedStoreId'),epoch:runtime.epoch,costMode:runtime.state?.projection?'active':'reference',orders:book.orders,members:book.members,products:book.products,shifts:book.shifts,restaurantEntries:book.restaurantOrders})
+    }
     if(!book.shifts.some(row=>row.id===request.shiftId&&row.status==='open'))throw Error('請先開班，將退款記入目前班別')
     if(book.restaurantOrders.some(row=>row.saleId===request.refundOf))throw Error('預訂退款請在「預訂出餐」取消原單')
     const original=book.orders.find(row=>row.id===request.refundOf),member=book.members.find(row=>row.id===original?.memberId)

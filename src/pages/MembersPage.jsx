@@ -250,7 +250,7 @@ export default function MembersPage({ store, session }) {
                     <span style={{fontFamily:'var(--font-mono)', fontSize:13, fontWeight:500, color: o.total < 0 ? 'var(--red)' : 'inherit'}}>
                       NT$ {o.total.toLocaleString()}
                     </span>
-                    {!isRefund && !isRefunded && (
+                    {!isRefund && !isRefunded && session?.role==='owner' && (
                       <button onClick={()=>setRefundOrder(o)} style={{padding:4, color:'var(--text-tertiary)'}} title={tr("退貨")}>
                         <RotateCcw size={13}/>
                       </button>
@@ -264,7 +264,7 @@ export default function MembersPage({ store, session }) {
       )}
 
       {refundOrder && (
-        <RefundModal order={refundOrder} session={session}
+        <RefundModal order={orders.find(row=>row.id===refundOrder.id)||refundOrder} session={session} products={store.products} retryFinancial={store.retryFinancial} onRecovery={()=>store.setView('recovery')}
           priorRefunds={orders.filter(o => o.refundOf === refundOrder.id)}
           onClose={()=>setRefundOrder(null)}
           onRefund={handleRefund}/>

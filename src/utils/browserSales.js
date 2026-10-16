@@ -1,4 +1,4 @@
-import {readRecords, writeRecords, withSalesLock, browserStorage,assertOriginalOperationAvailable} from './browserStorage'
+import {readRecords, writeRecords, withSalesLock, browserStorage,assertOriginalOperationAvailable,RECORD_KEY} from './browserStorage'
 import { prepareCheckout } from './checkoutSafety.mjs'
 import { prepareRefund, refundSignature } from './refundSafety.mjs'
 import {signature} from '../../electron/checkoutSignature.mjs'
@@ -6,6 +6,7 @@ import {hasBrowserStockCost,commitBrowserStockBusiness} from './browserStockBusi
 import {browserToBook} from '../../electron/recoveryRules.mjs'
 import {validateStockCostBook} from '../../electron/stockBackup.mjs'
 import {browserStockActor} from '../../electron/browserStockPlan.mjs'
+import {refundOwner,verifyBrowserRefundReview} from './browserRefundReview'
 export const SALES_PROTOCOL='pos-checkout-v5'
 function receipt(order,data) {
   return {protocol:SALES_PROTOCOL,success:true,orderId:order.id,order,
@@ -15,24 +16,34 @@ function receipt(order,data) {
 }
 export async function commitBrowserRefund(request,actor) {
   return withSalesLock(()=>{
+    let checked=false,replay=false,writing=false,beforeRaw=null
     try {
       const current=readRecords(),data=current.data,existing=data.pos2_orders.find(o=>o.id===request.id)
+      checked=true;replay=!!existing
+      if(request.review!==undefined)refundOwner(actor,current)
       if(hasBrowserStockCost(current))return commitBrowserStockBusiness('refundOrder',request,actor,current)
       assertOriginalOperationAvailable('refundOrder',request.id,current,request)
       if (existing) {
         if(existing.requestSignature!==refundSignature(request)) throw new Error('退貨單號內容不一致')
         return {...receipt(existing,data),original:data.pos2_orders.find(o=>o.id===existing.refundOf)}
       }
+      verifyBrowserRefundReview(request,actor,current)
       const original=data.pos2_orders.find(o=>o.id===request.refundOf),member=data.pos2_members.find(m=>m.id===original?.memberId)
       if(data.pos_restaurant_orders.some(e=>e.saleId===request.refundOf))throw Error('預訂退款請在「預訂出餐」取消原單，避免回補已耗用食材')
       const plan=prepareRefund(original,data.pos2_orders.filter(o=>o.refundOf===original?.id),request,member)
       if (plan.stockUpdates.some(u=>!data.pos2_products.some(p=>p.id===u.id))) throw new Error('退貨商品已不存在，請先核對庫存')
       const orig={...original,...(plan.order.fullRefund?{status:'refunded'}:{})}
+      beforeRaw=localStorage.getItem(RECORD_KEY);writing=true
       const next=writeRecords({pos2_orders:[plan.order,...data.pos2_orders.map(o=>o.id===orig.id?orig:o)],
         pos2_products:data.pos2_products.map(p=>{const u=plan.stockUpdates.find(u=>u.id===p.id);return u?{...p,stock:p.stock+u.delta}:p}),
         pos2_members:data.pos2_members.map(m=>m.id===plan.member?.id?plan.member:m)},current.revision)
       return {...receipt(plan.order,next.data),original:orig}
-    }catch(error){return {success:false,committed:error.historyUncertain?null:false,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
+    }catch(error){
+      if(writing)try{
+        if(localStorage.getItem(RECORD_KEY)!==beforeRaw){const current=readRecords().data,order=current.pos2_orders.find(row=>row.id===request.id);if(order?.requestSignature===refundSignature(request))return {...receipt(order,current),original:current.pos2_orders.find(row=>row.id===request.refundOf)};return {success:false,committed:null,error:error.message}}
+      }catch{return {success:false,committed:null,error:error.message}}
+      return {success:false,committed:error.historyUncertain||!checked||replay?null:false,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}
+    }
   })
 }
 export function browserReceipt(id,actor) {

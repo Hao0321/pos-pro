@@ -13,6 +13,7 @@ export const WORKSPACE_TASKS=[
   {id:'readiness',title:'營業前檢查、備份',detail:'確認資料保存與手機連線。',view:'readiness',perm:'pos.use',words:'下載 安全 還原 離線'},
   {id:'devices',title:'手機和電腦一起用',detail:'配對手機，共用同一間店資料。',view:'devices',perm:'settings.edit',words:'同步 共用 連線 QR'},
   {id:'members',title:'找客人、會員',detail:'查詢客戶、點數與儲值。',view:'members',perm:'members.view',words:'顧客 CRM 聯絡'},
+  {id:'refunds',title:'退貨、退款',detail:'找原單，核對金額後退貨。',view:'refunds',perm:'pos.refund',words:'退費 現金 刷卡 儲值 return refund'},
   {id:'reports',title:'今天賣得怎麼樣',detail:'查銷售紀錄與營業報表。',view:'reports',perm:'reports.view',words:'退款 報表 業績 銷售'},
   {id:'accounting',title:'查看帳務',detail:'收入、支出、應付與分錄。',view:'accounting',perm:'accounting.view',words:'會計 財務 利潤'},
   {id:'stocktake',title:'實際點一下庫存',detail:'輸入點到的數量，核對差異。',view:'stocktake',perm:'stocktake.view',words:'盤點 數量'},
@@ -27,8 +28,8 @@ export const WORKSPACE_TASKS=[
   {id:'suppliers',title:'供應商訂金、抵付與退回款',detail:'記錄已付訂金，再分配到已核對的請款。',view:'suppliers',perm:'purchase.edit',words:'供應商 預付 訂金 核准 審核 抵付 退款 supplier prepayment advance approval deposit'},
 ]
 export const WORKSPACE_AREAS=[
-  {id:'crm',title:'顧客與點餐',code:'CRM',intro:'幫你照顧客人',detail:'會員、點數、儲值、點餐與預訂。',description:'會員、點數、儲值、點餐和預訂，讓接單與經營回頭客更方便。',taskIds:['customers','sales','members','orders','restaurant','exchange','quick','sale','promotions','reports']},
-  {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['customers','sales','sale','quick','exchange','inventory','purchase','suppliers','shifts','stocktake','waste','accounting','reports','readiness','devices','settings','recovery','scenarios']},
+  {id:'crm',title:'顧客與點餐',code:'CRM',intro:'幫你照顧客人',detail:'會員、點數、儲值、點餐與預訂。',description:'會員、點數、儲值、點餐和預訂，讓接單與經營回頭客更方便。',taskIds:['customers','sales','members','orders','restaurant','exchange','quick','sale','refunds','promotions','reports']},
+  {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['customers','sales','sale','refunds','quick','exchange','inventory','purchase','suppliers','shifts','stocktake','waste','accounting','reports','readiness','devices','settings','recovery','scenarios']},
 ]
 export function workspaceTasks(session,query='',area='all'){
   const terms=query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)

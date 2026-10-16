@@ -1,5 +1,6 @@
 import { settledOrders, netSale, orderCost } from '../utils/orderLedger'
 import { executeFinancial, FINANCIAL_PENDING,readPendingFinancial } from '../utils/financialCommand'
+import {loadRefundContext} from '../utils/dataAccess'
 import { browserStorage, writeRecords, acquireBrowserEditor } from '../utils/browserStorage'
 import { prepareCheckout } from '../utils/checkoutSafety.mjs'
 import { createCheckoutCoordinator } from '../utils/checkoutCoordinator.mjs'
@@ -241,8 +242,14 @@ export function useStore(session){
   const refund = useCallback(async (origOrder, refundItems, opts={}) => {
     if (!origOrder || !refundItems?.length) throw new Error('請選擇退貨品項')
     if (dataError) throw new Error(dataError)
-    const result=await executeFinancial('refund',{refundOf:origOrder.id,items:refundItems.map(i=>({id:i.id,qty:i.qty})),
-      reason:opts.reason||'',cashier:opts.cashier||'',shiftId:openShift?.id||''},request=>dbRefund(request.refundOf,request,null,null,sessionRef.current),setFinancialState)
+    const input={refundOf:origOrder.id,items:refundItems.map(i=>({id:i.id,qty:i.qty})),reason:opts.reason||'',cashier:opts.cashier||'',shiftId:opts.shiftId||openShift?.id||'',...(opts.review===undefined?{}:{review:opts.review})}
+    let identity=null
+    if(opts.review&&!readPendingFinancial()){
+      const context=await loadRefundContext(sessionRef.current)
+      if(context.storeId!==opts.review.storeId||context.epoch!==opts.review.epoch||context.openShift?.id!==input.shiftId)throw Object.assign(Error('店面、資料或班別已更新，請重新看退款'),{notCommitted:true})
+      identity={id:'refund-'+crypto.randomUUID(),time:context.now}
+    }
+    const result=await executeFinancial('refund',input,request=>dbRefund(request.refundOf,request,null,null,sessionRef.current),setFinancialState,identity)
     setOrders(prev=>[result.order,...prev.filter(o=>o.id!==result.order.id).map(o=>o.id===result.original.id?result.original:o)])
     setProducts(prev=>prev.map(p=>result.products.find(n=>n.id===p.id)||p))
     if(result.member)setMembers(prev=>prev.map(m=>m.id===result.member.id?result.member:m))

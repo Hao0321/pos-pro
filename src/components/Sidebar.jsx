@@ -11,6 +11,7 @@ const NAV = [
   { key:'overview',label:'營運總覽',Icon:BarChart2,perm:'reports.view',accent:'gold' },
   { key:'quick',label:'快速建單',Icon:Sparkles,perm:'pos.use',accent:'green' },
   { key:'pos',        label:'收銀台',   Icon:ShoppingCart,    perm:'pos.use', accent:'green' },
+  { key:'refunds',label:'退貨、退款',Icon:ShoppingCart,perm:'pos.refund',accent:'red' },
   { key:'restaurant',label:'預訂出餐',Icon:ClipboardList,perm:'pos.use',accent:'green' },
   { key:'shifts',     label:'班別交班', Icon:Clock,           perm:'pos.use', accent:'teal' },
   { key:'readiness',  label:'營業前檢查', Icon:CheckCircleIcon, perm:'pos.use', accent:'green' },

@@ -725,6 +725,7 @@ module.exports = function initDatabase(dbPath) {
     },
   }
   Object.assign(api,require('./stockOpeningOperations.cjs')(db,api,stockStore),require('./stockCostOperations.cjs')(db,api,stockStore))
+  require('./refundReviewOperations.cjs')(db,api,stockStore)
   require('./stockBusinessOperations.cjs')(db,api,stockStore)
   return require('./recoveryOperations.cjs')(db,api,replaceAllTx)
 }

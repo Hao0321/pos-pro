@@ -11,6 +11,7 @@ import {readRecoveryCommand} from './utils/recoveryClient'
 import POSPage from './pages/POSPage'
 import InventoryPage from './pages/InventoryPage'
 import MembersPage from './pages/MembersPage'
+const RefundPage=lazy(()=>import('./pages/RefundPage'))
 const ReportsPage=lazy(()=>import('./pages/ReportsPage'))
 import AccountingPage from './pages/AccountingPage'
 import PurchasePage from './pages/PurchasePage'
@@ -56,6 +57,7 @@ export default function App() {
   useEffect(()=>{setWorkspaceArea('all')},[session?.userId,session?.role])
   const store = useStore(session)
   const { view, setView, lowStockCount, todayRevenue, todayOrders } = store
+  useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='refund'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'refunds')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
   useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='exchange'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'exchange')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
   useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='sales'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'sales')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
   useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='customer-ledger'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'customers')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
@@ -174,7 +176,7 @@ export default function App() {
           </div>
         )}
         {/* Quick entry locks its fields while retaining the same-document recovery action. */}
-        <main className="workspace-content" data-view={view} inert={store.checkoutState.phase!=='idle'&&view!=='recovery'||store.financialState.phase!=='idle'&&!['quick','exchange','sales','customers','suppliers','stocktake','recovery'].includes(view)?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+        <main className="workspace-content" data-view={view} inert={store.checkoutState.phase!=='idle'&&view!=='recovery'||store.financialState.phase!=='idle'&&!['quick','exchange','sales','customers','suppliers','stocktake','refunds','recovery'].includes(view)?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
           {view==='recovery'&&session.role==='owner'&&<Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><RecoveryPage store={store} session={session}/></Suspense>}
           {view === 'dashboard' && can('pos.use') && (simpleMode?<SimpleHomePage store={store} session={session} area={workspaceArea} onAreaChange={setWorkspaceArea}/>:<Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><DashboardPage store={store} session={session}/></Suspense>)}
           {view === 'overview' && can('reports.view') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><DashboardPage store={store} session={session}/></Suspense>}
@@ -189,6 +191,7 @@ export default function App() {
           {view === 'inventory'  && can('inventory.view')  && <InventoryPage  store={store} session={session}/>}
           {view === 'waste'      && can('inventory.view')  && <WastePage      store={store} session={session}/>}
           {view === 'members'    && can('members.view')    && <MembersPage    store={store} session={session}/>}
+          {view === 'refunds' && can('pos.refund') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><RefundPage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
           {view === 'reports'    && can('reports.view')    && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><ReportsPage store={store} session={session}/></Suspense>}
           {view === 'accounting' && can('accounting.view') && <AccountingPage store={store} session={session}/>}
           {view === 'purchase'   && can('purchase.view')   && <PurchasePage   store={store} session={session}/>}
