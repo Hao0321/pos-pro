@@ -1,4 +1,5 @@
 import {operationHeader,moneyValue,quantityValue,canonicalSignature} from './operationRules.mjs'
+import {normalizeTableOrdering,customerIntakeSource,assertCustomerOrderLink,validateTableOrderSources} from './tableOrdering.mjs'
 
 export const RESTAURANT_KIND='restaurant'
 export const RESTAURANT_STATES=['reserved','cooking','ready','dispatched','completed','cancelled']
@@ -24,14 +25,14 @@ export function normalizeRestaurantConfig(input,products){
   // Recipe outputs cannot also be ingredient inputs: production has one explicit level.
   const outputs=new Set(recipes.map(([target])=>target))
   if(recipes.some(([,rows])=>rows.some(r=>outputs.has(r.id))))throw Error('配方不支援相互引用；請以原料與包材建檔')
-  return {enabled:input.enabled,dailyCapacity:positiveInt(input.dailyCapacity,'每日產能'),slotCapacity:positiveInt(input.slotCapacity,'時段產能'),recipes:Object.fromEntries(recipes)}
+  return {enabled:input.enabled,dailyCapacity:positiveInt(input.dailyCapacity,'每日產能'),slotCapacity:positiveInt(input.slotCapacity,'時段產能'),recipes:Object.fromEntries(recipes),...(Object.hasOwn(input,'tableOrdering')?{tableOrdering:normalizeTableOrdering(input.tableOrdering)}:{})}
 }
 export function readRestaurantConfig(raw,products){
   return raw==null?defaultRestaurantConfig():normalizeRestaurantConfig(typeof raw==='string'?JSON.parse(raw):raw,products)
 }
 export function restaurantAvailability(product,config,products){
   const recipe=config?.enabled&&Object.hasOwn(config.recipes,product.id)?config.recipes[product.id]:null
-  return recipe?Math.max(0,Math.floor(Math.min(...recipe.map(r=>(products.find(p=>p.id===r.id)?.stock||0)/r.qty)))):product.stock
+  return recipe?Math.max(0,Math.min(...recipe.map(r=>Math.floor(Math.round((products.find(p=>p.id===r.id)?.stock||0)*1000)/Math.round(r.qty*1000))))):product.stock
 }
 function validateSchedule(day,slot){
   if(typeof day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(Date.parse(day+'T00:00:00Z'))||new Date(day+'T00:00:00Z').toISOString().slice(0,10)!==day)throw Error('取餐日期不正確')
@@ -39,11 +40,13 @@ function validateSchedule(day,slot){
 }
 export function validateRestaurantRecords(entries,operations,orders,products){
   if(!Array.isArray(entries)||!Array.isArray(operations))throw Error('預訂紀錄格式不正確')
-  const seen=new Set()
+  validateTableOrderSources(orders)
+  const seen=new Set(),customerIds=new Set()
   for(const e of entries){
     id(e?.id);validateSchedule(e.day,e.slot)
     if(seen.has(e.id)||!RESTAURANT_STATES.includes(e.status)||!['preorder','walkin','delivery'].includes(e.channel)||!Number.isSafeInteger(e.version)||e.version<1||!Array.isArray(e.items)||!e.items.length||!Array.isArray(e.allocations)||!e.allocations.length)throw Error('預訂歷史紀錄需要核對')
     seen.add(e.id);text(e.customer,100,'稱呼');text(e.contact,100,'聯絡方式');text(e.note,1000,'備註');operationHeader({id:e.id,time:e.createdAt})
+    if(Object.hasOwn(e,'customerOrderId')){id(e.customerOrderId);if(customerIds.has(e.customerOrderId))throw Error('顧客原單已重複接單');customerIds.add(e.customerOrderId);assertCustomerOrderLink(e,orders)}
     if(!['reserved','cancelled'].includes(e.status)&&!e.startedAt||e.startedAt&&!Number.isFinite(Date.parse(e.startedAt)))throw Error('製作紀錄需要核對')
     const itemIds=new Set(),resourceIds=new Set()
     let total=0
@@ -83,6 +86,7 @@ export function planRestaurant(request,data,actor,finance){
     validateSchedule(request.day,request.slot)
     if(!['preorder','walkin','delivery'].includes(request.channel)||!Array.isArray(request.items)||!request.items.length||request.items.length>100)throw Error('訂單來源或品項不正確')
     if(data.entries.some(e=>e.id===request.id)||data.orders.some(o=>o.id===request.id))throw Error('預訂編號已存在')
+    const customerSource=Object.hasOwn(request,'customerOrderId')?customerIntakeSource(request,data):null
     const seen=new Set(),resources=new Map(),items=request.items.map(i=>{
       id(i?.id);const p=data.products.find(p=>p.id===i.id)
       if(!p||seen.has(i.id))throw Error('商品不存在或重複');seen.add(i.id);positiveInt(i.qty,'份數');moneyValue(p.price,'售價');moneyValue(p.cost,'成本')
@@ -90,13 +94,14 @@ export function planRestaurant(request,data,actor,finance){
       const recipe=Object.hasOwn(config.recipes,p.id)?config.recipes[p.id]:[{id:p.id,qty:1}]
       let cost=0
       for(const r of recipe){const resource=data.products.find(p=>p.id===r.id);if(!resource)throw Error('配方原料已不存在');moneyValue(resource.cost,'原料成本');const qty=units(r.qty,'配方用量')*i.qty;const previous=resources.get(r.id);resources.set(r.id,{id:r.id,name:resource.name,qty:((previous?units(previous.qty,'預留量'):0)+qty)/1000,unitCost:resource.cost});cost+=resource.cost*r.qty}
-      return {id:p.id,name:p.name,price:p.price,qty:i.qty,cost:Math.round(cost*100)/100}
+      return {id:p.id,name:customerSource?.items.find(row=>row.id===p.id)?.name||p.name,price:p.price,qty:i.qty,cost:Math.round(cost*100)/100}
     })
     const quantity=items.reduce((n,i)=>n+i.qty,0),used=data.entries.filter(e=>e.day===request.day&&(e.status!=='cancelled'||e.startedAt))
     if(used.reduce((n,e)=>n+e.quantity,0)+quantity>config.dailyCapacity)throw Error('已超過當日產能，請選其他日期')
     if(used.filter(e=>e.slot===request.slot).reduce((n,e)=>n+e.quantity,0)+quantity>config.slotCapacity)throw Error('這個時段已滿，請選其他時段')
     entry={id:request.id,version:1,channel:request.channel,day:request.day,slot:request.slot,customer:text(request.customer,100,'稱呼'),contact:text(request.contact,100,'聯絡方式'),note:text(request.note,1000,'備註'),items,allocations:[...resources.values()],quantity,total:moneyValue(items.reduce((n,i)=>n+cents(i.price)*i.qty,0)/100,'應收'),status:'reserved',createdAt:request.time,startedAt:'',saleId:'',refundId:''}
     entry.pickupNumber=positiveInt(data.entries.filter(e=>e.day===entry.day).reduce((n,e)=>Math.max(n,e.pickupNumber||0),0)+1,'取餐號',1000000)
+    if(customerSource){entry.customerOrderId=customerSource.id;entry.tableNum=customerSource.tableNum||'';if(customerSource.tableId)entry.tableId=customerSource.tableId;assertCustomerOrderLink(entry,data.orders)}
     if(entry.channel!=='walkin'&&!entry.contact||entry.channel==='delivery'&&!entry.note)throw Error('預訂／外送須填聯絡方式，外送另須填地址')
     stock(entry.allocations,-1);next.entries.unshift(entry)
   }else{

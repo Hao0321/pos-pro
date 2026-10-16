@@ -10,7 +10,7 @@ const random=()=>randomBytes(32).toString('hex')
 const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b))
 function privateIPv4(host){const n=host.split('.').map(Number);return n.length===4&&n.every((v,i)=>Number.isInteger(v)&&v>=0&&v<=255&&String(v)===host.split('.')[i])&&(n[0]===10||n[0]===192&&n[1]===168||n[0]===172&&n[1]>=16&&n[1]<=31)}
 function addresses(){return [...new Set(Object.values(os.networkInterfaces()).flat().filter(i=>i?.family==='IPv4'&&!i.internal&&privateIPv4(i.address)).map(i=>i.address))]}
-module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{},now=Date.now,allowLoopback=false,stockSetupEnabled=false}){
+module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{},now=Date.now,allowLoopback=false,stockSetupEnabled=false,orderingStatus=()=>null}){
   let server=null,host='',port=0,cert=null,revision=0,startTask=null,stopTask=null,stopServer=null,stopping=false
   const devices=new Map(),pairs=new Map(),attempts=new Map()
   function storeIdentity(){let id=db.getSetting('sharedStoreId');if(!id){id=randomUUID();db.setSetting('sharedStoreId',id)}return id}
@@ -85,10 +85,12 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(method==='db:applySupplierLedgerOperation')return db.applySupplierLedgerOperation(args[0],actor)
     if(method==='db:rememberAgentMappings')return db.rememberAgentMappings(args[0],actor)
     if(method==='db:applyRestaurantOperation')return db.applyRestaurantOperation(args[0],actor)
+    if(method==='db:getTableOrderingContext')return db.getTableOrderingContext(actor)
+    if(method==='db:getCustomerIntakeContext')return db.getCustomerIntakeContext(args[0],actor)
     if(method==='db:applyInventoryOperation')return db.applyInventoryOperation(args[0],actor)
     if(method==='db:applyScenarioTemplate')return db.applyScenarioTemplate(args[0],actor)
     if(method==='shared:getStatus')return {running:true,host,port,revision,shared:true}
-    if(method==='server:getStatus')return {running:false,ip:host,port,shared:true}
+    if(method==='server:getStatus')return orderingStatus()||{running:false,ip:host,port,shared:true}
     if(method==='settings:get'){if(!businessKeys.has(args[0]))throw Error('此項設定請在店面電腦查閱');return db.getSetting(args[0])}
     if(method==='settings:getAll')return Object.fromEntries([...businessKeys].map(k=>[k,db.getSetting(k)]))
     if(method==='settings:set'||method==='settings:setMany'){

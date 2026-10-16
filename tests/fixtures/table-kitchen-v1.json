@@ -1,0 +1,577 @@
+{
+  "provenance": {
+    "revision": "fd75c2453b30bac3f14886683118b320e3c7e6a5",
+    "realMerchantData": false,
+    "producer": "actual native SQL and public HTTP"
+  },
+  "owner": {
+    "userId": "table-owner",
+    "username": "Table owner",
+    "role": "owner"
+  },
+  "products": [
+    {
+      "id": "rice",
+      "name": "Rice ingredient",
+      "price": 1,
+      "cost": 2,
+      "stock": 5,
+      "unit": "kg",
+      "category": "Ingredients"
+    },
+    {
+      "id": "bowl",
+      "name": "Rice bowl",
+      "price": 100,
+      "cost": 0,
+      "stock": 0,
+      "unit": "bowl",
+      "category": "Meals"
+    },
+    {
+      "id": "ready",
+      "name": "Ready meal",
+      "price": 80,
+      "cost": 30,
+      "stock": 3,
+      "unit": "portion",
+      "category": "Meals"
+    }
+  ],
+  "config": {
+    "enabled": true,
+    "dailyCapacity": 30,
+    "slotCapacity": 5,
+    "recipes": {
+      "bowl": [
+        {
+          "id": "rice",
+          "qty": 1.25
+        }
+      ]
+    }
+  },
+  "before": {
+    "products": [
+      {
+        "id": "bowl",
+        "name": "Rice bowl",
+        "category": "Meals",
+        "price": 100,
+        "cost": 0,
+        "stock": 0,
+        "barcode": "",
+        "unit": "bowl",
+        "noBarcode": true,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-16 21:23:49",
+        "updatedAt": "2026-10-16 21:23:49"
+      },
+      {
+        "id": "ready",
+        "name": "Ready meal",
+        "category": "Meals",
+        "price": 80,
+        "cost": 30,
+        "stock": 3,
+        "barcode": "",
+        "unit": "portion",
+        "noBarcode": true,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-16 21:23:49",
+        "updatedAt": "2026-10-16 21:23:49"
+      },
+      {
+        "id": "rice",
+        "name": "Rice ingredient",
+        "category": "Ingredients",
+        "price": 1,
+        "cost": 2,
+        "stock": 5,
+        "barcode": "",
+        "unit": "kg",
+        "noBarcode": true,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-16 21:23:49",
+        "updatedAt": "2026-10-16 21:23:49"
+      }
+    ],
+    "members": [],
+    "orders": [],
+    "suppliers": [],
+    "purchases": [],
+    "promotions": [],
+    "users": [
+      {
+        "id": "table-owner",
+        "username": "Table owner",
+        "password": "{\"salt\":[4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],\"iter\":1000,\"hash\":[50,105,113,182,34,70,15,158,76,48,253,64,114,166,103,71,185,119,120,83,48,82,0,220,175,112,166,213,225,27,158,252]}",
+        "role": "owner"
+      },
+      {
+        "id": "table-staff",
+        "username": "Table staff",
+        "password": "{\"salt\":[4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],\"iter\":1000,\"hash\":[50,105,113,182,34,70,15,158,76,48,253,64,114,166,103,71,185,119,120,83,48,82,0,220,175,112,166,213,225,27,158,252]}",
+        "role": "staff"
+      }
+    ],
+    "manualJournal": [],
+    "heldOrders": [],
+    "shifts": [
+      {
+        "id": "table-shift",
+        "cashier": "Table owner",
+        "cashierId": "",
+        "openTime": "2026-10-16T13:23:49.399Z",
+        "closeTime": "",
+        "openCash": 0,
+        "closeCash": 0,
+        "expectedCash": 0,
+        "diff": 0,
+        "cashSales": 0,
+        "cardSales": 0,
+        "orderCount": 0,
+        "refundCount": 0,
+        "refundAmount": 0,
+        "note": "",
+        "status": "open"
+      }
+    ],
+    "cashLog": [],
+    "wasteLog": [],
+    "memberTopups": [],
+    "auditLog": [],
+    "settings": [
+      {
+        "key": "orderTrackingSecret",
+        "value": "synthetic-table-fixture-tracking-key"
+      },
+      {
+        "key": "restaurantConfig",
+        "value": "{\"enabled\":true,\"dailyCapacity\":30,\"slotCapacity\":5,\"recipes\":{\"bowl\":[{\"id\":\"rice\",\"qty\":1.25}]}}"
+      },
+      {
+        "key": "sharedStoreId",
+        "value": "table-fixture-store"
+      }
+    ],
+    "restaurantOrders": [],
+    "restaurantOperations": [
+      {
+        "id": "table-fixture-config",
+        "kind": "restaurant",
+        "action": "configure",
+        "signature": "{\"action\":\"configure\",\"config\":{\"dailyCapacity\":30,\"enabled\":true,\"recipes\":{\"bowl\":[{\"id\":\"rice\",\"qty\":1.25}]},\"slotCapacity\":5},\"expectedConfig\":\"{\\\"dailyCapacity\\\":30,\\\"enabled\\\":false,\\\"recipes\\\":{},\\\"slotCapacity\\\":5}\",\"id\":\"table-fixture-config\",\"kind\":\"restaurant\",\"time\":\"2026-10-16T13:23:49.399Z\"}",
+        "entityId": "",
+        "entityVersion": 0,
+        "productIds": [],
+        "saleId": "",
+        "refundId": "",
+        "time": "2026-10-16T13:23:49.399Z",
+        "actor": {
+          "userId": "table-owner",
+          "username": "Table owner",
+          "role": "owner"
+        }
+      }
+    ],
+    "salesDocuments": [],
+    "salesOperations": [],
+    "customerEntries": [],
+    "customerOperations": [],
+    "supplierEntries": [],
+    "supplierOperations": [],
+    "stockCostEntries": [],
+    "stockCostOperations": [],
+    "_revision": "facd11ae9ab049e56d73bfdb3936109548612e352a51babf9eb61ef98824e557"
+  },
+  "request": {
+    "requestId": "00000000-0000-4000-8000-000000000005",
+    "items": [
+      {
+        "id": "ready",
+        "qty": 1
+      }
+    ],
+    "customerName": "Guest",
+    "tableNum": "5",
+    "note": ""
+  },
+  "response": {
+    "success": true,
+    "orderId": "CO00000000-0000-4000-8000-000000000005",
+    "total": 80,
+    "trackingToken": "ded4ba50710ac1266b35629db97f0695ea47a88d6b8bd2cdd37fa7ca12de80df"
+  },
+  "beforeAccept": {
+    "products": [
+      {
+        "id": "bowl",
+        "name": "Rice bowl",
+        "category": "Meals",
+        "price": 100,
+        "cost": 0,
+        "stock": 0,
+        "barcode": "",
+        "unit": "bowl",
+        "noBarcode": true,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-16 21:23:49",
+        "updatedAt": "2026-10-16 21:23:49"
+      },
+      {
+        "id": "ready",
+        "name": "Ready meal",
+        "category": "Meals",
+        "price": 80,
+        "cost": 30,
+        "stock": 3,
+        "barcode": "",
+        "unit": "portion",
+        "noBarcode": true,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-16 21:23:49",
+        "updatedAt": "2026-10-16 21:23:49"
+      },
+      {
+        "id": "rice",
+        "name": "Rice ingredient",
+        "category": "Ingredients",
+        "price": 1,
+        "cost": 2,
+        "stock": 5,
+        "barcode": "",
+        "unit": "kg",
+        "noBarcode": true,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-16 21:23:49",
+        "updatedAt": "2026-10-16 21:23:49"
+      }
+    ],
+    "members": [],
+    "orders": [
+      {
+        "id": "CO00000000-0000-4000-8000-000000000005",
+        "subtotal": 80,
+        "discount": 0,
+        "manualDiscount": 0,
+        "balanceUsed": 0,
+        "total": 80,
+        "payMethod": "pending",
+        "paid": 0,
+        "change_amount": 0,
+        "payments": [],
+        "memberId": null,
+        "pointsUsed": 0,
+        "pointsEarned": 0,
+        "time": "2026-10-16T13:23:49.479Z",
+        "source": "customer",
+        "status": "pending",
+        "tableNum": "5",
+        "note": "Guest: ",
+        "taxId": "",
+        "shiftId": "",
+        "refundOf": "",
+        "cashier": "",
+        "fullRefund": false,
+        "itemCosts": {},
+        "trackingTokenHash": "e9ab922182dcfc40a4a5a2f44dc02ac761e0f1709e9c73b3a1c3f6cc582a4dd5",
+        "requestSignature": "ffc98e957668f1236f7bfd8b6728637b5d81aba56b2e603aa137aaf36e197256",
+        "change": 0,
+        "items": [
+          {
+            "id": "ready",
+            "name": "Ready meal",
+            "price": 80,
+            "qty": 1
+          }
+        ]
+      }
+    ],
+    "suppliers": [],
+    "purchases": [],
+    "promotions": [],
+    "users": [
+      {
+        "id": "table-owner",
+        "username": "Table owner",
+        "password": "{\"salt\":[4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],\"iter\":1000,\"hash\":[50,105,113,182,34,70,15,158,76,48,253,64,114,166,103,71,185,119,120,83,48,82,0,220,175,112,166,213,225,27,158,252]}",
+        "role": "owner"
+      },
+      {
+        "id": "table-staff",
+        "username": "Table staff",
+        "password": "{\"salt\":[4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],\"iter\":1000,\"hash\":[50,105,113,182,34,70,15,158,76,48,253,64,114,166,103,71,185,119,120,83,48,82,0,220,175,112,166,213,225,27,158,252]}",
+        "role": "staff"
+      }
+    ],
+    "manualJournal": [],
+    "heldOrders": [],
+    "shifts": [
+      {
+        "id": "table-shift",
+        "cashier": "Table owner",
+        "cashierId": "",
+        "openTime": "2026-10-16T13:23:49.399Z",
+        "closeTime": "",
+        "openCash": 0,
+        "closeCash": 0,
+        "expectedCash": 0,
+        "diff": 0,
+        "cashSales": 0,
+        "cardSales": 0,
+        "orderCount": 0,
+        "refundCount": 0,
+        "refundAmount": 0,
+        "note": "",
+        "status": "open"
+      }
+    ],
+    "cashLog": [],
+    "wasteLog": [],
+    "memberTopups": [],
+    "auditLog": [],
+    "settings": [
+      {
+        "key": "orderTrackingSecret",
+        "value": "synthetic-table-fixture-tracking-key"
+      },
+      {
+        "key": "restaurantConfig",
+        "value": "{\"enabled\":true,\"dailyCapacity\":30,\"slotCapacity\":5,\"recipes\":{\"bowl\":[{\"id\":\"rice\",\"qty\":1.25}]}}"
+      },
+      {
+        "key": "sharedStoreId",
+        "value": "table-fixture-store"
+      }
+    ],
+    "restaurantOrders": [],
+    "restaurantOperations": [
+      {
+        "id": "table-fixture-config",
+        "kind": "restaurant",
+        "action": "configure",
+        "signature": "{\"action\":\"configure\",\"config\":{\"dailyCapacity\":30,\"enabled\":true,\"recipes\":{\"bowl\":[{\"id\":\"rice\",\"qty\":1.25}]},\"slotCapacity\":5},\"expectedConfig\":\"{\\\"dailyCapacity\\\":30,\\\"enabled\\\":false,\\\"recipes\\\":{},\\\"slotCapacity\\\":5}\",\"id\":\"table-fixture-config\",\"kind\":\"restaurant\",\"time\":\"2026-10-16T13:23:49.399Z\"}",
+        "entityId": "",
+        "entityVersion": 0,
+        "productIds": [],
+        "saleId": "",
+        "refundId": "",
+        "time": "2026-10-16T13:23:49.399Z",
+        "actor": {
+          "userId": "table-owner",
+          "username": "Table owner",
+          "role": "owner"
+        }
+      }
+    ],
+    "salesDocuments": [],
+    "salesOperations": [],
+    "customerEntries": [],
+    "customerOperations": [],
+    "supplierEntries": [],
+    "supplierOperations": [],
+    "stockCostEntries": [],
+    "stockCostOperations": [],
+    "_revision": "210b59e4f15deeadac69c145445b6dfe4a628733a244995aed00f340da785dd5"
+  },
+  "afterAccept": {
+    "products": [
+      {
+        "id": "bowl",
+        "name": "Rice bowl",
+        "category": "Meals",
+        "price": 100,
+        "cost": 0,
+        "stock": 0,
+        "barcode": "",
+        "unit": "bowl",
+        "noBarcode": true,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-16 21:23:49",
+        "updatedAt": "2026-10-16 21:23:49"
+      },
+      {
+        "id": "ready",
+        "name": "Ready meal",
+        "category": "Meals",
+        "price": 80,
+        "cost": 30,
+        "stock": 3,
+        "barcode": "",
+        "unit": "portion",
+        "noBarcode": true,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-16 21:23:49",
+        "updatedAt": "2026-10-16 21:23:49"
+      },
+      {
+        "id": "rice",
+        "name": "Rice ingredient",
+        "category": "Ingredients",
+        "price": 1,
+        "cost": 2,
+        "stock": 5,
+        "barcode": "",
+        "unit": "kg",
+        "noBarcode": true,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-16 21:23:49",
+        "updatedAt": "2026-10-16 21:23:49"
+      }
+    ],
+    "members": [],
+    "orders": [
+      {
+        "id": "CO00000000-0000-4000-8000-000000000005",
+        "subtotal": 80,
+        "discount": 0,
+        "manualDiscount": 0,
+        "balanceUsed": 0,
+        "total": 80,
+        "payMethod": "pending",
+        "paid": 0,
+        "change_amount": 0,
+        "payments": [],
+        "memberId": null,
+        "pointsUsed": 0,
+        "pointsEarned": 0,
+        "time": "2026-10-16T13:23:49.479Z",
+        "source": "customer",
+        "status": "accepted",
+        "tableNum": "5",
+        "note": "Guest: ",
+        "taxId": "",
+        "shiftId": "",
+        "refundOf": "",
+        "cashier": "",
+        "fullRefund": false,
+        "itemCosts": {},
+        "trackingTokenHash": "e9ab922182dcfc40a4a5a2f44dc02ac761e0f1709e9c73b3a1c3f6cc582a4dd5",
+        "requestSignature": "ffc98e957668f1236f7bfd8b6728637b5d81aba56b2e603aa137aaf36e197256",
+        "change": 0,
+        "items": [
+          {
+            "id": "ready",
+            "name": "Ready meal",
+            "price": 80,
+            "qty": 1
+          }
+        ]
+      }
+    ],
+    "suppliers": [],
+    "purchases": [],
+    "promotions": [],
+    "users": [
+      {
+        "id": "table-owner",
+        "username": "Table owner",
+        "password": "{\"salt\":[4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],\"iter\":1000,\"hash\":[50,105,113,182,34,70,15,158,76,48,253,64,114,166,103,71,185,119,120,83,48,82,0,220,175,112,166,213,225,27,158,252]}",
+        "role": "owner"
+      },
+      {
+        "id": "table-staff",
+        "username": "Table staff",
+        "password": "{\"salt\":[4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],\"iter\":1000,\"hash\":[50,105,113,182,34,70,15,158,76,48,253,64,114,166,103,71,185,119,120,83,48,82,0,220,175,112,166,213,225,27,158,252]}",
+        "role": "staff"
+      }
+    ],
+    "manualJournal": [],
+    "heldOrders": [],
+    "shifts": [
+      {
+        "id": "table-shift",
+        "cashier": "Table owner",
+        "cashierId": "",
+        "openTime": "2026-10-16T13:23:49.399Z",
+        "closeTime": "",
+        "openCash": 0,
+        "closeCash": 0,
+        "expectedCash": 0,
+        "diff": 0,
+        "cashSales": 0,
+        "cardSales": 0,
+        "orderCount": 0,
+        "refundCount": 0,
+        "refundAmount": 0,
+        "note": "",
+        "status": "open"
+      }
+    ],
+    "cashLog": [],
+    "wasteLog": [],
+    "memberTopups": [],
+    "auditLog": [],
+    "settings": [
+      {
+        "key": "orderTrackingSecret",
+        "value": "synthetic-table-fixture-tracking-key"
+      },
+      {
+        "key": "restaurantConfig",
+        "value": "{\"enabled\":true,\"dailyCapacity\":30,\"slotCapacity\":5,\"recipes\":{\"bowl\":[{\"id\":\"rice\",\"qty\":1.25}]}}"
+      },
+      {
+        "key": "sharedStoreId",
+        "value": "table-fixture-store"
+      }
+    ],
+    "restaurantOrders": [],
+    "restaurantOperations": [
+      {
+        "id": "table-fixture-config",
+        "kind": "restaurant",
+        "action": "configure",
+        "signature": "{\"action\":\"configure\",\"config\":{\"dailyCapacity\":30,\"enabled\":true,\"recipes\":{\"bowl\":[{\"id\":\"rice\",\"qty\":1.25}]},\"slotCapacity\":5},\"expectedConfig\":\"{\\\"dailyCapacity\\\":30,\\\"enabled\\\":false,\\\"recipes\\\":{},\\\"slotCapacity\\\":5}\",\"id\":\"table-fixture-config\",\"kind\":\"restaurant\",\"time\":\"2026-10-16T13:23:49.399Z\"}",
+        "entityId": "",
+        "entityVersion": 0,
+        "productIds": [],
+        "saleId": "",
+        "refundId": "",
+        "time": "2026-10-16T13:23:49.399Z",
+        "actor": {
+          "userId": "table-owner",
+          "username": "Table owner",
+          "role": "owner"
+        }
+      }
+    ],
+    "salesDocuments": [],
+    "salesOperations": [],
+    "customerEntries": [],
+    "customerOperations": [],
+    "supplierEntries": [],
+    "supplierOperations": [],
+    "stockCostEntries": [],
+    "stockCostOperations": [],
+    "_revision": "6b1335c8bffd6a628db49d3e41a7ad076e2b258cfb78baf5fe855fd4b597d11b"
+  }
+}

@@ -1,5 +1,9 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--table-kitchen':['native-table-kitchen.cjs','POS_TABLE_KITCHEN_PASS',false],
+  '--table-kitchen-ui':['native-table-kitchen-ui.cjs','POS_TABLE_KITCHEN_UI_PASS',true],
+  '--table-kitchen-shared-ui':['native-table-kitchen-shared-ui.cjs','POS_TABLE_KITCHEN_SHARED_UI_PASS',true],
+  '--table-kitchen-browser-ui':['native-table-kitchen-browser-ui.cjs','POS_TABLE_KITCHEN_BROWSER_UI_PASS',true],
   '--cross-storage':['native-cross-storage.cjs','POS_CROSS_STORAGE_PASS',false],
   '--cross-storage-ui':['native-cross-storage-ui.cjs','POS_CROSS_STORAGE_UI_PASS',true],
   '--cross-storage-shared':['native-cross-storage-shared.cjs','POS_CROSS_STORAGE_SHARED_PASS',false],

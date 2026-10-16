@@ -21,6 +21,8 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:previewStockSetup',(_e,input)=>{if(!stockSetupEnabled)throw Error('成本設定尚未開放新保存，請保留原編號核對');return db.previewStockSetup(input,ipcSecurity.current())})
   handle('db:applyStockSetupOperation',(_e,input)=>db.applyStockSetupOperation(input,ipcSecurity.current(),{allowNew:stockSetupEnabled===true}))
   handle('db:getRestaurantState',()=>db.getRestaurantState())
+  handle('db:getTableOrderingContext',()=>db.getTableOrderingContext(ipcSecurity.current()))
+  handle('db:getCustomerIntakeContext',(_e,id)=>db.getCustomerIntakeContext(id,ipcSecurity.current()))
   handle('db:getAgentContext',()=>db.getAgentContext(ipcSecurity.current()))
   handle('db:getExchangeContext',()=>db.getExchangeContext(ipcSecurity.current()))
   handle('db:applyExchangeOperation',(_e,input)=>db.applyExchangeOperation(input,ipcSecurity.current()))

@@ -22,6 +22,7 @@ import {appendPhysicalStocktakeBook} from '../../electron/physicalStocktakeCommi
 import {appendBrowserStockBusiness} from '../../electron/browserStockCommit.mjs'
 import {STOCK_BOOK_HEAD} from '../../electron/stockBookAnchor.mjs'
 import {validateSettingRows,updateBrowserSettings} from '../../electron/settingEncoding.mjs'
+import {usesRestaurantIntake} from '../../electron/tableOrdering.mjs'
 export const RECORD_KEY = 'pos_atomic_records_v1'
 export const DATA_KEYS = ['pos2_products','pos2_members','pos2_orders','pos2_manual_j',
   'pos_users','pos_suppliers','pos_purchases','pos_promotions','pos2_held_orders',
@@ -52,9 +53,14 @@ export function readRecords() {
     if(Object.keys(record.data).some(key=>!keys.has(key)))throw Error('備份含有目前版本不支援的資料，請保留原檔並使用相容版本')
     recoveryMetadata(record)
     validateSettingRows(record.data.pos_business_settings,'browser')
-    if(record.data.pos_business_settings.some(row=>row.encoding)&&![2,3].includes(record.recovery?.version))throw Error('復原保護索引損壞，請保留原資料核對')
+    if(record.data.pos_business_settings.some(row=>row.encoding)&&![2,3,4].includes(record.recovery?.version))throw Error('復原保護索引損壞，請保留原資料核對')
     validateBrowserProtection(record)
     validateStockCostBook(browserToBook(record.data))
+    const rawRestaurant=record.data.pos_business_settings.find(s=>s.key==='restaurantConfig')?.value,config=readRestaurantConfig(rawRestaurant==null?null:JSON.parse(rawRestaurant),record.data.pos2_products)
+    if(usesRestaurantIntake(config,record.data.pos_restaurant_orders,record.data.pos2_orders)){
+      if(record.recovery?.version!==4)throw Error('復原保護索引損壞，請保留原資料核對')
+      validateRestaurantRecords(record.data.pos_restaurant_orders,record.data.pos_restaurant_operations,record.data.pos2_orders,record.data.pos2_products)
+    }
     return record
   }
   const data = {}
@@ -69,7 +75,7 @@ export function readRecords() {
 }
 export function recoveryMetadata(record=readRecords()){
   const value=record.recovery??{version:1,snapshots:[],originalIds:[],events:[]}
-  if(![1,2,3].includes(value.version)||!Array.isArray(value.snapshots)||!Array.isArray(value.originalIds)||!Array.isArray(value.events)
+  if(![1,2,3,4].includes(value.version)||!Array.isArray(value.snapshots)||!Array.isArray(value.originalIds)||!Array.isArray(value.events)
     ||value.snapshots.some(s=>typeof s.id!=='string'||!s.data||typeof s.contentSignature!=='string'||typeof s.afterMaterial!=='string')
     ||value.originalIds.some(row=>!Array.isArray(row)||row.length!==3||row.some(v=>typeof v!=='string'))
     ||value.events.some(row=>typeof row.id!=='string'||typeof row.signature!=='string'||!row.receipt))throw Error('復原保護索引損壞，請保留原資料核對')
@@ -120,7 +126,7 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
     const originalIds=operationRecords(before).map(row=>[row.method,row.id,snapshotId])
     const receipt=recoveryCommand?{protocol:RECOVERY_PROTOCOL,success:true,id:recoveryCommand.id,sourceId:snapshotId,revision:String(next.revision),storeId:recoveryStoreId(target),
       ...(recoveryCommand.restoredSourceId?{restoredSourceId:recoveryCommand.restoredSourceId,originalOperationId:recoveryCommand.originalOperationId}:{})}:null
-    next.recovery={version:protection.version===3||transfer?.features?.includes('record-shapes-v1')?3:protection.version===2||transfer?.features?.includes('cross-storage-v1')?2:1,snapshots:[...protection.snapshots,snapshot],originalIds:[...protection.originalIds,...originalIds],
+    next.recovery={version:protection.version===4||transfer?.features?.includes('restaurant-intake-v1')?4:protection.version===3||transfer?.features?.includes('record-shapes-v1')?3:protection.version===2||transfer?.features?.includes('cross-storage-v1')?2:1,snapshots:[...protection.snapshots,snapshot],originalIds:[...protection.originalIds,...originalIds],
       events:[...protection.events,...(receipt?[{id:recoveryCommand.id,actorId:recoveryCommand.actorId,signature:recoveryCommand.signature,receipt}]:[])]}
     if(transfer?.protection)next.recovery=browserProtectionMetadata(mergeRecoveryGraphs(browserProtectionGraph(next),transfer.protection,'browser'))
   }else if(protection.originalIds.length){
@@ -140,10 +146,11 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
   validateSupplierLedgerRecords(next.data.pos_supplier_entries,next.data.pos_supplier_operations,{storeId:readExchangeTextSetting(next.data.pos_business_settings,'sharedStoreId'),suppliers:next.data.pos_suppliers,purchases:next.data.pos_purchases,inventoryAudits:next.data.pos_audit_log,cashLogs:next.data.pos2_cash_log,supplierFence:next.supplierFence})
   validateRestaurantRecords(next.data.pos_restaurant_orders,next.data.pos_restaurant_operations,next.data.pos2_orders,next.data.pos2_products)
   const rawConfig=next.data.pos_business_settings.find(s=>s.key==='restaurantConfig')?.value
-  readRestaurantConfig(rawConfig==null?null:JSON.parse(rawConfig),next.data.pos2_products)
+  const restaurantConfig=readRestaurantConfig(rawConfig==null?null:JSON.parse(rawConfig),next.data.pos2_products)
+  if(usesRestaurantIntake(restaurantConfig,next.data.pos_restaurant_orders,next.data.pos2_orders))next.recovery={...recoveryMetadata(next),version:4}
   validateStockCostBook(browserToBook(next.data))
   validateSettingRows(next.data.pos_business_settings,'browser')
-  if(next.data.pos_business_settings.some(row=>row.encoding)&&![2,3].includes(next.recovery?.version))throw Error('復原保護索引損壞，請保留原資料核對')
+  if(next.data.pos_business_settings.some(row=>row.encoding)&&![2,3,4].includes(next.recovery?.version))throw Error('復原保護索引損壞，請保留原資料核對')
   validateBrowserProtection(next)
   // setItem is atomic: quota/security failure keeps the previous complete record.
   nativeStorage().setItem(RECORD_KEY, JSON.stringify(next))

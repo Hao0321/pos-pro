@@ -85,7 +85,7 @@
       "name": "預訂、現場、外送登記、原料預留、收款與交付",
       "status": "unmeasured",
       "implementation": "available",
-      "nextExperiment": "目前版本回歸並在實店演練預訂至交付、取消、日結"
+      "nextExperiment": "開發分支接通簽章桌碼、顧客原單與正式備餐／收款／交付；已測實際 HTTP、SQLite、配對 HTTPS、最後一份、重開及跨格式原單。接續驗收精確新安裝檔、真人、實體手機、廚房紙本出單與長時間營業，完整範圍仍未驗收。"
     },
     {
       "id": "restaurant.deposits-modifiers",
@@ -204,7 +204,7 @@
       "name": "LINE、外送、電商及供應商整合",
       "status": "planned",
       "implementation": "partial",
-      "nextExperiment": "以各服務正式沙盒驗證認證、重播、退款及訂單對應"
+      "nextExperiment": "桌碼接入正式備餐不等於外送平台串接；Uber Eats／foodpanda、LINE 及電商仍須以各服務正式沙盒驗證認證、重播、退款及訂單對應。"
     },
     {
       "id": "security.authority",

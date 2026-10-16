@@ -44,6 +44,8 @@ if(sharedStoreMode&&!window.electronAPI){
   db.applySupplierLedgerOperation=input=>rpc('db:applySupplierLedgerOperation',input)
   for(const method of ['getRecoveryState','applyRecoveryOperation','lookupRecoveryOperation','exportRecoverySource','exportRecoveryDiagnostics','previewRestore','applyRestorePreview','lookupRestorePreview'])db[method]=input=>rpc('db:'+method,input)
   db.getRestaurantState=()=>rpc('db:getRestaurantState')
+  db.getTableOrderingContext=()=>rpc('db:getTableOrderingContext')
+  db.getCustomerIntakeContext=id=>rpc('db:getCustomerIntakeContext',id)
   db.applyRestaurantOperation=input=>rpc('db:applyRestaurantOperation',input)
   for(const method of ['migrateFromLocalStorage','importData','restoreBackup','deleteWaste','addOrder','getUsers','addUser','updateUser','deleteUser'])db[method]=async()=>{throw Error('此項管理操作請在店面電腦執行')}
   const unavailable=async()=>{throw Error('此設備操作請在店面電腦執行')}

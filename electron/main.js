@@ -83,7 +83,7 @@ if (gotLock) app.whenReady().then(async () => {
   const initDatabase = require('./database')
   const dbPath = path.join(app.getPath('userData'), 'pos-data.db')
   db = initDatabase(dbPath)
-  sharedStore=require('./sharedStoreServer.cjs')({db,distRoot:path.resolve(__dirname,'../dist'),certificateRoot:path.join(app.getPath('userData'),'shared-store'),onChanged:()=>{if(mainWindow&&!mainWindow.isDestroyed())mainWindow.webContents.send('store:changed')}})
+  sharedStore=require('./sharedStoreServer.cjs')({db,distRoot:path.resolve(__dirname,'../dist'),certificateRoot:path.join(app.getPath('userData'),'shared-store'),orderingStatus:()=>({running:orderServer?.isRunning?.()===true,ip:getLocalIP(),port:orderServer?.getActualPort?.()||null,tunnelUrl:orderServer?.getTunnelUrl?.()||null}),onChanged:()=>{if(mainWindow&&!mainWindow.isDestroyed())mainWindow.webContents.send('store:changed')}})
 
   // 啟動顧客點餐伺服器
   try {

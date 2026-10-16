@@ -4,6 +4,8 @@ import {loadRestaurantState} from '../utils/dataAccess'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
 import {defaultRestaurantConfig,restaurantAvailability} from '../../electron/restaurantRules.mjs'
 import useVisibleViewport from '../hooks/useVisibleViewport'
+import CustomerIntakePanel from './restaurant/CustomerIntakePanel'
+import TableOrderingPanel from './restaurant/TableOrderingPanel'
 
 const labels={reserved:'已預留',cooking:'製作中',ready:'可取餐',dispatched:'配送中',completed:'已交付',cancelled:'已取消'}
 const channels={preorder:'預訂',walkin:'現場',delivery:'外送'}
@@ -20,13 +22,13 @@ export default function RestaurantPage({store,session}){
   useEffect(()=>{
     let closed=false,running=false,again=false
     const load=async()=>{if(running){again=true;return}running=true;do{again=false;try{const next=await loadRestaurantState();if(!closed){setData(next);if(!dirty.current){setDraft(next.config);baseline.current=canonicalSignature(next.config)};setPay(p=>p&&next.entries.find(e=>e.id===p.entry.id)?.saleId?null:p);setCancel(c=>c&&next.entries.find(e=>e.id===c.entry.id)?.status==='cancelled'?null:c)}}catch(e){if(!closed)setError(e.message)}}while(again&&!closed);running=false}
-    reloadRef.current=load;load();window.addEventListener('pos-data-refreshed',load)
-    return()=>{closed=true;window.removeEventListener('pos-data-refreshed',load);reloadRef.current=null}
+    reloadRef.current=load;load();window.addEventListener('pos-data-refreshed',load);window.addEventListener('pos-restaurant-operation',load);const removeOrder=window.electronAPI?.onNewOrder?.(load)
+    return()=>{closed=true;window.removeEventListener('pos-data-refreshed',load);window.removeEventListener('pos-restaurant-operation',load);removeOrder?.();reloadRef.current=null}
   },[])
   function editConfig(fn){dirty.current=true;setDraft(fn)}
-  async function commit(input){
+  async function commit(input,identity=null){
     if(busy.current)return null;busy.current=true;setSaving(true);setError('');setMessage('')
-    try{const result=await store.commitRestaurant(input);await reloadRef.current?.();setMessage(input.action==='pay'?`已保存收款 ${result.order.id}，找零 NT$ ${result.order.change}`:input.action==='cancel'?`已保存取消 ${result.receipt.id}${result.refund?'，退款 NT$ '+Math.abs(result.refund.total):''}`:'已保存 '+result.receipt.id);return result}
+    try{const result=await store.commitRestaurant(input,identity);await reloadRef.current?.();setMessage(input.customerOrderId?'已加入備餐工作單':input.action==='pay'?`已保存收款 ${result.order.id}，找零 NT$ ${result.order.change}`:input.action==='cancel'?`已保存取消 ${result.receipt.id}${result.refund?'，退款 NT$ '+Math.abs(result.refund.total):''}`:'已保存 '+result.receipt.id);return result}
     catch(e){setError(e.message);return null}finally{busy.current=false;setSaving(false)}
   }
   async function configure(){const r=await commit({action:'configure',config:draft,expectedConfig:baseline.current});if(r){dirty.current=false;setDraft(r.config);baseline.current=canonicalSignature(r.config)}}
@@ -34,10 +36,12 @@ export default function RestaurantPage({store,session}){
   const config=data?.config||defaultRestaurantConfig(),ingredients=new Set(Object.values(config.recipes).flat().map(r=>r.id)),menu=products.filter(p=>!ingredients.has(p.id))
   const list=data?.entries.filter(e=>filter==='all'||!['cancelled','completed'].includes(e.status)).sort((a,b)=>a.day.localeCompare(b.day)||a.slot.localeCompare(b.slot)||(a.pickupNumber||0)-(b.pickupNumber||0))||[]
   return <div className="restaurant-page" style={{padding:16,overflowY:'auto',height:'100%'}}>
-    <h2 className="page-title">{tr("預訂出餐")}</h2><p>{tr("預訂、現場與外送共用這間店的庫存。接單即預留，未收到保存回覆請沿用原編號核對。")}</p>
+    <h2 className="page-title">{tr("預訂出餐")}</h2><p>{tr('接單、備餐、收款，都在這裡。')}</p>
     {error&&<p role="alert" style={{color:'var(--red)',overflowWrap:'anywhere'}}>{trMessage(error)}</p>}
     {message&&<p role="status" style={{color:'var(--green)',overflowWrap:'anywhere'}}>{trMessage(message)}</p>}
     {!data&&<p>{tr("載入正式預訂紀錄中…")}</p>}
+    {data&&<CustomerIntakePanel data={data} store={store} commit={commit} reload={()=>reloadRef.current?.()}/>}
+    {data&&owner&&<TableOrderingPanel config={config} store={store} settingsDirty={dirty.current} reload={()=>reloadRef.current?.()}/>}
     {owner&&data&&<details className="card" style={{padding:14,marginBottom:16}} open={!config.enabled}>
       <summary>{tr("產能與原料配方設定")}{dirty.current?tr("（尚未儲存）"):''}</summary>
       <p>{tr("設定配方前，先在庫存管理建立原料／包材並填寫單位、成本與實際庫存。未設定配方的品項直接預留成品庫存；有配方的品項按原料可用量接單。")}</p>
@@ -74,14 +78,17 @@ export default function RestaurantPage({store,session}){
     {!list.length&&data&&<p>{tr("沒有符合條件的正式預訂。")}</p>}
     {list.map(e=>{
       const status={reserved:'cooking',cooking:'ready',ready:e.channel==='delivery'?'dispatched':'completed',dispatched:'completed'}[e.status]
+      const nextAction={cooking:'開始製作',ready:'餐點好了',dispatched:'出發配送',completed:e.channel==='delivery'?'完成交付':'交給客人'}[status]
       return <article className="card" key={e.id} data-restaurant-id={e.id} style={{padding:14,marginBottom:12,overflowWrap:'anywhere'}}>
-        <strong>{e.day} {e.slot}{tr(" · 取餐號 ")}{e.pickupNumber?String(e.pickupNumber).padStart(3,'0'):e.id} · {tr(channels[e.channel])} · {e.customer||tr("現場客人")}</strong><p>{e.items.map(i=>`${i.name} × ${i.qty}`).join('、')} · NT$ {e.total}</p><p>{tr(labels[e.status])} · {e.saleId?tr("已收款"):tr("未收款")} · {e.contact}</p>{e.note&&<p>{e.note}</p>}
-        <small>{tr("單號 ")}{e.id}{tr(" · 版本 ")}{e.version}{e.saleId?tr(" · 收款 {0}", {0: e.saleId}):''}{e.refundId?tr(" · 退款 {0}", {0: e.refundId}):''}</small>
+        <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',gap:10}}><h3 style={{fontSize:22,marginBottom:4}}>{e.tableNum?tr('桌號 {0}',{0:e.tableNum}):e.customer||tr(channels[e.channel])}</h3><strong>NT$ {e.total}</strong></div>
+        <strong>{!e.customerOrderId&&<>{e.day} {e.slot} · </>}{tr('取餐號 {0}',{0:e.pickupNumber?String(e.pickupNumber).padStart(3,'0'):e.id})}</strong><p>{e.items.map(i=>`${i.name} × ${i.qty}`).join('、')}</p><p data-kitchen-status={e.status}>{tr(labels[e.status])} · {e.saleId?tr("已收款"):tr("未收款")}{e.contact?' · '+e.contact:''}</p>{e.note&&<p>{e.note}</p>}
         <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>
-          {status&&<button className="btn btn-primary" disabled={saving||status==='completed'&&!e.saleId} onClick={()=>commit({action:'advance',entryId:e.id,expectedVersion:e.version,status})}>{tr(labels[status])}</button>}
-          {!e.saleId&&e.status!=='cancelled'&&<button className="btn btn-ghost" disabled={saving||!store.openShift} onClick={()=>setPay({entry:e,paid:String(e.total),method:'cash'})}>{tr("確認此單收款")}</button>}
-          {e.status!=='cancelled'&&(!e.saleId||owner)&&<button className="btn btn-ghost" disabled={saving} onClick={()=>setCancel({entry:e,reason:''})}>{e.saleId?tr("取消並全額退款"):tr("取消預訂")}</button>}
+          {status&&<button className="btn btn-primary" data-kitchen-action={status} aria-label={tr(labels[status])} style={{minHeight:48,flexBasis:'100%'}} disabled={saving||status==='completed'&&!e.saleId} onClick={()=>commit({action:'advance',entryId:e.id,expectedVersion:e.version,status})}>{tr(nextAction)}</button>}
+          {!e.saleId&&e.status!=='cancelled'&&<button className="btn btn-ghost" data-kitchen-pay aria-label={tr("確認此單收款")} style={{minHeight:48,flex:1}} disabled={saving||!store.openShift} onClick={()=>setPay({entry:e,paid:String(e.total),method:'cash'})}>{tr('登記收款')}</button>}
+          {e.status!=='cancelled'&&(!e.saleId||owner)&&<button className="btn btn-ghost" data-kitchen-cancel aria-label={e.saleId?tr("取消並全額退款"):tr("取消預訂")} style={{minHeight:48,flex:1}} disabled={saving} onClick={()=>setCancel({entry:e,reason:''})}>{e.saleId?tr('取消並退款'):tr('取消這單')}</button>}
         </div>
+        {status==='completed'&&!e.saleId&&<p>{tr('先登記收款，再交給客人')}</p>}
+        <details style={{marginTop:12}}><summary>{tr('原單資料')}</summary><p>{e.day} {e.slot} · {tr(channels[e.channel])}</p><small>{tr("單號 ")}{e.id}{tr(" · 版本 ")}{e.version}{e.saleId?tr(" · 收款 {0}", {0: e.saleId}):''}{e.refundId?tr(" · 退款 {0}", {0: e.refundId}):''}</small></details>
         {!e.saleId&&e.status!=='cancelled'&&!store.openShift&&<p>{tr("請先到班別交班開班，再登記收款。")}</p>}
       </article>
     })}

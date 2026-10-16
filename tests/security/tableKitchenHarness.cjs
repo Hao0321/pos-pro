@@ -1,0 +1,49 @@
+const {app,BrowserWindow,ipcMain,session}=require('electron'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{randomUUID,X509Certificate}=require('node:crypto'),fixture=require('../fixtures/table-kitchen-v1.json'),{js,wait,input,select,tap,button,capture}=require('./rendererHarness.cjs'),{tr}=require('../../public/i18n/core.mjs')
+const root=process.env.POS_SECURITY_FIXTURE_ROOT;if(!root)throw Error('isolated table UI root required')
+const out=process.env.POS_CUSTOMERS_EVIDENCE||root;fs.mkdirSync(out,{recursive:true});app.setPath('userData',root);app.disableHardwareAcceleration();app.on('window-all-closed',()=>{})
+const q=JSON.stringify,dist=path.resolve('dist'),rendererPath=path.join(dist,'index.html'),windows=[],errors=[];let db,pc,shared,ordering,origin,ipcSecurity,nativeLost=false
+const owner=fixture.owner,staff={userId:'table-staff',username:'Table staff',role:'staff'},t=(key,locale='zh-TW',values={})=>tr(key,values,locale)
+function observe(w){windows.push(w);w.webContents.on('console-message',e=>{if(/TypeError|ReferenceError|Uncaught|Minified React/.test(e.message))errors.push(e.message)})}
+function restrict(w,origins){w.webContents.session.webRequest.onBeforeRequest({urls:['http://*/*','https://*/*']},(r,done)=>done({cancel:!origins.some(origin=>r.url.startsWith(origin+'/'))}))}
+async function prefs(w,locale='zh-TW',style='simple'){
+ await wait(w,'!!document.querySelector("[data-display-locale]")','display controls')
+ if(await js(w,'!!document.querySelector("[data-mobile-display]")&&!document.querySelector("[data-mobile-display]").open'))await tap(w,'[data-mobile-display] summary')
+ await select(w,'[data-display-locale]',locale);await tap(w,'[data-style-choice='+style+']')
+ if(await js(w,'!!document.querySelector("[data-mobile-display]")&&document.querySelector("[data-mobile-display]").open'))await tap(w,'[data-mobile-display] summary')
+}
+async function login(w,actor=owner){await wait(w,'[...document.querySelectorAll("button")].some(b=>b.textContent.includes('+q(actor.username)+'))','account list');await js(w,'[...document.querySelectorAll("button")].find(b=>b.textContent.includes('+q(actor.username)+')).setAttribute("data-table-login","")');await tap(w,'[data-table-login]');await input(w,'input[type=password]','table-password');await js(w,'document.querySelector("form").requestSubmit()');await wait(w,'!!document.querySelector(".easy-home")','signed in')}
+async function nav(w,key='restaurant',locale='zh-TW'){
+ const selector='[aria-label='+q(t('開啟功能選單',locale))+']'
+ if(await js(w,'!!document.querySelector('+q(selector)+')'))await tap(w,selector)
+ await tap(w,'[data-nav='+key+']');await wait(w,'!!document.querySelector(".restaurant-page")&&!!document.querySelector("[data-customer-intake]")','kitchen worklist')
+}
+async function setup(){
+ db=require('../../electron/database.js')(path.join(root,'table-ui.db'));for(const u of fixture.before.users)db.addUser(u);const book=structuredClone(fixture.before);book.products.find(p=>p.id==='rice').stock=20;book.products.find(p=>p.id==='ready').stock=1;const review=db.previewRestore({kind:'import',data:book},owner);assert.equal(db.applyRestorePreview(review.id,owner).success,true)
+ // Eight independent display cases share this isolated kitchen. The separate
+ // native capacity control keeps the original five-per-slot limit unchanged.
+ const initialConfig=db.getRestaurantState().config,capacity=db.applyRestaurantOperation({id:'gui-capacity',kind:'restaurant',action:'configure',time:new Date().toISOString(),expectedConfig:require('../../electron/operationRules.mjs').canonicalSignature(initialConfig),config:{...initialConfig,slotCapacity:12}},owner);assert.equal(capacity.success,true,capacity.error)
+ shared=require('../../electron/sharedStoreServer.cjs')({db,distRoot:dist,certificateRoot:path.join(root,'cert'),allowLoopback:true,orderingStatus:()=>({running:ordering?.isRunning()===true,ip:'127.0.0.1',port:ordering?.getActualPort(),tunnelUrl:null}),onChanged:()=>{if(pc&&!pc.isDestroyed())pc.webContents.send('store:changed')}})
+ ordering=require('../../electron/orderServer.cjs')(0,db,()=>pc,{host:'127.0.0.1',disableTunnel:true});await ordering.ready;origin='http://127.0.0.1:'+ordering.getActualPort()
+ pc=new BrowserWindow({show:false,width:1100,height:900,webPreferences:{session:session.fromPartition('table-desktop'),preload:path.resolve('electron/preload.js'),sandbox:true,contextIsolation:true,nodeIntegration:false,backgroundThrottling:false,offscreen:true}});observe(pc);restrict(pc,[])
+ const proxy=Object.create(db);proxy.applyRestaurantOperation=(...args)=>{const result=db.applyRestaurantOperation(...args);if(nativeLost&&args[0]?.customerOrderId){nativeLost=false;throw Error('fixture lost native intake reply after commit')}return result}
+ ipcSecurity=require('../../electron/ipcSecurity.cjs').createIpcSecurity({db:proxy,getWindow:()=>pc,rendererPath});require('../../electron/ipcHandlers.cjs')({ipcMain,db:proxy,ipcSecurity,getOrderServer:()=>ordering,getLocalIP:()=> '127.0.0.1',sharedStore:shared});await pc.loadFile(rendererPath);await prefs(pc);await login(pc);await nav(pc)
+ return {db,pc,shared,ordering,origin}
+}
+async function nativePrefs(locale,style){await js(pc,'localStorage.setItem("pos_display_preferences_v1",JSON.stringify({...JSON.parse(localStorage.getItem("pos_display_preferences_v1")),locale:'+q(locale)+',style:'+q(style)+'}))');pc.setContentSize(360,850);pc.webContents.reload();await wait(pc,'!!document.querySelector(".easy-home")&&document.documentElement.lang==='+q(locale)+'&&document.documentElement.dataset.uiStyle==='+q(style),'native display/restart');await nav(pc,'restaurant',locale)}
+async function createCodes(count='2'){
+ await tap(pc,'[data-table-ordering] summary');await input(pc,'[data-table-count]',count);await tap(pc,'[data-table-produce]');await wait(pc,'document.querySelectorAll("[data-table-ordering] img").length==='+count+'&&localStorage.getItem("pos_pending_financial_v1")===null','table code acknowledgement')
+ const context=db.getTableOrderingContext(owner),url=new URL('/menu/',origin);url.search=new URLSearchParams({table:context.tables[0].id,key:context.tables[0].key}).toString();const image=await js(pc,'document.querySelector("[data-table-ordering] img").src');fs.writeFileSync(path.join(out,'table-code.png'),Buffer.from(image.split(',')[1],'base64'));fs.writeFileSync(path.join(out,'qr-expected.json'),q({url:url.href,label:context.tables[0].label,source:'actual table code image and registered context',physicalCamera:false},null,2));return context
+}
+async function guest(context,{locale='zh-TW',style='simple',name='guest-'+randomUUID(),table=0,product='bowl'}={}){
+ const ss=session.fromPartition(name),w=new BrowserWindow({show:false,width:360,height:850,webPreferences:{session:ss,sandbox:true,contextIsolation:true,nodeIntegration:false,offscreen:true,backgroundThrottling:false}});observe(w);restrict(w,[origin]);const row=context.tables[table],url=new URL('/menu/',origin);url.search=new URLSearchParams({table:row.id,key:row.key}).toString();await w.loadURL(url.href);await wait(w,'!!document.querySelector(".add-btn[data-pid='+product+']")','signed menu');await select(w,'#menu-language',locale);await select(w,'#menu-style',style);return w
+}
+async function fillGuest(w,product='bowl'){await tap(w,'.add-btn[data-pid='+product+']');await tap(w,'#cart-fab');await tap(w,'#checkout-btn');await wait(w,'document.querySelector("#order-form-overlay").style.display==="flex"','customer review');assert.equal(await js(w,'document.querySelector("#table-num").readOnly'),true);await input(w,'#customer-name','Guest');await input(w,'#order-note','less salt','HTMLTextAreaElement')}
+async function submitGuest(w){await tap(w,'[data-action=confirmOrder]')}
+async function confirmedGuest(w){await wait(w,'JSON.parse(localStorage.getItem("pos_customer_order_journal_v1"))?.phase==="confirmed"','durable customer acknowledgement');return js(w,'JSON.parse(localStorage.getItem("pos_customer_order_journal_v1"))')}
+async function paired(actor=staff){
+ const status=await shared.start({host:'127.0.0.1',port:0}),base=new URL(shared.status().url).origin,ss=session.fromPartition('table-paired-'+actor.userId);ss.setCertificateVerifyProc((request,done)=>{let match=false;try{match=request.hostname==='127.0.0.1'&&new X509Certificate(request.certificate.data).fingerprint256===status.fingerprint}catch{}done(match?0:-2)})
+ const w=new BrowserWindow({show:false,width:360,height:850,webPreferences:{session:ss,sandbox:true,contextIsolation:true,nodeIntegration:false,offscreen:true,backgroundThrottling:false}});observe(w);restrict(w,[base]);await w.loadURL(shared.pair().url);await prefs(w);await login(w,actor);await nav(w);return w
+}
+async function downloadCodes(){const file=path.join(out,'table-codes.html'),done=new Promise((resolve,reject)=>pc.webContents.session.once('will-download',(_event,item)=>{item.setSavePath(file);item.once('done',(_event,state)=>state==='completed'?resolve(file):reject(Error(state)))}));await tap(pc,'[data-table-download]');return done}
+async function finish(){for(const w of windows)if(!w.isDestroyed())w.destroy();await shared?.stop();await ordering?.close();db?.close()}
+module.exports={app,setup,nativePrefs,createCodes,guest,fillGuest,submitGuest,confirmedGuest,paired,downloadCodes,finish,prefs,login,nav,js,wait,input,select,tap,button,capture,out,root,q,owner,staff,t,errors,rendererPath,get pc(){return pc},get db(){return db},get origin(){return origin},get shared(){return shared},get ordering(){return ordering},loseNative(){nativeLost=true}}

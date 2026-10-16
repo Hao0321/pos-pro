@@ -12,6 +12,7 @@ function equivalent(collection,key,a,b){
 module.exports=function recordShapeStorage(db){
  db.exec('CREATE TABLE IF NOT EXISTS recovery_record_shapes (collection TEXT NOT NULL,record_id TEXT NOT NULL,original_data TEXT NOT NULL,baseline_data TEXT NOT NULL,checksum TEXT NOT NULL,PRIMARY KEY(collection,record_id))')
  const allowed=new Map(Object.entries(tables).map(([key,table])=>[key,new Set(db.prepare('PRAGMA table_info('+table+')').all().map(row=>row.name))]));allowed.get('orders').add('items');allowed.get('orders').add('change');allowed.get('promotions').add('condition')
+ allowed.get('orders').add('tableId');allowed.get('orders').add('tableSignature');allowed.get('orders').add('trackingProof')
  const list=db.prepare('SELECT * FROM recovery_record_shapes ORDER BY collection,record_id'),one=db.prepare('SELECT * FROM recovery_record_shapes WHERE collection=? AND record_id=?'),insert=db.prepare('INSERT INTO recovery_record_shapes VALUES (?,?,?,?,?)')
  let rawDepth=0
  function assertSupported(book){for(const [collection,keys]of allowed)for(const row of book[collection]||[]){if(!row||typeof row.id!=='string')throw invalid(collection,'id');const unknown=Object.keys(row).find(key=>!keys.has(key));if(unknown)throw invalid(collection,unknown)}}
@@ -53,7 +54,7 @@ module.exports=function recordShapeStorage(db){
  function attachFinancial(api){
   const fieldCollections={order:'orders',original:'orders',product:'products',products:'products',member:'members',cashLog:'cashLog',waste:'wasteLog',topup:'memberTopups'}
   const row=(collection,value)=>projectRow(collection,collection==='products'&&value&&Object.hasOwn(value,'noBarcode')?{...value,noBarcode:!!value.noBarcode}:value)
-  for(const name of ['checkout','refundOrder','addTopup','addWaste','addCashLog']){
+  for(const name of ['checkout','refundOrder','addTopup','addWaste','addCashLog','applyRestaurantOperation']){
    const original=api[name]
    api[name]=function(...args){return db.transaction(()=>{
     for(const saved of list.all())decoded(saved)

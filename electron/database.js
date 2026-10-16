@@ -47,6 +47,9 @@ module.exports = function initDatabase(dbPath) {
     fullRefund: o.fullRefund ? 1 : 0,
     trackingTokenHash: o.trackingTokenHash || '',
     requestSignature: o.requestSignature || '',
+    table_id: o.tableId || '',
+    table_signature: o.tableSignature || '',
+    tracking_proof: o.trackingProof?JSON.stringify(o.trackingProof):'',
     itemCosts: typeof o.itemCosts==='string'?o.itemCosts:JSON.stringify(o.itemCosts||{}),
   })
 
@@ -68,9 +71,10 @@ module.exports = function initDatabase(dbPath) {
   })
 
   function readOrder(id) {
-    const row = stmts.getOrderById.get(id)
-    if (!row) return null
-    return recordShapes.projectRow('orders',{...row,change:row.change_amount,memberId:row.memberId||null,fullRefund:!!row.fullRefund,itemCosts:JSON.parse(row.itemCosts||'{}'),payments:JSON.parse(row.payments || '[]'),
+    const raw = stmts.getOrderById.get(id)
+    if (!raw) return null
+    const {table_id,table_signature,tracking_proof,...row}=raw
+    return recordShapes.projectRow('orders',{...row,...(table_id?{tableId:table_id,tableSignature:table_signature}:{}),...(tracking_proof?{trackingProof:JSON.parse(tracking_proof)}:{}),change:row.change_amount,memberId:row.memberId||null,fullRefund:!!row.fullRefund,itemCosts:JSON.parse(row.itemCosts||'{}'),payments:JSON.parse(row.payments || '[]'),
       items:stmts.getOrderItems.all(id).map(i=>({id:i.productId,name:i.name,price:i.price,qty:i.qty}))})
   }
   function checkoutReceipt(id) {
@@ -733,5 +737,6 @@ module.exports = function initDatabase(dbPath) {
   require('./stockBusinessOperations.cjs')(db,api,stockStore)
   require('./recoveryOperations.cjs')(db,api,replaceAllTx,recordShapes)
   recordShapes.attachFinancial(api)
+  require('./tableOrderingOperations.cjs')(db,api)
   return api
 }

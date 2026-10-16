@@ -10,8 +10,9 @@ import {validateSupplierLedgerRecords} from './supplierLedger.mjs'
 import {validateRestaurantRecords,readRestaurantConfig} from './restaurantRules.mjs'
 import {validateSettingRows,settingsForValidation} from './settingEncoding.mjs'
 import {convertLogicalBook} from './storageConversion.mjs'
+import {usesRestaurantIntake,RESTAURANT_INTAKE_FEATURE} from './tableOrdering.mjs'
 
-export const RECOVERY_FEATURES=['record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
+export const RECOVERY_FEATURES=[RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
 export const recoveryDataError=()=>Error('備份保護紀錄不完整或內容不同，請保留原檔核對')
 export function retainRecoveryFeatures(book,features){
  if(!features.includes('stock-cost-v1'))return book
@@ -38,8 +39,9 @@ export function recoveryBook(data,storage,{complete=false,digest=stockLedgerDige
  validateSupplierLedgerRecords(book.supplierEntries,book.supplierOperations,{storeId,suppliers:book.suppliers,purchases:book.purchases,inventoryAudits:book.auditLog,cashLogs:book.cashLog})
  validateRestaurantRecords(book.restaurantOrders,book.restaurantOperations,book.orders,book.products)
  const restaurantConfig=settings.find(row=>row.key==='restaurantConfig')?.value
- readRestaurantConfig(storage==='browser'&&restaurantConfig!=null?JSON.parse(restaurantConfig):restaurantConfig??null,book.products)
+ const checkedRestaurantConfig=readRestaurantConfig(storage==='browser'&&restaurantConfig!=null?JSON.parse(restaurantConfig):restaurantConfig??null,book.products)
  const features=[]
+ if(usesRestaurantIntake(checkedRestaurantConfig,book.restaurantOrders,book.orders))features.push(RESTAURANT_INTAKE_FEATURE)
  if(book.settings.some(row=>Object.hasOwn(row,'encoding')||storage==='sqlite'&&Object.hasOwn(row,'id')))features.push('cross-storage-v1')
  if(book.customerEntries.length)features.push('customer-ledger-v1')
  if(state.projection||settings.some(row=>row.key===STOCK_COMPAT_SETTING&&row.value==='1'))features.push('stock-cost-v1')

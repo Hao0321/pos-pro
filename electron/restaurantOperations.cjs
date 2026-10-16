@@ -1,5 +1,6 @@
 const {planRestaurant,restaurantReceipt,readRestaurantConfig,validateRestaurantRecords}=require('./restaurantRules.mjs')
 const finance={prepareCheckout:require('./checkoutSafety.cjs').prepareCheckout,prepareRefund:require('./refundSafety.cjs').prepareRefund}
+const {customerOrderView}=require('./tableOrdering.mjs')
 module.exports=function restaurantOperations(db,stmts,readOrder,orderInsertParams){
   const readEntries=()=>db.prepare("SELECT data FROM restaurant_orders ORDER BY json_extract(data,'$.createdAt') DESC,id DESC").all().map(r=>JSON.parse(r.data))
   const readOperations=()=>db.prepare('SELECT data FROM restaurant_operations ORDER BY id').all().map(r=>JSON.parse(r.data))
@@ -10,13 +11,14 @@ module.exports=function restaurantOperations(db,stmts,readOrder,orderInsertParam
     return data
   }
   return {
-    getRestaurantState(){const data=read();return {config:data.config,entries:data.entries}},
+    getRestaurantState(){const data=read(),customers=data.orders.filter(o=>o.source==='customer');return {config:data.config,entries:data.entries,...(customers.length?{customerOrders:customers.map(o=>customerOrderView(o,data.entries))}:{})}},
     applyRestaurantOperation(request,actor){
       if(!actor||!['owner','staff'].includes(actor.role)||request?.action==='configure'&&actor.role!=='owner')throw Error('權限不足')
       let replay=false,historyChecked=false
       try{return db.transaction(()=>{
         const data=read(),old=data.operations.find(r=>r.id===request?.id);replay=!!old;historyChecked=true
         if(old)return restaurantReceipt(request,old,data)
+        if(request?.customerOrderId&&Math.abs(Date.now()-Date.parse(request.time))>300000)throw Error('接單時間已過期，請重新核對原單')
         const plan=planRestaurant(request,data,actor,finance)
         // Stock, production state, ledger, loss and authoritative receipt share this transaction.
         for(const p of plan.next.products){const original=data.products.find(o=>o.id===p.id);if(p.stock!==original.stock)stmts.updateProductStock.run({id:p.id,delta:p.stock-original.stock})}
@@ -27,7 +29,7 @@ module.exports=function restaurantOperations(db,stmts,readOrder,orderInsertParam
         if(request.action==='configure')stmts.setSetting.run('restaurantConfig',JSON.stringify(plan.config))
         db.prepare('INSERT INTO restaurant_operations (id,data) VALUES (?,?)').run(request.id,JSON.stringify(plan.receipt))
         validateRestaurantRecords(plan.next.entries,[...data.operations,plan.receipt],plan.next.orders,plan.next.products)
-        return restaurantReceipt(request,plan.receipt,plan.next)
+        return restaurantReceipt(request,plan.receipt,read())
       })()}catch(error){return {success:false,committed:error.operationConflict===true||historyChecked&&!replay?false:null,error:error.message}}
     },
   }

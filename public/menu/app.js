@@ -1,6 +1,7 @@
 // 顧客點餐頁面 — vanilla JS
 import {tr,trMessage} from '../i18n/core.mjs'
 import {getDisplayPreferences,setDisplayPreferences,subscribeDisplayPreferences,initDisplayPreferences} from '../i18n/preferences.mjs'
+import {readCustomerJournal,beginCustomerRequest,confirmCustomerRequest,clearCustomerRequest,rejectUncommittedRequest,assertCustomerAcknowledgement,assertCustomerProgress,customerQuoteTotal} from './orderJournal.mjs'
 const API = window.location.origin
 let products = []
 let categories = []
@@ -10,6 +11,8 @@ let ws = null
 let currentOrderId = null
 let submitting = false
 let storeName=null,storeNameIsDefault=false,lastOrderStatus='pending',menuFailed=false,preferenceFailed=false
+let storeId=null,tableContext=null,journal=null,journalBlocked=false,menuContextInvalid=false,warning='',lastFulfilmentStatus='',lastTotal=0,lastPickupNumber=null
+function showWarning(message){warning=message;document.getElementById('customer-order-warning').textContent=trMessage(message)}
 
 function applyMenuLanguage(){
   initDisplayPreferences()
@@ -22,11 +25,17 @@ function applyMenuLanguage(){
   document.getElementById('store-name').textContent=displayName??tr(menuFailed?'無法連線':'載入中...')
   document.title=displayName?displayName+' - '+tr('線上點餐'):tr('線上點餐')
   document.getElementById('checkout-btn').textContent=tr('送出訂單')
-  document.querySelector('.order-form [data-action="confirmOrder"]').textContent=tr(submitting?'送出中...':'確認送出')
+  document.querySelector('.order-form [data-action="confirmOrder"]').textContent=tr(submitting?'送出中...':pendingOrderRequest?'核對原訂單':'確認送出')
+  document.querySelector('.order-form [data-action="confirmOrder"]').disabled=submitting||journalBlocked
   document.getElementById('cart-fab').setAttribute('aria-label',tr('購物車'))
   document.querySelector('.cart-header .close-btn').setAttribute('aria-label',tr('關閉購物車'))
   if(currentOrderId)document.getElementById('success-order-id').textContent=tr('訂單編號: {0}',{0:currentOrderId})
-  updateOrderStatus(lastOrderStatus);renderCategories();renderProducts();updateCartUI()
+  document.getElementById('customer-order-warning').textContent=trMessage(warning)
+  const originalTable=(pendingOrderRequest||currentOrderId&&journal?.request)?.tableNum;document.getElementById('table-context').textContent=originalTable?tr('原訂單桌號 {0}',{0:originalTable}):tableContext?tr('桌號 {0}',{0:tableContext.label}):''
+  if(currentOrderId){document.getElementById('success-table-label').textContent=journal?.request.tableNum?tr('桌號 {0}',{0:journal.request.tableNum}):'';document.getElementById('success-order-total').textContent=tr('訂單金額 NT$ {0}',{0:lastTotal});const quoted=journal?.quote?customerQuoteTotal(journal.quote):lastTotal;document.getElementById('success-order-price-change').textContent=quoted!==lastTotal?tr('金額已更新：原 {0}，店家 {1}；請向店家確認。',{0:quoted,1:lastTotal}):''}
+  document.getElementById('pending-order-reference').hidden=!pendingOrderRequest;document.getElementById('pending-order-id').textContent=pendingOrderRequest?'CO'+pendingOrderRequest.requestId:''
+  if(pendingOrderRequest)for(const [id,key]of [['customer-name','customerName'],['table-num','tableNum'],['order-note','note']]){document.getElementById(id).value=pendingOrderRequest[key]||'';document.getElementById(id).readOnly=true}
+  updateOrderStatus(lastOrderStatus,lastFulfilmentStatus,lastPickupNumber);renderCategories();renderProducts();updateCartUI()
 }
 
 // 防 XSS：跳脫 HTML 特殊字元
@@ -36,16 +45,26 @@ function esc(str) {
 
 // ===== 初始化 =====
 async function init() {
+  try{journal=readCustomerJournal(localStorage);pendingOrderRequest=journal?.phase==='pending'?journal.request:null}catch{journalBlocked=true;showWarning('這台裝置的原訂單需要核對，紀錄已保留')}
   try {
-    const res = await fetch(API + '/api/menu')
-    const data = await res.json()
+    const params=new URLSearchParams(location.search),query=new URLSearchParams();for(const key of ['table','key'])if(params.has(key))query.set(key,params.get(key))
+    let res = await fetch(API + '/api/menu'+(query.size?'?'+query:'')),data = await res.json()
+    if(!data.success&&journal){menuContextInvalid=!!query.size;res=await fetch(API+'/api/menu');data=await res.json()}
     if (data.success) {
       products = data.products
       categories = data.categories
       storeName=data.storeName
       storeNameIsDefault=data.storeNameIsDefault===true
+      storeId=data.storeId??null;tableContext=data.table??null
+      if(data.tableRequired&&!tableContext&&!journal){journalBlocked=true;showWarning('請掃描桌上的點餐碼')}
+      if(tableContext){document.getElementById('table-num').value=tableContext.label;document.getElementById('table-num').readOnly=true}
+      if(journal){
+        if(journal.storeId!==storeId){journalBlocked=true;showWarning('店面已變更，請向店家核對原訂單')}
+        if(journal.phase==='confirmed'){currentOrderId=journal.ack.orderId;trackingToken=journal.ack.trackingToken;showSuccess(currentOrderId,journal.ack.total);if(journalBlocked)updateOrderStatus('uncertain')}
+        else{cart=structuredClone(journal.quote);for(const [id,key]of [['customer-name','customerName'],['table-num','tableNum'],['order-note','note']]){document.getElementById(id).value=journal.request[key]||'';document.getElementById(id).readOnly=true};document.getElementById('form-total').textContent='NT$ '+customerQuoteTotal(journal.quote);document.getElementById('order-form-overlay').style.display='flex';if(!journalBlocked)showWarning('上次送單尚未確認，請核對原訂單')}
+      }
       applyMenuLanguage()
-    }else{throw Error('Menu unavailable')
+    }else{journalBlocked=true;showWarning(data.error||'無法載入菜單，請確認網路連線');throw Error('Menu unavailable')
     }
   } catch (err) {
     menuFailed=true
@@ -60,11 +79,11 @@ async function init() {
 let trackingToken=null, pendingOrderRequest=null
 function connectWebSocket() {
   setInterval(async()=>{
-    if(!currentOrderId || !trackingToken)return
+    if(!currentOrderId || !trackingToken||journal?.storeId!==storeId)return
     try{
       const r=await fetch(API+'/api/order/'+encodeURIComponent(currentOrderId),{headers:{Authorization:'Bearer '+trackingToken}})
-      const data=await r.json();if(data.success)updateOrderStatus(data.order.status)
-    }catch{}
+      const data=await r.json(),order=assertCustomerProgress({orderId:currentOrderId,total:lastTotal},data);updateOrderStatus(order.status,order.fulfilmentStatus,order.pickupNumber)
+    }catch{updateOrderStatus('uncertain')}
   },3000)
 }
 
@@ -125,7 +144,7 @@ function renderProducts() {
         <span class="p-name">${esc(p.name)}</span>
         <span class="p-price">NT$ ${esc(p.price)} <span class="p-unit">/ ${esc(p.unit || tr('個'))}</span></span>
         ${stockNote}
-        <button class="add-btn" data-pid="${esc(p.id)}" ${soldOut ? 'disabled' : ''}>${esc(tr(soldOut ? '售完' : '加入購物車'))}</button>
+        <button class="add-btn" data-pid="${esc(p.id)}" ${soldOut||journalBlocked||pendingOrderRequest||currentOrderId ? 'disabled' : ''}>${esc(tr(soldOut ? '售完' : '加入購物車'))}</button>
       </div>
     `
   }).join('')
@@ -147,20 +166,24 @@ function setSearch(q) {
 
 // ===== 購物車 =====
 function addToCart(productId) {
+  if(journalBlocked||pendingOrderRequest||currentOrderId)return
+  const previous=structuredClone(cart)
   const product = products.find(p => p.id === productId)
   if (!product) return
   const existing = cart.find(c => c.id === productId)
   if (existing) {
-    if (existing.qty >= product.stock) return // 不能超過庫存
+    if (existing.qty >= Math.min(product.stock,1000000)) return // 不能超過庫存
     existing.qty++
   } else {
     cart.push({ id: product.id, name: product.name, price: product.price, qty: 1, unit: product.unit })
   }
+  try{getCartTotal()}catch(e){cart=previous;showWarning(e.message);return}
   updateCartUI()
   renderProducts() // 更新數量 badge
 }
 
 function removeFromCart(productId) {
+  if(journalBlocked||pendingOrderRequest)return
   const idx = cart.findIndex(c => c.id === productId)
   if (idx < 0) return
   if (cart[idx].qty > 1) cart[idx].qty--
@@ -170,13 +193,14 @@ function removeFromCart(productId) {
 }
 
 function deleteFromCart(productId) {
+  if(journalBlocked||pendingOrderRequest)return
   cart = cart.filter(c => c.id !== productId)
   updateCartUI()
   renderProducts()
 }
 
 function getCartTotal() {
-  return cart.reduce((sum, item) => sum + item.price * item.qty, 0)
+  return customerQuoteTotal(cart)
 }
 
 function getCartCount() {
@@ -207,16 +231,16 @@ function updateCartUI() {
         <div class="ci-price">NT$ ${esc(item.price)} / ${esc(item.unit || tr('個'))}</div>
       </div>
       <div class="ci-controls">
-        <button data-action="removeFromCart" data-pid="${esc(item.id)}">-</button>
+        <button data-action="removeFromCart" data-pid="${esc(item.id)}" ${pendingOrderRequest||journalBlocked?'disabled':''}>-</button>
         <span class="ci-qty">${item.qty}</span>
-        <button data-action="addToCart" data-pid="${esc(item.id)}">+</button>
+        <button data-action="addToCart" data-pid="${esc(item.id)}" ${pendingOrderRequest||journalBlocked?'disabled':''}>+</button>
       </div>
-      <span class="ci-subtotal">NT$ ${item.price * item.qty}</span>
+      <span class="ci-subtotal">NT$ ${Math.round(item.price*100)*item.qty/100}</span>
     </div>
   `).join('')
 
   totalEl.textContent = 'NT$ ' + getCartTotal()
-  checkoutBtn.disabled = false
+  checkoutBtn.disabled = journalBlocked||!!currentOrderId
 }
 
 function toggleCart() {
@@ -235,7 +259,7 @@ function toggleCart() {
 
 // ===== 訂單提交 =====
 function submitOrder() {
-  if (!cart.length) return
+  if (!cart.length||journalBlocked||currentOrderId) return
   toggleCart()
   document.getElementById('form-total').textContent = 'NT$ ' + getCartTotal()
   document.getElementById('order-form-overlay').style.display = 'flex'
@@ -255,7 +279,7 @@ function newOrderRequestId() {
 }
 
 async function confirmOrder() {
-  if (submitting) return
+  if (submitting||journalBlocked) return
   submitting = true
   const btn = document.querySelector('.order-form .btn-primary')
   if (btn) { btn.disabled = true; btn.textContent = tr('送出中...') }
@@ -267,7 +291,19 @@ async function confirmOrder() {
   const orderItems = cart.map(c => ({ id: c.id, qty: c.qty }))
 
   try {
-    pendingOrderRequest ||= {items:orderItems,customerName,tableNum,note,requestId:newOrderRequestId()}
+    if(typeof storeId!=='string'||!storeId)throw Error('店面身份需要核對')
+    const durable=readCustomerJournal(localStorage)
+    if(durable){
+      if(durable.storeId!==storeId)throw Error('店面已變更，請向店家核對原訂單')
+      journal=durable
+      if(durable.phase==='confirmed'){currentOrderId=durable.ack.orderId;trackingToken=durable.ack.trackingToken;pendingOrderRequest=null;cart=[];closeOrderForm();showSuccess(currentOrderId,durable.ack.total);return}
+      pendingOrderRequest=durable.request
+    }
+    if(!pendingOrderRequest){
+      if(menuContextInvalid)throw Error('這張桌碼已失效，請向店家確認')
+      const params=new URLSearchParams(location.search),request={items:orderItems,customerName,tableNum,note,requestId:newOrderRequestId(),...(tableContext?{table:tableContext.id,key:params.get('key')}:{})}
+      journal=beginCustomerRequest(localStorage,storeId,request,cart);pendingOrderRequest=journal.request
+    }else{const saved=readCustomerJournal(localStorage);if(!saved||saved.phase!=='pending'||saved.storeId!==storeId||saved.signature!==journal.signature)throw Error('這台裝置的原訂單需要核對，紀錄已保留')}
     const res = await fetch(API + '/api/order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -275,32 +311,47 @@ async function confirmOrder() {
     })
     const data = await res.json()
     if (data.success) {
-      currentOrderId = data.orderId
-      trackingToken = data.trackingToken
+      const ack=assertCustomerAcknowledgement(pendingOrderRequest,data),check=await fetch(API+'/api/order/'+encodeURIComponent(ack.orderId),{headers:{Authorization:'Bearer '+ack.trackingToken}}),verified=await check.json()
+      assertCustomerProgress(ack,verified)
+      journal=confirmCustomerRequest(localStorage,pendingOrderRequest,ack)
+      currentOrderId = ack.orderId
+      trackingToken = ack.trackingToken
       pendingOrderRequest = null
+      showWarning('')
       closeOrderForm()
       showSuccess(data.orderId, data.total)
+      updateOrderStatus(verified.order.status,verified.order.fulfilmentStatus,verified.order.pickupNumber)
       cart = []
       updateCartUI()
     } else {
-      if(res.status===400)pendingOrderRequest=null
-      alert(trMessage(data.error || '訂單送出失敗'))
+      if(res.status===400&&data.committed===false){rejectUncommittedRequest(localStorage,pendingOrderRequest);pendingOrderRequest=null;journal=null;for(const id of ['customer-name','table-num','order-note'])document.getElementById(id).readOnly=id==='table-num'&&!!tableContext;if(menuContextInvalid)journalBlocked=true}
+      showWarning(data.error || '訂單送出失敗')
     }
   } catch (err) {
-    alert(tr('連線中斷，結果尚未確認。再次送出會使用原請求編號，請勿另外建立訂單。'))
+    try{const saved=readCustomerJournal(localStorage);if(saved?.phase==='pending'){journal=saved;pendingOrderRequest=saved.request;cart=structuredClone(saved.quote);if(saved.storeId!==storeId)journalBlocked=true}}catch{journalBlocked=true}
+    showWarning(journalBlocked?'這台裝置的原訂單需要核對，紀錄已保留':pendingOrderRequest?'連線中斷，結果尚未確認。再次送出會使用原請求編號，請勿另外建立訂單。':'這台裝置無法保留原單，請先確認儲存空間')
+  } finally {
+    submitting = false
+    if (btn) { btn.disabled = journalBlocked; btn.textContent = tr(pendingOrderRequest?'核對原訂單':'確認送出') }
+    applyMenuLanguage()
   }
-  submitting = false
-  if (btn) { btn.disabled = false; btn.textContent = tr('確認送出') }
 }
 
 function showSuccess(orderId, total) {
+  lastTotal=total
   document.getElementById('success-order-id').textContent = tr('訂單編號: {0}',{0:orderId})
   updateOrderStatus('pending')
   document.getElementById('order-success').style.display = 'flex'
+  document.getElementById('success-order-total').textContent=tr('訂單金額 NT$ {0}',{0:total})
+  document.getElementById('success-table-label').textContent=journal?.request.tableNum?tr('桌號 {0}',{0:journal.request.tableNum}):''
+  const quoted=journal?.quote?customerQuoteTotal(journal.quote):total;document.getElementById('success-order-price-change').textContent=quoted!==total?tr('金額已更新：原 {0}，店家 {1}；請向店家確認。',{0:quoted,1:total}):''
 }
 
-function updateOrderStatus(status) {
+function updateOrderStatus(status,fulfilmentStatus='',pickupNumber=null) {
   lastOrderStatus=status
+  lastFulfilmentStatus=fulfilmentStatus
+  if(Number.isSafeInteger(pickupNumber)&&pickupNumber>0)lastPickupNumber=pickupNumber
+  document.getElementById('success-pickup-number').textContent=lastPickupNumber?tr('取餐號 {0}',{0:String(lastPickupNumber).padStart(3,'0')}):''
   const statusEl = document.getElementById('success-status')
   if (!statusEl) return
   const labels = {
@@ -308,15 +359,23 @@ function updateOrderStatus(status) {
     accepted: '店家已接單，準備中！',
     completed: '已完成，請取餐！',
     rejected: '很抱歉，訂單已被取消',
+    uncertain:'店家正在核對原單，請勿重新下單',
   }
-  statusEl.textContent = tr(labels[status] || status)
+  const kitchen={reserved:'店家已接單，排隊備餐中',cooking:'餐點製作中',ready:'餐點好了，請向店家取餐',dispatched:'餐點配送中',completed:'餐點已交付',cancelled:'很抱歉，訂單已被取消'}
+  statusEl.textContent = tr(kitchen[fulfilmentStatus]||labels[status] || status)
 }
 
 function resetApp() {
+  if(pendingOrderRequest){showWarning('上次送單尚未確認，請核對原訂單');return}
+  try{if(journal)clearCustomerRequest(localStorage,journal.request.requestId)}catch(e){journalBlocked=true;showWarning(e.message);return}
+  journal=null;trackingToken=null;journalBlocked=menuContextInvalid;showWarning(menuContextInvalid?'這張桌碼已失效，請向店家確認':'')
+  lastPickupNumber=null;lastFulfilmentStatus='';lastOrderStatus='pending'
+  cart=[];updateCartUI()
   currentOrderId = null
   document.getElementById('order-success').style.display = 'none'
   document.getElementById('customer-name').value = ''
-  document.getElementById('table-num').value = ''
+  document.getElementById('customer-name').readOnly=false;document.getElementById('table-num').readOnly=!!tableContext;document.getElementById('order-note').readOnly=false
+  document.getElementById('table-num').value = tableContext?.label||''
   document.getElementById('order-note').value = ''
   renderProducts()
 }

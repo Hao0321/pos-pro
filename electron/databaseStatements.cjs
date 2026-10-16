@@ -39,10 +39,10 @@ module.exports=function prepareStatements(db){
     insertOrder: db.prepare(`
       INSERT INTO orders (id, subtotal, discount, manualDiscount, balanceUsed, total, payMethod, paid, change_amount,
         payments, memberId, pointsUsed, pointsEarned, time, source, status, tableNum, note,
-        taxId, shiftId, refundOf, cashier, fullRefund, trackingTokenHash, requestSignature, itemCosts)
+        taxId, shiftId, refundOf, cashier, fullRefund, trackingTokenHash, requestSignature, itemCosts, table_id, table_signature, tracking_proof)
       VALUES (@id, @subtotal, @discount, @manualDiscount, @balanceUsed, @total, @payMethod, @paid, @change_amount,
         @payments, @memberId, @pointsUsed, @pointsEarned, @time, @source, @status, @tableNum, @note,
-        @taxId, @shiftId, @refundOf, @cashier, @fullRefund, @trackingTokenHash, @requestSignature, @itemCosts)
+        @taxId, @shiftId, @refundOf, @cashier, @fullRefund, @trackingTokenHash, @requestSignature, @itemCosts, @table_id, @table_signature, @tracking_proof)
     `),
     updateOrderStatus: db.prepare('UPDATE orders SET status = ? WHERE id = ?'),
 

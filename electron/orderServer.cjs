@@ -1,6 +1,10 @@
 const express = require('express')
 const path = require('node:path')
-const {randomBytes,createHash,createHmac,timingSafeEqual} = require('node:crypto')
+const {randomBytes,randomUUID,createHash,createHmac,timingSafeEqual} = require('node:crypto')
+const {readRestaurantConfig}=require('./restaurantRules.mjs')
+const {publicOrderingMenu,assertPublicRecipeAvailability,customerOrderView}=require('./tableOrdering.mjs')
+const {resolveTable}=require('./tableCapability.cjs')
+const trackingProof=require('./customerTrackingProof.cjs')
 const digest=value=>createHash('sha256').update(value).digest('hex')
 const same=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b))
 function publicProduct(p) { return {id:p.id,name:p.name,category:p.category,price:p.price,stock:p.stock,unit:p.unit} }
@@ -28,6 +32,8 @@ module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
   const app=express(),limits=new Map()
   let closing=false,closeTask=null
   app.disable('x-powered-by')
+  const storeIdentity=()=>{let id=db.getSetting('sharedStoreId');if(id==null||id===''){id=randomUUID();db.setSetting('sharedStoreId',id)}if(typeof id!=='string'||!id)throw Error('店面身份需要核對');return id}
+  const restaurant=()=>{const products=db.getProducts(),state=typeof db.getRestaurantState==='function'?db.getRestaurantState():null;return {products,config:state?.config||readRestaurantConfig(db.getSetting('restaurantConfig'),products),entries:state?.entries||[]}}
   app.use((req,res,next)=>{
     if(closing)return res.status(503).json({success:false,error:'店面正在關閉，請稍後重試'})
     res.set({'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Cache-Control':'no-store',
@@ -39,11 +45,11 @@ module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
   app.use('/agent',express.static(path.join(__dirname,'../dist/agent')))
   app.get('/llms.txt',(_req,res)=>res.sendFile(path.join(__dirname,'../dist/llms.txt')))
   app.get('/.well-known/pos-business-exchange',(_req,res)=>res.json({protocol:'pos-business-exchange-discovery/v1',catalogue:'/api/catalogue',manifest:'/agent/manifest.json',guide:'/llms.txt',humanReviewRequired:true,anonymousWrites:false}))
-  app.get('/api/menu',(_req,res)=>{
-    const products=db.getProducts().filter(p=>p.stock>0&&p.price>0).map(publicProduct)
+  app.get('/api/menu',(req,res)=>{try{
+    const state=restaurant(),products=publicOrderingMenu(state.products,state.config),table=resolveTable(db,state.config,req.query)
     const storeName=db.getSetting('storeName')
-    res.json({success:true,products,categories:[...new Set(products.map(p=>p.category))],storeName:storeName||'商店',storeNameIsDefault:!storeName})
-  })
+    res.json({success:true,products,categories:[...new Set(products.map(p=>p.category))],storeId:storeIdentity(),storeName:storeName||'商店',storeNameIsDefault:!storeName,...(table?{table}:{}),...(state.config.enabled&&state.config.tableOrdering?.enabled?{tableRequired:true}:{})})
+  }catch(error){res.status(400).json({success:false,error:error.message})}})
   app.get('/api/catalogue',async(_req,res)=>res.json(await db.getPublicCatalogue()))
   app.post('/api/order',(req,res,next)=>{
     try {
@@ -61,32 +67,46 @@ module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
   },express.json({limit:'32kb',strict:true}),(req,res)=>{
     try {
       if(closing)return res.status(503).json({success:false,error:'店面正在關閉，請稍後重試'})
+      const persist=()=>{
       const signature=digest(JSON.stringify(req.body))
       const old=typeof req.body?.requestId==='string' ? db.getOrder('CO'+req.body.requestId) : null
       let order
       if (old) {
-        if(old.requestSignature!==signature) return res.status(409).json({success:false,error:'請求編號已使用，請先核對原訂單'})
+        if(old.requestSignature!==signature)throw Object.assign(Error('請求編號已使用，請先核對原訂單'),{status:409})
         order=old
-      } else {order=prepareCustomerOrder(req.body,db.getProducts());order.requestSignature=signature}
-      let secret=db.getSetting('orderTrackingSecret')
-      if (!secret) {secret=randomBytes(32).toString('hex');db.setSetting('orderTrackingSecret',secret)}
-      const token=createHmac('sha256',secret).update(order.id).digest('hex')
-      if (!old) {
-        order.trackingTokenHash=digest(token)
-        if (db.addOrder(order)?.success!==true) throw new Error('save failed')
-        const w=getMainWindow()
-        if (w&&!w.isDestroyed()) w.webContents.send('customer-order:new',order)
+      } else {
+        if(typeof req.body?.requestId==='string')db.assertCustomerOrderAvailable?.('CO'+req.body.requestId)
+        const state=restaurant(),table=resolveTable(db,state.config,req.body),menu=publicOrderingMenu(state.products,state.config)
+        if(state.config.enabled&&state.config.tableOrdering?.enabled&&!table)throw Error('請掃描桌上的點餐碼')
+        if(table&&req.body.tableNum!==undefined&&req.body.tableNum!==table.label)throw Error('桌號與桌碼不符，請重新掃描')
+        order=prepareCustomerOrder({...req.body,...(table?{tableNum:table.label}:{})},menu);assertPublicRecipeAvailability(order.items,state.products,state.config);order.requestSignature=signature
+        if(table){order.tableId=table.id;order.tableSignature=req.body.key}
       }
-      res.json({success:true,orderId:order.id,total:order.total,trackingToken:token})
-    } catch {res.status(400).json({success:false,error:'送單未完成，請確認品項、數量與庫存後重試'})}
+      let token=null
+      if(old?.trackingProof){try{token=trackingProof.open(db,old)}catch{throw Object.assign(Error('原單追蹤資料需要店家核對，請保留原請求編號'),{status:409})}}
+      if(!token){let secret=db.getSetting('orderTrackingSecret');if(!secret){secret=randomBytes(32).toString('hex');db.setSetting('orderTrackingSecret',secret)};token=createHmac('sha256',secret).update(order.id).digest('hex')}
+      if(old&&!same(old.trackingTokenHash,digest(token)))throw Object.assign(Error('原單追蹤資料需要店家核對，請保留原請求編號'),{status:409})
+      if (!old) {
+        order.trackingTokenHash=digest(token);order.trackingProof=trackingProof.seal(db,order,token)
+        if (db.addOrder(order)?.success!==true) throw new Error('save failed')
+      }
+      return {order,created:!old,response:{success:true,orderId:order.id,total:order.total,trackingToken:token}}
+      }
+      const saved=typeof db.withCustomerOrderTransaction==='function'?db.withCustomerOrderTransaction(persist):persist()
+      if(saved.created){
+        try{const w=getMainWindow();if(w&&!w.isDestroyed())w.webContents.send('customer-order:new',saved.order)}catch{}
+      }
+      res.json(saved.response)
+    } catch(error){const uncertain=error.status===409||error.historyUncertain;res.status(uncertain?409:400).json({success:false,committed:uncertain?null:false,error:uncertain?'原訂單需要店家核對，請勿重新下單':'送單未完成，請確認品項、數量與庫存後重試'})}
   })
   app.get('/api/order/:id',(req,res)=>{
     const order=db.getOrder(req.params.id),token=req.get('authorization')?.replace(/^Bearer /,'')
     if (!order || order.source!=='customer' || !token || !same(order.trackingTokenHash,digest(token)))
       return res.status(404).json({success:false,error:'找不到訂單'})
-    res.json({success:true,order:{id:order.id,status:order.status,total:order.total}})
+    const progress=customerOrderView(order,restaurant().entries)
+    res.json({success:true,order:{id:order.id,status:progress.status,total:order.total,...(progress.fulfilmentStatus?{fulfilmentStatus:progress.fulfilmentStatus,pickupNumber:progress.pickupNumber}:{})}})
   })
-  app.get('/api/info',(_req,res)=>res.json({storeName:db.getSetting('storeName')||'商店',version:require('../package.json').version}))
+  app.get('/api/info',(_req,res)=>res.json({storeId:storeIdentity(),storeName:db.getSetting('storeName')||'商店',version:require('../package.json').version}))
   app.use((err,_req,res,_next)=>res.status(err.type==='entity.too.large'?413:400).json({success:false,error:'請求格式或大小不符'}))
   let server,stopServer,tunnelUrl=null,tunnelStop=null
   const ready=new Promise((resolve,reject)=>{

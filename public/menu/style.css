@@ -496,3 +496,7 @@ html:lang(zh-CN) body{font-family:'Microsoft YaHei','PingFang SC','Noto Sans SC'
 [data-ui-style="simple"] .cat-btn.active{background:#235dcc;color:#fff}
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* The table and recovery state stay readable on a small customer phone. */
+#table-context { font-size:1.2rem; font-weight:700; }
+#customer-order-warning { color:var(--red, #b42318); white-space:normal; overflow-wrap:anywhere; }
+.form-actions button { min-height:48px; }

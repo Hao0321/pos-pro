@@ -4,6 +4,7 @@ import { JSDOM } from 'jsdom'
 import { exportXLS, exportMultiSheetXLS } from '../../src/utils/exportXLS.js'
 import {tr,trMessage} from '../../public/i18n/core.mjs'
 import {getDisplayPreferences,setDisplayPreferences,subscribeDisplayPreferences,initDisplayPreferences} from '../../public/i18n/preferences.mjs'
+import * as customerJournal from '../../public/menu/orderJournal.mjs'
 
 test('actual menu renders special identifiers as data and keeps search and cart actions working', async () => {
   const dom = new JSDOM(fs.readFileSync('public/menu/index.html', 'utf8'), { url: 'https://store.invalid/menu/', runScripts: 'outside-only' })
@@ -17,10 +18,11 @@ test('actual menu renders special identifiers as data and keeps search and cart 
     // JSDOM outside-only has no ESM loader. Bind the real imported modules;
     // native-display-ui.cjs separately verifies browser module loading over HTTP.
     vi.stubGlobal('document',window.document)
-    Object.assign(window,{tr,trMessage,getDisplayPreferences,setDisplayPreferences,subscribeDisplayPreferences,initDisplayPreferences})
+    Object.assign(window,{tr,trMessage,getDisplayPreferences,setDisplayPreferences,subscribeDisplayPreferences,initDisplayPreferences,structuredClone:globalThis.structuredClone},customerJournal)
     const source=fs.readFileSync('public/menu/app.js','utf8')
       .replace(/^import \{tr,trMessage\} from '\.\.\/i18n\/core\.mjs'\r?\n/m,'')
       .replace(/^import \{getDisplayPreferences,setDisplayPreferences,subscribeDisplayPreferences,initDisplayPreferences\} from '\.\.\/i18n\/preferences\.mjs'\r?\n/m,'')
+      .replace(/^import \{[^\n]+\} from '\.\/orderJournal\.mjs'\r?\n/m,'')
     window.eval(source)
     await new Promise(resolve => setTimeout(resolve, 0))
     const document = window.document, button = document.querySelector('.add-btn')

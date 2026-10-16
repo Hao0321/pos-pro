@@ -15,7 +15,7 @@ export function validateSettingRows(rows,storage){
    let value;try{value=JSON.parse(row.value)}catch{throw invalid()}
    if(storage==='browser'&&typeof value!=='string')throw invalid()
   }
-  if(['sharedStoreId','orderTrackingSecret'].includes(row.key)){
+  if(['sharedStoreId','orderTrackingSecret','orderReceiptSecret'].includes(row.key)){
    let value=row.value
    if(storage==='browser'||row.encoding===BROWSER_JSON_ENCODING){try{value=JSON.parse(row.value)}catch{if(row.encoding)throw invalid()}}
    if(typeof value!=='string')throw invalid()

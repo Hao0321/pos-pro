@@ -4,10 +4,11 @@ import { commitBrowserSale, browserReceipt, commitBrowserRefund } from './browse
 import { summarizeShift } from '../../electron/shiftReconciliation.mjs'
 import {moneyValue,quantityValue,operationHeader,sameCommand} from '../../electron/operationRules.mjs'
 import {commitBrowserInventory,getBrowserStocktakeState} from './browserInventory'
-import {commitBrowserRestaurant,browserRestaurantState} from './browserRestaurant'
+import {commitBrowserRestaurant,browserRestaurantState,browserCustomerIntakeContext} from './browserRestaurant'
 import {makeAgentContext} from '../../electron/agentDraftRules.mjs'
 import {readAgentMappings,mergeAgentMappings} from '../../electron/businessDocument.mjs'
 import {retainAuditLogs} from './auditRetention'
+import {customerOrderView} from '../../electron/tableOrdering.mjs'
 import {readExchangeTextSetting} from '../../electron/businessExchange.mjs'
 import {getBrowserRefundContext,previewBrowserRefund} from './browserRefundReview'
 import {stockSetupBrowserEnabled} from './stockSetupAvailability.mjs'
@@ -15,6 +16,7 @@ import {hasBrowserStockCost,commitBrowserStockBusiness,commitBrowserProduct,asse
 // 資料存取抽象層 — 自動判斷 Electron (SQLite) 或 瀏覽器 (localStorage)
 export const isElectron = !!(typeof window !== 'undefined' && window.electronAPI)
 export const isSharedStore = !!(typeof window !== 'undefined' && window.electronAPI?.sharedStore)
+export async function loadCustomerIntakeContext(id){return isElectron?window.electronAPI.db.getCustomerIntakeContext(id):browserCustomerIntakeContext(id)}
 export async function loadStockSetupAccess(){return isElectron?window.electronAPI.db.getStockSetupAccess():{enabled:stockSetupBrowserEnabled()}}
 export async function loadStockSetupState(actor){return isElectron?window.electronAPI.db.getStockSetupState():(await import('./browserStockSetup')).getBrowserStockSetupState(actor)}
 export async function previewStockSetup(input,actor){return isElectron?window.electronAPI.db.previewStockSetup(input):(await import('./browserStockSetup')).previewBrowserStockSetup(input,actor)}
@@ -284,7 +286,7 @@ export async function checkAndMigrate() {
 // ===== Customer Orders =====
 export async function loadCustomerOrders() {
   if (isElectron) return window.electronAPI.db.getCustomerOrders()
-  return []
+  const record=readRecords();return record.data.pos2_orders.filter(o=>o.source==='customer').map(o=>customerOrderView(o,record.data.pos_restaurant_orders))
 }
 export async function updateOrderStatus(id, status) {
   if (isElectron) return window.electronAPI.db.updateOrderStatus(id, status)

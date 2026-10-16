@@ -202,7 +202,7 @@ export default function App() {
           {view === 'stocksetup' && can('inventory.cost') && (store.stockSetupEnabled||store.financialState.kind==='stock-cost') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><StockSetupPage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
           {view === 'stockhistory' && can('inventory.cost') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><StockHistoryPage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
           {view === 'promotions' && can('promotions.view') && <PromotionsPage store={store} session={session}/>}
-          {view === 'orders'     && can('pos.use')         && <OrdersPage />}
+          {view === 'orders'     && can('pos.use')         && <OrdersPage store={store} session={session}/>}
           {view === 'settings'   && can('settings.view')   && <SettingsPage   session={session} onLogout={handleLogout} store={store}/>}
           {view === 'scenarios'  && can('settings.edit')   && <ScenarioTemplatesPage session={session} store={store}/>}
           {view === 'readiness' && can('pos.use') && <ReadinessPage store={store} session={session} backupIssue={backupIssue} onBackupVerified={()=>setBackupIssue('')}/>}

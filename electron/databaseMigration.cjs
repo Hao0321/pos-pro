@@ -18,7 +18,8 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
     require('./salesPlan.mjs').validateSalesRecords(data.salesDocuments||[],data.salesOperations||[],data.cashLog||[],data.settings?.find(s=>s.key==='sharedStoreId')?.value,data.products||[],exchange.readExchangeStore(exchange.readExchangeTextSetting(data.settings||[],exchange.EXCHANGE_SETTING)).quotes)
     for(const [key,table]of [['salesDocuments','sales_documents'],['salesOperations','sales_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
     const restaurantConfig=data.settings?.find(s=>s.key==='restaurantConfig')
-    if(restaurantConfig)require('./restaurantRules.mjs').readRestaurantConfig(restaurantConfig.value,data.products||[])
+    const checkedConfig=require('./restaurantRules.mjs').readRestaurantConfig(restaurantConfig?.value??null,data.products||[])
+    if(require('./tableOrdering.mjs').usesRestaurantIntake(checkedConfig,data.restaurantOrders||[],data.orders||[]))require('./databaseFeatureFence.cjs').installIntakeFence(db)
     if(data.restaurantOrders||data.restaurantOperations){
       require('./restaurantRules.mjs').validateRestaurantRecords(data.restaurantOrders||[],data.restaurantOperations||[],data.orders||[],data.products||[])
       for(const [key,table] of [['restaurantOrders','restaurant_orders'],['restaurantOperations','restaurant_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
