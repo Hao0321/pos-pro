@@ -32,10 +32,12 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(req.headers.host!==expected)throw Object.assign(Error('店面網址不符'),{status:403})
     if(req.method==='POST'&&(req.headers.origin!==`https://${expected}`||req.headers['sec-fetch-site']&&req.headers['sec-fetch-site']!=='same-origin'))throw Object.assign(Error('拒絕其他網站的請求'),{status:403})
   }
-  async function body(req){
+  async function body(req,limit=1024*1024){
     if(req.headers['content-type']!=='application/json')throw Object.assign(Error('請使用 JSON 請求'),{status:415})
+    const tooLarge=()=>Object.assign(Error(limit===1024*1024?'請求過大，請分批操作':'備份太大，請保留原檔並在店面電腦核對'),{status:413})
+    if(Number(req.headers['content-length'])>limit)throw tooLarge()
     let size=0,chunks=[]
-    for await(const chunk of req){size+=chunk.length;if(size>1024*1024)throw Object.assign(Error('請求過大，請分批操作'),{status:413});chunks.push(chunk)}
+    for await(const chunk of req){size+=chunk.length;if(size>limit)throw tooLarge();chunks.push(chunk)}
     return JSON.parse(Buffer.concat(chunks).toString('utf8'))
   }
   function throttle(req){const id=req.socket.remoteAddress,old=attempts.get(id);if(!old||now()-old.start>60000){attempts.set(id,{start:now(),count:1});return}if(++old.count>10)throw Object.assign(Error('嘗試次數過多，請一分鐘後再試'),{status:429})}
@@ -58,6 +60,9 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(method==='db:applyExchangeOperation')return db.applyExchangeOperation(args[0],actor)
     if(method==='db:getSalesState')return db.getSalesState(actor)
     if(method==='db:getRecoveryState')return db.getRecoveryState(args[0],actor)
+    if(method==='db:previewRestore')return db.previewRestore(args[0],actor)
+    if(method==='db:applyRestorePreview')return db.applyRestorePreview(args[0],actor)
+    if(method==='db:lookupRestorePreview')return db.lookupRestorePreview(args[0],actor)
     if(method==='db:applyRecoveryOperation')return db.applyRecoveryOperation(args[0],actor)
     if(method==='db:lookupRecoveryOperation')return db.lookupRecoveryOperation(args[0],actor)
     if(method==='db:exportRecoverySource')return db.exportRecoverySource(args[0],actor)
@@ -110,7 +115,16 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
       const pathname=new URL(req.url,`https://${host}:${port}`).pathname
       if(pathname.startsWith('/api/')){
         if(req.method!=='POST')return reply(res,405,{error:'請使用 POST'})
-        const input=await body(req)
+        const backupPreview=pathname==='/api/backup-preview'
+        if(backupPreview){
+          // The larger file route is owner-only BEFORE reading its body. Device,
+          // CSRF, current credentials and role are checked again after upload.
+          const device=sessionFor(req),actor=current(device)
+          if(!actor)throw Object.assign(Error('請重新登入店面帳號'),{status:401})
+          if(!equal(req.headers['x-pos-csrf'],device.csrf))throw Object.assign(Error('請重新整理以驗證連線'),{status:403})
+          authorizeActor(db,actor,'db:previewRestore',[])
+        }
+        const input=await body(req,backupPreview?64*1024*1024+65536:1024*1024)
         if(stopping)throw Object.assign(Error('店面正在關閉，請稍後重試'),{status:503})
         if(!input||typeof input!=='object'||Array.isArray(input))throw Error('請求格式錯誤')
         if(pathname==='/api/pair'){
@@ -125,7 +139,7 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
         const device=sessionFor(req)
         if(pathname==='/api/bootstrap')return reply(res,200,{success:true,csrf:device.csrf,revision,storeId:device.storeId})
         if(!equal(req.headers['x-pos-csrf'],device.csrf))throw Object.assign(Error('請重新整理以驗證連線'),{status:403})
-        if(pathname!=='/api/rpc'||typeof input.method!=='string'||!Array.isArray(input.args)||input.args.length>4)throw Error('請求格式錯誤')
+        if(!['/api/rpc','/api/backup-preview'].includes(pathname)||typeof input.method!=='string'||!Array.isArray(input.args)||input.args.length>4||backupPreview&&(input.method!=='db:previewRestore'||input.args.length!==1))throw Error('請求格式錯誤')
         if(input.method==='auth:login')throttle(req)
         const result=await dispatch(device,input.method,input.args)
         return reply(res,200,{result,revision,storeId:device.storeId})

@@ -20,7 +20,7 @@ if(sharedStoreMode&&!window.electronAPI){
     if(pair){history.replaceState(null,'',location.pathname+location.search);await post('pair',{token:pair},'')}
     else await post('bootstrap',{},'')
   }
-  async function rpc(method,...args){await(boot||=initialize().catch(e=>{boot=null;throw e}));const response=await post('rpc',{method,args});if(method==='auth:session'&&!response.result)signal('pos-shared-auth-expired');return response.result}
+  async function rpc(method,...args){await(boot||=initialize().catch(e=>{boot=null;throw e}));const response=await post(method==='db:previewRestore'?'backup-preview':'rpc',{method,args});if(method==='auth:session'&&!response.result)signal('pos-shared-auth-expired');return response.result}
   const dbMethods=['rememberAgentMappings','getAgentContext','getProducts','addProduct','updateProduct','deleteProduct','findByBarcode','getMembers','addMember','updateMember','deleteMember','getOrders','getOrderItems','checkout','checkoutReceipt','refundOrder','getCustomerOrders','updateOrderStatus','getSuppliers','addSupplier','updateSupplier','deleteSupplier','getPurchases','addPurchase','updatePurchase','deletePurchase','getPromotions','addPromotion','updatePromotion','deletePromotion','getManualJournal','addManualEntry','deleteManualEntry','getAuditLogs','writeAuditLog','getHeldOrders','addHeldOrder','deleteHeldOrder','getShifts','getOpenShift','openShift','closeShift','getCashLog','addCashLog','getWasteLog','addWaste','getTopups','addTopup','applyInventoryOperation','applyScenarioTemplate','getScenarioTemplateReceipt','getBackups','createBackup','exportData','getStoreSnapshot']
   const db=Object.fromEntries(dbMethods.map(method=>[method,(...args)=>rpc('db:'+method,...args)]))
   db.getExchangeContext=()=>rpc('db:getExchangeContext')
@@ -42,10 +42,10 @@ if(sharedStoreMode&&!window.electronAPI){
   db.applyCustomerLedgerOperation=input=>rpc('db:applyCustomerLedgerOperation',input)
   db.getSupplierState=()=>rpc('db:getSupplierState')
   db.applySupplierLedgerOperation=input=>rpc('db:applySupplierLedgerOperation',input)
-  for(const method of ['getRecoveryState','applyRecoveryOperation','lookupRecoveryOperation','exportRecoverySource','exportRecoveryDiagnostics'])db[method]=input=>rpc('db:'+method,input)
+  for(const method of ['getRecoveryState','applyRecoveryOperation','lookupRecoveryOperation','exportRecoverySource','exportRecoveryDiagnostics','previewRestore','applyRestorePreview','lookupRestorePreview'])db[method]=input=>rpc('db:'+method,input)
   db.getRestaurantState=()=>rpc('db:getRestaurantState')
   db.applyRestaurantOperation=input=>rpc('db:applyRestaurantOperation',input)
-  for(const method of ['migrateFromLocalStorage','importData','restoreBackup','previewRestore','applyRestorePreview','lookupRestorePreview','deleteWaste','addOrder','getUsers','addUser','updateUser','deleteUser'])db[method]=async()=>{throw Error('此項管理操作請在店面電腦執行')}
+  for(const method of ['migrateFromLocalStorage','importData','restoreBackup','deleteWaste','addOrder','getUsers','addUser','updateUser','deleteUser'])db[method]=async()=>{throw Error('此項管理操作請在店面電腦執行')}
   const unavailable=async()=>{throw Error('此設備操作請在店面電腦執行')}
   window.electronAPI={sharedStore:true,db,
     auth:{list:()=>rpc('auth:list'),session:()=>rpc('auth:session'),login:input=>rpc('auth:login',input),logout:()=>rpc('auth:logout'),setup:unavailable},

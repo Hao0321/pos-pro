@@ -1,6 +1,9 @@
 module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierParams,stockStore){
   // ===== Migration =====
   const migrateTx = db.transaction((data,{costRestore=false}={}) => {
+    const rawSettings=data.settings||[],encoding=require('./settingEncoding.mjs')
+    encoding.validateSettingRows(rawSettings,'sqlite')
+    data={...data,settings:encoding.settingsForValidation(rawSettings,'sqlite')}
     require('./stockBackup.mjs').validateStockCostBook(data)
     if(!costRestore&&(data.stockCostEntries?.length||data.stockCostOperations?.length))throw require('./stockOpeningPlan.mjs').stockLedgerError('FLOW')
     require('./procurementRules.mjs').validateProcurementRecords(data.purchases||[],data.cashLog||[])
@@ -20,7 +23,8 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
       require('./restaurantRules.mjs').validateRestaurantRecords(data.restaurantOrders||[],data.restaurantOperations||[],data.orders||[],data.products||[])
       for(const [key,table] of [['restaurantOrders','restaurant_orders'],['restaurantOperations','restaurant_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
     }
-    if(data.settings){if(!Array.isArray(data.settings))throw Error('營業設定格式錯誤');const seen=new Set();for(const s of data.settings){if(typeof s.key!=='string'||!s.key||typeof s.value!=='string'||seen.has(s.key))throw Error('營業設定格式錯誤');seen.add(s.key);stmts.setSetting.run(s.key,s.value)}}
+    for(const row of rawSettings)stmts.setRawSetting.run(row)
+    if(rawSettings.some(row=>row.encoding||Object.hasOwn(row,'id')))require('./databaseFeatureFence.cjs').installCrossStorageFence(db)
     // Products
     if (data.products && data.products.length) {
       for (const p of data.products) {
@@ -39,7 +43,7 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
           supplierId: p.supplierId || '',
           reorderLevel: p.reorderLevel || 0,
         })
-        db.prepare('UPDATE products SET createdAt=COALESCE(?,createdAt),updatedAt=COALESCE(?,updatedAt) WHERE id=?').run(p.createdAt??null,p.updatedAt??null,p.id)
+        db.prepare('UPDATE products SET createdAt=?,updatedAt=? WHERE id=?').run(p.createdAt??null,p.updatedAt??null,p.id)
       }
     }
 
@@ -59,7 +63,7 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
           lastBirthdayBonus: m.lastBirthdayBonus || '',
           note:m.note||'',
         })
-        db.prepare('UPDATE members SET createdAt=COALESCE(?,createdAt) WHERE id=?').run(m.createdAt??null,m.id)
+        db.prepare('UPDATE members SET createdAt=? WHERE id=?').run(m.createdAt??null,m.id)
       }
     }
 

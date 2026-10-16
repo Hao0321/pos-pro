@@ -14,6 +14,7 @@ module.exports = function initDatabase(dbPath) {
   db.pragma('foreign_keys = ON')
 
   require('./databaseSchema.cjs')(db)
+  const recordShapes=require('./recordShapeStorage.cjs')(db)
   let stockStore
   try{stockStore=require('./stockLedgerStorage.cjs')(db)}catch(error){db.close();throw error}
   if(db.prepare('SELECT 1 FROM customer_entries LIMIT 1').get())require('./databaseFeatureFence.cjs').installCustomerFence(db)
@@ -69,15 +70,15 @@ module.exports = function initDatabase(dbPath) {
   function readOrder(id) {
     const row = stmts.getOrderById.get(id)
     if (!row) return null
-    return {...row,change:row.change_amount,memberId:row.memberId||null,fullRefund:!!row.fullRefund,itemCosts:JSON.parse(row.itemCosts||'{}'),payments:JSON.parse(row.payments || '[]'),
-      items:stmts.getOrderItems.all(id).map(i=>({id:i.productId,name:i.name,price:i.price,qty:i.qty}))}
+    return recordShapes.projectRow('orders',{...row,change:row.change_amount,memberId:row.memberId||null,fullRefund:!!row.fullRefund,itemCosts:JSON.parse(row.itemCosts||'{}'),payments:JSON.parse(row.payments || '[]'),
+      items:stmts.getOrderItems.all(id).map(i=>({id:i.productId,name:i.name,price:i.price,qty:i.qty}))})
   }
   function checkoutReceipt(id) {
     const order=readOrder(id)
     if (!order) return {protocol:PROTOCOL,success:true,found:false}
     return {protocol:PROTOCOL,success:true,orderId:id,order,
       ...(order.status==='refunded'&&!order.refundOf?{refunds:db.prepare('SELECT id FROM orders WHERE refundOf=?').all(id).map(row=>readOrder(row.id))}:{}),
-      products:order.items.map(i=>stmts.getProductById.get(i.id)).filter(Boolean),
+      products:order.items.map(i=>stmts.getProductById.get(i.id)).filter(Boolean).map(p=>recordShapes.projectRow('products',{...p,noBarcode:!!p.noBarcode})),
       member:order.memberId ? stmts.getMemberById.get(order.memberId) || null : null}
   }
   const checkoutTx = db.transaction((orderData, stockUpdates, memberUpdate) => {
@@ -534,7 +535,7 @@ module.exports = function initDatabase(dbPath) {
     },
     exportData() {
       return db.transaction(()=>{
-      const data = {
+      let data = {
         products: stmts.getAllProducts.all().map(p => ({ ...p, noBarcode: !!p.noBarcode })),
         members: stmts.getAllMembers.all(),
         orders: stmts.getAllOrders.all().map(o=>readOrder(o.id)),
@@ -566,6 +567,7 @@ module.exports = function initDatabase(dbPath) {
         require('./stockOpeningPlan.mjs').assertStockCustodyMatchesBook(stock.projection.custody,data.products,data.restaurantOrders)
       }
       data.stockCostEntries=stock.entries;data.stockCostOperations=stock.operations
+      data=recordShapes.project(data)
       require('./stockBackup.mjs').validateStockCostBook(data,stock)
       // A backup round trip may change insertion order for tied timestamps.
       // Stable collection ordering keeps the revision tied to business content.
@@ -575,7 +577,7 @@ module.exports = function initDatabase(dbPath) {
     },
     // Settings
     getSetting(key) {
-      const row = stmts.getSetting.get(key)
+      const row = stmts.getTypedSetting.get(key)
       return row ? row.value : null
     },
     setSetting(key, value) {
@@ -584,11 +586,11 @@ module.exports = function initDatabase(dbPath) {
       stmts.setSetting.run(key, value)
       return { success: true }
     },
-    setSettings(values){if(Object.hasOwn(values,'stockCostVersionFence'))throw Error('成本資料的版本保護由完整備份流程管理');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');db.transaction(()=>{for(const [key,value]of Object.entries(values))stmts.setSetting.run(key,String(value))})();return {success:true}},
+    setSettings(values){if(Object.hasOwn(values,'stockCostVersionFence'))throw Error('成本資料的版本保護由完整備份流程管理');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');db.transaction(()=>{for(const [key,value]of Object.entries(values))stmts.setSetting.run(key,value)})();return {success:true}},
     getAllSettings() {
       const rows = stmts.getAllSettings.all()
       const result = {}
-      for (const r of rows) result[r.key] = r.value
+      for (const r of rows) result[r.key] = require('./settingEncoding.mjs').settingValue(r,'sqlite')
       return result
     },
 
@@ -724,9 +726,12 @@ module.exports = function initDatabase(dbPath) {
       db.close()
     },
   }
+  recordShapes.attachReads(api)
   Object.assign(api,require('./stockOpeningOperations.cjs')(db,api,stockStore),require('./stockCostOperations.cjs')(db,api,stockStore))
   require('./stockSetupOperations.cjs')(db,api,stockStore)
   require('./refundReviewOperations.cjs')(db,api,stockStore)
   require('./stockBusinessOperations.cjs')(db,api,stockStore)
-  return require('./recoveryOperations.cjs')(db,api,replaceAllTx)
+  require('./recoveryOperations.cjs')(db,api,replaceAllTx,recordShapes)
+  recordShapes.attachFinancial(api)
+  return api
 }

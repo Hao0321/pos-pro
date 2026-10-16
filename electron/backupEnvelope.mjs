@@ -1,6 +1,8 @@
 import {stockLedgerDigest} from './stockLedgerModel.mjs'
 import {recoveryBook,recoveryDataError,RECOVERY_FEATURES} from './recoveryBook.mjs'
-import {validateRecoveryGraph} from './recoveryGraph.mjs'
+import {validateRecoveryGraph,portableRecoveryGraph,emptyRecoveryGraph} from './recoveryGraph.mjs'
+import {detectBookStorage,convertStorageBook,assertConversionReversible} from './storageConversion.mjs'
+import {bookToBrowser} from './recoveryRules.mjs'
 
 export const FULL_BACKUP_FORMAT='pos-complete-backup/v1'
 export function createCompleteBackup(book,protection,storage,{features=[],digest=stockLedgerDigest}={}){
@@ -23,4 +25,16 @@ export function readCompleteBackup(input,storage,{digest=stockLedgerDigest}={}){
  return {book:structuredClone(input.book),protection:structuredClone(input.protection),features:[...input.features],legacy:false}
 }
 export const recoveryGraphRevision=(graph,digest=stockLedgerDigest)=>digest(graph)
-export function backupProtectionSummary(value){return {legacy:value.legacy,snapshots:value.protection?.snapshots.length||0,originalIds:value.protection?.originalIds.length||0,receipts:value.protection?.events.length||0}}
+export function readPortableBackup(input,storage,options={}){
+ const origin=Object.hasOwn(input??{},'format')?input.storage:detectBookStorage(input)
+ if(!['sqlite','browser'].includes(origin)||!['sqlite','browser'].includes(storage))throw recoveryDataError()
+ const incoming=readCompleteBackup(input,origin,options),checked=recoveryBook(incoming.book,origin,{complete:!incoming.legacy,...options})
+ const features=[...new Set([...incoming.features,...checked.features])].sort()
+ if(origin===storage)return {...incoming,features,protection:incoming.protection??(features.includes('cross-storage-v1')?emptyRecoveryGraph(2):null),sourceStorage:origin,converted:false}
+ const normalized=origin==='sqlite'?checked.book:bookToBrowser(checked.book),book=assertConversionReversible(normalized,convertStorageBook(normalized,origin,storage),origin,storage)
+ recoveryBook(book,storage,{complete:true,...options})
+ const protection=incoming.protection?portableRecoveryGraph(incoming.protection,origin,{...options,version:3}):emptyRecoveryGraph(3)
+ validateRecoveryGraph(protection,storage,options)
+ return {...incoming,book,protection,features:[...new Set([...features,'cross-storage-v1','record-shapes-v1'])].sort(),sourceStorage:origin,converted:true}
+}
+export function backupProtectionSummary(value){return {legacy:value.legacy,snapshots:value.protection?.snapshots.length||0,originalIds:value.protection?.originalIds.length||0,receipts:value.protection?.events.length||0,...(value.sourceStorage?{sourceStorage:value.sourceStorage,converted:value.converted}: {})}}

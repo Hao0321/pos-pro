@@ -3,14 +3,16 @@ const {canonicalSignature}=require('./operationRules.mjs')
 const {signature:checkoutSignature,PROTOCOL}=require('./checkoutContract.cjs')
 const {refundSignature}=require('./refundSafety.cjs')
 const {RECOVERY_PROTOCOL,recoveryStoreId,materialSignature,protectedRestoreBook,recoverySummary,operationRecords,pendingOperation,originalMatches,recoveryOperationId}=require('./recoveryRules.mjs')
-const {createCompleteBackup,readCompleteBackup,backupProtectionSummary}=require('./backupEnvelope.mjs')
+const {createCompleteBackup,readPortableBackup,backupProtectionSummary}=require('./backupEnvelope.mjs')
+const {convertLogicalBook}=require('./storageConversion.mjs')
+const {bookToBrowser}=require('./recoveryRules.mjs')
 const {mergeRecoveryGraphs,validateRecoveryGraph}=require('./recoveryGraph.mjs')
 const {recoveryBook,recoveryBoundaryMatches}=require('./recoveryBook.mjs')
 const {STOCK_COMPAT_SETTING}=require('./stockCompatibility.mjs')
 const sha=value=>createHash('sha256').update(typeof value==='string'?value:canonicalSignature(value)).digest('hex')
 const proof={checkoutSignature,refundSignature}
 
-module.exports=function installRecovery(db,api,replaceAllTx){
+module.exports=function installRecovery(db,api,replaceAllTx,recordShapes){
   db.exec(`CREATE TABLE IF NOT EXISTS recovery_snapshots (
     id TEXT PRIMARY KEY, created_at TEXT NOT NULL, actor_id TEXT NOT NULL, store_id TEXT NOT NULL,
     data TEXT NOT NULL, sha256 TEXT NOT NULL, after_material TEXT NOT NULL);
@@ -18,7 +20,8 @@ module.exports=function installRecovery(db,api,replaceAllTx){
       snapshot_id TEXT NOT NULL, PRIMARY KEY(method,operation_id,snapshot_id));
     CREATE TABLE IF NOT EXISTS recovery_previews (id TEXT PRIMARY KEY, data TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS recovery_events (id TEXT PRIMARY KEY, actor_id TEXT NOT NULL,
-      signature TEXT NOT NULL, receipt TEXT NOT NULL);`)
+      signature TEXT NOT NULL, receipt TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS recovery_source_formats (snapshot_id TEXT PRIMARY KEY, storage TEXT NOT NULL CHECK(storage IN ('sqlite','browser')));`)
   const insertIndex=db.prepare('INSERT OR IGNORE INTO recovery_original_ids VALUES (?,?,?)')
   const graphStore=require('./recoveryGraphStorage.cjs')(db),graphOptions=graphStore.options
   function retainFeatures(book,features){if(!features.includes('stock-cost-v1'))return book;const settings=new Map(book.settings.map(row=>[row.key,row]));settings.set(STOCK_COMPAT_SETTING,{key:STOCK_COMPAT_SETTING,value:'1'});return {...book,settings:[...settings.values()]}}
@@ -46,6 +49,7 @@ module.exports=function installRecovery(db,api,replaceAllTx){
     db.prepare('INSERT INTO recovery_snapshots VALUES (?,?,?,?,?,?,?)').run(snapshotId,new Date().toISOString(),actor.userId,recoveryStoreId(current),data,sha(data),'pending')
     for(const record of operationRecords(current))insertIndex.run(record.method,record.id,snapshotId)
     replaceAllTx(next)
+    recordShapes.capture(next,recordShapes.raw(()=>api.exportData()))
     const restored=api.exportData()
     db.prepare('UPDATE recovery_snapshots SET after_material=? WHERE id=?').run(material(restored),snapshotId)
     const receipt={protocol:RECOVERY_PROTOCOL,success:true,id,sourceId:snapshotId,revision:restored._revision,storeId:recoveryStoreId(restored),...extra}
@@ -65,11 +69,12 @@ module.exports=function installRecovery(db,api,replaceAllTx){
     }else if(input.kind==='protected'){
       const source=readSource(input.id)
       if(source.store_id!==recoveryStoreId(current))throw Error('店面不符')
-      if(!recoveryBoundaryMatches(source.after_material,current,'sqlite',graphStore.digest))throw Error('還原後已有新的營運資料')
+      if(!recoveryBoundaryMatches(source.after_material,current,'sqlite',graphStore.digest,source.storage))throw Error('還原後已有新的營運資料')
       data=api.exportRecoverySource(input.id,actor);label='還原前的副本'
     }else{data=input.data;label='匯入備份'}
-    if(JSON.stringify(data).length>64*1024*1024)throw Error('備份太大，請保留原檔並在店面電腦核對')
-    const incoming=readCompleteBackup(data,'sqlite',graphOptions),target=retainFeatures(protectedRestoreBook(current,incoming.book),incoming.features),id='restore-'+randomUUID(),now=Date.now(),currentGraph=graphStore.read()
+    if(Buffer.byteLength(JSON.stringify(data),'utf8')>64*1024*1024)throw Error('備份太大，請保留原檔並在店面電腦核對')
+    const incoming=readPortableBackup(data,'sqlite',graphOptions),target=retainFeatures(protectedRestoreBook(current,incoming.book),incoming.features),id='restore-'+randomUUID(),now=Date.now(),currentGraph=graphStore.read()
+    recordShapes.assertSupported(target)
     if(incoming.protection)mergeRecoveryGraphs(currentGraph,incoming.protection,'sqlite',graphOptions)
     const transfer={protection:incoming.protection,features:incoming.features,expectedProtectionRevision:graphStore.digest(currentGraph)}
     db.prepare('DELETE FROM recovery_previews WHERE json_extract(data,\'$.expiresAt\')<?').run(now)
@@ -93,8 +98,10 @@ module.exports=function installRecovery(db,api,replaceAllTx){
   }
   function readSource(id){
     const row=db.prepare('SELECT * FROM recovery_snapshots WHERE id=?').get(id)
-    if(!row||sha(row.data)!==row.sha256)throw Error('保護副本需要核對，原資料已保留')
-    return {...row,book:JSON.parse(row.data)}
+    if(!row)throw Error('保護副本需要核對，原資料已保留')
+    const storage=db.prepare('SELECT storage FROM recovery_source_formats WHERE snapshot_id=?').get(id)?.storage||'sqlite',data=JSON.parse(row.data)
+    if((storage==='sqlite'?sha(row.data):canonicalSignature(data))!==row.sha256)throw Error('保護副本需要核對，原資料已保留')
+    return {...row,storage,book:recoveryBook(data,storage,graphOptions).book}
   }
   api.previewRestore=(input,actor)=>preview(input,owner(actor))
   api.applyRestorePreview=(previewId,actor)=>confirm(previewId,owner(actor))
@@ -119,6 +126,7 @@ module.exports=function installRecovery(db,api,replaceAllTx){
     return db.transaction(()=>{
       const current=api.exportData();if(expectedRevision&&expectedRevision!==current._revision)throw Error('本機資料已改變，已取消覆蓋')
       if(require('./stockCompatibility.mjs').hasStockCostHistory(current)||require('./stockCompatibility.mjs').hasStockCostHistory(data))throw Error('成本帳請使用完整備份還原預覽，不能部分同步')
+      if(graphStore.features().includes('cross-storage-v1'))throw Error('保護紀錄請使用完整備份搬移，不能部分同步；手機共用店面可照常使用。')
       const who=actor||internalActor(),id='import-'+randomUUID()
       // The legacy cloud projection imports named collections. Full backup/file
       // restores use previewRestore instead and replace the complete business book.
@@ -134,7 +142,7 @@ module.exports=function installRecovery(db,api,replaceAllTx){
     const sources=rows.map(({id})=>{
       const source=readSource(id),record=operationRecords(source.book).find(row=>row.method===operation.method&&row.id===operation.id)
       const matches=!!record&&originalMatches(record,operation,proof),sameStore=source.store_id===recoveryStoreId(current)
-      const unchanged=recoveryBoundaryMatches(source.after_material,current,'sqlite',graphStore.digest)
+      const unchanged=recoveryBoundaryMatches(source.after_material,current,'sqlite',graphStore.digest,source.storage)
       return {id:source.id,createdAt:source.created_at,operationId:operation.id,matches,canRecover:!active&&matches&&sameStore&&unchanged,
         reason:active?'目前帳本已有這個原編號':!matches?'原編號內容不同':!sameStore?'店面不符':!unchanged?'還原後已有新的營運資料':'可以找回原紀錄',summary:recoverySummary(source.book)}
     })
@@ -150,7 +158,8 @@ module.exports=function installRecovery(db,api,replaceAllTx){
       const state=api.getRecoveryState(input.pending,actor),source=state.sources.find(row=>row.id===input.sourceId)
       if(state.revision!==input.expectedRevision)throw Error('帳本已更新，請重新核對復原內容')
       if(!source?.canRecover)throw Error('已有新資料或原編號內容不符，請保留兩份帳本核對')
-      return replace(input.id,readSource(source.id).book,api.exportData()._revision,actor,signature,{restoredSourceId:source.id,originalOperationId:state.operationId})
+      const saved=readSource(source.id)
+      return replace(input.id,convertLogicalBook(saved.book,saved.storage,'sqlite'),api.exportData()._revision,actor,signature,{restoredSourceId:source.id,originalOperationId:state.operationId})
     })()
   }
   api.lookupRecoveryOperation=(input,actor)=>{
@@ -160,9 +169,9 @@ module.exports=function installRecovery(db,api,replaceAllTx){
   api.exportFullBackup=actor=>{if(actor)owner(actor);return db.transaction(()=>createCompleteBackup(api.exportData(),graphStore.read(),'sqlite',{...graphOptions,features:graphStore.features()}))()}
   api.getProtectedBackups=actor=>{owner(actor);return db.transaction(()=>{
     const current=api.exportData(),graph=validateRecoveryGraph(graphStore.read(),'sqlite',graphOptions)
-    return [...graph.snapshots.values()].map(row=>{const sameStore=row.storeId===recoveryStoreId(current),unchanged=recoveryBoundaryMatches(row.afterMaterial,current,'sqlite',graphStore.digest);return {id:row.id,createdAt:row.createdAt,summary:recoverySummary(row.source.book),canRestore:sameStore&&unchanged,reason:!sameStore?'店面不符':!unchanged?'還原後已有新的營運資料':'可以找回原紀錄'}}).sort((a,b)=>Number(b.canRestore)-Number(a.canRestore)||b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id))
+    return [...graph.snapshots.values()].map(row=>{const sameStore=row.storeId===recoveryStoreId(current),unchanged=recoveryBoundaryMatches(row.afterMaterial,current,'sqlite',graphStore.digest,row.source.storage);return {id:row.id,createdAt:row.createdAt,summary:recoverySummary(row.source.book),canRestore:sameStore&&unchanged,reason:!sameStore?'店面不符':!unchanged?'還原後已有新的營運資料':'可以找回原紀錄'}}).sort((a,b)=>Number(b.canRestore)-Number(a.canRestore)||b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id))
   })()}
-  api.exportRecoverySource=(id,actor)=>{owner(actor);return db.transaction(()=>createCompleteBackup(recoveryBook(readSource(id).book,'sqlite',graphOptions).book,graphStore.read(),'sqlite',{...graphOptions,features:graphStore.features()}))()}
+  api.exportRecoverySource=(id,actor)=>{owner(actor);return db.transaction(()=>{const saved=readSource(id),book=saved.storage==='browser'?bookToBrowser(saved.book):saved.book;return createCompleteBackup(book,graphStore.read(),saved.storage,{...graphOptions,features:graphStore.features()})})()}
   api.exportRecoveryDiagnostics=actor=>{
     owner(actor)
     // Read raw rows without parsing the damaged business or recovery JSON.

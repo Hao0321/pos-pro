@@ -1,4 +1,5 @@
 import {canonicalSignature,operationHeader,moneyValue,quantityValue} from './operationRules.mjs'
+import {updateBrowserSettings} from './settingEncoding.mjs'
 import {signature as checkoutSignature} from './checkoutSignature.mjs'
 import {prepareCheckout} from '../src/utils/checkoutSafety.mjs'
 import {prepareRefund,refundSignature} from '../src/utils/refundSafety.mjs'
@@ -85,7 +86,7 @@ export function planBrowserStockBusiness(book,runtime,method,request,actor){
   }else if(method==='applyRestaurantOperation'){
     const data=browserRestaurantData(book),plan=planRestaurant(request,data,actor,{prepareCheckout,prepareRefund})
     Object.assign(next,{products:plan.next.products,orders:plan.next.orders,wasteLog:plan.next.waste,restaurantOrders:plan.next.entries,restaurantOperations:[...data.operations,plan.receipt]})
-    if(request.action==='configure')next.settings=[...book.settings.filter(row=>row.key!=='restaurantConfig'),{key:'restaurantConfig',value:JSON.stringify(JSON.stringify(plan.config))}]
+    if(request.action==='configure')next.settings=updateBrowserSettings(book.settings,{restaurantConfig:JSON.stringify(JSON.stringify(plan.config))})
     result.plan=plan
   }else if(method==='applyInventoryOperation'){
     const plan=planSupplierInventory(request,browserStockContexts(book,runtime),actor)

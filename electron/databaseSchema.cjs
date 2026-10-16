@@ -255,6 +255,8 @@ module.exports=function initializeSchema(db){
     ensureColumn('purchases', 'paidDate', "TEXT DEFAULT ''")
     ensureColumn('purchases', 'procurement', 'TEXT DEFAULT NULL')
     ensureColumn('promotions','note',"TEXT DEFAULT ''")
+    ensureColumn('settings','value_encoding','INTEGER NOT NULL DEFAULT 0')
+    ensureColumn('settings','row_id','TEXT DEFAULT NULL')
   } catch(e){db.close();throw new Error('資料庫結構更新未完成，已保留原始資料：'+e.message)}
 
   // ===== Prepared Statements =====

@@ -124,9 +124,7 @@ module.exports=function prepareStatements(db){
     `),
 
     // --- Settings ---
-    getSetting: db.prepare('SELECT value FROM settings WHERE key = ?'),
-    setSetting: db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)'),
-    getAllSettings: db.prepare('SELECT * FROM settings'),
+    ...require('./databaseSettings.cjs')(db),
 
     // --- Held Orders ---
     getAllHeld: db.prepare('SELECT * FROM held_orders ORDER BY createdAt DESC'),

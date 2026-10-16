@@ -4,7 +4,9 @@ import {signature as checkoutSignature} from '../../electron/checkoutSignature.m
 import {refundSignature} from './refundSafety.mjs'
 import {RECOVERY_PROTOCOL,browserToBook,bookToBrowser,protectedRestoreBook,recoveryStoreId,recoverySummary,materialSignature,operationRecords,pendingOperation,originalMatches} from '../../electron/recoveryRules.mjs'
 import {STOCK_COMPAT_SETTING} from '../../electron/stockCompatibility.mjs'
-import {createCompleteBackup,readCompleteBackup,backupProtectionSummary} from '../../electron/backupEnvelope.mjs'
+import {createCompleteBackup,readPortableBackup,backupProtectionSummary} from '../../electron/backupEnvelope.mjs'
+import {convertLogicalBook} from '../../electron/storageConversion.mjs'
+import {stockLedgerDigest} from '../../electron/stockLedgerModel.mjs'
 import {mergeRecoveryGraphs,validateRecoveryGraph} from '../../electron/recoveryGraph.mjs'
 import {recoveryBook,recoveryBoundaryMatches,retainRecoveryFeatures} from '../../electron/recoveryBook.mjs'
 import {browserProtectionGraph,browserProtectionRevision} from './browserProtection'
@@ -20,8 +22,10 @@ function prior(id,signature,actor,record=readRecords()){
 }
 function source(id,record=readRecords()){
   const row=recoveryMetadata(record).snapshots.find(s=>s.id===id)
-  if(!row||canonicalSignature(row.data)!==row.contentSignature)throw Error('保護副本需要核對，原資料已保留')
-  return {...row,book:browserToBook(row.data)}
+  const storage=row?.storage||'browser'
+  if(!row||(storage==='sqlite'?stockLedgerDigest(row.data).slice(7):canonicalSignature(row.data))!==row.contentSignature)throw Error('保護副本需要核對，原資料已保留')
+  const data=storage==='sqlite'?JSON.parse(row.data):row.data
+  return {...row,storage,book:recoveryBook(data,storage).book}
 }
 export async function previewRestore(input,actor){
   owner(actor);const record=readRecords(),current=browserToBook(record.data)
@@ -33,13 +37,14 @@ export async function previewRestore(input,actor){
   }else if(input.kind==='protected'){
     const saved=source(input.id,record)
     if(saved.storeId!==recoveryStoreId(current))throw Error('店面不符')
-    if(!recoveryBoundaryMatches(saved.afterMaterial,current,'browser'))throw Error('還原後已有新的營運資料')
+    if(!recoveryBoundaryMatches(saved.afterMaterial,current,'browser',stockLedgerDigest,saved.storage))throw Error('還原後已有新的營運資料')
     raw=await exportRecoverySource(input.id,actor);label='還原前的副本'
   }else if(input.kind==='import'){
     raw=input.data;label='匯入備份'
   }
   else throw Error('還原來源不正確')
-  const incoming=readCompleteBackup(raw,'browser')
+  if(new TextEncoder().encode(JSON.stringify(raw)).length>64*1024*1024)throw Error('備份太大，請保留原檔並在店面電腦核對')
+  const incoming=readPortableBackup(raw,'browser')
   if(!incoming.book||Array.isArray(incoming.book)||!Array.isArray(incoming.book.pos2_products))throw Error('備份格式錯誤')
   if(Object.keys(incoming.book).some(key=>!DATA_KEYS.includes(key)))throw Error('備份含有目前版本不支援的資料，請保留原檔並使用相容版本')
   if(incoming.protection)mergeRecoveryGraphs(browserProtectionGraph(record),incoming.protection,'browser')
@@ -68,7 +73,7 @@ export async function getRecoveryState(pending,actor){
   const ids=new Set(meta.originalIds.filter(row=>row[0]===operation.method&&row[1]===operation.id).map(row=>row[2]))
   const sources=[...meta.snapshots].reverse().filter(row=>ids.has(row.id)).map(row=>{
     const saved=source(row.id,record),original=operationRecords(saved.book).find(row=>row.method===operation.method&&row.id===operation.id)
-    const matches=!!original&&originalMatches(original,operation,proof),sameStore=saved.storeId===recoveryStoreId(current),unchanged=recoveryBoundaryMatches(saved.afterMaterial,current,'browser')
+    const matches=!!original&&originalMatches(original,operation,proof),sameStore=saved.storeId===recoveryStoreId(current),unchanged=recoveryBoundaryMatches(saved.afterMaterial,current,'browser',stockLedgerDigest,saved.storage)
     return {id:saved.id,createdAt:saved.createdAt,operationId:operation.id,matches,canRecover:!active&&matches&&sameStore&&unchanged,
       reason:active?'目前帳本已有這個原編號':!matches?'原編號內容不同':!sameStore?'店面不符':!unchanged?'還原後已有新的營運資料':'可以找回原紀錄',summary:recoverySummary(saved.book)}
   })
@@ -82,7 +87,7 @@ export async function applyRecoveryOperation(input,actor){
     const state=await getRecoveryState(input.pending,actor),selected=state.sources.find(s=>s.id===input.sourceId)
     if(state.revision!==input.expectedRevision)throw Error('帳本已更新，請重新核對復原內容')
     if(!selected?.canRecover)throw Error('已有新資料或原編號內容不符，請保留兩份帳本核對')
-    const next=restoreRecords(source(selected.id).data,Number(input.expectedRevision),{id:input.id,actorId:actor.userId,signature,restoredSourceId:selected.id,originalOperationId:state.operationId})
+    const saved=source(selected.id),next=restoreRecords(bookToBrowser(convertLogicalBook(saved.book,saved.storage,'browser')),Number(input.expectedRevision),{id:input.id,actorId:actor.userId,signature,restoredSourceId:selected.id,originalOperationId:state.operationId})
     return prior(input.id,signature,actor,next)
   })
 }
@@ -90,9 +95,9 @@ export async function lookupRecoveryOperation(input,actor){owner(actor);const re
 export function exportBrowserFullBackup(actor){const record=readRecords();if(actor)owner(actor,record);return createCompleteBackup(record.data,browserProtectionGraph(record),'browser',{features:record.supplierFence?['supplier-ledger-v1']:[]})}
 export function getProtectedBackups(_input,actor){
  const record=readRecords();owner(actor,record);const current=browserToBook(record.data),graph=validateRecoveryGraph(browserProtectionGraph(record),'browser')
- return [...graph.snapshots.values()].map(row=>{const sameStore=row.storeId===recoveryStoreId(current),unchanged=recoveryBoundaryMatches(row.afterMaterial,current,'browser');return {id:row.id,createdAt:row.createdAt,summary:recoverySummary(row.source.book),canRestore:sameStore&&unchanged,reason:!sameStore?'店面不符':!unchanged?'還原後已有新的營運資料':'可以找回原紀錄'}}).sort((a,b)=>Number(b.canRestore)-Number(a.canRestore)||b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id))
+ return [...graph.snapshots.values()].map(row=>{const sameStore=row.storeId===recoveryStoreId(current),unchanged=recoveryBoundaryMatches(row.afterMaterial,current,'browser',stockLedgerDigest,row.source.storage);return {id:row.id,createdAt:row.createdAt,summary:recoverySummary(row.source.book),canRestore:sameStore&&unchanged,reason:!sameStore?'店面不符':!unchanged?'還原後已有新的營運資料':'可以找回原紀錄'}}).sort((a,b)=>Number(b.canRestore)-Number(a.canRestore)||b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id))
 }
-export async function exportRecoverySource(id,actor){owner(actor);const record=readRecords(),saved=source(id,record),data=bookToBrowser(recoveryBook(saved.data,'browser').book);return createCompleteBackup(data,browserProtectionGraph(record),'browser',{features:record.supplierFence?['supplier-ledger-v1']:[]})}
+export async function exportRecoverySource(id,actor){owner(actor);const record=readRecords(),saved=source(id,record),data=saved.storage==='browser'?bookToBrowser(saved.book):saved.book;return createCompleteBackup(data,browserProtectionGraph(record),saved.storage,{features:record.supplierFence?['supplier-ledger-v1']:[]})}
 export async function exportRecoveryDiagnostics(_input,actor){
   // A standalone browser is device-local, not an authentication boundary. Keep
   // raw bytes available when parsing this device's record fails. No writes.

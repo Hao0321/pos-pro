@@ -40,7 +40,7 @@ export default function SettingsPage({ session, onLogout, store }) {
       </div>
 
       <div style={ss.tabBar}>
-        {TABS.filter(t=>!isSharedStore||['general','business','audit'].includes(t.key)).map(({key,label,Icon})=>(
+        {TABS.filter(t=>!isSharedStore||['general','business','audit'].includes(t.key)||t.key==='backup'&&session.role==='owner').map(({key,label,Icon})=>(
           <button key={key} onClick={()=>setTab(key)} style={{
             ...ss.tab,
             background: tab===key?'var(--bg-active)':'transparent',

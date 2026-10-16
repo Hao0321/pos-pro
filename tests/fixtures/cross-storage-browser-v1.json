@@ -1,0 +1,3841 @@
+{
+  "provenance": {
+    "synthetic": true,
+    "realMerchantData": false,
+    "baselineRevision": "7961d6971d50a7b0fc43f35b2dae96e29b581ad3",
+    "producer": "actual standalone browser engine before conversion; jsdom Web Lock model, not real transport/device evidence"
+  },
+  "owner": {
+    "userId": "browser-source",
+    "username": "Browser 原店主",
+    "role": "owner"
+  },
+  "baseline": {
+    "pos2_products": [
+      {
+        "id": "p",
+        "name": "原文 Item",
+        "category": "",
+        "price": 100,
+        "cost": 20,
+        "stock": 100,
+        "barcode": "",
+        "unit": "個",
+        "noBarcode": false,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-16 19:58:50",
+        "updatedAt": "2026-10-16 19:58:50"
+      }
+    ],
+    "pos2_members": [],
+    "pos2_orders": [],
+    "pos2_manual_j": [],
+    "pos_users": [
+      {
+        "id": "browser-source",
+        "username": "Browser 原店主",
+        "role": "owner",
+        "password": "synthetic-browser-credential"
+      }
+    ],
+    "pos_suppliers": [],
+    "pos_purchases": [],
+    "pos_promotions": [],
+    "pos2_held_orders": [],
+    "pos2_shifts": [
+      {
+        "id": "source-shift",
+        "cashier": "Source 原店主",
+        "cashierId": "",
+        "openTime": "2026-10-16T11:58:50.887Z",
+        "closeTime": "",
+        "openCash": 100,
+        "closeCash": 0,
+        "expectedCash": 0,
+        "diff": 0,
+        "cashSales": 0,
+        "cardSales": 0,
+        "orderCount": 0,
+        "refundCount": 0,
+        "refundAmount": 0,
+        "note": "",
+        "status": "open"
+      }
+    ],
+    "pos2_cash_log": [],
+    "pos2_waste": [],
+    "pos2_topups": [],
+    "pos_audit_log": [],
+    "pos_business_settings": [
+      {
+        "key": "browserEmpty",
+        "value": "\"\""
+      },
+      {
+        "key": "browserFalse",
+        "value": "false"
+      },
+      {
+        "key": "browserJson",
+        "value": "{\"zero\":0,\"flag\":false,\"nested\":[1,\"2\"]}"
+      },
+      {
+        "key": "browserNumberText",
+        "value": "\"001.20\""
+      },
+      {
+        "key": "browserZero",
+        "value": "0"
+      },
+      {
+        "key": "integrationToken",
+        "value": "\"synthetic-source-credential\""
+      },
+      {
+        "key": "nativeEmpty",
+        "value": "\"\""
+      },
+      {
+        "key": "nativeFalse",
+        "value": "\"false\""
+      },
+      {
+        "key": "nativeJson",
+        "value": "\" { \\\"zero\\\": 0, \\\"flag\\\": false, \\\"nested\\\": [1,\\\"2\\\"] } \""
+      },
+      {
+        "key": "nativeNumberText",
+        "value": "\"001.20\""
+      },
+      {
+        "key": "nativeZero",
+        "value": "\"0\""
+      },
+      {
+        "key": "restaurantConfig",
+        "value": "\"{\\\"enabled\\\":false,\\\"dailyCapacity\\\":100,\\\"slotCapacity\\\":10,\\\"recipes\\\":{}}\""
+      },
+      {
+        "key": "sharedStoreId",
+        "value": "\"cross-storage-shop\""
+      }
+    ],
+    "pos_restaurant_orders": [],
+    "pos_restaurant_operations": [],
+    "pos_sales_documents": [],
+    "pos_sales_operations": [],
+    "pos_customer_entries": [],
+    "pos_customer_operations": [],
+    "pos_supplier_entries": [],
+    "pos_supplier_operations": [],
+    "pos_stock_cost_entries": [],
+    "pos_stock_cost_operations": []
+  },
+  "original": {
+    "pos2_products": [
+      {
+        "id": "p",
+        "name": "原文 Item",
+        "category": "",
+        "price": 100,
+        "cost": 20,
+        "stock": 100,
+        "barcode": "",
+        "unit": "個",
+        "noBarcode": false,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-16 19:58:50",
+        "updatedAt": "2026-10-16 19:58:50"
+      }
+    ],
+    "pos2_members": [],
+    "pos2_orders": [],
+    "pos2_manual_j": [],
+    "pos_users": [
+      {
+        "id": "browser-source",
+        "username": "Browser 原店主",
+        "role": "owner",
+        "password": "synthetic-browser-credential"
+      }
+    ],
+    "pos_suppliers": [],
+    "pos_purchases": [],
+    "pos_promotions": [],
+    "pos2_held_orders": [],
+    "pos2_shifts": [
+      {
+        "id": "source-shift",
+        "cashier": "Source 原店主",
+        "cashierId": "",
+        "openTime": "2026-10-16T11:58:50.887Z",
+        "closeTime": "",
+        "openCash": 100,
+        "closeCash": 0,
+        "expectedCash": 0,
+        "diff": 0,
+        "cashSales": 0,
+        "cardSales": 0,
+        "orderCount": 0,
+        "refundCount": 0,
+        "refundAmount": 0,
+        "note": "",
+        "status": "open"
+      }
+    ],
+    "pos2_cash_log": [
+      {
+        "id": "browser-original-cash-59",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 59",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-58",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 58",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-57",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 57",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-56",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 56",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-55",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 55",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-54",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 54",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-53",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 53",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-52",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 52",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-51",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 51",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-50",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 50",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-49",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 49",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-48",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 48",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-47",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 47",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-46",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 46",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-45",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 45",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-44",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 44",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-43",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 43",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-42",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 42",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-41",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 41",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-40",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 40",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-39",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 39",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-38",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 38",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-37",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 37",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-36",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 36",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-35",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 35",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-34",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 34",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-33",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 33",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-32",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 32",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-31",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 31",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-30",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 30",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-29",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 29",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-28",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 28",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-27",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 27",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-26",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 26",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-25",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 25",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-24",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 24",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-23",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 23",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-22",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 22",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-21",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 21",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-20",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 20",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-19",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 19",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-18",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 18",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-17",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 17",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-16",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 16",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-15",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 15",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-14",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 14",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-13",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 13",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-12",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 12",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-11",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 11",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-10",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 10",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-9",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 9",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-8",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 8",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-7",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 7",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-6",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 6",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-5",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 5",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-4",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 4",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-3",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 3",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-2",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 2",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-1",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 1",
+        "cashier": "Browser 原店主"
+      },
+      {
+        "id": "browser-original-cash-0",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 0",
+        "cashier": "Browser 原店主"
+      }
+    ],
+    "pos2_waste": [],
+    "pos2_topups": [],
+    "pos_audit_log": [
+      {
+        "id": "AL1792151942876p5z8",
+        "timestamp": "2026-10-16T11:59:02.876Z",
+        "action": "BACKUP_CREATE",
+        "level": "info",
+        "label": "建立備份",
+        "userId": "browser-source",
+        "username": "Browser 原店主",
+        "role": "owner",
+        "detail": "{\"label\":\"Before browser cash\"}"
+      }
+    ],
+    "pos_business_settings": [
+      {
+        "key": "browserEmpty",
+        "value": "\"\""
+      },
+      {
+        "key": "browserFalse",
+        "value": "false"
+      },
+      {
+        "key": "browserJson",
+        "value": "{\"zero\":0,\"flag\":false,\"nested\":[1,\"2\"]}"
+      },
+      {
+        "key": "browserNumberText",
+        "value": "\"001.20\""
+      },
+      {
+        "key": "browserZero",
+        "value": "0"
+      },
+      {
+        "key": "integrationToken",
+        "value": "\"synthetic-source-credential\""
+      },
+      {
+        "key": "nativeEmpty",
+        "value": "\"\""
+      },
+      {
+        "key": "nativeFalse",
+        "value": "\"false\""
+      },
+      {
+        "key": "nativeJson",
+        "value": "\" { \\\"zero\\\": 0, \\\"flag\\\": false, \\\"nested\\\": [1,\\\"2\\\"] } \""
+      },
+      {
+        "key": "nativeNumberText",
+        "value": "\"001.20\""
+      },
+      {
+        "key": "nativeZero",
+        "value": "\"0\""
+      },
+      {
+        "key": "restaurantConfig",
+        "value": "\"{\\\"enabled\\\":false,\\\"dailyCapacity\\\":100,\\\"slotCapacity\\\":10,\\\"recipes\\\":{}}\""
+      },
+      {
+        "key": "sharedStoreId",
+        "value": "\"cross-storage-shop\""
+      }
+    ],
+    "pos_restaurant_orders": [],
+    "pos_restaurant_operations": [],
+    "pos_sales_documents": [],
+    "pos_sales_operations": [],
+    "pos_customer_entries": [],
+    "pos_customer_operations": [],
+    "pos_supplier_entries": [],
+    "pos_supplier_operations": [],
+    "pos_stock_cost_entries": [],
+    "pos_stock_cost_operations": []
+  },
+  "packet": {
+    "format": "pos-complete-backup/v1",
+    "storage": "browser",
+    "storeId": "cross-storage-shop",
+    "features": [],
+    "book": {
+      "pos2_products": [
+        {
+          "id": "p",
+          "name": "原文 Item",
+          "category": "",
+          "price": 100,
+          "cost": 20,
+          "stock": 100,
+          "barcode": "",
+          "unit": "個",
+          "noBarcode": false,
+          "imageUrl": "",
+          "expiryDate": "",
+          "supplierId": "",
+          "reorderLevel": 0,
+          "createdAt": "2026-10-16 19:58:50",
+          "updatedAt": "2026-10-16 19:58:50"
+        }
+      ],
+      "pos2_members": [],
+      "pos2_orders": [],
+      "pos2_manual_j": [],
+      "pos_users": [
+        {
+          "id": "browser-source",
+          "username": "Browser 原店主",
+          "role": "owner",
+          "password": "synthetic-browser-credential"
+        }
+      ],
+      "pos_suppliers": [],
+      "pos_purchases": [],
+      "pos_promotions": [],
+      "pos2_held_orders": [],
+      "pos2_shifts": [
+        {
+          "id": "source-shift",
+          "cashier": "Source 原店主",
+          "cashierId": "",
+          "openTime": "2026-10-16T11:58:50.887Z",
+          "closeTime": "",
+          "openCash": 100,
+          "closeCash": 0,
+          "expectedCash": 0,
+          "diff": 0,
+          "cashSales": 0,
+          "cardSales": 0,
+          "orderCount": 0,
+          "refundCount": 0,
+          "refundAmount": 0,
+          "note": "",
+          "status": "open"
+        }
+      ],
+      "pos2_cash_log": [],
+      "pos2_waste": [],
+      "pos2_topups": [],
+      "pos_audit_log": [
+        {
+          "id": "AL1792151942876p5z8",
+          "timestamp": "2026-10-16T11:59:02.876Z",
+          "action": "BACKUP_CREATE",
+          "level": "info",
+          "label": "建立備份",
+          "userId": "browser-source",
+          "username": "Browser 原店主",
+          "role": "owner",
+          "detail": "{\"label\":\"Before browser cash\"}"
+        }
+      ],
+      "pos_business_settings": [
+        {
+          "key": "browserEmpty",
+          "value": "\"\""
+        },
+        {
+          "key": "browserFalse",
+          "value": "false"
+        },
+        {
+          "key": "browserJson",
+          "value": "{\"zero\":0,\"flag\":false,\"nested\":[1,\"2\"]}"
+        },
+        {
+          "key": "browserNumberText",
+          "value": "\"001.20\""
+        },
+        {
+          "key": "browserZero",
+          "value": "0"
+        },
+        {
+          "key": "integrationToken",
+          "value": "\"synthetic-source-credential\""
+        },
+        {
+          "key": "nativeEmpty",
+          "value": "\"\""
+        },
+        {
+          "key": "nativeFalse",
+          "value": "\"false\""
+        },
+        {
+          "key": "nativeJson",
+          "value": "\" { \\\"zero\\\": 0, \\\"flag\\\": false, \\\"nested\\\": [1,\\\"2\\\"] } \""
+        },
+        {
+          "key": "nativeNumberText",
+          "value": "\"001.20\""
+        },
+        {
+          "key": "nativeZero",
+          "value": "\"0\""
+        },
+        {
+          "key": "restaurantConfig",
+          "value": "\"{\\\"enabled\\\":false,\\\"dailyCapacity\\\":100,\\\"slotCapacity\\\":10,\\\"recipes\\\":{}}\""
+        },
+        {
+          "key": "sharedStoreId",
+          "value": "\"cross-storage-shop\""
+        }
+      ],
+      "pos_restaurant_orders": [],
+      "pos_restaurant_operations": [],
+      "pos_sales_documents": [],
+      "pos_sales_operations": [],
+      "pos_customer_entries": [],
+      "pos_customer_operations": [],
+      "pos_supplier_entries": [],
+      "pos_supplier_operations": [],
+      "pos_stock_cost_entries": [],
+      "pos_stock_cost_operations": []
+    },
+    "protection": {
+      "version": 1,
+      "books": [
+        {
+          "id": "sha256:7972ca005357133f5f3cafa09e0743d25f5fe11527cacc41470cb08f151d69f9",
+          "data": "{\"pos2_products\":[],\"pos2_members\":[],\"pos2_orders\":[],\"pos2_manual_j\":[],\"pos_users\":[{\"id\":\"browser-source\",\"username\":\"Browser 原店主\",\"role\":\"owner\",\"password\":\"synthetic-browser-credential\"}],\"pos_suppliers\":[],\"pos_purchases\":[],\"pos_promotions\":[],\"pos2_held_orders\":[],\"pos2_shifts\":[],\"pos2_cash_log\":[],\"pos2_waste\":[],\"pos2_topups\":[],\"pos_audit_log\":[],\"pos_business_settings\":[],\"pos_restaurant_orders\":[],\"pos_restaurant_operations\":[],\"pos_sales_documents\":[],\"pos_sales_operations\":[],\"pos_customer_entries\":[],\"pos_customer_operations\":[],\"pos_supplier_entries\":[],\"pos_supplier_operations\":[],\"pos_stock_cost_entries\":[],\"pos_stock_cost_operations\":[]}",
+          "contentSignature": "{\"pos2_cash_log\":[],\"pos2_held_orders\":[],\"pos2_manual_j\":[],\"pos2_members\":[],\"pos2_orders\":[],\"pos2_products\":[],\"pos2_shifts\":[],\"pos2_topups\":[],\"pos2_waste\":[],\"pos_audit_log\":[],\"pos_business_settings\":[],\"pos_customer_entries\":[],\"pos_customer_operations\":[],\"pos_promotions\":[],\"pos_purchases\":[],\"pos_restaurant_operations\":[],\"pos_restaurant_orders\":[],\"pos_sales_documents\":[],\"pos_sales_operations\":[],\"pos_stock_cost_entries\":[],\"pos_stock_cost_operations\":[],\"pos_supplier_entries\":[],\"pos_supplier_operations\":[],\"pos_suppliers\":[],\"pos_users\":[{\"id\":\"browser-source\",\"password\":\"synthetic-browser-credential\",\"role\":\"owner\",\"username\":\"Browser 原店主\"}]}"
+        },
+        {
+          "id": "sha256:c5ff933caa7e0c702514b1b15e297e797e414a5cae4eca1cb0fca16850b5438f",
+          "data": "{\"pos2_products\":[{\"id\":\"p\",\"name\":\"原文 Item\",\"category\":\"\",\"price\":100,\"cost\":20,\"stock\":100,\"barcode\":\"\",\"unit\":\"個\",\"noBarcode\":false,\"imageUrl\":\"\",\"expiryDate\":\"\",\"supplierId\":\"\",\"reorderLevel\":0,\"createdAt\":\"2026-10-16 19:58:50\",\"updatedAt\":\"2026-10-16 19:58:50\"}],\"pos2_members\":[],\"pos2_orders\":[],\"pos2_manual_j\":[],\"pos_users\":[{\"id\":\"browser-source\",\"username\":\"Browser 原店主\",\"role\":\"owner\",\"password\":\"synthetic-browser-credential\"}],\"pos_suppliers\":[],\"pos_purchases\":[],\"pos_promotions\":[],\"pos2_held_orders\":[],\"pos2_shifts\":[{\"id\":\"source-shift\",\"cashier\":\"Source 原店主\",\"cashierId\":\"\",\"openTime\":\"2026-10-16T11:58:50.887Z\",\"closeTime\":\"\",\"openCash\":100,\"closeCash\":0,\"expectedCash\":0,\"diff\":0,\"cashSales\":0,\"cardSales\":0,\"orderCount\":0,\"refundCount\":0,\"refundAmount\":0,\"note\":\"\",\"status\":\"open\"}],\"pos2_cash_log\":[{\"id\":\"browser-original-cash-59\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 59\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-58\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 58\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-57\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 57\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-56\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 56\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-55\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 55\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-54\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 54\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-53\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 53\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-52\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 52\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-51\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 51\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-50\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 50\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-49\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 49\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-48\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 48\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-47\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 47\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-46\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 46\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-45\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 45\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-44\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 44\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-43\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 43\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-42\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 42\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-41\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 41\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-40\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 40\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-39\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 39\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-38\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 38\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-37\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 37\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-36\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 36\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-35\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 35\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-34\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 34\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-33\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 33\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-32\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 32\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-31\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 31\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-30\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 30\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-29\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 29\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-28\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 28\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-27\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 27\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-26\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 26\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-25\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 25\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-24\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 24\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-23\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 23\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-22\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 22\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-21\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 21\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-20\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 20\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-19\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 19\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-18\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 18\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-17\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 17\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-16\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 16\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-15\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 15\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-14\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 14\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-13\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 13\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-12\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 12\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-11\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 11\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-10\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 10\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-9\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 9\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-8\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 8\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-7\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 7\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-6\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 6\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-5\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 5\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-4\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 4\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-3\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 3\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-2\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 2\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-1\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 1\",\"cashier\":\"Browser 原店主\"},{\"id\":\"browser-original-cash-0\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\",\"amount\":0.01,\"reason\":\"Browser original 0\",\"cashier\":\"Browser 原店主\"}],\"pos2_waste\":[],\"pos2_topups\":[],\"pos_audit_log\":[{\"id\":\"AL1792151942876p5z8\",\"timestamp\":\"2026-10-16T11:59:02.876Z\",\"action\":\"BACKUP_CREATE\",\"level\":\"info\",\"label\":\"建立備份\",\"userId\":\"browser-source\",\"username\":\"Browser 原店主\",\"role\":\"owner\",\"detail\":\"{\\\"label\\\":\\\"Before browser cash\\\"}\"}],\"pos_business_settings\":[{\"key\":\"browserEmpty\",\"value\":\"\\\"\\\"\"},{\"key\":\"browserFalse\",\"value\":\"false\"},{\"key\":\"browserJson\",\"value\":\"{\\\"zero\\\":0,\\\"flag\\\":false,\\\"nested\\\":[1,\\\"2\\\"]}\"},{\"key\":\"browserNumberText\",\"value\":\"\\\"001.20\\\"\"},{\"key\":\"browserZero\",\"value\":\"0\"},{\"key\":\"integrationToken\",\"value\":\"\\\"synthetic-source-credential\\\"\"},{\"key\":\"nativeEmpty\",\"value\":\"\\\"\\\"\"},{\"key\":\"nativeFalse\",\"value\":\"\\\"false\\\"\"},{\"key\":\"nativeJson\",\"value\":\"\\\" { \\\\\\\"zero\\\\\\\": 0, \\\\\\\"flag\\\\\\\": false, \\\\\\\"nested\\\\\\\": [1,\\\\\\\"2\\\\\\\"] } \\\"\"},{\"key\":\"nativeNumberText\",\"value\":\"\\\"001.20\\\"\"},{\"key\":\"nativeZero\",\"value\":\"\\\"0\\\"\"},{\"key\":\"restaurantConfig\",\"value\":\"\\\"{\\\\\\\"enabled\\\\\\\":false,\\\\\\\"dailyCapacity\\\\\\\":100,\\\\\\\"slotCapacity\\\\\\\":10,\\\\\\\"recipes\\\\\\\":{}}\\\"\"},{\"key\":\"sharedStoreId\",\"value\":\"\\\"cross-storage-shop\\\"\"}],\"pos_restaurant_orders\":[],\"pos_restaurant_operations\":[],\"pos_sales_documents\":[],\"pos_sales_operations\":[],\"pos_customer_entries\":[],\"pos_customer_operations\":[],\"pos_supplier_entries\":[],\"pos_supplier_operations\":[],\"pos_stock_cost_entries\":[],\"pos_stock_cost_operations\":[]}",
+          "contentSignature": "{\"pos2_cash_log\":[{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-59\",\"reason\":\"Browser original 59\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-58\",\"reason\":\"Browser original 58\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-57\",\"reason\":\"Browser original 57\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-56\",\"reason\":\"Browser original 56\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-55\",\"reason\":\"Browser original 55\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-54\",\"reason\":\"Browser original 54\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-53\",\"reason\":\"Browser original 53\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-52\",\"reason\":\"Browser original 52\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-51\",\"reason\":\"Browser original 51\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-50\",\"reason\":\"Browser original 50\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-49\",\"reason\":\"Browser original 49\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-48\",\"reason\":\"Browser original 48\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-47\",\"reason\":\"Browser original 47\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-46\",\"reason\":\"Browser original 46\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-45\",\"reason\":\"Browser original 45\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-44\",\"reason\":\"Browser original 44\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-43\",\"reason\":\"Browser original 43\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-42\",\"reason\":\"Browser original 42\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-41\",\"reason\":\"Browser original 41\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-40\",\"reason\":\"Browser original 40\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-39\",\"reason\":\"Browser original 39\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-38\",\"reason\":\"Browser original 38\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-37\",\"reason\":\"Browser original 37\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-36\",\"reason\":\"Browser original 36\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-35\",\"reason\":\"Browser original 35\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-34\",\"reason\":\"Browser original 34\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-33\",\"reason\":\"Browser original 33\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-32\",\"reason\":\"Browser original 32\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-31\",\"reason\":\"Browser original 31\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-30\",\"reason\":\"Browser original 30\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-29\",\"reason\":\"Browser original 29\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-28\",\"reason\":\"Browser original 28\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-27\",\"reason\":\"Browser original 27\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-26\",\"reason\":\"Browser original 26\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-25\",\"reason\":\"Browser original 25\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-24\",\"reason\":\"Browser original 24\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-23\",\"reason\":\"Browser original 23\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-22\",\"reason\":\"Browser original 22\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-21\",\"reason\":\"Browser original 21\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-20\",\"reason\":\"Browser original 20\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-19\",\"reason\":\"Browser original 19\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-18\",\"reason\":\"Browser original 18\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-17\",\"reason\":\"Browser original 17\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-16\",\"reason\":\"Browser original 16\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-15\",\"reason\":\"Browser original 15\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-14\",\"reason\":\"Browser original 14\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-13\",\"reason\":\"Browser original 13\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-12\",\"reason\":\"Browser original 12\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-11\",\"reason\":\"Browser original 11\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-10\",\"reason\":\"Browser original 10\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-9\",\"reason\":\"Browser original 9\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-8\",\"reason\":\"Browser original 8\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-7\",\"reason\":\"Browser original 7\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-6\",\"reason\":\"Browser original 6\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-5\",\"reason\":\"Browser original 5\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-4\",\"reason\":\"Browser original 4\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-3\",\"reason\":\"Browser original 3\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-2\",\"reason\":\"Browser original 2\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-1\",\"reason\":\"Browser original 1\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-0\",\"reason\":\"Browser original 0\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"}],\"pos2_held_orders\":[],\"pos2_manual_j\":[],\"pos2_members\":[],\"pos2_orders\":[],\"pos2_products\":[{\"barcode\":\"\",\"category\":\"\",\"cost\":20,\"createdAt\":\"2026-10-16 19:58:50\",\"expiryDate\":\"\",\"id\":\"p\",\"imageUrl\":\"\",\"name\":\"原文 Item\",\"noBarcode\":false,\"price\":100,\"reorderLevel\":0,\"stock\":100,\"supplierId\":\"\",\"unit\":\"個\",\"updatedAt\":\"2026-10-16 19:58:50\"}],\"pos2_shifts\":[{\"cardSales\":0,\"cashSales\":0,\"cashier\":\"Source 原店主\",\"cashierId\":\"\",\"closeCash\":0,\"closeTime\":\"\",\"diff\":0,\"expectedCash\":0,\"id\":\"source-shift\",\"note\":\"\",\"openCash\":100,\"openTime\":\"2026-10-16T11:58:50.887Z\",\"orderCount\":0,\"refundAmount\":0,\"refundCount\":0,\"status\":\"open\"}],\"pos2_topups\":[],\"pos2_waste\":[],\"pos_audit_log\":[{\"action\":\"BACKUP_CREATE\",\"detail\":\"{\\\"label\\\":\\\"Before browser cash\\\"}\",\"id\":\"AL1792151942876p5z8\",\"label\":\"建立備份\",\"level\":\"info\",\"role\":\"owner\",\"timestamp\":\"2026-10-16T11:59:02.876Z\",\"userId\":\"browser-source\",\"username\":\"Browser 原店主\"}],\"pos_business_settings\":[{\"key\":\"browserEmpty\",\"value\":\"\\\"\\\"\"},{\"key\":\"browserFalse\",\"value\":\"false\"},{\"key\":\"browserJson\",\"value\":\"{\\\"zero\\\":0,\\\"flag\\\":false,\\\"nested\\\":[1,\\\"2\\\"]}\"},{\"key\":\"browserNumberText\",\"value\":\"\\\"001.20\\\"\"},{\"key\":\"browserZero\",\"value\":\"0\"},{\"key\":\"integrationToken\",\"value\":\"\\\"synthetic-source-credential\\\"\"},{\"key\":\"nativeEmpty\",\"value\":\"\\\"\\\"\"},{\"key\":\"nativeFalse\",\"value\":\"\\\"false\\\"\"},{\"key\":\"nativeJson\",\"value\":\"\\\" { \\\\\\\"zero\\\\\\\": 0, \\\\\\\"flag\\\\\\\": false, \\\\\\\"nested\\\\\\\": [1,\\\\\\\"2\\\\\\\"] } \\\"\"},{\"key\":\"nativeNumberText\",\"value\":\"\\\"001.20\\\"\"},{\"key\":\"nativeZero\",\"value\":\"\\\"0\\\"\"},{\"key\":\"restaurantConfig\",\"value\":\"\\\"{\\\\\\\"enabled\\\\\\\":false,\\\\\\\"dailyCapacity\\\\\\\":100,\\\\\\\"slotCapacity\\\\\\\":10,\\\\\\\"recipes\\\\\\\":{}}\\\"\"},{\"key\":\"sharedStoreId\",\"value\":\"\\\"cross-storage-shop\\\"\"}],\"pos_customer_entries\":[],\"pos_customer_operations\":[],\"pos_promotions\":[],\"pos_purchases\":[],\"pos_restaurant_operations\":[],\"pos_restaurant_orders\":[],\"pos_sales_documents\":[],\"pos_sales_operations\":[],\"pos_stock_cost_entries\":[],\"pos_stock_cost_operations\":[],\"pos_supplier_entries\":[],\"pos_supplier_operations\":[],\"pos_suppliers\":[],\"pos_users\":[{\"id\":\"browser-source\",\"password\":\"synthetic-browser-credential\",\"role\":\"owner\",\"username\":\"Browser 原店主\"}]}"
+        }
+      ],
+      "snapshots": [
+        {
+          "id": "rescue-ecf1fcc8-78d9-4c90-b198-6095496c68c3",
+          "createdAt": "2026-10-16T11:59:02.870Z",
+          "actorId": "browser-source",
+          "storeId": "",
+          "afterMaterial": "{\"auditLog\":[],\"cashLog\":[],\"customerEntries\":[],\"customerOperations\":[],\"heldOrders\":[],\"manualJournal\":[],\"memberTopups\":[],\"members\":[],\"orders\":[],\"products\":[{\"barcode\":\"\",\"category\":\"\",\"cost\":20,\"createdAt\":\"2026-10-16 19:58:50\",\"expiryDate\":\"\",\"id\":\"p\",\"imageUrl\":\"\",\"name\":\"原文 Item\",\"noBarcode\":false,\"price\":100,\"reorderLevel\":0,\"stock\":100,\"supplierId\":\"\",\"unit\":\"個\",\"updatedAt\":\"2026-10-16 19:58:50\"}],\"promotions\":[],\"purchases\":[],\"restaurantOperations\":[],\"restaurantOrders\":[],\"salesDocuments\":[],\"salesOperations\":[],\"settings\":[{\"key\":\"browserEmpty\",\"value\":\"\\\"\\\"\"},{\"key\":\"browserFalse\",\"value\":\"false\"},{\"key\":\"browserJson\",\"value\":\"{\\\"zero\\\":0,\\\"flag\\\":false,\\\"nested\\\":[1,\\\"2\\\"]}\"},{\"key\":\"browserNumberText\",\"value\":\"\\\"001.20\\\"\"},{\"key\":\"browserZero\",\"value\":\"0\"},{\"key\":\"nativeEmpty\",\"value\":\"\\\"\\\"\"},{\"key\":\"nativeFalse\",\"value\":\"\\\"false\\\"\"},{\"key\":\"nativeJson\",\"value\":\"\\\" { \\\\\\\"zero\\\\\\\": 0, \\\\\\\"flag\\\\\\\": false, \\\\\\\"nested\\\\\\\": [1,\\\\\\\"2\\\\\\\"] } \\\"\"},{\"key\":\"nativeNumberText\",\"value\":\"\\\"001.20\\\"\"},{\"key\":\"nativeZero\",\"value\":\"\\\"0\\\"\"},{\"key\":\"restaurantConfig\",\"value\":\"\\\"{\\\\\\\"enabled\\\\\\\":false,\\\\\\\"dailyCapacity\\\\\\\":100,\\\\\\\"slotCapacity\\\\\\\":10,\\\\\\\"recipes\\\\\\\":{}}\\\"\"}],\"shifts\":[{\"cardSales\":0,\"cashSales\":0,\"cashier\":\"Source 原店主\",\"cashierId\":\"\",\"closeCash\":0,\"closeTime\":\"\",\"diff\":0,\"expectedCash\":0,\"id\":\"source-shift\",\"note\":\"\",\"openCash\":100,\"openTime\":\"2026-10-16T11:58:50.887Z\",\"orderCount\":0,\"refundAmount\":0,\"refundCount\":0,\"status\":\"open\"}],\"supplierEntries\":[],\"supplierOperations\":[],\"suppliers\":[],\"wasteLog\":[]}",
+          "operationId": "restore-8a8337ec-6209-4d6a-8f95-11dd97a35262",
+          "bookId": "sha256:7972ca005357133f5f3cafa09e0743d25f5fe11527cacc41470cb08f151d69f9"
+        },
+        {
+          "id": "rescue-099a4570-9f30-4630-8a83-9c93e42c811e",
+          "createdAt": "2026-10-16T11:59:02.919Z",
+          "actorId": "browser-source",
+          "storeId": "cross-storage-shop",
+          "afterMaterial": "{\"auditLog\":[],\"cashLog\":[],\"customerEntries\":[],\"customerOperations\":[],\"heldOrders\":[],\"manualJournal\":[],\"memberTopups\":[],\"members\":[],\"orders\":[],\"products\":[{\"barcode\":\"\",\"category\":\"\",\"cost\":20,\"createdAt\":\"2026-10-16 19:58:50\",\"expiryDate\":\"\",\"id\":\"p\",\"imageUrl\":\"\",\"name\":\"原文 Item\",\"noBarcode\":false,\"price\":100,\"reorderLevel\":0,\"stock\":100,\"supplierId\":\"\",\"unit\":\"個\",\"updatedAt\":\"2026-10-16 19:58:50\"}],\"promotions\":[],\"purchases\":[],\"restaurantOperations\":[],\"restaurantOrders\":[],\"salesDocuments\":[],\"salesOperations\":[],\"settings\":[{\"key\":\"browserEmpty\",\"value\":\"\\\"\\\"\"},{\"key\":\"browserFalse\",\"value\":\"false\"},{\"key\":\"browserJson\",\"value\":\"{\\\"zero\\\":0,\\\"flag\\\":false,\\\"nested\\\":[1,\\\"2\\\"]}\"},{\"key\":\"browserNumberText\",\"value\":\"\\\"001.20\\\"\"},{\"key\":\"browserZero\",\"value\":\"0\"},{\"key\":\"nativeEmpty\",\"value\":\"\\\"\\\"\"},{\"key\":\"nativeFalse\",\"value\":\"\\\"false\\\"\"},{\"key\":\"nativeJson\",\"value\":\"\\\" { \\\\\\\"zero\\\\\\\": 0, \\\\\\\"flag\\\\\\\": false, \\\\\\\"nested\\\\\\\": [1,\\\\\\\"2\\\\\\\"] } \\\"\"},{\"key\":\"nativeNumberText\",\"value\":\"\\\"001.20\\\"\"},{\"key\":\"nativeZero\",\"value\":\"\\\"0\\\"\"},{\"key\":\"restaurantConfig\",\"value\":\"\\\"{\\\\\\\"enabled\\\\\\\":false,\\\\\\\"dailyCapacity\\\\\\\":100,\\\\\\\"slotCapacity\\\\\\\":10,\\\\\\\"recipes\\\\\\\":{}}\\\"\"}],\"shifts\":[{\"cardSales\":0,\"cashSales\":0,\"cashier\":\"Source 原店主\",\"cashierId\":\"\",\"closeCash\":0,\"closeTime\":\"\",\"diff\":0,\"expectedCash\":0,\"id\":\"source-shift\",\"note\":\"\",\"openCash\":100,\"openTime\":\"2026-10-16T11:58:50.887Z\",\"orderCount\":0,\"refundAmount\":0,\"refundCount\":0,\"status\":\"open\"}],\"supplierEntries\":[],\"supplierOperations\":[],\"suppliers\":[],\"wasteLog\":[]}",
+          "operationId": "restore-538d4e71-00e1-44ef-aadc-5435a818c091",
+          "bookId": "sha256:c5ff933caa7e0c702514b1b15e297e797e414a5cae4eca1cb0fca16850b5438f"
+        }
+      ],
+      "originalIds": [
+        [
+          "addCashLog",
+          "browser-original-cash-0",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-1",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-10",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-11",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-12",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-13",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-14",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-15",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-16",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-17",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-18",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-19",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-2",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-20",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-21",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-22",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-23",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-24",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-25",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-26",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-27",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-28",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-29",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-3",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-30",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-31",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-32",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-33",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-34",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-35",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-36",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-37",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-38",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-39",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-4",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-40",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-41",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-42",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-43",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-44",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-45",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-46",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-47",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-48",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-49",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-5",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-50",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-51",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-52",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-53",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-54",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-55",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-56",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-57",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-58",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-59",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-6",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-7",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-8",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-9",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "openShift",
+          "source-shift",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ]
+      ],
+      "events": [
+        {
+          "id": "restore-538d4e71-00e1-44ef-aadc-5435a818c091",
+          "actorId": "browser-source",
+          "signature": "{\"kind\":\"restore-preview\",\"previewId\":\"restore-538d4e71-00e1-44ef-aadc-5435a818c091\"}",
+          "receipt": "{\"protocol\":\"pos-recovery-v1\",\"success\":true,\"id\":\"restore-538d4e71-00e1-44ef-aadc-5435a818c091\",\"sourceId\":\"rescue-099a4570-9f30-4630-8a83-9c93e42c811e\",\"revision\":\"64\",\"storeId\":\"cross-storage-shop\"}"
+        },
+        {
+          "id": "restore-8a8337ec-6209-4d6a-8f95-11dd97a35262",
+          "actorId": "browser-source",
+          "signature": "{\"kind\":\"restore-preview\",\"previewId\":\"restore-8a8337ec-6209-4d6a-8f95-11dd97a35262\"}",
+          "receipt": "{\"protocol\":\"pos-recovery-v1\",\"success\":true,\"id\":\"restore-8a8337ec-6209-4d6a-8f95-11dd97a35262\",\"sourceId\":\"rescue-ecf1fcc8-78d9-4c90-b198-6095496c68c3\",\"revision\":\"2\",\"storeId\":\"cross-storage-shop\"}"
+        }
+      ]
+    },
+    "checksum": "sha256:8e32bbd83dac6f59fc1e0636c6ab90a50c9387b6be086fecdc6b75b69e288741"
+  },
+  "requests": [
+    {
+      "id": "browser-original-cash-0",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 0",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-1",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 1",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-2",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 2",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-3",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 3",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-4",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 4",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-5",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 5",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-6",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 6",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-7",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 7",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-8",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 8",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-9",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 9",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-10",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 10",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-11",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 11",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-12",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 12",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-13",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 13",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-14",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 14",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-15",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 15",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-16",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 16",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-17",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 17",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-18",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 18",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-19",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 19",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-20",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 20",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-21",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 21",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-22",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 22",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-23",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 23",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-24",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 24",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-25",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 25",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-26",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 26",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-27",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 27",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-28",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 28",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-29",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 29",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-30",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 30",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-31",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 31",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-32",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 32",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-33",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 33",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-34",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 34",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-35",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 35",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-36",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 36",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-37",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 37",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-38",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 38",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-39",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 39",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-40",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 40",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-41",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 41",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-42",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 42",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-43",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 43",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-44",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 44",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-45",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 45",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-46",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 46",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-47",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 47",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-48",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 48",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-49",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 49",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-50",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 50",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-51",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 51",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-52",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 52",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-53",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 53",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-54",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 54",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-55",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 55",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-56",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 56",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-57",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 57",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-58",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 58",
+      "cashier": "Browser 原店主"
+    },
+    {
+      "id": "browser-original-cash-59",
+      "shiftId": "source-shift",
+      "time": "2026-10-16T04:02:00Z",
+      "type": "in",
+      "amount": 0.01,
+      "reason": "Browser original 59",
+      "cashier": "Browser 原店主"
+    }
+  ],
+  "receipts": [
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-0",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 0",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-1",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 1",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-2",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 2",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-3",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 3",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-4",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 4",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-5",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 5",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-6",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 6",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-7",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 7",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-8",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 8",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-9",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 9",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-10",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 10",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-11",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 11",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-12",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 12",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-13",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 13",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-14",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 14",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-15",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 15",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-16",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 16",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-17",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 17",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-18",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 18",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-19",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 19",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-20",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 20",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-21",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 21",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-22",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 22",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-23",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 23",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-24",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 24",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-25",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 25",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-26",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 26",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-27",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 27",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-28",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 28",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-29",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 29",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-30",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 30",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-31",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 31",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-32",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 32",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-33",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 33",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-34",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 34",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-35",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 35",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-36",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 36",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-37",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 37",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-38",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 38",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-39",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 39",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-40",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 40",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-41",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 41",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-42",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 42",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-43",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 43",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-44",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 44",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-45",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 45",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-46",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 46",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-47",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 47",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-48",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 48",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-49",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 49",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-50",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 50",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-51",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 51",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-52",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 52",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-53",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 53",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-54",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 54",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-55",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 55",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-56",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 56",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-57",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 57",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-58",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 58",
+        "cashier": "Browser 原店主"
+      }
+    },
+    {
+      "success": true,
+      "cashLog": {
+        "id": "browser-original-cash-59",
+        "shiftId": "source-shift",
+        "time": "2026-10-16T04:02:00Z",
+        "type": "in",
+        "amount": 0.01,
+        "reason": "Browser original 59",
+        "cashier": "Browser 原店主"
+      }
+    }
+  ],
+  "preview": {
+    "protocol": "pos-recovery-v1",
+    "id": "restore-538d4e71-00e1-44ef-aadc-5435a818c091",
+    "label": "Before browser cash",
+    "kind": "backup",
+    "backupId": "BK-c18936e9-3111-4443-9f5a-157a14393932",
+    "expectedRevision": "63",
+    "expiresAt": 1792152842917,
+    "storeId": "cross-storage-shop",
+    "originStoreId": "cross-storage-shop",
+    "current": {
+      "products": 1,
+      "orders": 0,
+      "salesDocuments": 0,
+      "salesPayments": 0,
+      "cashLogs": 60,
+      "purchases": 0,
+      "members": 0,
+      "customerEntries": 0,
+      "customerReceipts": 0,
+      "supplierEntries": 0,
+      "supplierPayments": 0,
+      "stockCostEntries": 0
+    },
+    "target": {
+      "products": 1,
+      "orders": 0,
+      "salesDocuments": 0,
+      "salesPayments": 0,
+      "cashLogs": 0,
+      "purchases": 0,
+      "members": 0,
+      "customerEntries": 0,
+      "customerReceipts": 0,
+      "supplierEntries": 0,
+      "supplierPayments": 0,
+      "stockCostEntries": 0
+    },
+    "protection": {
+      "legacy": false,
+      "snapshots": 1,
+      "originalIds": 0,
+      "receipts": 1
+    }
+  },
+  "receipt": {
+    "protocol": "pos-recovery-v1",
+    "success": true,
+    "id": "restore-538d4e71-00e1-44ef-aadc-5435a818c091",
+    "sourceId": "rescue-099a4570-9f30-4630-8a83-9c93e42c811e",
+    "revision": "64",
+    "storeId": "cross-storage-shop"
+  },
+  "record": {
+    "version": 1,
+    "revision": 64,
+    "data": {
+      "pos2_products": [
+        {
+          "id": "p",
+          "name": "原文 Item",
+          "category": "",
+          "price": 100,
+          "cost": 20,
+          "stock": 100,
+          "barcode": "",
+          "unit": "個",
+          "noBarcode": false,
+          "imageUrl": "",
+          "expiryDate": "",
+          "supplierId": "",
+          "reorderLevel": 0,
+          "createdAt": "2026-10-16 19:58:50",
+          "updatedAt": "2026-10-16 19:58:50"
+        }
+      ],
+      "pos2_members": [],
+      "pos2_orders": [],
+      "pos2_manual_j": [],
+      "pos_users": [
+        {
+          "id": "browser-source",
+          "username": "Browser 原店主",
+          "role": "owner",
+          "password": "synthetic-browser-credential"
+        }
+      ],
+      "pos_suppliers": [],
+      "pos_purchases": [],
+      "pos_promotions": [],
+      "pos2_held_orders": [],
+      "pos2_shifts": [
+        {
+          "id": "source-shift",
+          "cashier": "Source 原店主",
+          "cashierId": "",
+          "openTime": "2026-10-16T11:58:50.887Z",
+          "closeTime": "",
+          "openCash": 100,
+          "closeCash": 0,
+          "expectedCash": 0,
+          "diff": 0,
+          "cashSales": 0,
+          "cardSales": 0,
+          "orderCount": 0,
+          "refundCount": 0,
+          "refundAmount": 0,
+          "note": "",
+          "status": "open"
+        }
+      ],
+      "pos2_cash_log": [],
+      "pos2_waste": [],
+      "pos2_topups": [],
+      "pos_audit_log": [
+        {
+          "id": "AL1792151942876p5z8",
+          "timestamp": "2026-10-16T11:59:02.876Z",
+          "action": "BACKUP_CREATE",
+          "level": "info",
+          "label": "建立備份",
+          "userId": "browser-source",
+          "username": "Browser 原店主",
+          "role": "owner",
+          "detail": "{\"label\":\"Before browser cash\"}"
+        }
+      ],
+      "pos_business_settings": [
+        {
+          "key": "browserEmpty",
+          "value": "\"\""
+        },
+        {
+          "key": "browserFalse",
+          "value": "false"
+        },
+        {
+          "key": "browserJson",
+          "value": "{\"zero\":0,\"flag\":false,\"nested\":[1,\"2\"]}"
+        },
+        {
+          "key": "browserNumberText",
+          "value": "\"001.20\""
+        },
+        {
+          "key": "browserZero",
+          "value": "0"
+        },
+        {
+          "key": "integrationToken",
+          "value": "\"synthetic-source-credential\""
+        },
+        {
+          "key": "nativeEmpty",
+          "value": "\"\""
+        },
+        {
+          "key": "nativeFalse",
+          "value": "\"false\""
+        },
+        {
+          "key": "nativeJson",
+          "value": "\" { \\\"zero\\\": 0, \\\"flag\\\": false, \\\"nested\\\": [1,\\\"2\\\"] } \""
+        },
+        {
+          "key": "nativeNumberText",
+          "value": "\"001.20\""
+        },
+        {
+          "key": "nativeZero",
+          "value": "\"0\""
+        },
+        {
+          "key": "restaurantConfig",
+          "value": "\"{\\\"enabled\\\":false,\\\"dailyCapacity\\\":100,\\\"slotCapacity\\\":10,\\\"recipes\\\":{}}\""
+        },
+        {
+          "key": "sharedStoreId",
+          "value": "\"cross-storage-shop\""
+        }
+      ],
+      "pos_restaurant_orders": [],
+      "pos_restaurant_operations": [],
+      "pos_sales_documents": [],
+      "pos_sales_operations": [],
+      "pos_customer_entries": [],
+      "pos_customer_operations": [],
+      "pos_supplier_entries": [],
+      "pos_supplier_operations": [],
+      "pos_stock_cost_entries": [],
+      "pos_stock_cost_operations": []
+    },
+    "recovery": {
+      "version": 1,
+      "snapshots": [
+        {
+          "id": "rescue-ecf1fcc8-78d9-4c90-b198-6095496c68c3",
+          "createdAt": "2026-10-16T11:59:02.870Z",
+          "actorId": "browser-source",
+          "storeId": "",
+          "afterMaterial": "{\"auditLog\":[],\"cashLog\":[],\"customerEntries\":[],\"customerOperations\":[],\"heldOrders\":[],\"manualJournal\":[],\"memberTopups\":[],\"members\":[],\"orders\":[],\"products\":[{\"barcode\":\"\",\"category\":\"\",\"cost\":20,\"createdAt\":\"2026-10-16 19:58:50\",\"expiryDate\":\"\",\"id\":\"p\",\"imageUrl\":\"\",\"name\":\"原文 Item\",\"noBarcode\":false,\"price\":100,\"reorderLevel\":0,\"stock\":100,\"supplierId\":\"\",\"unit\":\"個\",\"updatedAt\":\"2026-10-16 19:58:50\"}],\"promotions\":[],\"purchases\":[],\"restaurantOperations\":[],\"restaurantOrders\":[],\"salesDocuments\":[],\"salesOperations\":[],\"settings\":[{\"key\":\"browserEmpty\",\"value\":\"\\\"\\\"\"},{\"key\":\"browserFalse\",\"value\":\"false\"},{\"key\":\"browserJson\",\"value\":\"{\\\"zero\\\":0,\\\"flag\\\":false,\\\"nested\\\":[1,\\\"2\\\"]}\"},{\"key\":\"browserNumberText\",\"value\":\"\\\"001.20\\\"\"},{\"key\":\"browserZero\",\"value\":\"0\"},{\"key\":\"nativeEmpty\",\"value\":\"\\\"\\\"\"},{\"key\":\"nativeFalse\",\"value\":\"\\\"false\\\"\"},{\"key\":\"nativeJson\",\"value\":\"\\\" { \\\\\\\"zero\\\\\\\": 0, \\\\\\\"flag\\\\\\\": false, \\\\\\\"nested\\\\\\\": [1,\\\\\\\"2\\\\\\\"] } \\\"\"},{\"key\":\"nativeNumberText\",\"value\":\"\\\"001.20\\\"\"},{\"key\":\"nativeZero\",\"value\":\"\\\"0\\\"\"},{\"key\":\"restaurantConfig\",\"value\":\"\\\"{\\\\\\\"enabled\\\\\\\":false,\\\\\\\"dailyCapacity\\\\\\\":100,\\\\\\\"slotCapacity\\\\\\\":10,\\\\\\\"recipes\\\\\\\":{}}\\\"\"}],\"shifts\":[{\"cardSales\":0,\"cashSales\":0,\"cashier\":\"Source 原店主\",\"cashierId\":\"\",\"closeCash\":0,\"closeTime\":\"\",\"diff\":0,\"expectedCash\":0,\"id\":\"source-shift\",\"note\":\"\",\"openCash\":100,\"openTime\":\"2026-10-16T11:58:50.887Z\",\"orderCount\":0,\"refundAmount\":0,\"refundCount\":0,\"status\":\"open\"}],\"supplierEntries\":[],\"supplierOperations\":[],\"suppliers\":[],\"wasteLog\":[]}",
+          "operationId": "restore-8a8337ec-6209-4d6a-8f95-11dd97a35262",
+          "data": {
+            "pos2_products": [],
+            "pos2_members": [],
+            "pos2_orders": [],
+            "pos2_manual_j": [],
+            "pos_users": [
+              {
+                "id": "browser-source",
+                "username": "Browser 原店主",
+                "role": "owner",
+                "password": "synthetic-browser-credential"
+              }
+            ],
+            "pos_suppliers": [],
+            "pos_purchases": [],
+            "pos_promotions": [],
+            "pos2_held_orders": [],
+            "pos2_shifts": [],
+            "pos2_cash_log": [],
+            "pos2_waste": [],
+            "pos2_topups": [],
+            "pos_audit_log": [],
+            "pos_business_settings": [],
+            "pos_restaurant_orders": [],
+            "pos_restaurant_operations": [],
+            "pos_sales_documents": [],
+            "pos_sales_operations": [],
+            "pos_customer_entries": [],
+            "pos_customer_operations": [],
+            "pos_supplier_entries": [],
+            "pos_supplier_operations": [],
+            "pos_stock_cost_entries": [],
+            "pos_stock_cost_operations": []
+          },
+          "contentSignature": "{\"pos2_cash_log\":[],\"pos2_held_orders\":[],\"pos2_manual_j\":[],\"pos2_members\":[],\"pos2_orders\":[],\"pos2_products\":[],\"pos2_shifts\":[],\"pos2_topups\":[],\"pos2_waste\":[],\"pos_audit_log\":[],\"pos_business_settings\":[],\"pos_customer_entries\":[],\"pos_customer_operations\":[],\"pos_promotions\":[],\"pos_purchases\":[],\"pos_restaurant_operations\":[],\"pos_restaurant_orders\":[],\"pos_sales_documents\":[],\"pos_sales_operations\":[],\"pos_stock_cost_entries\":[],\"pos_stock_cost_operations\":[],\"pos_supplier_entries\":[],\"pos_supplier_operations\":[],\"pos_suppliers\":[],\"pos_users\":[{\"id\":\"browser-source\",\"password\":\"synthetic-browser-credential\",\"role\":\"owner\",\"username\":\"Browser 原店主\"}]}"
+        },
+        {
+          "id": "rescue-099a4570-9f30-4630-8a83-9c93e42c811e",
+          "createdAt": "2026-10-16T11:59:02.919Z",
+          "actorId": "browser-source",
+          "storeId": "cross-storage-shop",
+          "afterMaterial": "{\"auditLog\":[],\"cashLog\":[],\"customerEntries\":[],\"customerOperations\":[],\"heldOrders\":[],\"manualJournal\":[],\"memberTopups\":[],\"members\":[],\"orders\":[],\"products\":[{\"barcode\":\"\",\"category\":\"\",\"cost\":20,\"createdAt\":\"2026-10-16 19:58:50\",\"expiryDate\":\"\",\"id\":\"p\",\"imageUrl\":\"\",\"name\":\"原文 Item\",\"noBarcode\":false,\"price\":100,\"reorderLevel\":0,\"stock\":100,\"supplierId\":\"\",\"unit\":\"個\",\"updatedAt\":\"2026-10-16 19:58:50\"}],\"promotions\":[],\"purchases\":[],\"restaurantOperations\":[],\"restaurantOrders\":[],\"salesDocuments\":[],\"salesOperations\":[],\"settings\":[{\"key\":\"browserEmpty\",\"value\":\"\\\"\\\"\"},{\"key\":\"browserFalse\",\"value\":\"false\"},{\"key\":\"browserJson\",\"value\":\"{\\\"zero\\\":0,\\\"flag\\\":false,\\\"nested\\\":[1,\\\"2\\\"]}\"},{\"key\":\"browserNumberText\",\"value\":\"\\\"001.20\\\"\"},{\"key\":\"browserZero\",\"value\":\"0\"},{\"key\":\"nativeEmpty\",\"value\":\"\\\"\\\"\"},{\"key\":\"nativeFalse\",\"value\":\"\\\"false\\\"\"},{\"key\":\"nativeJson\",\"value\":\"\\\" { \\\\\\\"zero\\\\\\\": 0, \\\\\\\"flag\\\\\\\": false, \\\\\\\"nested\\\\\\\": [1,\\\\\\\"2\\\\\\\"] } \\\"\"},{\"key\":\"nativeNumberText\",\"value\":\"\\\"001.20\\\"\"},{\"key\":\"nativeZero\",\"value\":\"\\\"0\\\"\"},{\"key\":\"restaurantConfig\",\"value\":\"\\\"{\\\\\\\"enabled\\\\\\\":false,\\\\\\\"dailyCapacity\\\\\\\":100,\\\\\\\"slotCapacity\\\\\\\":10,\\\\\\\"recipes\\\\\\\":{}}\\\"\"}],\"shifts\":[{\"cardSales\":0,\"cashSales\":0,\"cashier\":\"Source 原店主\",\"cashierId\":\"\",\"closeCash\":0,\"closeTime\":\"\",\"diff\":0,\"expectedCash\":0,\"id\":\"source-shift\",\"note\":\"\",\"openCash\":100,\"openTime\":\"2026-10-16T11:58:50.887Z\",\"orderCount\":0,\"refundAmount\":0,\"refundCount\":0,\"status\":\"open\"}],\"supplierEntries\":[],\"supplierOperations\":[],\"suppliers\":[],\"wasteLog\":[]}",
+          "operationId": "restore-538d4e71-00e1-44ef-aadc-5435a818c091",
+          "data": {
+            "pos2_products": [
+              {
+                "id": "p",
+                "name": "原文 Item",
+                "category": "",
+                "price": 100,
+                "cost": 20,
+                "stock": 100,
+                "barcode": "",
+                "unit": "個",
+                "noBarcode": false,
+                "imageUrl": "",
+                "expiryDate": "",
+                "supplierId": "",
+                "reorderLevel": 0,
+                "createdAt": "2026-10-16 19:58:50",
+                "updatedAt": "2026-10-16 19:58:50"
+              }
+            ],
+            "pos2_members": [],
+            "pos2_orders": [],
+            "pos2_manual_j": [],
+            "pos_users": [
+              {
+                "id": "browser-source",
+                "username": "Browser 原店主",
+                "role": "owner",
+                "password": "synthetic-browser-credential"
+              }
+            ],
+            "pos_suppliers": [],
+            "pos_purchases": [],
+            "pos_promotions": [],
+            "pos2_held_orders": [],
+            "pos2_shifts": [
+              {
+                "id": "source-shift",
+                "cashier": "Source 原店主",
+                "cashierId": "",
+                "openTime": "2026-10-16T11:58:50.887Z",
+                "closeTime": "",
+                "openCash": 100,
+                "closeCash": 0,
+                "expectedCash": 0,
+                "diff": 0,
+                "cashSales": 0,
+                "cardSales": 0,
+                "orderCount": 0,
+                "refundCount": 0,
+                "refundAmount": 0,
+                "note": "",
+                "status": "open"
+              }
+            ],
+            "pos2_cash_log": [
+              {
+                "id": "browser-original-cash-59",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 59",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-58",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 58",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-57",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 57",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-56",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 56",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-55",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 55",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-54",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 54",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-53",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 53",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-52",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 52",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-51",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 51",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-50",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 50",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-49",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 49",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-48",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 48",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-47",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 47",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-46",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 46",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-45",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 45",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-44",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 44",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-43",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 43",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-42",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 42",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-41",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 41",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-40",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 40",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-39",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 39",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-38",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 38",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-37",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 37",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-36",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 36",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-35",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 35",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-34",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 34",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-33",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 33",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-32",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 32",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-31",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 31",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-30",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 30",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-29",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 29",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-28",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 28",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-27",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 27",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-26",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 26",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-25",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 25",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-24",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 24",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-23",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 23",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-22",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 22",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-21",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 21",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-20",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 20",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-19",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 19",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-18",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 18",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-17",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 17",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-16",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 16",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-15",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 15",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-14",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 14",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-13",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 13",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-12",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 12",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-11",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 11",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-10",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 10",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-9",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 9",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-8",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 8",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-7",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 7",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-6",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 6",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-5",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 5",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-4",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 4",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-3",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 3",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-2",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 2",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-1",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 1",
+                "cashier": "Browser 原店主"
+              },
+              {
+                "id": "browser-original-cash-0",
+                "shiftId": "source-shift",
+                "time": "2026-10-16T04:02:00Z",
+                "type": "in",
+                "amount": 0.01,
+                "reason": "Browser original 0",
+                "cashier": "Browser 原店主"
+              }
+            ],
+            "pos2_waste": [],
+            "pos2_topups": [],
+            "pos_audit_log": [
+              {
+                "id": "AL1792151942876p5z8",
+                "timestamp": "2026-10-16T11:59:02.876Z",
+                "action": "BACKUP_CREATE",
+                "level": "info",
+                "label": "建立備份",
+                "userId": "browser-source",
+                "username": "Browser 原店主",
+                "role": "owner",
+                "detail": "{\"label\":\"Before browser cash\"}"
+              }
+            ],
+            "pos_business_settings": [
+              {
+                "key": "browserEmpty",
+                "value": "\"\""
+              },
+              {
+                "key": "browserFalse",
+                "value": "false"
+              },
+              {
+                "key": "browserJson",
+                "value": "{\"zero\":0,\"flag\":false,\"nested\":[1,\"2\"]}"
+              },
+              {
+                "key": "browserNumberText",
+                "value": "\"001.20\""
+              },
+              {
+                "key": "browserZero",
+                "value": "0"
+              },
+              {
+                "key": "integrationToken",
+                "value": "\"synthetic-source-credential\""
+              },
+              {
+                "key": "nativeEmpty",
+                "value": "\"\""
+              },
+              {
+                "key": "nativeFalse",
+                "value": "\"false\""
+              },
+              {
+                "key": "nativeJson",
+                "value": "\" { \\\"zero\\\": 0, \\\"flag\\\": false, \\\"nested\\\": [1,\\\"2\\\"] } \""
+              },
+              {
+                "key": "nativeNumberText",
+                "value": "\"001.20\""
+              },
+              {
+                "key": "nativeZero",
+                "value": "\"0\""
+              },
+              {
+                "key": "restaurantConfig",
+                "value": "\"{\\\"enabled\\\":false,\\\"dailyCapacity\\\":100,\\\"slotCapacity\\\":10,\\\"recipes\\\":{}}\""
+              },
+              {
+                "key": "sharedStoreId",
+                "value": "\"cross-storage-shop\""
+              }
+            ],
+            "pos_restaurant_orders": [],
+            "pos_restaurant_operations": [],
+            "pos_sales_documents": [],
+            "pos_sales_operations": [],
+            "pos_customer_entries": [],
+            "pos_customer_operations": [],
+            "pos_supplier_entries": [],
+            "pos_supplier_operations": [],
+            "pos_stock_cost_entries": [],
+            "pos_stock_cost_operations": []
+          },
+          "contentSignature": "{\"pos2_cash_log\":[{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-59\",\"reason\":\"Browser original 59\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-58\",\"reason\":\"Browser original 58\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-57\",\"reason\":\"Browser original 57\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-56\",\"reason\":\"Browser original 56\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-55\",\"reason\":\"Browser original 55\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-54\",\"reason\":\"Browser original 54\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-53\",\"reason\":\"Browser original 53\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-52\",\"reason\":\"Browser original 52\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-51\",\"reason\":\"Browser original 51\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-50\",\"reason\":\"Browser original 50\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-49\",\"reason\":\"Browser original 49\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-48\",\"reason\":\"Browser original 48\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-47\",\"reason\":\"Browser original 47\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-46\",\"reason\":\"Browser original 46\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-45\",\"reason\":\"Browser original 45\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-44\",\"reason\":\"Browser original 44\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-43\",\"reason\":\"Browser original 43\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-42\",\"reason\":\"Browser original 42\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-41\",\"reason\":\"Browser original 41\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-40\",\"reason\":\"Browser original 40\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-39\",\"reason\":\"Browser original 39\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-38\",\"reason\":\"Browser original 38\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-37\",\"reason\":\"Browser original 37\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-36\",\"reason\":\"Browser original 36\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-35\",\"reason\":\"Browser original 35\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-34\",\"reason\":\"Browser original 34\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-33\",\"reason\":\"Browser original 33\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-32\",\"reason\":\"Browser original 32\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-31\",\"reason\":\"Browser original 31\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-30\",\"reason\":\"Browser original 30\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-29\",\"reason\":\"Browser original 29\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-28\",\"reason\":\"Browser original 28\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-27\",\"reason\":\"Browser original 27\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-26\",\"reason\":\"Browser original 26\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-25\",\"reason\":\"Browser original 25\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-24\",\"reason\":\"Browser original 24\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-23\",\"reason\":\"Browser original 23\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-22\",\"reason\":\"Browser original 22\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-21\",\"reason\":\"Browser original 21\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-20\",\"reason\":\"Browser original 20\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-19\",\"reason\":\"Browser original 19\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-18\",\"reason\":\"Browser original 18\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-17\",\"reason\":\"Browser original 17\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-16\",\"reason\":\"Browser original 16\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-15\",\"reason\":\"Browser original 15\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-14\",\"reason\":\"Browser original 14\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-13\",\"reason\":\"Browser original 13\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-12\",\"reason\":\"Browser original 12\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-11\",\"reason\":\"Browser original 11\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-10\",\"reason\":\"Browser original 10\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-9\",\"reason\":\"Browser original 9\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-8\",\"reason\":\"Browser original 8\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-7\",\"reason\":\"Browser original 7\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-6\",\"reason\":\"Browser original 6\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-5\",\"reason\":\"Browser original 5\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-4\",\"reason\":\"Browser original 4\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-3\",\"reason\":\"Browser original 3\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-2\",\"reason\":\"Browser original 2\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-1\",\"reason\":\"Browser original 1\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"},{\"amount\":0.01,\"cashier\":\"Browser 原店主\",\"id\":\"browser-original-cash-0\",\"reason\":\"Browser original 0\",\"shiftId\":\"source-shift\",\"time\":\"2026-10-16T04:02:00Z\",\"type\":\"in\"}],\"pos2_held_orders\":[],\"pos2_manual_j\":[],\"pos2_members\":[],\"pos2_orders\":[],\"pos2_products\":[{\"barcode\":\"\",\"category\":\"\",\"cost\":20,\"createdAt\":\"2026-10-16 19:58:50\",\"expiryDate\":\"\",\"id\":\"p\",\"imageUrl\":\"\",\"name\":\"原文 Item\",\"noBarcode\":false,\"price\":100,\"reorderLevel\":0,\"stock\":100,\"supplierId\":\"\",\"unit\":\"個\",\"updatedAt\":\"2026-10-16 19:58:50\"}],\"pos2_shifts\":[{\"cardSales\":0,\"cashSales\":0,\"cashier\":\"Source 原店主\",\"cashierId\":\"\",\"closeCash\":0,\"closeTime\":\"\",\"diff\":0,\"expectedCash\":0,\"id\":\"source-shift\",\"note\":\"\",\"openCash\":100,\"openTime\":\"2026-10-16T11:58:50.887Z\",\"orderCount\":0,\"refundAmount\":0,\"refundCount\":0,\"status\":\"open\"}],\"pos2_topups\":[],\"pos2_waste\":[],\"pos_audit_log\":[{\"action\":\"BACKUP_CREATE\",\"detail\":\"{\\\"label\\\":\\\"Before browser cash\\\"}\",\"id\":\"AL1792151942876p5z8\",\"label\":\"建立備份\",\"level\":\"info\",\"role\":\"owner\",\"timestamp\":\"2026-10-16T11:59:02.876Z\",\"userId\":\"browser-source\",\"username\":\"Browser 原店主\"}],\"pos_business_settings\":[{\"key\":\"browserEmpty\",\"value\":\"\\\"\\\"\"},{\"key\":\"browserFalse\",\"value\":\"false\"},{\"key\":\"browserJson\",\"value\":\"{\\\"zero\\\":0,\\\"flag\\\":false,\\\"nested\\\":[1,\\\"2\\\"]}\"},{\"key\":\"browserNumberText\",\"value\":\"\\\"001.20\\\"\"},{\"key\":\"browserZero\",\"value\":\"0\"},{\"key\":\"integrationToken\",\"value\":\"\\\"synthetic-source-credential\\\"\"},{\"key\":\"nativeEmpty\",\"value\":\"\\\"\\\"\"},{\"key\":\"nativeFalse\",\"value\":\"\\\"false\\\"\"},{\"key\":\"nativeJson\",\"value\":\"\\\" { \\\\\\\"zero\\\\\\\": 0, \\\\\\\"flag\\\\\\\": false, \\\\\\\"nested\\\\\\\": [1,\\\\\\\"2\\\\\\\"] } \\\"\"},{\"key\":\"nativeNumberText\",\"value\":\"\\\"001.20\\\"\"},{\"key\":\"nativeZero\",\"value\":\"\\\"0\\\"\"},{\"key\":\"restaurantConfig\",\"value\":\"\\\"{\\\\\\\"enabled\\\\\\\":false,\\\\\\\"dailyCapacity\\\\\\\":100,\\\\\\\"slotCapacity\\\\\\\":10,\\\\\\\"recipes\\\\\\\":{}}\\\"\"},{\"key\":\"sharedStoreId\",\"value\":\"\\\"cross-storage-shop\\\"\"}],\"pos_customer_entries\":[],\"pos_customer_operations\":[],\"pos_promotions\":[],\"pos_purchases\":[],\"pos_restaurant_operations\":[],\"pos_restaurant_orders\":[],\"pos_sales_documents\":[],\"pos_sales_operations\":[],\"pos_stock_cost_entries\":[],\"pos_stock_cost_operations\":[],\"pos_supplier_entries\":[],\"pos_supplier_operations\":[],\"pos_suppliers\":[],\"pos_users\":[{\"id\":\"browser-source\",\"password\":\"synthetic-browser-credential\",\"role\":\"owner\",\"username\":\"Browser 原店主\"}]}"
+        }
+      ],
+      "originalIds": [
+        [
+          "addCashLog",
+          "browser-original-cash-0",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-1",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-10",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-11",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-12",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-13",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-14",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-15",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-16",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-17",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-18",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-19",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-2",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-20",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-21",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-22",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-23",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-24",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-25",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-26",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-27",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-28",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-29",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-3",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-30",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-31",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-32",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-33",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-34",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-35",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-36",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-37",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-38",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-39",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-4",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-40",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-41",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-42",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-43",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-44",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-45",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-46",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-47",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-48",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-49",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-5",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-50",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-51",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-52",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-53",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-54",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-55",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-56",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-57",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-58",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-59",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-6",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-7",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-8",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "addCashLog",
+          "browser-original-cash-9",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ],
+        [
+          "openShift",
+          "source-shift",
+          "rescue-099a4570-9f30-4630-8a83-9c93e42c811e"
+        ]
+      ],
+      "events": [
+        {
+          "id": "restore-538d4e71-00e1-44ef-aadc-5435a818c091",
+          "actorId": "browser-source",
+          "signature": "{\"kind\":\"restore-preview\",\"previewId\":\"restore-538d4e71-00e1-44ef-aadc-5435a818c091\"}",
+          "receipt": {
+            "protocol": "pos-recovery-v1",
+            "success": true,
+            "id": "restore-538d4e71-00e1-44ef-aadc-5435a818c091",
+            "sourceId": "rescue-099a4570-9f30-4630-8a83-9c93e42c811e",
+            "revision": "64",
+            "storeId": "cross-storage-shop"
+          }
+        },
+        {
+          "id": "restore-8a8337ec-6209-4d6a-8f95-11dd97a35262",
+          "actorId": "browser-source",
+          "signature": "{\"kind\":\"restore-preview\",\"previewId\":\"restore-8a8337ec-6209-4d6a-8f95-11dd97a35262\"}",
+          "receipt": {
+            "protocol": "pos-recovery-v1",
+            "success": true,
+            "id": "restore-8a8337ec-6209-4d6a-8f95-11dd97a35262",
+            "sourceId": "rescue-ecf1fcc8-78d9-4c90-b198-6095496c68c3",
+            "revision": "2",
+            "storeId": "cross-storage-shop"
+          }
+        }
+      ]
+    },
+    "salesEpoch": "a7c3e0bb-279e-4fa6-97e5-fa7d3f95cf6f"
+  },
+  "foreignError": "請選擇瀏覽器版匯出的備份"
+}

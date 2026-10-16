@@ -312,14 +312,13 @@ export function importBackupFile(file,session) {
     const reader=new FileReader()
     reader.onload=async e=>{
       try{
-        const packet=JSON.parse(e.target.result),data=packet?.format?packet:packet?.data,storage=packet?.storage
-        if(!data||typeof data!=='object')throw new Error('備份格式錯誤')
+        const packet=JSON.parse(e.target.result),data=packet?.format?packet:packet?.data??packet
+        if(!data||typeof data!=='object'||Array.isArray(data))throw new Error('備份格式錯誤')
         const complete=data.format===FULL_BACKUP_FORMAT
         if(data.format&&!complete)throw Error('備份保護紀錄不完整或內容不同，請保留原檔核對')
-        if(isElectron){
-          if((!complete&&!Array.isArray(data.products))||storage==='browser')throw new Error('請選擇桌面版匯出的備份')
-        }else{
-          if((!complete&&!Array.isArray(data.pos2_products))||storage==='sqlite')throw new Error('請選擇瀏覽器版匯出的備份')
+        if(!complete){
+          const {detectBookStorage}=await import('../../electron/storageConversion.mjs'),origin=detectBookStorage(data)
+          if(packet?.data&&packet.storage!==undefined&&packet.storage!==origin)throw Error('備份來源格式需要核對，請保留原檔')
         }
         resolve(await previewRestore({kind:'import',data},session))
       }catch(error){reject(error)}

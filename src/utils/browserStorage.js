@@ -21,6 +21,7 @@ import {retainRecoveryFeatures} from '../../electron/recoveryBook.mjs'
 import {appendPhysicalStocktakeBook} from '../../electron/physicalStocktakeCommit.mjs'
 import {appendBrowserStockBusiness} from '../../electron/browserStockCommit.mjs'
 import {STOCK_BOOK_HEAD} from '../../electron/stockBookAnchor.mjs'
+import {validateSettingRows,updateBrowserSettings} from '../../electron/settingEncoding.mjs'
 export const RECORD_KEY = 'pos_atomic_records_v1'
 export const DATA_KEYS = ['pos2_products','pos2_members','pos2_orders','pos2_manual_j',
   'pos_users','pos_suppliers','pos_purchases','pos_promotions','pos2_held_orders',
@@ -50,6 +51,8 @@ export function readRecords() {
     for (const key of DATA_KEYS) validArray(record.data[key])
     if(Object.keys(record.data).some(key=>!keys.has(key)))throw Error('備份含有目前版本不支援的資料，請保留原檔並使用相容版本')
     recoveryMetadata(record)
+    validateSettingRows(record.data.pos_business_settings,'browser')
+    if(record.data.pos_business_settings.some(row=>row.encoding)&&![2,3].includes(record.recovery?.version))throw Error('復原保護索引損壞，請保留原資料核對')
     validateBrowserProtection(record)
     validateStockCostBook(browserToBook(record.data))
     return record
@@ -66,7 +69,7 @@ export function readRecords() {
 }
 export function recoveryMetadata(record=readRecords()){
   const value=record.recovery??{version:1,snapshots:[],originalIds:[],events:[]}
-  if(value.version!==1||!Array.isArray(value.snapshots)||!Array.isArray(value.originalIds)||!Array.isArray(value.events)
+  if(![1,2,3].includes(value.version)||!Array.isArray(value.snapshots)||!Array.isArray(value.originalIds)||!Array.isArray(value.events)
     ||value.snapshots.some(s=>typeof s.id!=='string'||!s.data||typeof s.contentSignature!=='string'||typeof s.afterMaterial!=='string')
     ||value.originalIds.some(row=>!Array.isArray(row)||row.length!==3||row.some(v=>typeof v!=='string'))
     ||value.events.some(row=>typeof row.id!=='string'||typeof row.signature!=='string'||!row.receipt))throw Error('復原保護索引損壞，請保留原資料核對')
@@ -117,7 +120,7 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
     const originalIds=operationRecords(before).map(row=>[row.method,row.id,snapshotId])
     const receipt=recoveryCommand?{protocol:RECOVERY_PROTOCOL,success:true,id:recoveryCommand.id,sourceId:snapshotId,revision:String(next.revision),storeId:recoveryStoreId(target),
       ...(recoveryCommand.restoredSourceId?{restoredSourceId:recoveryCommand.restoredSourceId,originalOperationId:recoveryCommand.originalOperationId}:{})}:null
-    next.recovery={version:1,snapshots:[...protection.snapshots,snapshot],originalIds:[...protection.originalIds,...originalIds],
+    next.recovery={version:protection.version===3||transfer?.features?.includes('record-shapes-v1')?3:protection.version===2||transfer?.features?.includes('cross-storage-v1')?2:1,snapshots:[...protection.snapshots,snapshot],originalIds:[...protection.originalIds,...originalIds],
       events:[...protection.events,...(receipt?[{id:recoveryCommand.id,actorId:recoveryCommand.actorId,signature:recoveryCommand.signature,receipt}]:[])]}
     if(transfer?.protection)next.recovery=browserProtectionMetadata(mergeRecoveryGraphs(browserProtectionGraph(next),transfer.protection,'browser'))
   }else if(protection.originalIds.length){
@@ -139,6 +142,8 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
   const rawConfig=next.data.pos_business_settings.find(s=>s.key==='restaurantConfig')?.value
   readRestaurantConfig(rawConfig==null?null:JSON.parse(rawConfig),next.data.pos2_products)
   validateStockCostBook(browserToBook(next.data))
+  validateSettingRows(next.data.pos_business_settings,'browser')
+  if(next.data.pos_business_settings.some(row=>row.encoding)&&![2,3].includes(next.recovery?.version))throw Error('復原保護索引損壞，請保留原資料核對')
   validateBrowserProtection(next)
   // setItem is atomic: quota/security failure keeps the previous complete record.
   nativeStorage().setItem(RECORD_KEY, JSON.stringify(next))
@@ -156,7 +161,10 @@ export const browserStorage = {
   setItem(key, value) {if(key.startsWith(SETTINGS_PREFIX)){writeBusinessSettings({[key.slice(SETTINGS_PREFIX.length)]:value});return}if (keys.has(key)) writeRecords({[key]:validArray(JSON.parse(value))}); else nativeStorage().setItem(key,value) },
   removeItem(key) {if(key.startsWith(SETTINGS_PREFIX)){writeRecords({pos_business_settings:readRecords().data.pos_business_settings.filter(s=>s.key!==key.slice(SETTINGS_PREFIX.length))});return}if (keys.has(key)) writeRecords({[key]:[]}); else nativeStorage().removeItem(key) },
 }
-export function writeBusinessSettings(values){const current=readRecords();const data=new Map(current.data.pos_business_settings.map(s=>[s.key,s.value]));for(const [key,value]of Object.entries(values))data.set(key,String(value));return writeRecords({pos_business_settings:[...data].map(([key,value])=>({key,value}))},current.revision)}
+export function writeBusinessSettings(values){
+ const current=readRecords()
+ return writeRecords({pos_business_settings:updateBrowserSettings(current.data.pos_business_settings,values)},current.revision)
+}
 export async function withSalesLock(action) {
   if (!globalThis.navigator?.locks?.request)
     throw new Error('此瀏覽器缺少安全交易鎖。請使用新版瀏覽器的 HTTPS／localhost，或桌面版。')

@@ -4,7 +4,7 @@ module.exports=function restaurantOperations(db,stmts,readOrder,orderInsertParam
   const readEntries=()=>db.prepare("SELECT data FROM restaurant_orders ORDER BY json_extract(data,'$.createdAt') DESC,id DESC").all().map(r=>JSON.parse(r.data))
   const readOperations=()=>db.prepare('SELECT data FROM restaurant_operations ORDER BY id').all().map(r=>JSON.parse(r.data))
   function read(){
-    const data={products:stmts.getAllProducts.all().map(p=>({...p,noBarcode:!!p.noBarcode})),entries:readEntries(),operations:readOperations(),orders:stmts.getAllOrders.all().map(o=>readOrder(o.id)),waste:db.prepare('SELECT * FROM waste_log').all(),shifts:db.prepare('SELECT * FROM shifts').all(),settings:Object.fromEntries(stmts.getAllSettings.all().map(s=>[s.key,s.value]))}
+    const data={products:stmts.getAllProducts.all().map(p=>({...p,noBarcode:!!p.noBarcode})),entries:readEntries(),operations:readOperations(),orders:stmts.getAllOrders.all().map(o=>readOrder(o.id)),waste:db.prepare('SELECT * FROM waste_log').all(),shifts:db.prepare('SELECT * FROM shifts').all(),settings:Object.fromEntries(stmts.getAllSettings.all().map(s=>[s.key,require('./settingEncoding.mjs').nativeSettingText(s)]))}
     data.config=readRestaurantConfig(data.settings.restaurantConfig,data.products)
     validateRestaurantRecords(data.entries,data.operations,data.orders,data.products)
     return data
