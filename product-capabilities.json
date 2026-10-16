@@ -125,9 +125,9 @@
     {
       "id": "procurement.approvals-advances",
       "name": "採購核准、預付貨款與多單核銷",
-      "status": "planned",
-      "implementation": "partial",
-      "nextExperiment": "設計小店預設簡單、企業可選雙人核准及預付分攤"
+      "status": "unmeasured",
+      "implementation": "available",
+      "nextExperiment": "讓真實店家無口頭提示完成預付、跨單抵付、退款與另一帳號核准；另驗收實體設備、實際安裝移除及更多舊版升級"
     },
     {
       "id": "inventory.movements-costing",
