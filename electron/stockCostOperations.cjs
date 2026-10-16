@@ -7,6 +7,16 @@ module.exports=function stockCostOperations(db,api,store){
  const owner=actor=>{const user=actor?.userId&&api.getUsers().find(row=>row.id===actor.userId);if(actor?.role!=='owner'||user?.role!=='owner'||user.username!==actor.username)throw Error('權限不足');return actor}
  function current(){const state=store.read();if(state.projection){if(!store.matchesEpoch(state))throw stockLedgerError('HISTORY');assertStockCustodyMatchesBook(state.projection.custody,api.getProducts(),api.getRestaurantState().entries)}return state}
  return {
+  getStockHistory(input,actor){
+   owner(actor);require('./stockHistory.mjs').stockHistoryQuery(input)
+   return db.transaction(()=>{
+    owner(actor);const spans=[],state=store.read((sequence,start,end)=>spans.push({sequence,start,end})),book=api.exportData()
+    if(state.projection&&!store.matchesEpoch(state))throw stockLedgerError('HISTORY')
+    require('./stockBackup.mjs').validateStockCostBook(book,state)
+    const epoch=db.prepare('SELECT value FROM sales_runtime WHERE id=?').get('epoch')?.value||null
+    return require('./stockHistory.mjs').makeStockHistory(input,{book,state,spans,epoch})
+   })()
+  },
   getStockSalesState(actor){
    const verify=()=>{const user=actor?.userId&&api.getUsers().find(row=>row.id===actor.userId);if(!user||!['owner','staff'].includes(user.role)||actor.role!==user.role||actor.username!==user.username)throw Error('權限不足');return user.role}
    verify()

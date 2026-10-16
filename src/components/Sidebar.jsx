@@ -25,6 +25,7 @@ const NAV = [
   { key:'waste',      label:'損耗管理', Icon:Trash2,          perm:'inventory.view', accent:'red' },
   { key:'stocktake',  label:'每日盤點', Icon:ClipboardList,   perm:'stocktake.view', accent:'amber' },
   { key:'stocksetup',label:'核對庫存成本',Icon:Package,perm:'inventory.cost',accent:'blue',needsStockSetup:true },
+  { key:'stockhistory',label:'庫存去哪了',Icon:Package,perm:'inventory.cost',accent:'blue' },
   { key:'promotions', label:'促銷活動', Icon:Tag,             perm:'promotions.view', accent:'pink' },
   { key:'members',    label:'會員',     Icon:Users,           perm:'members.view', accent:'gold' },
   { key:'reports',    label:'報表分析', Icon:BarChart2,       perm:'reports.view', accent:'blue' },

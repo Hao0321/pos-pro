@@ -72,6 +72,7 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(method==='db:previewRefund')return db.previewRefund(args[0],actor)
     if(method==='db:exportRecoveryDiagnostics')return db.exportRecoveryDiagnostics(actor)
     if(method==='db:getStockAccountingState')return db.getStockAccountingState(actor)
+    if(method==='db:getStockHistory')return db.getStockHistory(args[0],actor)
     if(method==='db:getStockSalesState')return db.getStockSalesState(actor)
     if(method==='db:applySalesOperation')return db.applySalesOperation(args[0],actor)
     if(method==='db:applyCustomerLedgerOperation')return db.applyCustomerLedgerOperation(args[0],actor)

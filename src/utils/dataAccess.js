@@ -21,6 +21,7 @@ export async function previewStockSetup(input,actor){return isElectron?window.el
 export async function applyStockSetupOperation(input,actor){return isElectron?window.electronAPI.db.applyStockSetupOperation(input):(await import('./browserStockSetup')).commitBrowserStockSetup(input,actor)}
 export async function loadStockAccountingState(actor){return isElectron?window.electronAPI.db.getStockAccountingState():(await import('./browserStockReports')).getBrowserStockAccountingState(actor)}
 export async function loadStockSalesState(actor){return isElectron?window.electronAPI.db.getStockSalesState():(await import('./browserStockReports')).getBrowserStockSalesState(actor)}
+export async function loadStockHistory(input,actor){return isElectron?window.electronAPI.db.getStockHistory(input):(await import('./browserStockHistory')).getBrowserStockHistory(input,actor)}
 export async function applyInventoryOperation(request,actor){return isElectron?window.electronAPI.db.applyInventoryOperation(request):commitBrowserInventory(request,actor)}
 export async function loadStocktakeState(actor){return isElectron?window.electronAPI.db.getStocktakeState():getBrowserStocktakeState(actor)}
 export async function loadRefundContext(actor){return isElectron?window.electronAPI.db.getRefundContext():getBrowserRefundContext(actor)}

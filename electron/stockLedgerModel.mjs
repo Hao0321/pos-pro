@@ -30,7 +30,7 @@ export function stockLedgerAcknowledgement(body,hash,projection){
  const method=body.method||STOCK_COST_METHOD,common={protocol:STOCK_LEDGER_PROTOCOL,success:true,id:body.input.id,eventId:body.id,eventHash:hash,stateDigest:body.afterDigest,sequence:body.sequence}
  return method===STOCK_COST_METHOD?{...common,valuation:costCustodySummary(projection.custody)}:{...common,sourceMethod:method}
 }
-export function replayStockLedger(rawEntries=[],rawOperations=[],digest=stockLedgerDigest){
+export function replayStockLedger(rawEntries=[],rawOperations=[],digest=stockLedgerDigest,observe=null){
  try{
   if(!Array.isArray(rawEntries)||!Array.isArray(rawOperations)||rawEntries.length!==rawOperations.length)throw stockLedgerError('HISTORY')
   const entries=structuredClone(rawEntries).sort((a,b)=>a.sequence-b.sequence),operations=structuredClone(rawOperations).sort((a,b)=>a.id.localeCompare(b.id)),operationMap=new Map(operations.map(row=>[row.id,row]))
@@ -43,6 +43,8 @@ export function replayStockLedger(rawEntries=[],rawOperations=[],digest=stockLed
    if(body.afterDigest!==digest(next))throw stockLedgerError('HISTORY')
    const operation=operationMap.get(canonicalSignature([method,body.input.id])),expectedReceipt=stockLedgerAcknowledgement(body,hash,next)
    if(!operation||operation.method!==method||operation.operationId!==body.input.id||operation.actorId!==body.actor.userId||operation.signature!==canonicalSignature(body.input)||canonicalSignature(operation.receipt)!==canonicalSignature(expectedReceipt))throw stockLedgerError('HISTORY')
+   // SH2: primitive journal bounds cannot let a reader mutate verified history.
+   if(observe)observe(body.sequence,projection?.journals.length||0,next.journals.length)
    projection=next;previousHash=hash
   }
   return {entries,operations,projection,head:previousHash,stateDigest:digest(projection),valuation:projection?costCustodySummary(projection.custody):null}

@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   db: {
     getStockAccountingState:()=>ipcRenderer.invoke('db:getStockAccountingState'),
     getStockSalesState:()=>ipcRenderer.invoke('db:getStockSalesState'),
+    getStockHistory:input=>ipcRenderer.invoke('db:getStockHistory',input),
     getAgentContext:()=>ipcRenderer.invoke('db:getAgentContext'),
     getExchangeContext:()=>ipcRenderer.invoke('db:getExchangeContext'),
     applyExchangeOperation:input=>ipcRenderer.invoke('db:applyExchangeOperation',input),

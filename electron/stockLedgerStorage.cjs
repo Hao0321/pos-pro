@@ -44,9 +44,9 @@ module.exports=function stockLedgerStorage(db){
   }
  }
  const rows=table=>db.prepare('SELECT * FROM '+table+' ORDER BY id').all().map(row=>{const data=JSON.parse(row.data);if(row.id!==data.id||table==='stock_cost_entries'&&row.sequence!==data.sequence)throw stockLedgerError('HISTORY');return data})
- function read(){
+ function read(observe=null){
   try{
-   const state=replayStockLedger(rows('stock_cost_entries'),rows('stock_cost_operations'),digest)
+   const state=replayStockLedger(rows('stock_cost_entries'),rows('stock_cost_operations'),digest,observe)
    const anchor=db.prepare('SELECT key,value FROM settings WHERE key=?').get(STOCK_BOOK_HEAD)
    assertStockBookHead({settings:anchor?[anchor]:[]},state)
    return state

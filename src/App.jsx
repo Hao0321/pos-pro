@@ -13,6 +13,7 @@ import InventoryPage from './pages/InventoryPage'
 import MembersPage from './pages/MembersPage'
 const RefundPage=lazy(()=>import('./pages/RefundPage'))
 const StockSetupPage=lazy(()=>import('./pages/StockSetupPage'))
+const StockHistoryPage=lazy(()=>import('./pages/StockHistoryPage'))
 const ReportsPage=lazy(()=>import('./pages/ReportsPage'))
 import AccountingPage from './pages/AccountingPage'
 import PurchasePage from './pages/PurchasePage'
@@ -132,7 +133,7 @@ export default function App() {
   const NAV_LABELS = {
     recovery:'資料復原',dashboard:'首頁',overview:'營運總覽',quick:'快速建單', pos:'收銀台',restaurant:'預訂出餐', shifts:'班別交班', readiness:'營業前檢查',devices:'共用店面',
     inventory:'庫存管理', purchase:'進貨管理',suppliers:'供應商與預付款',exchange:'報價與價目表',sales:'銷售與應收',customers:'客戶與款項', waste:'損耗管理',
-    stocktake:'每日盤點', promotions:'促銷活動', members:'會員',
+    stocktake:'每日盤點', stockhistory:'庫存去哪了', promotions:'促銷活動', members:'會員',
     reports:'報表分析', accounting:'會計帳務', orders:'顧客點餐', settings:'設定', scenarios:'情境模板',
   }
 
@@ -199,6 +200,7 @@ export default function App() {
           {view === 'purchase'   && can('purchase.view')   && <PurchasePage   store={store} session={session}/>}
           {view === 'stocktake'  && can('stocktake.view')  && <StocktakePage  store={store} session={session}/>}
           {view === 'stocksetup' && can('inventory.cost') && (store.stockSetupEnabled||store.financialState.kind==='stock-cost') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><StockSetupPage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
+          {view === 'stockhistory' && can('inventory.cost') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><StockHistoryPage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
           {view === 'promotions' && can('promotions.view') && <PromotionsPage store={store} session={session}/>}
           {view === 'orders'     && can('pos.use')         && <OrdersPage />}
           {view === 'settings'   && can('settings.view')   && <SettingsPage   session={session} onLogout={handleLogout} store={store}/>}

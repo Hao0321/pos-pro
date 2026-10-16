@@ -28,6 +28,7 @@ if(sharedStoreMode&&!window.electronAPI){
   db.getSalesState=()=>rpc('db:getSalesState')
   db.getStockAccountingState=()=>rpc('db:getStockAccountingState')
   db.getStockSalesState=()=>rpc('db:getStockSalesState')
+  db.getStockHistory=input=>rpc('db:getStockHistory',input)
   db.exportFullBackup=()=>rpc('db:exportFullBackup')
   db.getProtectedBackups=()=>rpc('db:getProtectedBackups')
   db.getStocktakeState=()=>rpc('db:getStocktakeState')
