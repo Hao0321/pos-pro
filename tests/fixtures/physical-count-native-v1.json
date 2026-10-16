@@ -1,0 +1,325 @@
+{
+  "provenance": {
+    "kind": "synthetic actual closed native SQLite book before physical count",
+    "sourceRevision": "288ab7cf460b18784e3e4410fced216d3e612988",
+    "baselineMarker": "POS_PHYSICAL_BASELINE_CAPTURED",
+    "closedSourceSha256": "0cec7811f0c7ca28314180e7b72aed7330f61cff7de7cb2c30402622001841d4",
+    "canonicalBookSha256": "c13272c14eb88e92eee160f9b41da1ca9171793d8d619160b623179498c2ed69",
+    "realMerchantData": false
+  },
+  "book": {
+    "products": [
+      {
+        "id": "p",
+        "name": "Rice 原文",
+        "category": "",
+        "price": 100,
+        "cost": 20,
+        "stock": 7,
+        "barcode": "",
+        "unit": "袋",
+        "noBarcode": false,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-16 15:16:09",
+        "updatedAt": "2026-10-16 15:16:09"
+      }
+    ],
+    "members": [],
+    "orders": [],
+    "suppliers": [],
+    "purchases": [],
+    "promotions": [],
+    "users": [
+      {
+        "id": "owner",
+        "username": "Count fixture",
+        "password": "fixture-count-password",
+        "role": "owner"
+      }
+    ],
+    "manualJournal": [],
+    "heldOrders": [],
+    "shifts": [
+      {
+        "id": "shift",
+        "cashier": "Count fixture",
+        "cashierId": "",
+        "openTime": "2026-10-16T07:16:09.462Z",
+        "closeTime": "",
+        "openCash": 0,
+        "closeCash": 0,
+        "expectedCash": 0,
+        "diff": 0,
+        "cashSales": 0,
+        "cardSales": 0,
+        "orderCount": 0,
+        "refundCount": 0,
+        "refundAmount": 0,
+        "note": "",
+        "status": "open"
+      }
+    ],
+    "cashLog": [],
+    "wasteLog": [],
+    "memberTopups": [],
+    "auditLog": [],
+    "settings": [
+      {
+        "key": "restaurantConfig",
+        "value": "{\"enabled\":true,\"dailyCapacity\":30,\"slotCapacity\":5,\"recipes\":{}}"
+      },
+      {
+        "key": "sharedStoreId",
+        "value": "physical-count-store"
+      },
+      {
+        "key": "stockCostVersionFence",
+        "value": "1"
+      }
+    ],
+    "restaurantOrders": [
+      {
+        "id": "reservation-2",
+        "version": 1,
+        "channel": "preorder",
+        "day": "2026-10-16",
+        "slot": "12:00",
+        "customer": "Unstarted",
+        "contact": "fixture-contact",
+        "note": "",
+        "items": [
+          {
+            "id": "p",
+            "name": "Rice 原文",
+            "price": 100,
+            "qty": 2,
+            "cost": 20
+          }
+        ],
+        "allocations": [
+          {
+            "id": "p",
+            "name": "Rice 原文",
+            "qty": 2,
+            "unitCost": 20
+          }
+        ],
+        "quantity": 2,
+        "total": 200,
+        "status": "reserved",
+        "createdAt": "2026-10-16T07:16:09.465Z",
+        "startedAt": "",
+        "saleId": "",
+        "refundId": "",
+        "pickupNumber": 1
+      },
+      {
+        "id": "reservation-3",
+        "version": 2,
+        "channel": "walkin",
+        "day": "2026-10-16",
+        "slot": "12:00",
+        "customer": "Cooking",
+        "contact": "",
+        "note": "",
+        "items": [
+          {
+            "id": "p",
+            "name": "Rice 原文",
+            "price": 100,
+            "qty": 1,
+            "cost": 20
+          }
+        ],
+        "allocations": [
+          {
+            "id": "p",
+            "name": "Rice 原文",
+            "qty": 1,
+            "unitCost": 20
+          }
+        ],
+        "quantity": 1,
+        "total": 100,
+        "status": "cooking",
+        "createdAt": "2026-10-16T07:16:09.466Z",
+        "startedAt": "2026-10-16T07:16:09.467Z",
+        "saleId": "",
+        "refundId": "",
+        "pickupNumber": 2
+      }
+    ],
+    "restaurantOperations": [
+      {
+        "id": "reservation-1",
+        "kind": "restaurant",
+        "action": "configure",
+        "signature": "{\"action\":\"configure\",\"config\":{\"dailyCapacity\":30,\"enabled\":true,\"recipes\":{},\"slotCapacity\":5},\"expectedConfig\":\"{\\\"dailyCapacity\\\":30,\\\"enabled\\\":false,\\\"recipes\\\":{},\\\"slotCapacity\\\":5}\",\"id\":\"reservation-1\",\"kind\":\"restaurant\",\"time\":\"2026-10-16T07:16:09.463Z\"}",
+        "entityId": "",
+        "entityVersion": 0,
+        "productIds": [],
+        "saleId": "",
+        "refundId": "",
+        "time": "2026-10-16T07:16:09.463Z",
+        "actor": {
+          "userId": "owner",
+          "username": "Count fixture",
+          "role": "owner"
+        }
+      },
+      {
+        "id": "reservation-2",
+        "kind": "restaurant",
+        "action": "create",
+        "signature": "{\"action\":\"create\",\"channel\":\"preorder\",\"contact\":\"fixture-contact\",\"customer\":\"Unstarted\",\"day\":\"2026-10-16\",\"id\":\"reservation-2\",\"items\":[{\"id\":\"p\",\"price\":100,\"qty\":2}],\"kind\":\"restaurant\",\"note\":\"\",\"slot\":\"12:00\",\"time\":\"2026-10-16T07:16:09.465Z\"}",
+        "entityId": "reservation-2",
+        "entityVersion": 1,
+        "productIds": [
+          "p"
+        ],
+        "saleId": "",
+        "refundId": "",
+        "time": "2026-10-16T07:16:09.465Z",
+        "actor": {
+          "userId": "owner",
+          "username": "Count fixture",
+          "role": "owner"
+        }
+      },
+      {
+        "id": "reservation-3",
+        "kind": "restaurant",
+        "action": "create",
+        "signature": "{\"action\":\"create\",\"channel\":\"walkin\",\"contact\":\"\",\"customer\":\"Cooking\",\"day\":\"2026-10-16\",\"id\":\"reservation-3\",\"items\":[{\"id\":\"p\",\"price\":100,\"qty\":1}],\"kind\":\"restaurant\",\"note\":\"\",\"slot\":\"12:00\",\"time\":\"2026-10-16T07:16:09.466Z\"}",
+        "entityId": "reservation-3",
+        "entityVersion": 1,
+        "productIds": [
+          "p"
+        ],
+        "saleId": "",
+        "refundId": "",
+        "time": "2026-10-16T07:16:09.466Z",
+        "actor": {
+          "userId": "owner",
+          "username": "Count fixture",
+          "role": "owner"
+        }
+      },
+      {
+        "id": "reservation-4",
+        "kind": "restaurant",
+        "action": "advance",
+        "signature": "{\"action\":\"advance\",\"entryId\":\"reservation-3\",\"expectedVersion\":1,\"id\":\"reservation-4\",\"kind\":\"restaurant\",\"status\":\"cooking\",\"time\":\"2026-10-16T07:16:09.467Z\"}",
+        "entityId": "reservation-3",
+        "entityVersion": 2,
+        "productIds": [
+          "p"
+        ],
+        "saleId": "",
+        "refundId": "",
+        "time": "2026-10-16T07:16:09.467Z",
+        "actor": {
+          "userId": "owner",
+          "username": "Count fixture",
+          "role": "owner"
+        }
+      }
+    ],
+    "salesDocuments": [],
+    "salesOperations": [],
+    "customerEntries": [],
+    "customerOperations": [],
+    "supplierEntries": [],
+    "supplierOperations": [],
+    "stockCostEntries": [
+      {
+        "actor": {
+          "role": "owner",
+          "userId": "owner",
+          "username": "Count fixture"
+        },
+        "afterDigest": "sha256:a06488229a2e41024a1758227d1e7ea67fe598bb2e4ea743ae29b8b9d027acb0",
+        "beforeDigest": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        "date": "2026-10-16",
+        "hash": "sha256:70492e59db8bc43391e5eafb0c5439cef2471cb2928ca3551b14b314bd041763",
+        "id": "stock-9833a817-9746-4043-bf85-e45a2f4b44fc",
+        "input": {
+          "action": "open",
+          "epoch": "dbf48202-af6c-4a99-83a2-7751f5df3adc",
+          "id": "original-opening",
+          "overrides": [],
+          "protocol": "pos-stock-cost/v1",
+          "reviewed": true,
+          "snapshotDigest": "sha256:bff867e690f08f8ec8d06bfe55872e0e806d09f841b770bb908dd19758128d2e",
+          "storeId": "physical-count-store",
+          "time": "2026-10-16T07:16:09.770Z"
+        },
+        "openingMaterial": "{\"inventoryRows\":[],\"legacyJournal\":[],\"legacyOperationIds\":{\"addProduct\":[\"p\"],\"addWaste\":[],\"applyInventoryOperation\":[],\"applyRestaurantOperation\":[\"reservation-1\",\"reservation-2\",\"reservation-3\",\"reservation-4\"],\"applySalesOperation\":[],\"checkout\":[],\"refundOrder\":[]},\"preview\":{\"authoritativeValuation\":false,\"currency\":\"TWD\",\"epoch\":\"dbf48202-af6c-4a99-83a2-7751f5df3adc\",\"legacyCostReviews\":[],\"paidLegacyReservations\":[],\"products\":[{\"availableUnits\":7000,\"name\":\"Rice 原文\",\"productId\":\"p\",\"referenceUnitCostCents\":2000,\"referenceValueCents\":14000,\"unit\":\"袋\",\"zeroCostNeedsReview\":false}],\"referenceAvailableValueCents\":14000,\"referenceInventoryBalanceCents\":0,\"referenceOwnedValueCents\":20000,\"referenceReservedValueCents\":6000,\"reviewFlags\":[\"inventory-reference-reconciliation-needed\",\"legacy-reservation-unit-needs-review\"],\"status\":\"reference-only-not-activated\",\"storeId\":\"physical-count-store\",\"unpaidReservations\":[{\"allocations\":[{\"name\":\"Rice 原文\",\"productId\":\"p\",\"quantityUnits\":1000,\"referenceUnitCostCents\":2000,\"referenceValueCents\":2000,\"unit\":\"袋\",\"unitEvidence\":\"current-product-unit-reference\"}],\"entryId\":\"reservation-3\",\"prepared\":true,\"status\":\"cooking\",\"version\":2},{\"allocations\":[{\"name\":\"Rice 原文\",\"productId\":\"p\",\"quantityUnits\":2000,\"referenceUnitCostCents\":2000,\"referenceValueCents\":4000,\"unit\":\"袋\",\"unitEvidence\":\"current-product-unit-reference\"}],\"entryId\":\"reservation-2\",\"prepared\":false,\"status\":\"reserved\",\"version\":1}],\"version\":1},\"profile\":\"pos-stock-opening-preview/v1\"}",
+        "previousHash": null,
+        "sequence": 1,
+        "time": "2026-10-16T07:16:09.776Z"
+      }
+    ],
+    "stockCostOperations": [
+      {
+        "actorId": "owner",
+        "id": "[\"applyStockCostOperation\",\"original-opening\"]",
+        "method": "applyStockCostOperation",
+        "operationId": "original-opening",
+        "receipt": {
+          "eventHash": "sha256:70492e59db8bc43391e5eafb0c5439cef2471cb2928ca3551b14b314bd041763",
+          "eventId": "stock-9833a817-9746-4043-bf85-e45a2f4b44fc",
+          "id": "original-opening",
+          "protocol": "pos-stock-cost/v1",
+          "sequence": 1,
+          "stateDigest": "sha256:a06488229a2e41024a1758227d1e7ea67fe598bb2e4ea743ae29b8b9d027acb0",
+          "success": true,
+          "valuation": {
+            "categories": {
+              "available": {
+                "complete": true,
+                "knownValueCents": 14000,
+                "unvalued": [],
+                "valueCents": 14000
+              },
+              "consumed": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              },
+              "reserved": {
+                "complete": true,
+                "knownValueCents": 6000,
+                "unvalued": [],
+                "valueCents": 6000
+              },
+              "supplierReturned": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              },
+              "wasted": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              }
+            },
+            "complete": true,
+            "knownSourceValueCents": 20000,
+            "ownedKnownValueCents": 20000,
+            "ownedValueCents": 20000,
+            "totalSourceValueCents": 20000
+          }
+        },
+        "signature": "{\"action\":\"open\",\"epoch\":\"dbf48202-af6c-4a99-83a2-7751f5df3adc\",\"id\":\"original-opening\",\"overrides\":[],\"protocol\":\"pos-stock-cost/v1\",\"reviewed\":true,\"snapshotDigest\":\"sha256:bff867e690f08f8ec8d06bfe55872e0e806d09f841b770bb908dd19758128d2e\",\"storeId\":\"physical-count-store\",\"time\":\"2026-10-16T07:16:09.770Z\"}"
+      }
+    ],
+    "_revision": "93117d55437b03e70012555d3501748c9b4de41ae77a8c6ab423baedfca27c32"
+  }
+}

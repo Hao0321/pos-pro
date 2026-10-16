@@ -2,7 +2,7 @@ import {AGENT_PROTOCOL} from './agentDraftRules.mjs'
 
 export const AGENT_HANDOFF_PROTOCOL='pos-agent-handoff/v1'
 export function isAgentDocumentText(raw){return typeof raw==='string'&&(/^[\s\uFEFF]*\{/.test(raw)||raw.includes('```'))}
-export function parseAgentDocument(raw){
+export function parseAgentDocument(raw,{plainDecimalPlaces=null}={}){
   if(typeof raw!=='string'||new TextEncoder().encode(raw).length>32768)throw Error('單據太大，請分批匯入（每次最多 32 KB）')
   let value=raw.replace(/^\uFEFF/,'').trim()
   if(value.includes('```')){
@@ -15,6 +15,14 @@ export function parseAgentDocument(raw){
   let document
   try{document=JSON.parse(value)}catch{throw Error('讀不到完整單據。請貼上 Agent 的完整回覆，或重新選取原始單據檔。')}
   if(!document||typeof document!=='object'||Array.isArray(document))throw Error('請一次匯入一份單據。')
+  // Inspect raw numeric tokens before precision lost by JSON decoding can turn
+  // a nonzero count or amount into zero. Quoted merchant data is never scanned.
+  const numeric=value.replace(/"(?:\\.|[^"\\])*"/g,'""')
+  for(const match of numeric.matchAll(/-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/g)){
+    const token=match[0],number=Number(token)
+    if(!Number.isFinite(number)||number===0&&/[1-9]/.test(token.split(/[eE]/)[0]))throw Error('單據數字太小或太大，請核對原文')
+    if(plainDecimalPlaces===3&&!/^(?:0|[1-9]\d*)(?:\.\d{1,3})?$/.test(token))throw Error('盤點數量請用一般小數，最多三位')
+  }
   return document
 }
 export function makeAgentHandoff(context,kind='sale',now=new Date()){

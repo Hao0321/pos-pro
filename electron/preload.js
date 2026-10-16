@@ -89,6 +89,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     exportData: () => ipcRenderer.invoke('db:exportData'),
     exportFullBackup: () => ipcRenderer.invoke('db:exportFullBackup'),
     getProtectedBackups: () => ipcRenderer.invoke('db:getProtectedBackups'),
+    getStocktakeState: () => ipcRenderer.invoke('db:getStocktakeState'),
     importData: (data, expectedRevision) => ipcRenderer.invoke('db:importData', data, expectedRevision),
 
     migrateFromLocalStorage: (data) => ipcRenderer.invoke('db:migrateFromLocalStorage', data),

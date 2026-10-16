@@ -52,7 +52,7 @@ export function planStockOpening(preview,input,date){
  const add=(key,row,quantityUnits,owner)=>{
   if(keys.has(key))throw stockLedgerError('INPUT');keys.add(key)
   if(!quantityUnits)return
-  const explicit=overrides.has(key),valueCents=explicit?overrides.get(key):row.referenceUnitCostCents>0?row.referenceValueCents:null
+  const explicit=overrides.has(key),valueCents=explicit?overrides.get(key):!row.countCostNeedsReview&&row.referenceUnitCostCents>0?row.referenceValueCents:null
   const source=costSource({id:'opening:'+request.id+':'+sources.length,productId:row.productId,unit:row.unit,currency:'TWD',quantityUnits,valueCents}),queueOrder=sources.length+1
   sources.push(source);sourceEvidence.push({sourceId:source.id,key,basis:valueCents===null?'unknown':explicit?'confirmed':'legacy-reference-snapshot'})
   let node=positions.find(node=>canonicalSignature(node.owner)===canonicalSignature(owner))

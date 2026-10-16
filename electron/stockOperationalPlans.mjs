@@ -1,4 +1,5 @@
 import {stockLedgerError} from './stockOpeningPlan.mjs'
+import {PHYSICAL_STOCKTAKE,PHYSICAL_MEANING,assertPhysicalStocktakeReceipt} from './physicalStocktake.mjs'
 
 export function planOperationalStock(c,method){
  const {input,evidence,stockOwner:owner,stockUnits:units,stockLineValue:value}=c
@@ -14,12 +15,12 @@ export function planOperationalStock(c,method){
  }
  if(method==='applyRestaurantOperation')return restaurant(c)
  if(input.kind==='stocktake'){
-  // Physical-shelf counts need the separate reservation-aware review flow. An
-  // old client must not silently treat held or cooking materials as available.
-  if(input.quantityMeaning!=='available')throw stockLedgerError('INPUT')
+  const physical=input.protocol===PHYSICAL_STOCKTAKE?assertPhysicalStocktakeReceipt(input,evidence.stocktake):null
+  if(physical?input.quantityMeaning!==PHYSICAL_MEANING:input.quantityMeaning!=='available')throw stockLedgerError('INPUT')
   for(const count of input.counts){const product=c.product(count.id),delta=product.afterUnits-product.beforeUnits
-   if(product.beforeUnits!==units(count.expectedStock)||product.afterUnits!==units(count.stock))throw stockLedgerError('HISTORY')
-   if(delta>0)c.acquire(product.id,delta,product.referenceUnitCostCents>0?value(delta,product.referenceUnitCostCents):null,'4191',product.referenceUnitCostCents>0?'count-reference':'unknown',product.id)
+   const frozen=physical?.rows.find(row=>row.fact.product.id===count.id)
+   if(physical?product.beforeUnits!==frozen.fact.availableUnits||product.afterUnits!==frozen.availableAfterUnits:product.beforeUnits!==units(count.expectedStock)||product.afterUnits!==units(count.stock))throw stockLedgerError('HISTORY')
+   if(delta>0)c.acquire(product.id,delta,!physical&&product.referenceUnitCostCents>0?value(delta,product.referenceUnitCostCents):null,'4191',physical?'count-unknown':product.referenceUnitCostCents>0?'count-reference':'unknown',product.id)
    else if(delta<0)c.move(owner('available'),owner('wasted','stocktake',input.id),product.id,-delta)
   }return
  }

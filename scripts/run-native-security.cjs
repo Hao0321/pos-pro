@@ -1,5 +1,8 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--physical-stocktake':['native-physical-stocktake.cjs','POS_PHYSICAL_STOCKTAKE_PASS',false],
+  '--physical-stocktake-ui':['native-physical-stocktake-ui.cjs','POS_PHYSICAL_STOCKTAKE_UI_PASS',true],
+  '--physical-stocktake-browser-ui':['native-physical-stocktake-browser-ui.cjs','POS_PHYSICAL_BROWSER_UI_PASS',true],
   '--recovery-transfer':['native-recovery-transfer.cjs','POS_RECOVERY_TRANSFER_PASS',false],
   '--recovery-transfer-ui':['native-recovery-transfer-ui.cjs','POS_RECOVERY_TRANSFER_UI_PASS',true],
   '--recovery-transfer-browser-ui':['native-recovery-transfer-browser-ui.cjs','POS_RECOVERY_TRANSFER_BROWSER_UI_PASS',true],

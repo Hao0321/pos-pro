@@ -53,7 +53,7 @@ module.exports=function installStockBusinessOperations(db,api,store){
    if(input.action==='create')output.costBasis=require('./stockReportBasis.mjs').captureRestaurantCostBasis(output.entry,facts.restaurantConfig)
    include(output.beforeEntry?.allocations);include(output.entry?.allocations)
   }else if(method==='applyInventoryOperation'){
-   if(input.kind==='stocktake')include(input.counts)
+   if(input.kind==='stocktake'){include(input.counts);if(result.receipt?.stocktake)output.stocktake=structuredClone(result.receipt.stocktake)}
    else{
     const purchase=api.getPurchases().find(row=>row.id===input.purchaseId),modern=purchase?.procurement?.version===1
     if(!purchase||!facts.purchase)throw stockLedgerError('HISTORY')
@@ -82,7 +82,10 @@ module.exports=function installStockBusinessOperations(db,api,store){
   return output
  }
  for(const method of STOCK_BUSINESS_METHODS)api[method]=function(...args){
-  if(!store.active())return originals[method].apply(api,args)
+  if(!store.active()){
+   if(method==='applyInventoryOperation'&&args[0]?.protocol==='pos-physical-stocktake/v1')return db.transaction(()=>{const result=originals[method].apply(api,args);if(result?.success)store.ensureCompatibility();return result})()
+   return originals[method].apply(api,args)
+  }
   let existing=false,replayed=false
   try{return db.transaction(()=>{
    const verified=actor(args[actorAt[method]],['refundOrder','applySalesOperation'].includes(method)),input=normalize(method,args)

@@ -16,6 +16,7 @@ import {STOCK_COMPAT_SETTING} from '../../electron/stockCompatibility.mjs'
 import {browserProtectionGraph,browserProtectionMetadata,browserProtectionRevision,validateBrowserProtection} from './browserProtection'
 import {mergeRecoveryGraphs} from '../../electron/recoveryGraph.mjs'
 import {retainRecoveryFeatures} from '../../electron/recoveryBook.mjs'
+import {appendPhysicalStocktakeBook} from '../../electron/physicalStocktakeCommit.mjs'
 export const RECORD_KEY = 'pos_atomic_records_v1'
 export const DATA_KEYS = ['pos2_products','pos2_members','pos2_orders','pos2_manual_j',
   'pos_users','pos_suppliers','pos_purchases','pos_promotions','pos2_held_orders',
@@ -75,7 +76,7 @@ export function assertOriginalOperationAvailable(method,id,record=readRecords(),
   const error=new Error('原編號曾經保存，目前帳本無法確認這筆內容。請使用復原引導核對。')
   error.historyUncertain=true;throw error
 }
-export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false,recoveryCommand=null,transfer=null}={}) {
+export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false,recoveryCommand=null,transfer=null,physicalStocktake=null}={}) {
   const current = readRecords()
   if (expectedRevision != null && current.revision !== expectedRevision)
     throw new Error('本機資料已改變，請重新載入後再操作。')
@@ -89,7 +90,9 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
   if(!restore){
     const before=browserToBook(current.data),after=browserToBook(next.data),oldFlag=before.settings.find(row=>row.key===STOCK_COMPAT_SETTING)||null,newFlag=after.settings.find(row=>row.key===STOCK_COMPAT_SETTING)||null
     if(canonicalSignature(oldFlag)!==canonicalSignature(newFlag))throw Error('成本資料的版本保護由完整備份流程管理')
-    guardUnintegratedStockWrite(before,after,validateStockCostBook(before))
+    const state=validateStockCostBook(before)
+    if(physicalStocktake)next.data=bookToBrowser(appendPhysicalStocktakeBook(before,after,state,physicalStocktake,{storeId:readExchangeTextSetting(before.settings,'sharedStoreId'),epoch:current.salesEpoch,costMode:state.projection?'active':'reference',restaurantEntries:before.restaurantOrders}))
+    else guardUnintegratedStockWrite(before,after,state)
   }
   if(!restore&&current.supplierFence&&updates.pos_purchases){
     const oldLegacy=current.data.pos_purchases.filter(po=>!po.procurement),newLegacy=next.data.pos_purchases.filter(po=>!po.procurement)

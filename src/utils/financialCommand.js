@@ -6,6 +6,7 @@ import {assertSalesResult} from '../../electron/salesPlan.mjs'
 import {assertCustomerLedgerResult} from '../../electron/customerLedger.mjs'
 import {assertSupplierLedgerResult} from '../../electron/supplierLedger.mjs'
 import {assertSupplierInventoryResult} from '../../electron/supplierInventory.mjs'
+import {PHYSICAL_STOCKTAKE,assertPhysicalStocktakeResult} from '../../electron/physicalStocktake.mjs'
 export const FINANCIAL_PENDING='pos_pending_financial_v1'
 const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt'}
 for(const kind of PROCUREMENT_KINDS)fields[kind]='receipt'
@@ -44,6 +45,7 @@ function assertReceipt(kind,request,result){
     assertSupplierInventoryResult(request,result)
     if(row.kind!==kind||row.signature!==JSON.stringify(canonical(request))||!Array.isArray(row.productIds)||!row.productIds.length&&!PROCUREMENT_KINDS.includes(kind)||!Array.isArray(result.products)||result.products.length!==row.productIds.length||new Set(row.productIds).size!==row.productIds.length||row.productIds.some(id=>!result.products.some(p=>p.id===id)))throw Error('庫存保存結果尚未確認：回覆內容不符')
     if(kind==='stocktake'&&(row.productIds.length!==request.counts.length||request.counts.some(c=>!row.productIds.includes(c.id))))throw Error('盤點回覆缺少原品項')
+    if(kind==='stocktake'&&request.protocol===PHYSICAL_STOCKTAKE)assertPhysicalStocktakeResult(request,result)
     if(kind==='receive'&&(row.purchaseId!==request.purchaseId||result.purchase?.id!==request.purchaseId))throw Error('到貨回覆缺少原進貨單')
     if(PROCUREMENT_KINDS.includes(kind)||row.document){
       const po=result.purchase

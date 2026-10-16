@@ -3,7 +3,7 @@ import {browserStorage, writeRecords, readRecords, withSalesLock,writeBusinessSe
 import { commitBrowserSale, browserReceipt, commitBrowserRefund } from './browserSales'
 import { summarizeShift } from '../../electron/shiftReconciliation.mjs'
 import {moneyValue,quantityValue,operationHeader,sameCommand} from '../../electron/operationRules.mjs'
-import {commitBrowserInventory} from './browserInventory'
+import {commitBrowserInventory,getBrowserStocktakeState} from './browserInventory'
 import {commitBrowserRestaurant,browserRestaurantState} from './browserRestaurant'
 import {makeAgentContext} from '../../electron/agentDraftRules.mjs'
 import {readAgentMappings,mergeAgentMappings} from '../../electron/businessDocument.mjs'
@@ -15,6 +15,7 @@ export const isSharedStore = !!(typeof window !== 'undefined' && window.electron
 export async function loadStockAccountingState(actor){return isElectron?window.electronAPI.db.getStockAccountingState():(await import('./browserStockReports')).getBrowserStockAccountingState(actor)}
 export async function loadStockSalesState(actor){return isElectron?window.electronAPI.db.getStockSalesState():(await import('./browserStockReports')).getBrowserStockSalesState(actor)}
 export async function applyInventoryOperation(request,actor){return isElectron?window.electronAPI.db.applyInventoryOperation(request):commitBrowserInventory(request,actor)}
+export async function loadStocktakeState(actor){return isElectron?window.electronAPI.db.getStocktakeState():getBrowserStocktakeState(actor)}
 export async function getExchangeContext(actor){return isElectron?window.electronAPI.db.getExchangeContext():(await import('./browserExchange')).getBrowserExchangeContext(actor)}
 export async function applyExchangeOperation(request,actor){return isElectron?window.electronAPI.db.applyExchangeOperation(request):(await import('./browserExchange')).commitBrowserExchange(request,actor)}
 export async function loadSalesState(actor){return isElectron?window.electronAPI.db.getSalesState():(await import('./browserSalesDocuments')).getBrowserSalesState(actor)}

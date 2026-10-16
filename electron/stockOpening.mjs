@@ -2,6 +2,7 @@ import {canonicalSignature,moneyValue,quantityValue} from './operationRules.mjs'
 import {automaticBusinessJournal} from './businessJournal.mjs'
 import {STOCK_COST_ERRORS} from './stockCost.mjs'
 import {aggregateJournal} from './journalAmounts.mjs'
+import {physicalStocktakeAudits} from './physicalStocktake.mjs'
 
 // This is a reference-only preview, not activation or authoritative valuation.
 // The native/browser adapter owns hashing and must keep `material` private.
@@ -15,12 +16,14 @@ export function prepareStockOpening(data){
   const collections=['products','orders','topups','wasteLog','purchases','salesDocuments','customerEntries','supplierEntries','manualJournal','restaurantEntries']
   if(!data||typeof data.storeId!=='string'||!data.storeId||typeof data.epoch!=='string'||!data.epoch||collections.some(key=>!Array.isArray(data[key])))fail()
   const products=new Map(),rows=[],flags=new Set(),unpaid=[],paid=[]
+  const unknownCounts=new Set(physicalStocktakeAudits(data.inventoryAudits||[]).flatMap(row=>row.receipt.rows.filter(item=>item.differenceUnits>0).map(item=>item.fact.product.id)))
   for(const product of data.products){
     if(typeof product.id!=='string'||!product.id||products.has(product.id))fail()
     const quantityUnits=units(product.stock),rate=cents(product.cost??0),referenceValueCents=referenceValue(rate,quantityUnits),unit=product.unit??'個'
     if(typeof unit!=='string')fail()
     if(!unit.trim()||unit!==unit.trim()||unit.normalize('NFC')!==unit||/[\p{Cc}\p{Cf}]/u.test(unit))flags.add('product-unit-needs-review')
     const row={productId:product.id,name:product.name||'',unit,availableUnits:quantityUnits,referenceUnitCostCents:rate,referenceValueCents,zeroCostNeedsReview:quantityUnits>0&&rate===0}
+    if(quantityUnits>0&&unknownCounts.has(product.id)){row.countCostNeedsReview=true;flags.add('count-surplus-cost-needs-review')}
     if(row.zeroCostNeedsReview)flags.add('opening-zero-cost-needs-review')
     if(referenceValueCents===null)flags.add('reference-value-out-of-range')
     products.set(product.id,row);rows.push(row)
@@ -34,7 +37,7 @@ export function prepareStockOpening(data){
       const quantityUnits=units(item.qty),rate=cents(item.unitCost??0)
       if(!quantityUnits)fail()
       if(!rate)flags.add('reserved-zero-cost-needs-review')
-      return {productId:item.id,name:item.name||product.name,unit:product.unit,quantityUnits,referenceUnitCostCents:rate,referenceValueCents:referenceValue(rate,quantityUnits),unitEvidence:'current-product-unit-reference'}
+      return {productId:item.id,name:item.name||product.name,unit:product.unit,quantityUnits,referenceUnitCostCents:rate,referenceValueCents:referenceValue(rate,quantityUnits),unitEvidence:'current-product-unit-reference',...(unknownCounts.has(item.id)?{countCostNeedsReview:true}:{})}
     })
     flags.add('legacy-reservation-unit-needs-review')
     if(entry.saleId){paid.push({entryId:entry.id,version:entry.version,status:entry.status,saleId:entry.saleId,prepared:!!entry.startedAt,allocations});continue}
