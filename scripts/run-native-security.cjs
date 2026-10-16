@@ -1,5 +1,6 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--receipt-print-ui':['native-receipt-print-ui.cjs','POS_RECEIPT_PRINT_UI_PASS',true],
   '--login-reachability':['native-login-reachability.cjs','POS_LOGIN_REACHABILITY_PASS',true],
   '--customer-key-continuity':['native-customer-key-continuity.cjs','POS_CUSTOMER_KEY_CONTINUITY_PASS',false],
   '--kitchen-print-browser-ui':['native-kitchen-print-browser-ui.cjs','POS_KITCHEN_PRINT_BROWSER_UI_PASS',true],

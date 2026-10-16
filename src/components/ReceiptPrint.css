@@ -1,0 +1,21 @@
+.receipt-print-control { width:100%; margin-top:16px; text-align:left; overflow-wrap:anywhere; }
+.receipt-print-control p,.receipt-device-hint { margin:8px 0; font-size:14px; line-height:1.6; }
+.receipt-device-hint { color:var(--text-secondary); }
+.receipt-print-control [role=alert] { color:var(--red); }
+.receipt-print-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.receipt-print-actions .btn { min-height:48px; flex:1 1 120px; white-space:normal; justify-content:center; }
+.receipt-print-review { padding:12px; background:var(--bg-overlay); border:1px solid var(--border-subtle); border-radius:var(--r2); }
+.receipt-history-overlay { position:fixed; inset:0; z-index:1100; background:rgba(0,0,0,.55); display:grid; place-items:center; padding:12px; }
+.receipt-history { width:min(660px,100%); max-height:calc(100dvh - 24px); overflow-y:auto; padding:16px; background:var(--bg-raised); color:var(--text-primary); border:1px solid var(--border-subtle); border-radius:var(--r3); box-shadow:var(--shadow-lg); overflow-wrap:anywhere; }
+.receipt-history header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.receipt-history h2 { font-size:20px; margin:0; }
+.receipt-history .btn,.receipt-history .field,.receipt-history summary { min-height:48px; }
+.receipt-history .field { width:100%; font-size:16px; }
+.receipt-history-list article { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 0; border-bottom:1px solid var(--border-subtle); }
+.receipt-history-list article>div { min-width:0; flex:1; }
+.receipt-history-list article>button { flex-shrink:0; white-space:normal; max-width:44%; }
+.receipt-history p { font-size:14px; line-height:1.6; margin:8px 0; }
+.receipt-original-id { font-family:var(--font-mono); color:var(--text-secondary); font-size:12px!important; }
+.receipt-total { display:block; font-size:28px; margin-top:12px; }
+.receipt-history details { margin-top:12px; }
+.receipt-history summary { cursor:pointer; display:flex; align-items:center; }
