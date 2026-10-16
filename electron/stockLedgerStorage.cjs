@@ -69,7 +69,7 @@ module.exports=function stockLedgerStorage(db){
   const key=canonicalSignature([method,input.id]),saved=db.prepare('SELECT data FROM stock_cost_operations WHERE id=?').get(key)
   if(!saved)return null
   const current=read(),row=current.operations.find(row=>row.id===key)
-  if(!row||row.actorId!==actor.userId||row.signature!==canonicalSignature(input))throw stockLedgerError('HISTORY')
+  if(!row||row.actorId!==actor.userId&&actor.role!=='owner'||row.signature!==canonicalSignature(input))throw stockLedgerError('HISTORY')
   return structuredClone(row.receipt)
  }
  function append(input,actor,{openingMaterial=null,time,date},method=METHOD,evidence=null){

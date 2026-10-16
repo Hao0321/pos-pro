@@ -136,7 +136,7 @@ function roundTrip(pending,commit){
 
   saved=backup();restore(saved);const retained=raw.prepare('SELECT id,data FROM recovery_snapshots ORDER BY created_at LIMIT 1').get()
   for(let i=0;i<12;i++)db.createBackup('rolling-'+i,owner.username)
-  assert.equal(db.getBackups().length,10);assert.equal(db.exportRecoverySource(retained.id,owner).cashLog[0].amount,5)
+  assert.equal(db.getBackups().length,10);const protectedFile=db.exportRecoverySource(retained.id,owner);assert.equal(protectedFile.format,'pos-complete-backup/v1');assert.equal(protectedFile.book.cashLog[0].amount,5);assert.ok(protectedFile.protection.originalIds.some(row=>row[1]===protectedFile.book.cashLog[0].id))
   raw.prepare('UPDATE recovery_snapshots SET data=? WHERE id=?').run(retained.data+' ',retained.id)
   before=db.exportData();assert.throws(()=>db.exportRecoverySource(retained.id,owner),/保護副本需要核對/);assert.deepEqual(db.exportData(),before)
   const diagnostic=db.exportRecoveryDiagnostics(owner);assert.equal(diagnostic.importable,false);assert.equal(diagnostic.tables.find(t=>t.name==='recovery_snapshots').rows.find(r=>r.id===retained.id).data,retained.data+' ')
@@ -146,7 +146,7 @@ function roundTrip(pending,commit){
   const history=Array.from({length:2105},(_,i)=>({...cash,id:'cash-history-'+i,time:new Date(Date.parse(time)+i).toISOString()}))
   db.migrateFromLocalStorage({cashLog:history});assert.equal(db.exportData().cashLog.length,2105);restore(saved)
   assert.equal(db.addCashLog(history[0]).committed,null);const fullSource=db.getRecoveryState({kind:'cashlog',request:history[0]},owner).sources.find(s=>s.canRecover)
-  assert.equal(db.exportRecoverySource(fullSource.id,owner).cashLog.length,2105);recover({kind:'cashlog',request:history[0]});assert.equal(db.exportData().cashLog.length,2105)
+  assert.equal(db.exportRecoverySource(fullSource.id,owner).book.cashLog.length,2105);recover({kind:'cashlog',request:history[0]});assert.equal(db.exportData().cashLog.length,2105)
   pass('the oldest original ID and complete protected history remain available beyond 2100 cash rows, independent of display limits')
   close();db=init(path.join(root,'fresh-store.db'));raw=new Database(path.join(root,'fresh-store.db'))
   const freshPassword=password('new-device-password');db.addUser({id:'owner',username:'New device owner',password:freshPassword,role:'owner'});db.setSetting('sharedStoreId','fresh-device-generated-id')

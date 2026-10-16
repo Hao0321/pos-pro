@@ -13,6 +13,9 @@ import {RECOVERY_PROTOCOL,browserToBook,bookToBrowser,materialSignature,protecte
 import {validateStockCostBook} from '../../electron/stockBackup.mjs'
 import {guardUnintegratedStockWrite} from '../../electron/stockBrowserGuard.mjs'
 import {STOCK_COMPAT_SETTING} from '../../electron/stockCompatibility.mjs'
+import {browserProtectionGraph,browserProtectionMetadata,browserProtectionRevision,validateBrowserProtection} from './browserProtection'
+import {mergeRecoveryGraphs} from '../../electron/recoveryGraph.mjs'
+import {retainRecoveryFeatures} from '../../electron/recoveryBook.mjs'
 export const RECORD_KEY = 'pos_atomic_records_v1'
 export const DATA_KEYS = ['pos2_products','pos2_members','pos2_orders','pos2_manual_j',
   'pos_users','pos_suppliers','pos_purchases','pos_promotions','pos2_held_orders',
@@ -42,6 +45,7 @@ export function readRecords() {
     for (const key of DATA_KEYS) validArray(record.data[key])
     if(Object.keys(record.data).some(key=>!keys.has(key)))throw Error('備份含有目前版本不支援的資料，請保留原檔並使用相容版本')
     recoveryMetadata(record)
+    validateBrowserProtection(record)
     validateStockCostBook(browserToBook(record.data))
     return record
   }
@@ -71,10 +75,12 @@ export function assertOriginalOperationAvailable(method,id,record=readRecords(),
   const error=new Error('原編號曾經保存，目前帳本無法確認這筆內容。請使用復原引導核對。')
   error.historyUncertain=true;throw error
 }
-export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false,recoveryCommand=null}={}) {
+export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false,recoveryCommand=null,transfer=null}={}) {
   const current = readRecords()
   if (expectedRevision != null && current.revision !== expectedRevision)
     throw new Error('本機資料已改變，請重新載入後再操作。')
+  if(transfer?.expectedProtectionRevision&&transfer.expectedProtectionRevision!==browserProtectionRevision(current))throw Error('本機資料已改變，請重新載入後再操作。')
+  if(transfer?.protection)mergeRecoveryGraphs(browserProtectionGraph(current),transfer.protection,'browser')
   for (const [key, value] of Object.entries(updates)) {
     if (!keys.has(key)) throw new Error('未知資料集合')
     validArray(value)
@@ -92,15 +98,16 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
   const protection=recoveryMetadata(current)
   if(current.recovery)next.recovery=protection
   if(restore){
-    const before=browserToBook(current.data),target=protectedRestoreBook(before,browserToBook(next.data))
+    const before=browserToBook(current.data),target=retainRecoveryFeatures(protectedRestoreBook(before,browserToBook(next.data)),transfer?.features||[])
     next.data=bookToBrowser(target)
     const snapshotId='rescue-'+crypto.randomUUID(),snapshot={id:snapshotId,createdAt:new Date().toISOString(),actorId:recoveryCommand?.actorId||'local-owner',
-      storeId:recoveryStoreId(before),data:current.data,contentSignature:canonicalSignature(current.data),afterMaterial:materialSignature(target)}
+      storeId:recoveryStoreId(before),data:current.data,contentSignature:canonicalSignature(current.data),afterMaterial:materialSignature(target),operationId:recoveryCommand?.id??null}
     const originalIds=operationRecords(before).map(row=>[row.method,row.id,snapshotId])
     const receipt=recoveryCommand?{protocol:RECOVERY_PROTOCOL,success:true,id:recoveryCommand.id,sourceId:snapshotId,revision:String(next.revision),storeId:recoveryStoreId(target),
       ...(recoveryCommand.restoredSourceId?{restoredSourceId:recoveryCommand.restoredSourceId,originalOperationId:recoveryCommand.originalOperationId}:{})}:null
     next.recovery={version:1,snapshots:[...protection.snapshots,snapshot],originalIds:[...protection.originalIds,...originalIds],
       events:[...protection.events,...(receipt?[{id:recoveryCommand.id,actorId:recoveryCommand.actorId,signature:recoveryCommand.signature,receipt}]:[])]}
+    if(transfer?.protection)next.recovery=browserProtectionMetadata(mergeRecoveryGraphs(browserProtectionGraph(next),transfer.protection,'browser'))
   }else if(protection.originalIds.length){
     const existing=new Set(operationRecords(browserToBook(current.data)).map(row=>JSON.stringify([row.method,row.id])))
     const known=new Set(protection.originalIds.map(row=>JSON.stringify(row.slice(0,2))))
@@ -110,7 +117,7 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
   // Rotate it in the SAME atomic write as a restore, never as a later side effect.
   if(restore||ensureSalesEpoch||current.salesEpoch||next.data.pos_sales_documents.length||next.data.pos_customer_entries.length||next.data.pos_supplier_entries.length)
     next.salesEpoch=restore?crypto.randomUUID():current.salesEpoch||crypto.randomUUID()
-  if(current.supplierFence||next.data.pos_supplier_entries.length)next.supplierFence=true
+  if(current.supplierFence||next.data.pos_supplier_entries.length||transfer?.features?.includes('supplier-ledger-v1'))next.supplierFence=true
   validateProcurementRecords(next.data.pos_purchases,next.data.pos2_cash_log)
   validateExchangeSettings(next.data.pos_business_settings,next.data.pos_purchases,next.data.pos_audit_log)
   validateSalesRecords(next.data.pos_sales_documents,next.data.pos_sales_operations,next.data.pos2_cash_log,readExchangeTextSetting(next.data.pos_business_settings,'sharedStoreId'),next.data.pos2_products,readExchangeStore(readExchangeTextSetting(next.data.pos_business_settings,EXCHANGE_SETTING)).quotes)
@@ -120,16 +127,17 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
   const rawConfig=next.data.pos_business_settings.find(s=>s.key==='restaurantConfig')?.value
   readRestaurantConfig(rawConfig==null?null:JSON.parse(rawConfig),next.data.pos2_products)
   validateStockCostBook(browserToBook(next.data))
+  validateBrowserProtection(next)
   // setItem is atomic: quota/security failure keeps the previous complete record.
   nativeStorage().setItem(RECORD_KEY, JSON.stringify(next))
   return next
 }
-export function restoreRecords(data,expectedRevision,recoveryCommand=null){
+export function restoreRecords(data,expectedRevision,recoveryCommand=null,transfer=null){
   if(!data||typeof data!=='object'||Array.isArray(data))throw new Error('備份格式錯誤')
   const updates=Object.fromEntries(DATA_KEYS.filter(key=>Object.hasOwn(data,key)).map(key=>[key,data[key]]))
   if(Object.hasOwn(data,'pos_stock_cost_entries')!==Object.hasOwn(data,'pos_stock_cost_operations'))throw Error('庫存成本回執需要核對，請保留原編號與資料')
   for(const key of ['pos_sales_documents','pos_sales_operations','pos_customer_entries','pos_customer_operations','pos_supplier_entries','pos_supplier_operations','pos_stock_cost_entries','pos_stock_cost_operations'])if(!Object.hasOwn(updates,key))updates[key]=[]
-  return writeRecords(updates,expectedRevision,{restore:true,recoveryCommand})
+  return writeRecords(updates,expectedRevision,{restore:true,recoveryCommand,transfer})
 }
 export const browserStorage = {
   getItem(key) {if(key.startsWith(SETTINGS_PREFIX))return readRecords().data.pos_business_settings.find(s=>s.key===key.slice(SETTINGS_PREFIX.length))?.value??null;return keys.has(key) ? JSON.stringify(readRecords().data[key]) : nativeStorage().getItem(key) },

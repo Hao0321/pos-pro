@@ -513,7 +513,7 @@ module.exports = function initDatabase(dbPath) {
       return db.prepare('SELECT id,label,createdAt,createdBy,length(data) AS size FROM backups ORDER BY createdAt DESC').all()
     },
     createBackup(label, createdBy) {
-      const allData = this.exportData()
+      const allData = this.exportFullBackup()
       const id = 'bk-' + randomUUID()
       stmts.insertBackup.run({
         id,

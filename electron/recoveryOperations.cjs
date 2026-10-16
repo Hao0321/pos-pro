@@ -3,6 +3,10 @@ const {canonicalSignature}=require('./operationRules.mjs')
 const {signature:checkoutSignature,PROTOCOL}=require('./checkoutContract.cjs')
 const {refundSignature}=require('./refundSafety.cjs')
 const {RECOVERY_PROTOCOL,recoveryStoreId,materialSignature,protectedRestoreBook,recoverySummary,operationRecords,pendingOperation,originalMatches,recoveryOperationId}=require('./recoveryRules.mjs')
+const {createCompleteBackup,readCompleteBackup,backupProtectionSummary}=require('./backupEnvelope.mjs')
+const {mergeRecoveryGraphs,validateRecoveryGraph}=require('./recoveryGraph.mjs')
+const {recoveryBook,recoveryBoundaryMatches}=require('./recoveryBook.mjs')
+const {STOCK_COMPAT_SETTING}=require('./stockCompatibility.mjs')
 const sha=value=>createHash('sha256').update(typeof value==='string'?value:canonicalSignature(value)).digest('hex')
 const proof={checkoutSignature,refundSignature}
 
@@ -16,6 +20,8 @@ module.exports=function installRecovery(db,api,replaceAllTx){
     CREATE TABLE IF NOT EXISTS recovery_events (id TEXT PRIMARY KEY, actor_id TEXT NOT NULL,
       signature TEXT NOT NULL, receipt TEXT NOT NULL);`)
   const insertIndex=db.prepare('INSERT OR IGNORE INTO recovery_original_ids VALUES (?,?,?)')
+  const graphStore=require('./recoveryGraphStorage.cjs')(db),graphOptions=graphStore.options
+  function retainFeatures(book,features){if(!features.includes('stock-cost-v1'))return book;const settings=new Map(book.settings.map(row=>[row.key,row]));settings.set(STOCK_COMPAT_SETTING,{key:STOCK_COMPAT_SETTING,value:'1'});return {...book,settings:[...settings.values()]}}
   const material=book=>sha(materialSignature(book))
   const owner=actor=>{
     if(actor?.role!=='owner'||!api.getUsers().some(user=>user.id===actor.userId&&user.role==='owner'&&user.username===actor.username))throw Error('權限不足')
@@ -25,14 +31,16 @@ module.exports=function installRecovery(db,api,replaceAllTx){
   function prior(id,signature,actor){
     const old=db.prepare('SELECT * FROM recovery_events WHERE id=?').get(id)
     if(!old)return null
-    if(old.signature!==signature||old.actor_id!==actor.userId)throw Error('復原編號已存在且內容不同')
+    if(old.signature!==signature||old.actor_id!==actor.userId&&actor.role!=='owner')throw Error('復原編號已存在且內容不同')
     return JSON.parse(old.receipt)
   }
-  function replace(id,source,expectedRevision,actor,signature,extra={}){
+  function replace(id,source,expectedRevision,actor,signature,extra={},transfer=null){
     const old=prior(id,signature,actor);if(old)return old
     const current=api.exportData()
     if(current._revision!==expectedRevision)throw Error('帳本已更新，請重新查看還原預覽')
-    const next=protectedRestoreBook(current,source),snapshotId='rescue-'+randomUUID(),data=JSON.stringify(current)
+    if(transfer?.expectedProtectionRevision&&transfer.expectedProtectionRevision!==graphStore.revision())throw Error('帳本已更新，請重新查看還原預覽')
+    if(transfer?.protection)mergeRecoveryGraphs(graphStore.read(),transfer.protection,'sqlite',graphOptions)
+    const features=[...new Set([...graphStore.features(),...(transfer?.features||[])])],next=retainFeatures(protectedRestoreBook(current,source),features),snapshotId='rescue-'+randomUUID(),data=JSON.stringify(current)
     // This outer transaction contains the preimage, history fence, replacement,
     // sales epoch and the immutable acknowledgement. A late failure rolls all back.
     db.prepare('INSERT INTO recovery_snapshots VALUES (?,?,?,?,?,?,?)').run(snapshotId,new Date().toISOString(),actor.userId,recoveryStoreId(current),data,sha(data),'pending')
@@ -42,26 +50,35 @@ module.exports=function installRecovery(db,api,replaceAllTx){
     db.prepare('UPDATE recovery_snapshots SET after_material=? WHERE id=?').run(material(restored),snapshotId)
     const receipt={protocol:RECOVERY_PROTOCOL,success:true,id,sourceId:snapshotId,revision:restored._revision,storeId:recoveryStoreId(restored),...extra}
     db.prepare('INSERT INTO recovery_events VALUES (?,?,?,?)').run(id,actor.userId,signature,JSON.stringify(receipt))
+    if(transfer?.protection)graphStore.merge(transfer.protection)
+    graphStore.install(features)
     return receipt
   }
   function preview(input,actor){
-    if(!input||!['backup','import'].includes(input.kind))throw Error('還原來源不正確')
+    if(!input||!['backup','import','protected'].includes(input.kind))throw Error('還原來源不正確')
     const current=api.exportData()
     let data,label
     if(input.kind==='backup'){
       const backup=db.prepare('SELECT data,label FROM backups WHERE id=?').get(input.id)
       if(!backup)throw Error('備份不存在')
       data=JSON.parse(backup.data);label=backup.label
+    }else if(input.kind==='protected'){
+      const source=readSource(input.id)
+      if(source.store_id!==recoveryStoreId(current))throw Error('店面不符')
+      if(!recoveryBoundaryMatches(source.after_material,current,'sqlite',graphStore.digest))throw Error('還原後已有新的營運資料')
+      data=api.exportRecoverySource(input.id,actor);label='還原前的副本'
     }else{data=input.data;label='匯入備份'}
     if(JSON.stringify(data).length>64*1024*1024)throw Error('備份太大，請保留原檔並在店面電腦核對')
-    const target=protectedRestoreBook(current,data),id='restore-'+randomUUID(),now=Date.now()
+    const incoming=readCompleteBackup(data,'sqlite',graphOptions),target=retainFeatures(protectedRestoreBook(current,incoming.book),incoming.features),id='restore-'+randomUUID(),now=Date.now(),currentGraph=graphStore.read()
+    if(incoming.protection)mergeRecoveryGraphs(currentGraph,incoming.protection,'sqlite',graphOptions)
+    const transfer={protection:incoming.protection,features:incoming.features,expectedProtectionRevision:graphStore.digest(currentGraph)}
     db.prepare('DELETE FROM recovery_previews WHERE json_extract(data,\'$.expiresAt\')<?').run(now)
     if(db.prepare('SELECT count(*) AS n FROM recovery_previews p WHERE NOT EXISTS (SELECT 1 FROM recovery_events e WHERE e.id=p.id)').get().n>=20)throw Error('還原預覽過多，請稍後再試')
     const row={id,actorId:actor.userId,kind:input.kind,backupId:input.id||null,label,expectedRevision:current._revision,
-      targetHash:sha(target),target,storeId:recoveryStoreId(target),originStoreId:recoveryStoreId(current),expiresAt:now+15*60*1000}
+      targetHash:sha({target,transfer}),target,transfer,protectionSummary:backupProtectionSummary(incoming),storeId:recoveryStoreId(target),originStoreId:recoveryStoreId(current),expiresAt:now+15*60*1000}
     db.prepare('INSERT INTO recovery_previews VALUES (?,?)').run(id,JSON.stringify(row))
     return {protocol:RECOVERY_PROTOCOL,id,label,kind:row.kind,backupId:row.backupId,expectedRevision:current._revision,storeId:row.storeId,originStoreId:row.originStoreId,
-      current:recoverySummary(current),target:recoverySummary(target),expiresAt:row.expiresAt}
+      current:recoverySummary(current),target:recoverySummary(target),protection:row.protectionSummary,expiresAt:row.expiresAt}
   }
   function confirm(previewId,actor){
     const signature=canonicalSignature({kind:'restore-preview',previewId})
@@ -70,8 +87,8 @@ module.exports=function installRecovery(db,api,replaceAllTx){
       const saved=db.prepare('SELECT data FROM recovery_previews WHERE id=?').get(previewId)
       if(!saved)throw Error('還原預覽已失效，請重新查看')
       const row=JSON.parse(saved.data)
-      if(row.actorId!==actor.userId||row.expiresAt<Date.now()||sha(row.target)!==row.targetHash)throw Error('還原預覽已失效，請重新查看')
-      return replace(previewId,row.target,row.expectedRevision,actor,signature)
+      if(row.actorId!==actor.userId||row.expiresAt<Date.now()||sha({target:row.target,transfer:row.transfer})!==row.targetHash)throw Error('還原預覽已失效，請重新查看')
+      return replace(previewId,row.target,row.expectedRevision,actor,signature,{},row.transfer)
     })()
   }
   function readSource(id){
@@ -110,15 +127,16 @@ module.exports=function installRecovery(db,api,replaceAllTx){
     })()
   }
   api.getRecoveryState=(pending,actor)=>{
-    owner(actor);const operation=pendingOperation(pending),current=api.exportData(),revision=current._revision,currentMaterial=material(current)
+    owner(actor);const operation=pendingOperation(pending),current=api.exportData(),revision=sha({book:current._revision,protection:graphStore.revision()})
     const records=operationRecords(current),active=records.find(row=>row.method===operation.method&&row.id===operation.id)
     const rows=db.prepare(`SELECT s.id FROM recovery_snapshots s JOIN recovery_original_ids i ON i.snapshot_id=s.id
       WHERE i.method=? AND i.operation_id=? ORDER BY s.created_at DESC,s.id DESC`).all(operation.method,operation.id)
     const sources=rows.map(({id})=>{
       const source=readSource(id),record=operationRecords(source.book).find(row=>row.method===operation.method&&row.id===operation.id)
       const matches=!!record&&originalMatches(record,operation,proof),sameStore=source.store_id===recoveryStoreId(current)
-      return {id:source.id,createdAt:source.created_at,operationId:operation.id,matches,canRecover:!active&&matches&&sameStore&&source.after_material===currentMaterial,
-        reason:active?'目前帳本已有這個原編號':!matches?'原編號內容不同':!sameStore?'店面不符':source.after_material!==currentMaterial?'還原後已有新的營運資料':'可以找回原紀錄',summary:recoverySummary(source.book)}
+      const unchanged=recoveryBoundaryMatches(source.after_material,current,'sqlite',graphStore.digest)
+      return {id:source.id,createdAt:source.created_at,operationId:operation.id,matches,canRecover:!active&&matches&&sameStore&&unchanged,
+        reason:active?'目前帳本已有這個原編號':!matches?'原編號內容不同':!sameStore?'店面不符':!unchanged?'還原後已有新的營運資料':'可以找回原紀錄',summary:recoverySummary(source.book)}
     })
     return {protocol:RECOVERY_PROTOCOL,operationId:operation.id,storeId:recoveryStoreId(current),revision,summary:recoverySummary(current),
       active:active?originalMatches(active,operation,proof)?'matched':'different':'missing',sources}
@@ -132,14 +150,19 @@ module.exports=function installRecovery(db,api,replaceAllTx){
       const state=api.getRecoveryState(input.pending,actor),source=state.sources.find(row=>row.id===input.sourceId)
       if(state.revision!==input.expectedRevision)throw Error('帳本已更新，請重新核對復原內容')
       if(!source?.canRecover)throw Error('已有新資料或原編號內容不符，請保留兩份帳本核對')
-      return replace(input.id,readSource(source.id).book,state.revision,actor,signature,{restoredSourceId:source.id,originalOperationId:state.operationId})
+      return replace(input.id,readSource(source.id).book,api.exportData()._revision,actor,signature,{restoredSourceId:source.id,originalOperationId:state.operationId})
     })()
   }
   api.lookupRecoveryOperation=(input,actor)=>{
     owner(actor);const receipt=prior(input?.id,canonicalSignature(input),actor)
     return {protocol:RECOVERY_PROTOCOL,success:true,id:input.id,found:!!receipt,receipt}
   }
-  api.exportRecoverySource=(id,actor)=>{owner(actor);return readSource(id).book}
+  api.exportFullBackup=actor=>{if(actor)owner(actor);return db.transaction(()=>createCompleteBackup(api.exportData(),graphStore.read(),'sqlite',{...graphOptions,features:graphStore.features()}))()}
+  api.getProtectedBackups=actor=>{owner(actor);return db.transaction(()=>{
+    const current=api.exportData(),graph=validateRecoveryGraph(graphStore.read(),'sqlite',graphOptions)
+    return [...graph.snapshots.values()].map(row=>{const sameStore=row.storeId===recoveryStoreId(current),unchanged=recoveryBoundaryMatches(row.afterMaterial,current,'sqlite',graphStore.digest);return {id:row.id,createdAt:row.createdAt,summary:recoverySummary(row.source.book),canRestore:sameStore&&unchanged,reason:!sameStore?'店面不符':!unchanged?'還原後已有新的營運資料':'可以找回原紀錄'}}).sort((a,b)=>Number(b.canRestore)-Number(a.canRestore)||b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id))
+  })()}
+  api.exportRecoverySource=(id,actor)=>{owner(actor);return db.transaction(()=>createCompleteBackup(recoveryBook(readSource(id).book,'sqlite',graphOptions).book,graphStore.read(),'sqlite',{...graphOptions,features:graphStore.features()}))()}
   api.exportRecoveryDiagnostics=actor=>{
     owner(actor)
     // Read raw rows without parsing the damaged business or recovery JSON.

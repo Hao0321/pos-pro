@@ -1,5 +1,8 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--recovery-transfer':['native-recovery-transfer.cjs','POS_RECOVERY_TRANSFER_PASS',false],
+  '--recovery-transfer-ui':['native-recovery-transfer-ui.cjs','POS_RECOVERY_TRANSFER_UI_PASS',true],
+  '--recovery-transfer-browser-ui':['native-recovery-transfer-browser-ui.cjs','POS_RECOVERY_TRANSFER_BROWSER_UI_PASS',true],
   '--stock-recovery':['native-stock-recovery.cjs','POS_STOCK_RECOVERY_PASS',false],
   '--stock-recovery-ui':['native-stock-recovery-ui.cjs','POS_STOCK_RECOVERY_UI_PASS',true],
   '--stock-browser-ui':['native-stock-browser-ui.cjs','POS_STOCK_BROWSER_UI_PASS',true],

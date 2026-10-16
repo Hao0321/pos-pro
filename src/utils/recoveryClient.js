@@ -1,5 +1,6 @@
 import {browserStorage} from './browserStorage'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
+import {FULL_BACKUP_FORMAT} from '../../electron/backupEnvelope.mjs'
 import {RECOVERY_PROTOCOL} from '../../electron/recoveryRules.mjs'
 
 const keys={restore:'pos_pending_restore_v1',recover:'pos_pending_recovery_v1'}
@@ -59,7 +60,8 @@ export function applyProtectedRecovery(state,source,pending,session){
 }
 export const retryRecoveryCommand=(entry,session)=>execute(entry.kind,entry.input,entry.scope,session)
 export function downloadRecoveryData(data,name){
-  const url=URL.createObjectURL(new Blob([JSON.stringify({version:'3.1',storage:isNative()?'sqlite':'browser',data},null,2)],{type:'application/json'}))
+  const value=data?.format===FULL_BACKUP_FORMAT?data:{version:'3.1',storage:isNative()?'sqlite':'browser',data}
+  const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}))
   const anchor=document.createElement('a');anchor.href=url;anchor.download=name.replace(/[^A-Za-z0-9_.-]/g,'_')+'.json';anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
 export async function exportRecoverySource(id,session){downloadRecoveryData(await invoke('exportRecoverySource',id,session),'protected-'+id)}

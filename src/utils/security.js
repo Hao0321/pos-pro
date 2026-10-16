@@ -1,6 +1,8 @@
 import { browserStorage, DATA_KEYS } from './browserStorage'
 import {previewRestore,applyRestorePreview} from './recoveryClient'
 import {retainAuditLogs} from './auditRetention'
+import {exportBrowserFullBackup,getProtectedBackups as browserProtectedBackups} from './browserRecovery'
+import {FULL_BACKUP_FORMAT} from '../../electron/backupEnvelope.mjs'
 // ═══════════════════════════════════════════════════════════════════
 // 資安核心模組 — POS Pro Security Layer
 // ═══════════════════════════════════════════════════════════════════
@@ -270,9 +272,9 @@ export async function createBackup(session, label = '') {
     return result
   }
   const raw=browserStorage.getItem(BACKUP_KEY),backups=raw?JSON.parse(raw):[]
-  const data=Object.fromEntries(BACKUP_KEYS.map(k=>[k,JSON.parse(browserStorage.getItem(k))]))
+  const data=exportBrowserFullBackup()
   const backup={id:'BK-'+crypto.randomUUID(),label:label||`備份 ${new Date().toLocaleString('zh-TW')}`,
-    createdAt:new Date().toISOString(),createdBy:session?.username||'系統',size:JSON.stringify(data).length,data}
+    createdAt:new Date().toISOString(),createdBy:session?.username||'系統',size:new TextEncoder().encode(JSON.stringify(data)).length,data}
   browserStorage.setItem(BACKUP_KEY,JSON.stringify([backup,...backups].slice(0,BACKUP_MAX)))
   writeAuditLog('BACKUP_CREATE',session,{label:backup.label})
   return backup
@@ -283,6 +285,7 @@ export async function getBackupList() {
   const raw=browserStorage.getItem(BACKUP_KEY)
   return raw?JSON.parse(raw).map(({data,...meta})=>meta):[]
 }
+export async function getProtectedBackupList(session){return isElectron?window.electronAPI.db.getProtectedBackups():browserProtectedBackups(null,session)}
 
 export async function restoreBackup(backupId, session, prepared=null) {
   const preview=prepared||await previewRestore({kind:'backup',id:backupId},session)
@@ -293,8 +296,8 @@ export async function restoreBackup(backupId, session, prepared=null) {
 }
 
 export async function exportBackupFile(session) {
-  const data=isElectron?await window.electronAPI.db.exportData():Object.fromEntries(BACKUP_KEYS.map(k=>[k,JSON.parse(browserStorage.getItem(k))]))
-  const content=JSON.stringify({exportedAt:new Date().toISOString(),version:'3.1',storage:isElectron?'sqlite':'browser',data},null,2)
+  const data=isElectron?await window.electronAPI.db.exportFullBackup():exportBrowserFullBackup(session)
+  const content=JSON.stringify(data,null,2)
   const url=URL.createObjectURL(new Blob([content],{type:'application/json'})),a=document.createElement('a')
   const filename=`POSPro_backup_${new Date().toISOString().slice(0,10)}.json`
   a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url)
@@ -309,12 +312,14 @@ export function importBackupFile(file,session) {
     const reader=new FileReader()
     reader.onload=async e=>{
       try{
-        const {data,storage}=JSON.parse(e.target.result)
+        const packet=JSON.parse(e.target.result),data=packet?.format?packet:packet?.data,storage=packet?.storage
         if(!data||typeof data!=='object')throw new Error('備份格式錯誤')
+        const complete=data.format===FULL_BACKUP_FORMAT
+        if(data.format&&!complete)throw Error('備份保護紀錄不完整或內容不同，請保留原檔核對')
         if(isElectron){
-          if(!Array.isArray(data.products)||storage==='browser')throw new Error('請選擇桌面版匯出的備份')
+          if((!complete&&!Array.isArray(data.products))||storage==='browser')throw new Error('請選擇桌面版匯出的備份')
         }else{
-          if(!Array.isArray(data.pos2_products)||storage==='sqlite')throw new Error('請選擇瀏覽器版匯出的備份')
+          if((!complete&&!Array.isArray(data.pos2_products))||storage==='sqlite')throw new Error('請選擇瀏覽器版匯出的備份')
         }
         resolve(await previewRestore({kind:'import',data},session))
       }catch(error){reject(error)}
