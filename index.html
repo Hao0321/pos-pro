@@ -20,14 +20,14 @@
 </head>
 <body style="background:var(--bg-base,#f5f4ef);color:var(--text-primary,#141414);-webkit-tap-highlight-color:transparent;overscroll-behavior:none">
   <div id="root">
-    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif">
+    <div data-startup-splash style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif">
       <img src="./icon-192.png" width="64" height="64" alt="" />
       <div style="font-size:24px;font-weight:700;color:#141414">POS Pro</div>
-      <div style="font-size:16px;font-weight:700;color:#2b20f4">ERP・點餐・CRM</div>
-      <div style="font-size:13px;color:#5f5f59">啟動中...</div>
+      <div data-startup-text="ERP・點餐・CRM" style="font-size:16px;font-weight:700;color:#2b20f4">ERP・點餐・CRM</div>
+      <div data-startup-text="啟動中..." style="font-size:13px;color:#5f5f59">啟動中...</div>
     </div>
   </div>
-  <script type="module" src="/src/main.jsx"></script>
   <script type="module" src="/src/startup.js"></script>
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
