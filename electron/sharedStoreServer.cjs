@@ -85,6 +85,10 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(name==='updateSupplier'&&Object.hasOwn(args[1]||{},'catalog')&&!Object.hasOwn(args[1],'_expectedCatalog'))throw Error('修改貨源須帶入原目錄，請重新核對')
     if(name==='writeAuditLog'){args[0]={...args[0],userId:actor.userId,username:actor.username,role:actor.role}}
     if(name==='getScenarioTemplateReceipt')return db[name](args[0],actor)
+    if(name==='checkout')return db.checkout(args[0],args[1],args[2],actor)
+    if(name==='refundOrder')return db.refundOrder(args[0],args[1],actor)
+    if(['addProduct','addWaste','deleteProduct'].includes(name))return db[name](args[0],actor)
+    if(['updateProduct','updateOrderStatus'].includes(name))return db[name](args[0],args[1],actor)
     return db[name](...args)
   }
   async function handle(req,res){

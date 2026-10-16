@@ -11,6 +11,8 @@ export const STOCK_LEDGER_ERRORS={
  HISTORY:'庫存成本回執需要核對，請保留原編號與資料',
  FLOW:'此庫存流程尚未接上成本帳，原資料已保留',
  BALANCE:'原存貨帳金額需要先核對，尚未啟用成本帳',
+ ADJUST:'庫存數量請用盤點調整，商品資料可以直接修改',
+ RETAIN:'商品已有交易或成本紀錄，請保留商品與原單位以供核對',
 }
 export function stockLedgerError(code){return Object.assign(Error(STOCK_LEDGER_ERRORS[code]),{code:'STOCK_LEDGER_'+code})}
 function shape(value,keys){
@@ -60,12 +62,22 @@ export function planStockOpening(preview,input,date){
  // The cutover establishes a new queue, not a reconstruction of historical FIFO.
  // Existing holds keep priority over the available snapshot when later released.
  for(const reservation of preview.unpaidReservations)for(const row of reservation.allocations)add(stockOpeningKey('reserved',row.productId,reservation.entryId),row,row.quantityUnits,{stage:'reserved',locationId:'main',referenceId:reservation.entryId})
+ for(const reservation of preview.paidLegacyReservations||[])for(const row of reservation.allocations||[])add(stockOpeningKey('consumed',row.productId,reservation.entryId),row,row.quantityUnits,{stage:'consumed',locationId:'main',referenceId:canonicalSignature(['restaurant',reservation.entryId])})
  for(const row of preview.products)add(stockOpeningKey('available',row.productId),row,row.availableUnits,available)
  if([...overrides.keys()].some(key=>!keys.has(key)||!sourceEvidence.some(row=>row.key===key)))throw stockLedgerError('INPUT')
  const custody=createCostCustody(sources,positions),valuation=costCustodySummary(custody)
  const bridge=BigInt(valuation.ownedKnownValueCents)-BigInt(preview.referenceInventoryBalanceCents)
  if(bridge>BigInt(Number.MAX_SAFE_INTEGER)||bridge<BigInt(-Number.MAX_SAFE_INTEGER))throw stockLedgerError('BALANCE')
- return {custody,sourceEvidence,valuation,journal:journal('stock-opening:'+request.id,date,'庫存成本開帳差額',Number(bridge),valuation.ownedValueCents!==null)}
+ const opening=journal('stock-opening:'+request.id,date,'庫存成本開帳差額',Number(bridge),valuation.ownedValueCents!==null)
+ for(const reservation of preview.paidLegacyReservations||[])for(const row of reservation.allocations||[]){
+  const key=stockOpeningKey('consumed',row.productId,reservation.entryId),evidence=sourceEvidence.find(source=>source.key===key),source=sources.find(source=>source.id===evidence?.sourceId)
+  if(!source)throw stockLedgerError('HISTORY')
+  const delta=BigInt(source.valueCents??0)-BigInt(row.referenceValueCents??0),value=Number(delta<0n?-delta:delta)
+  if(!Number.isSafeInteger(value))throw stockLedgerError('BALANCE')
+  if(source.valueCents===null)opening.costComplete=false
+  if(value)opening.lines.push({account:'5101',debitCents:delta>0n?value:0,creditCents:delta<0n?value:0},{account:'3901',debitCents:delta<0n?value:0,creditCents:delta>0n?value:0})
+ }
+ return {custody,sourceEvidence,valuation,journal:opening}
 }
 
 export function planOpeningCostPrice(projection,input,date){
@@ -74,8 +86,9 @@ export function planOpeningCostPrice(projection,input,date){
  const plan=planCostCustody(projection.custody,{expectedSequence:request.expectedSequence,steps:[{kind:'price',sourceId:request.sourceId,valueCents:request.valueCents}]})
  const effect=plan.effects[0],asset=effect.byState.available.confirmedValueCents+effect.byState.reserved.confirmedValueCents
  const values=[['1211',asset],['5101',effect.byState.consumed.confirmedValueCents],['5208',effect.byState.wasted.confirmedValueCents],['5204',effect.byState.supplierReturned.confirmedValueCents]]
- const lines=values.filter(([,value])=>value>0).map(([account,value])=>({account,debitCents:value,creditCents:0}))
- if(request.valueCents>0)lines.push({account:'3901',debitCents:0,creditCents:request.valueCents})
+ const lines=values.filter(([,value])=>value>0).map(([account,value])=>({account,debitCents:value,creditCents:0})),creditAccount=projection.sourceEvidence.find(row=>row.sourceId===request.sourceId).creditAccount||'3901'
+ if(!['3901','4191','5101','2102','2291'].includes(creditAccount))throw stockLedgerError('HISTORY')
+ if(request.valueCents>0)lines.push({account:creditAccount,debitCents:0,creditCents:request.valueCents})
  return {...plan,journal:{id:'stock-price:'+request.id,date,type:'stock-cost',amountUnit:'cents',description:'期初庫存成本補登',costComplete:plan.valuation.ownedValueCents!==null,lines}}
 }
 

@@ -21,5 +21,9 @@ const rows={
  '原存貨帳金額需要先核對，尚未啟用成本帳':['Review the existing inventory account amount before starting the cost ledger.','原価台帳を開始する前に、既存の在庫勘定の金額を確認してください。','原存货账金额需要先核对，尚未启用成本账'],
  '庫存成本開帳差額':['Inventory costing opening adjustment','在庫原価台帳の開始調整額','库存成本开账差额'],
  '期初庫存成本補登':['Opening inventory cost confirmation','開始在庫の原価確定','期初库存成本补登'],
+ '庫存數量請用盤點調整，商品資料可以直接修改':['Use a stock count to adjust quantities. Product details can be edited directly.','在庫数量は棚卸で調整してください。商品情報はそのまま編集できます。','库存数量请用盘点调整，商品资料可以直接修改'],
+ '商品已有交易或成本紀錄，請保留商品與原單位以供核對':['This product has transaction or cost history. Keep the product and its original unit for review.','この商品には取引または原価の履歴があります。確認のため商品と元の単位を保持してください。','商品已有交易或成本记录，请保留商品与原单位以供核对'],
+ '庫存成本異動':['Inventory cost movement','在庫原価の変動','库存成本异动'],
+ '供應商退貨成本差額':['Supplier return cost variance','仕入先への返品原価差額','供应商退货成本差额'],
 }
 export default Object.fromEntries(Object.entries(rows).map(([key,row],index)=>[key,[...row,8000+index]]))

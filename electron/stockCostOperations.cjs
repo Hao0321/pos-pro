@@ -19,7 +19,7 @@ module.exports=function stockCostOperations(db,api,store){
     let openingMaterial=null
     if(input.action==='open'){
      if(state.projection)throw stockLedgerError('ACTIVE')
-     const snapshot=readStockOpening(api,actor),hash='sha256:'+createHash('sha256').update(snapshot.material).digest('hex')
+     const snapshot=readStockOpening(api,actor,db),hash='sha256:'+createHash('sha256').update(snapshot.material).digest('hex')
      if(hash!==input.snapshotDigest)throw stockLedgerError('STALE')
      openingMaterial=snapshot.material
     }else if(!state.projection)throw stockLedgerError('HISTORY')

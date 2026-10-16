@@ -62,29 +62,30 @@ function node(current,owner,create=false){
 function costForSource(current,sourceId){
   return Object.fromEntries(STOCK_COST_STATES.map(stage=>[stage,stockCostSummary(current.sources,current.positions.filter(row=>row.owner.stage===stage).flatMap(row=>row.segments.filter(segment=>segment.sourceId===sourceId)))]))
 }
-function acquire(current,step){
+function acquire(current,step,discarded=false){
   record(step,['kind','sources','to']);const to=costOwner(step.to)
-  if(to.stage!=='available'||!Array.isArray(step.sources)||!step.sources.length)fail('STATES')
+  if(to.stage!==(discarded?'wasted':'available')||!Array.isArray(step.sources)||!step.sources.length)fail('STATES')
   const existing=new Set(current.sources.map(row=>row.id)),added=[]
   for(const input of step.sources){const source=costSource(input);if(existing.has(source.id))fail('SOURCE_ID');existing.add(source.id);current.sources.push(source);added.push({sourceId:source.id,offsetUnits:0,quantityUnits:source.quantityUnits,queueOrder:current.nextQueueOrder});current.nextQueueOrder=increment(current.nextQueueOrder)}
   const destination=node(current,to,true);destination.segments=normalizeCostSegments(current.sources,[...destination.segments,...added])
-  return {kind:'acquire',to,segments:added,cost:stockCostSummary(current.sources,added)}
+  return {kind:discarded?'acquire-disposed':'acquire',to,segments:added,cost:stockCostSummary(current.sources,added)}
 }
 const EDGES=new Set(['available:reserved','available:consumed','available:wasted','available:supplierReturned','reserved:available','reserved:consumed','reserved:wasted','consumed:available','consumed:wasted','wasted:available','supplierReturned:available'])
-function move(current,step){
+function move(current,step,unused=false){
   record(step,['kind','from','to','productId','unit','quantityUnits']);const from=costOwner(step.from),to=costOwner(step.to),transfer=from.stage==='available'&&to.stage==='available'&&from.locationId!==to.locationId
   if(key(from)===key(to)||!transfer&&!EDGES.has(from.stage+':'+to.stage))fail('STATES')
+  if(unused&&(from.stage!=='consumed'||to.stage!=='available'||from.locationId!==to.locationId))fail('STATES')
   if((to.stage!=='available'||from.stage==='reserved')&&from.locationId!==to.locationId)fail('STATES')
   const origin=node(current,from);if(!origin)fail('INSUFFICIENT')
   const sources=new Map(current.sources.map(row=>[row.id,row])),selected=origin.segments.filter(row=>sources.get(row.sourceId).productId===step.productId),other=origin.segments.filter(row=>sources.get(row.sourceId).productId!==step.productId)
   const taken=takeFifoSegments(current.sources,selected,{productId:step.productId,unit:step.unit,quantityUnits:step.quantityUnits})
   origin.segments=normalizeCostSegments(current.sources,[...other,...taken.remaining]);const destination=node(current,to,true)
   if(to.stage==='available'){
-    const released=from.stage==='reserved'
+    const released=from.stage==='reserved'||unused
     destination.segments=restoreCostSegments(current.sources,destination.segments,taken.allocations,released?{kind:'release-reservation'}:{kind:'customer-return',queueOrder:current.nextQueueOrder})
     if(!released)current.nextQueueOrder=increment(greatestQueue(current.positions))
   }else destination.segments=normalizeCostSegments(current.sources,[...destination.segments,...taken.allocations])
-  return {kind:'move',from,to,productId:step.productId,unit:step.unit,quantityUnits:step.quantityUnits,segments:taken.allocations,cost:taken.cost}
+  return {kind:unused?'release-unused':'move',from,to,productId:step.productId,unit:step.unit,quantityUnits:step.quantityUnits,segments:taken.allocations,cost:taken.cost}
 }
 function price(current,step){
   record(step,['kind','sourceId','valueCents']);const index=current.sources.findIndex(source=>source.id===step.sourceId)
@@ -101,7 +102,9 @@ export function planCostCustody(input,command){
     const descriptor=step&&Object.getOwnPropertyDescriptor(step,'kind')
     if(!descriptor||!Object.hasOwn(descriptor,'value'))fail('STATES')
     if(step.kind==='acquire')effects.push(acquire(current,step))
+    else if(step.kind==='acquire-disposed')effects.push(acquire(current,step,true))
     else if(step.kind==='move')effects.push(move(current,step))
+    else if(step.kind==='release-unused')effects.push(move(current,step,true))
     else if(step.kind==='price')effects.push(price(current,step))
     else fail('STATES')
   }

@@ -35,9 +35,9 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:applyInventoryOperation',(_e,input)=>db.applyInventoryOperation(input,ipcSecurity.current()))
   handle('db:applyScenarioTemplate', (_e, input) => db.applyScenarioTemplate(input, ipcSecurity.current()))
   handle('db:getScenarioTemplateReceipt', (_e, id) => db.getScenarioTemplateReceipt(id, ipcSecurity.current()))
-  handle('db:addProduct', (_e, data) => db.addProduct(data))
-  handle('db:updateProduct', (_e, id, data) => db.updateProduct(id, data))
-  handle('db:deleteProduct', (_e, id) => db.deleteProduct(id))
+  handle('db:addProduct', (_e, data) => db.addProduct(data,ipcSecurity.current()))
+  handle('db:updateProduct', (_e, id, data) => db.updateProduct(id, data,ipcSecurity.current()))
+  handle('db:deleteProduct', (_e, id) => db.deleteProduct(id,ipcSecurity.current()))
   handle('db:findByBarcode', (_e, code) => db.findByBarcode(code))
 
   // ----- Members -----
@@ -53,13 +53,13 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
 
   // ----- Checkout (atomic) -----
   handle('db:checkout', (_e, orderData, stockUpdates, memberUpdate) => {
-    return db.checkout(orderData, stockUpdates, memberUpdate)
+    return db.checkout(orderData, stockUpdates, memberUpdate,ipcSecurity.current())
   })
 
   // ----- Customer Orders -----
   handle('db:getCustomerOrders', () => db.getCustomerOrders())
   handle('db:updateOrderStatus', (_e, id, status) => {
-    const result = db.updateOrderStatus(id, status)
+    const result = db.updateOrderStatus(id, status,ipcSecurity.current())
     // 通知 WebSocket 客戶端
     if (orderServer && orderServer.broadcast) {
       orderServer.broadcast(JSON.stringify({ type: 'order-status', orderId: id, status }))
@@ -136,8 +136,8 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:isEmpty', () => db.isEmpty())
 
   // ----- Refund -----
-  handle('db:refundOrder', (_e, origId, refundData, stockUpdates, memberUpdate) =>
-    db.refundOrder(origId, refundData, stockUpdates, memberUpdate))
+  handle('db:refundOrder', (_e, origId, refundData) =>
+    db.refundOrder(origId, refundData, ipcSecurity.current()))
 
   // ----- Held Orders -----
   handle('db:getHeldOrders', () => db.getHeldOrders())
@@ -154,7 +154,7 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
 
   // ----- Waste -----
   handle('db:getWasteLog', () => db.getWasteLog())
-  handle('db:addWaste', (_e, data) => db.addWaste(data))
+  handle('db:addWaste', (_e, data) => db.addWaste(data,ipcSecurity.current()))
   handle('db:deleteWaste', (_e, id) => db.deleteWaste(id))
 
   // ----- Topups -----

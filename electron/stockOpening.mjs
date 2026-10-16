@@ -26,7 +26,7 @@ export function prepareStockOpening(data){
   }
   for(const entry of data.restaurantEntries){
     if(entry.status==='cancelled')continue
-    if(entry.saleId){paid.push({entryId:entry.id,version:entry.version,status:entry.status,saleId:entry.saleId});continue}
+    if(entry.saleId&&entry.status==='completed'){paid.push({entryId:entry.id,version:entry.version,status:entry.status,saleId:entry.saleId});continue}
     if(!Array.isArray(entry.allocations))fail()
     const allocations=entry.allocations.map(item=>{
       const product=products.get(item.id);if(!product)fail()
@@ -36,6 +36,7 @@ export function prepareStockOpening(data){
       return {productId:item.id,name:item.name||product.name,unit:product.unit,quantityUnits,referenceUnitCostCents:rate,referenceValueCents:referenceValue(rate,quantityUnits),unitEvidence:'current-product-unit-reference'}
     })
     flags.add('legacy-reservation-unit-needs-review')
+    if(entry.saleId){paid.push({entryId:entry.id,version:entry.version,status:entry.status,saleId:entry.saleId,prepared:!!entry.startedAt,allocations});continue}
     unpaid.push({entryId:entry.id,version:entry.version,status:entry.status,prepared:!!entry.startedAt,allocations})
   }
   const legacyCostReviews=[]
