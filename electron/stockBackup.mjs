@@ -13,6 +13,7 @@ export function validateStockCostBook(book,validatedState=null){
   if((book.settings||[]).some(row=>row.key===STOCK_COMPAT_SETTING&&row.value!=='1'))throw stockLedgerError('HISTORY')
   const hasEntries=Object.hasOwn(book,'stockCostEntries'),hasOperations=Object.hasOwn(book,'stockCostOperations')
   if(hasEntries!==hasOperations)throw stockLedgerError('HISTORY')
+  if(!hasEntries&&(book.settings||[]).some(row=>row.key===STOCK_COMPAT_SETTING&&row.value==='1'))throw stockLedgerError('HISTORY')
   if(hasEntries&&(!Array.isArray(book.stockCostEntries)||!Array.isArray(book.stockCostOperations)))throw stockLedgerError('HISTORY')
   const state=validatedState||replayStockLedger(book.stockCostEntries||[],book.stockCostOperations||[])
   if(!state.projection)return state

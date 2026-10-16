@@ -25,6 +25,7 @@ it('native Node crypto and portable browser SHA produce the same complete verifi
 })
 it.each([
  ['missing half',book=>{delete book.stockCostOperations}],
+ ['both missing from a marked cost book',book=>{delete book.stockCostEntries;delete book.stockCostOperations;book.settings.push({key:'stockCostVersionFence',value:'1'})}],
  ['null arrays',book=>{book.stockCostEntries=null;book.stockCostOperations=null}],
  ['duplicate event',book=>book.stockCostEntries.push(structuredClone(book.stockCostEntries[0]))],
  ['duplicate acknowledgement',book=>{book.stockCostOperations[1]=structuredClone(book.stockCostOperations[0])}],

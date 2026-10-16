@@ -14,6 +14,7 @@ module.exports=function stockLedgerStorage(db){
  let depth=0,restoreDepth=0
  const compatibility=db.prepare('SELECT value FROM settings WHERE key=?').get(STOCK_COMPAT_SETTING)
  if(compatibility&&compatibility.value!=='1')throw stockLedgerError('HISTORY')
+ if(compatibility&&['stock_cost_entries','stock_cost_operations'].some(name=>!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)))throw stockLedgerError('HISTORY')
  db.function('pos_stock_write_allowed',()=>{if(!depth)throw stockLedgerError('FLOW');return 1})
  db.function('pos_stock_restore_allowed',()=>restoreDepth>0?1:0)
  db.exec('CREATE TABLE IF NOT EXISTS stock_cost_entries (id TEXT PRIMARY KEY,sequence INTEGER UNIQUE NOT NULL,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS stock_cost_operations (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS stock_cost_runtime (id TEXT PRIMARY KEY,opening_hash TEXT NOT NULL,epoch TEXT NOT NULL);')

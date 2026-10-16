@@ -37,6 +37,7 @@ export function readRecords() {
     // New collections may be absent in records written by earlier versions.
     if(!Object.hasOwn(record.data,'pos_business_settings'))record.data.pos_business_settings=readLegacySettings()
     if(Object.hasOwn(record.data,'pos_stock_cost_entries')!==Object.hasOwn(record.data,'pos_stock_cost_operations'))throw Error('庫存成本回執需要核對，請保留原編號與資料')
+    if(!Object.hasOwn(record.data,'pos_stock_cost_entries')&&record.data.pos_business_settings.some(row=>row.key===STOCK_COMPAT_SETTING&&row.value==='1'))throw Error('庫存成本回執需要核對，請保留原編號與資料')
     for(const key of ['pos_restaurant_orders','pos_restaurant_operations','pos_sales_documents','pos_sales_operations','pos_customer_entries','pos_customer_operations','pos_supplier_entries','pos_supplier_operations','pos_stock_cost_entries','pos_stock_cost_operations'])if(!Object.hasOwn(record.data,key))record.data[key]=[]
     for (const key of DATA_KEYS) validArray(record.data[key])
     if(Object.keys(record.data).some(key=>!keys.has(key)))throw Error('備份含有目前版本不支援的資料，請保留原檔並使用相容版本')
@@ -50,6 +51,7 @@ export function readRecords() {
     data[key] = old == null ? key==='pos_business_settings'?readLegacySettings():[] : validArray(JSON.parse(old))
   }
   if((nativeStorage().getItem('pos_stock_cost_entries')!==null)!==(nativeStorage().getItem('pos_stock_cost_operations')!==null))throw Error('庫存成本回執需要核對，請保留原編號與資料')
+  if(nativeStorage().getItem('pos_stock_cost_entries')===null&&data.pos_business_settings.some(row=>row.key===STOCK_COMPAT_SETTING&&row.value==='1'))throw Error('庫存成本回執需要核對，請保留原編號與資料')
   validateStockCostBook(browserToBook(data))
   return {version:1,revision:0,data}
 }

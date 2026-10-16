@@ -22,13 +22,17 @@ it('round trips the full native-derived cost history in one browser record and r
  const limited=getBrowserStockSalesState(staff);expect(limited.scope).toBe('pos');expect(limited.data).not.toHaveProperty('supplierState');expect(limited.performance.enriched[0]).not.toHaveProperty('stockValue');expect(()=>getBrowserStockAccountingState(staff)).toThrow(/權限/);expect(()=>getBrowserStockSalesState({...owner,username:'forged'})).toThrow(/權限/)
  expect((await recovery.lookupRestorePreview(restored.preview.id,owner)).receipt).toEqual(restored.result);expect(await recovery.applyRestorePreview(restored.preview.id,owner)).toEqual(restored.result)
 })
-it.each(['missing-half','null-arrays','changed-hash','changed-order'])('rejects %s before preview or any browser mutation',async kind=>{
+it.each(['missing-half','missing-both-marked','null-arrays','changed-hash','changed-order'])('rejects %s before preview or any browser mutation',async kind=>{
  const data=source(),before=localStorage.getItem(RECORD_KEY)
  if(kind==='missing-half')delete data.pos_stock_cost_operations
+ if(kind==='missing-both-marked'){delete data.pos_stock_cost_entries;delete data.pos_stock_cost_operations;data.pos_business_settings.push({key:'stockCostVersionFence',value:'1'})}
  if(kind==='null-arrays'){data.pos_stock_cost_entries=null;data.pos_stock_cost_operations=null}
  if(kind==='changed-hash')data.pos_stock_cost_entries[0].hash='bad'
  if(kind==='changed-order')data.pos2_orders[0].total+=1
  await expect(recovery.previewRestore({kind:'import',data},owner)).rejects.toThrow(/成本回執/);expect(localStorage.getItem(RECORD_KEY)).toBe(before)
+})
+it('retains the original browser record bytes when a marked book has lost both cost collections',async()=>{
+ await restore(source());const record=readRecords();delete record.data.pos_stock_cost_entries;delete record.data.pos_stock_cost_operations;const raw=JSON.stringify(record);localStorage.setItem(RECORD_KEY,raw);expect(()=>readRecords()).toThrow(/成本回執/);expect(localStorage.getItem(RECORD_KEY)).toBe(raw)
 })
 it('rejects standalone uncoupled stock writes while retaining inputs, exact history and metadata price edits',async()=>{
  await restore(source());const before=localStorage.getItem(RECORD_KEY),record=readRecords()

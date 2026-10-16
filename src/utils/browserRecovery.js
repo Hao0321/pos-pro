@@ -3,9 +3,10 @@ import {canonicalSignature} from '../../electron/operationRules.mjs'
 import {signature as checkoutSignature} from '../../electron/checkoutSignature.mjs'
 import {refundSignature} from './refundSafety.mjs'
 import {RECOVERY_PROTOCOL,browserToBook,bookToBrowser,protectedRestoreBook,recoveryStoreId,recoverySummary,materialSignature,operationRecords,pendingOperation,originalMatches} from '../../electron/recoveryRules.mjs'
+import {STOCK_COMPAT_SETTING} from '../../electron/stockCompatibility.mjs'
 
 const previews=new Map(),proof={checkoutSignature,refundSignature}
-function completeBook(data){const a=Object.hasOwn(data,'pos_stock_cost_entries'),b=Object.hasOwn(data,'pos_stock_cost_operations');if(a!==b||a&&(!Array.isArray(data.pos_stock_cost_entries)||!Array.isArray(data.pos_stock_cost_operations)))throw Error('庫存成本回執需要核對，請保留原編號與資料');return browserToBook(data)}
+function completeBook(data){const a=Object.hasOwn(data,'pos_stock_cost_entries'),b=Object.hasOwn(data,'pos_stock_cost_operations'),marked=Array.isArray(data.pos_business_settings)&&data.pos_business_settings.some(row=>row.key===STOCK_COMPAT_SETTING&&row.value==='1');if(a!==b||!a&&marked||a&&(!Array.isArray(data.pos_stock_cost_entries)||!Array.isArray(data.pos_stock_cost_operations)))throw Error('庫存成本回執需要核對，請保留原編號與資料');return browserToBook(data)}
 function owner(actor){if(actor?.role!=='owner'||!readRecords().data.pos_users.some(u=>u.id===actor.userId&&u.role==='owner'&&u.username===actor.username))throw Error('權限不足')}
 function prior(id,signature,actor,record=readRecords()){
   const row=recoveryMetadata(record).events.find(e=>e.id===id)
