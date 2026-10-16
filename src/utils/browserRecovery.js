@@ -5,7 +5,8 @@ import {refundSignature} from './refundSafety.mjs'
 import {RECOVERY_PROTOCOL,browserToBook,bookToBrowser,protectedRestoreBook,recoveryStoreId,recoverySummary,materialSignature,operationRecords,pendingOperation,originalMatches} from '../../electron/recoveryRules.mjs'
 
 const previews=new Map(),proof={checkoutSignature,refundSignature}
-function owner(actor){if(actor?.role!=='owner'||!readRecords().data.pos_users.some(u=>u.id===actor.userId&&u.role==='owner'))throw Error('權限不足')}
+function completeBook(data){const a=Object.hasOwn(data,'pos_stock_cost_entries'),b=Object.hasOwn(data,'pos_stock_cost_operations');if(a!==b||a&&(!Array.isArray(data.pos_stock_cost_entries)||!Array.isArray(data.pos_stock_cost_operations)))throw Error('庫存成本回執需要核對，請保留原編號與資料');return browserToBook(data)}
+function owner(actor){if(actor?.role!=='owner'||!readRecords().data.pos_users.some(u=>u.id===actor.userId&&u.role==='owner'&&u.username===actor.username))throw Error('權限不足')}
 function prior(id,signature,actor,record=readRecords()){
   const row=recoveryMetadata(record).events.find(e=>e.id===id)
   if(!row)return null
@@ -23,11 +24,11 @@ export async function previewRestore(input,actor){
   if(input.kind==='backup'){
     const row=JSON.parse(browserStorage.getItem('pos_backups')||'[]').find(b=>b.id===input.id)
     if(!row?.data)throw Error('備份不存在')
-    data=browserToBook(row.data);label=row.label
+    data=completeBook(row.data);label=row.label
   }else if(input.kind==='import'){
     if(!input.data||Array.isArray(input.data)||!Array.isArray(input.data.pos2_products))throw Error('備份格式錯誤')
     if(Object.keys(input.data).some(key=>!DATA_KEYS.includes(key)))throw Error('備份含有目前版本不支援的資料，請保留原檔並使用相容版本')
-    data=browserToBook(input.data);label='匯入備份'
+    data=completeBook(input.data);label='匯入備份'
   }
   else throw Error('還原來源不正確')
   const target=protectedRestoreBook(current,data),id='restore-'+crypto.randomUUID(),expiresAt=Date.now()+15*60*1000

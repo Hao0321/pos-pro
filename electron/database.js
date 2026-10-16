@@ -152,7 +152,7 @@ module.exports = function initDatabase(dbPath) {
     return {...checkoutReceipt(plan.order.id),original:readOrder(original.id)}
   })
 
-  const {migrateTx,replaceAllTx}=require('./databaseMigration.cjs')(db,stmts,orderInsertParams,supplierParams)
+  const {migrateTx,replaceAllTx}=require('./databaseMigration.cjs')(db,stmts,orderInsertParams,supplierParams,stockStore)
 
   // ===== Public API =====
   const api={
@@ -564,8 +564,9 @@ module.exports = function initDatabase(dbPath) {
       const stock=stockStore.read()
       if(stock.projection){
         require('./stockOpeningPlan.mjs').assertStockCustodyMatchesBook(stock.projection.custody,data.products,data.restaurantOrders)
-        data.stockCostEntries=stock.entries;data.stockCostOperations=stock.operations
       }
+      data.stockCostEntries=stock.entries;data.stockCostOperations=stock.operations
+      require('./stockBackup.mjs').validateStockCostBook(data,stock)
       // A backup round trip may change insertion order for tied timestamps.
       // Stable collection ordering keeps the revision tied to business content.
       for(const rows of Object.values(data))rows.sort((a,b)=>String(a.id??a.key).localeCompare(String(b.id??b.key)))
@@ -578,11 +579,12 @@ module.exports = function initDatabase(dbPath) {
       return row ? row.value : null
     },
     setSetting(key, value) {
+      if(key==='stockCostVersionFence')throw Error('成本資料的版本保護由完整備份流程管理')
       if(key==='businessExchangeV1')throw Error('報價歷史只能由正式報價或還原流程保存')
       stmts.setSetting.run(key, value)
       return { success: true }
     },
-    setSettings(values){if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');db.transaction(()=>{for(const [key,value]of Object.entries(values))stmts.setSetting.run(key,String(value))})();return {success:true}},
+    setSettings(values){if(Object.hasOwn(values,'stockCostVersionFence'))throw Error('成本資料的版本保護由完整備份流程管理');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');db.transaction(()=>{for(const [key,value]of Object.entries(values))stmts.setSetting.run(key,String(value))})();return {success:true}},
     getAllSettings() {
       const rows = stmts.getAllSettings.all()
       const result = {}
@@ -598,7 +600,7 @@ module.exports = function initDatabase(dbPath) {
       return migrateTx(data)
     },
     isEmpty() {
-      return ['products','members','orders','suppliers','purchases','promotions','manual_journal','held_orders','shifts','cash_log','waste_log','member_topups','sales_documents','sales_operations','customer_entries','customer_operations','supplier_entries','supplier_operations','restaurant_orders','restaurant_operations'].every(t=>db.prepare('SELECT 1 FROM '+t+' LIMIT 1').get()==null)
+      return ['products','members','orders','suppliers','purchases','promotions','manual_journal','held_orders','shifts','cash_log','waste_log','member_topups','sales_documents','sales_operations','customer_entries','customer_operations','supplier_entries','supplier_operations','restaurant_orders','restaurant_operations','stock_cost_entries','stock_cost_operations'].every(t=>db.prepare('SELECT 1 FROM '+t+' LIMIT 1').get()==null)
     },
 
     // ===== Held Orders 掛單 =====

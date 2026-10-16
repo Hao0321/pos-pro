@@ -4,6 +4,7 @@ import { browserStorage, readRecords, writeRecords } from './browserStorage'
 // pull：從 Supabase 拉全部資料，覆蓋本機
 import { getSupabase, isCloudEnabled } from './supabaseClient'
 import { isElectron } from './dataAccess'
+import {hasStockCostHistory} from '../../electron/stockCompatibility.mjs'
 
 // ===== Tables 設定 =====
 // localKey：localStorage key（Browser 模式）
@@ -156,6 +157,7 @@ async function readLocal() {
     const data = await window.electronAPI.db.exportData()
     return {
       _revision:data._revision,
+      _stockCostHistory:hasStockCostHistory(data),
       _restaurantOrders:data.restaurantOrders||[],
       _restaurantOperations:data.restaurantOperations||[],
       _salesDocuments:data.salesDocuments||[],
@@ -182,6 +184,7 @@ async function readLocal() {
   const all = {}
   for (const t of TABLES) all[t.localKey] = loadLS(t.localKey)
   const data=readRecords().data,raw=data.pos_business_settings.find(s=>s.key==='restaurantConfig')?.value
+  all._stockCostHistory=hasStockCostHistory({settings:data.pos_business_settings,stockCostEntries:data.pos_stock_cost_entries,stockCostOperations:data.pos_stock_cost_operations})
   all._restaurantOrders=data.pos_restaurant_orders;all._restaurantOperations=data.pos_restaurant_operations
   all._salesDocuments=data.pos_sales_documents;all._salesOperations=data.pos_sales_operations
   all._customerEntries=data.pos_customer_entries;all._customerOperations=data.pos_customer_operations
@@ -190,6 +193,7 @@ async function readLocal() {
   return all
 }
 function guardRestaurantCloud(data){
+  if(data._stockCostHistory)throw Error('成本帳請使用完整備份還原預覽，不能部分同步')
   if(data._supplierEntries?.length||data._supplierOperations?.length)throw Error('目前雲端快照不包含完整供應商核准、預付與抵付回執，已停止同步。請使用完整 JSON 備份；手機共用店面可照常使用。')
   if(data._customerEntries?.length||data._customerOperations?.length)throw Error('目前雲端快照不包含完整客戶預收與抵付回執，已停止同步。請使用完整 JSON 備份；手機共用店面可照常使用。')
   if(data._salesDocuments.length||data._salesOperations.length)throw Error('目前雲端快照不包含完整銷售、應收及收款回執，已停止同步。請使用完整 JSON 備份；手機共用店面可照常使用。')

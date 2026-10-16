@@ -1,9 +1,8 @@
-module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierParams){
+module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierParams,stockStore){
   // ===== Migration =====
-  const migrateTx = db.transaction((data) => {
-    // Cost-ledger restore is not public until its complete protected replacement
-    // and original-ID recovery adapters are connected. Never discard this data.
-    if(data.stockCostEntries?.length||data.stockCostOperations?.length)throw require('./stockOpeningPlan.mjs').stockLedgerError('FLOW')
+  const migrateTx = db.transaction((data,{costRestore=false}={}) => {
+    require('./stockBackup.mjs').validateStockCostBook(data)
+    if(!costRestore&&(data.stockCostEntries?.length||data.stockCostOperations?.length))throw require('./stockOpeningPlan.mjs').stockLedgerError('FLOW')
     require('./procurementRules.mjs').validateProcurementRecords(data.purchases||[],data.cashLog||[])
     require('./businessExchange.mjs').validateExchangeSettings(data.settings||[],data.purchases||[],data.auditLog||[])
     const exchange=require('./businessExchange.mjs')
@@ -254,6 +253,7 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
       }
     }
 
+    if(!costRestore&&require('./stockCompatibility.mjs').hasStockCostHistory(data))stockStore.ensureCompatibility()
     return { success: true }
   })
 
@@ -261,6 +261,8 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
   // importData / restoreBackup 共用。若 migrateTx 中途 throw（例如缺欄位、髒資料），
   // 連同前面的 DELETE 一起 rollback，保證不會把舊資料清掉卻沒匯入新資料造成整庫遺失。
   const replaceAllTx = db.transaction((data) => {
+    require('./stockBackup.mjs').validateStockCostBook(data)
+    return stockStore.restore(()=>{
     db.exec(`
       DELETE FROM products; DELETE FROM members;
       DELETE FROM order_items; DELETE FROM orders;
@@ -275,8 +277,10 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
       DELETE FROM sales_documents; DELETE FROM sales_operations; DELETE FROM customer_entries; DELETE FROM customer_operations;
       DELETE FROM supplier_entries; DELETE FROM supplier_operations;
     `)
-    migrateTx(data)
+    migrateTx(data,{costRestore:true})
     db.prepare('UPDATE sales_runtime SET value=? WHERE id=?').run(require('node:crypto').randomUUID(),'epoch')
+    stockStore.replace(data)
+    })
   })
 
   return {migrateTx,replaceAllTx}

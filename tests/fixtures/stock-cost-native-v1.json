@@ -1,0 +1,497 @@
+{
+  "provenance": {
+    "kind": "synthetic actual native SQLite book",
+    "sourceRevision": "d4a3a34ab248e7879c989b0e3cfe916c8191c282",
+    "baselineMarker": "POS_STOCK_RECOVERY_BASELINE_CAPTURED",
+    "canonicalBookSha256": "fcacbd42ee8929b40d8a49a0bab8dbace5ee37569e86dd0b36b3f263e3311a42",
+    "realMerchantData": false
+  },
+  "book": {
+    "products": [
+      {
+        "id": "p",
+        "name": "Cost 原文",
+        "category": "",
+        "price": 100,
+        "cost": 20,
+        "stock": 9,
+        "barcode": "",
+        "unit": "個",
+        "noBarcode": false,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-16 12:52:50",
+        "updatedAt": "2026-10-16 12:52:50"
+      }
+    ],
+    "members": [],
+    "orders": [
+      {
+        "id": "sale",
+        "subtotal": 1100,
+        "discount": 0,
+        "manualDiscount": 0,
+        "balanceUsed": 0,
+        "total": 1100,
+        "payMethod": "card",
+        "paid": 1100,
+        "change_amount": 0,
+        "payments": [
+          {
+            "method": "card",
+            "amount": 1100
+          }
+        ],
+        "memberId": null,
+        "pointsUsed": 0,
+        "pointsEarned": 0,
+        "time": "2026-10-16T04:52:50.206Z",
+        "source": "pos",
+        "status": "completed",
+        "tableNum": "",
+        "note": "",
+        "taxId": "",
+        "shiftId": "shift",
+        "refundOf": "",
+        "cashier": "Recovery fixture",
+        "fullRefund": false,
+        "itemCosts": {
+          "p": 20
+        },
+        "trackingTokenHash": "",
+        "requestSignature": "",
+        "change": 0,
+        "items": [
+          {
+            "id": "p",
+            "name": "Cost 原文",
+            "price": 100,
+            "qty": 11
+          }
+        ]
+      }
+    ],
+    "suppliers": [
+      {
+        "id": "s",
+        "name": "Supplier",
+        "contact": "",
+        "phone": "",
+        "payTerms": "",
+        "note": "",
+        "catalog": []
+      }
+    ],
+    "purchases": [
+      {
+        "id": "po",
+        "supplierId": "s",
+        "supplierName": "Supplier",
+        "status": "received",
+        "date": "2026-10-16",
+        "receivedDate": "2026-10-16",
+        "paidDate": "",
+        "note": "",
+        "total": 300,
+        "items": [
+          {
+            "productId": "p",
+            "catalogId": null,
+            "name": "Cost 原文",
+            "unit": "個",
+            "qty": 10,
+            "unitCost": 30,
+            "received": 10
+          }
+        ],
+        "procurement": {
+          "version": 1,
+          "revision": 2,
+          "createdOperationId": "create",
+          "createdAt": "2026-10-16T04:52:50.191Z",
+          "receipts": [
+            {
+              "id": "receive",
+              "time": "2026-10-16T04:52:50.197Z",
+              "date": "2026-10-16",
+              "quantities": [
+                10
+              ],
+              "amount": 300
+            }
+          ],
+          "bills": [],
+          "payments": [],
+          "reversals": [],
+          "cancel": null
+        }
+      }
+    ],
+    "promotions": [],
+    "users": [
+      {
+        "id": "owner",
+        "username": "Recovery fixture",
+        "password": "fixture",
+        "role": "owner"
+      }
+    ],
+    "manualJournal": [],
+    "heldOrders": [],
+    "shifts": [
+      {
+        "id": "shift",
+        "cashier": "Recovery fixture",
+        "cashierId": "",
+        "openTime": "2026-10-16T04:52:50.171Z",
+        "closeTime": "",
+        "openCash": 0,
+        "closeCash": 0,
+        "expectedCash": 0,
+        "diff": 0,
+        "cashSales": 0,
+        "cardSales": 0,
+        "orderCount": 0,
+        "refundCount": 0,
+        "refundAmount": 0,
+        "note": "",
+        "status": "open"
+      }
+    ],
+    "cashLog": [],
+    "wasteLog": [],
+    "memberTopups": [],
+    "auditLog": [
+      {
+        "id": "stock-operation:create",
+        "timestamp": "2026-10-16T04:52:50.195Z",
+        "action": "INVENTORY_OPERATION",
+        "level": "info",
+        "label": "庫存盤點",
+        "userId": "owner",
+        "username": "Recovery fixture",
+        "role": "owner",
+        "detail": "{\"id\":\"create\",\"kind\":\"purchase-create\",\"signature\":\"{\\\"id\\\":\\\"create\\\",\\\"kind\\\":\\\"purchase-create\\\",\\\"purchase\\\":{\\\"date\\\":\\\"2026-10-16\\\",\\\"id\\\":\\\"po\\\",\\\"items\\\":[{\\\"name\\\":\\\"Cost 原文\\\",\\\"productId\\\":\\\"p\\\",\\\"qty\\\":10,\\\"received\\\":0,\\\"unit\\\":\\\"個\\\",\\\"unitCost\\\":30}],\\\"supplierId\\\":\\\"s\\\"},\\\"time\\\":\\\"2026-10-16T04:52:50.191Z\\\"}\",\"productIds\":[],\"purchaseId\":\"po\",\"supplierId\":null,\"time\":\"2026-10-16T04:52:50.191Z\",\"purchaseVersion\":1,\"document\":{\"collection\":\"purchase-create\",\"id\":\"create\",\"signature\":\"{\\\"id\\\":\\\"create\\\",\\\"time\\\":\\\"2026-10-16T04:52:50.191Z\\\"}\"}}"
+      },
+      {
+        "id": "stock-operation:receive",
+        "timestamp": "2026-10-16T04:52:50.199Z",
+        "action": "INVENTORY_OPERATION",
+        "level": "info",
+        "label": "進貨到貨",
+        "userId": "owner",
+        "username": "Recovery fixture",
+        "role": "owner",
+        "detail": "{\"id\":\"receive\",\"kind\":\"receive\",\"signature\":\"{\\\"expectedPurchase\\\":\\\"{\\\\\\\"date\\\\\\\":\\\\\\\"2026-10-16\\\\\\\",\\\\\\\"id\\\\\\\":\\\\\\\"po\\\\\\\",\\\\\\\"items\\\\\\\":[{\\\\\\\"catalogId\\\\\\\":null,\\\\\\\"name\\\\\\\":\\\\\\\"Cost 原文\\\\\\\",\\\\\\\"productId\\\\\\\":\\\\\\\"p\\\\\\\",\\\\\\\"qty\\\\\\\":10,\\\\\\\"received\\\\\\\":0,\\\\\\\"unit\\\\\\\":\\\\\\\"個\\\\\\\",\\\\\\\"unitCost\\\\\\\":30}],\\\\\\\"note\\\\\\\":\\\\\\\"\\\\\\\",\\\\\\\"paidDate\\\\\\\":\\\\\\\"\\\\\\\",\\\\\\\"procurement\\\\\\\":{\\\\\\\"bills\\\\\\\":[],\\\\\\\"cancel\\\\\\\":null,\\\\\\\"createdAt\\\\\\\":\\\\\\\"2026-10-16T04:52:50.191Z\\\\\\\",\\\\\\\"createdOperationId\\\\\\\":\\\\\\\"create\\\\\\\",\\\\\\\"payments\\\\\\\":[],\\\\\\\"receipts\\\\\\\":[],\\\\\\\"reversals\\\\\\\":[],\\\\\\\"revision\\\\\\\":1,\\\\\\\"version\\\\\\\":1},\\\\\\\"receivedDate\\\\\\\":\\\\\\\"\\\\\\\",\\\\\\\"status\\\\\\\":\\\\\\\"ordered\\\\\\\",\\\\\\\"supplierId\\\\\\\":\\\\\\\"s\\\\\\\",\\\\\\\"supplierName\\\\\\\":\\\\\\\"Supplier\\\\\\\",\\\\\\\"total\\\\\\\":300}\\\",\\\"id\\\":\\\"receive\\\",\\\"kind\\\":\\\"receive\\\",\\\"purchaseId\\\":\\\"po\\\",\\\"quantities\\\":[10],\\\"time\\\":\\\"2026-10-16T04:52:50.197Z\\\"}\",\"productIds\":[\"p\"],\"purchaseId\":\"po\",\"supplierId\":null,\"time\":\"2026-10-16T04:52:50.197Z\",\"purchaseVersion\":2,\"document\":{\"collection\":\"receipts\",\"id\":\"receive\",\"signature\":\"{\\\"amount\\\":300,\\\"date\\\":\\\"2026-10-16\\\",\\\"id\\\":\\\"receive\\\",\\\"quantities\\\":[10],\\\"time\\\":\\\"2026-10-16T04:52:50.197Z\\\"}\"}}"
+      }
+    ],
+    "settings": [
+      {
+        "key": "sharedStoreId",
+        "value": "cost-recovery-baseline"
+      }
+    ],
+    "restaurantOrders": [],
+    "restaurantOperations": [],
+    "salesDocuments": [],
+    "salesOperations": [],
+    "customerEntries": [],
+    "customerOperations": [],
+    "supplierEntries": [],
+    "supplierOperations": [],
+    "stockCostEntries": [
+      {
+        "actor": {
+          "role": "owner",
+          "userId": "owner",
+          "username": "Recovery fixture"
+        },
+        "afterDigest": "sha256:66217a1217c0c6e536bb1cd6054b80b4e5db499bb892df550c8337dfdc3f5db0",
+        "beforeDigest": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        "date": "2026-10-16",
+        "hash": "sha256:17b1575376232d1bcc24d71164c415f0716d68a66e25125ca8374904eb4e9de4",
+        "id": "stock-030aceb6-26ee-4f6e-960f-7bead46b2aec",
+        "input": {
+          "action": "open",
+          "epoch": "17f54f9e-b827-45b3-ad81-42dc3a14ec9a",
+          "id": "opening",
+          "overrides": [],
+          "protocol": "pos-stock-cost/v1",
+          "reviewed": true,
+          "snapshotDigest": "sha256:9cf8d07d941313072638fb08c222bbdd92e5891cf0c3e885d5c8d9d0244c6277",
+          "storeId": "cost-recovery-baseline",
+          "time": "2026-10-16T04:52:50.174Z"
+        },
+        "openingMaterial": "{\"inventoryRows\":[],\"legacyJournal\":[],\"legacyOperationIds\":{\"addProduct\":[\"p\"],\"addWaste\":[],\"applyInventoryOperation\":[],\"applyRestaurantOperation\":[],\"applySalesOperation\":[],\"checkout\":[],\"refundOrder\":[]},\"preview\":{\"authoritativeValuation\":false,\"currency\":\"TWD\",\"epoch\":\"17f54f9e-b827-45b3-ad81-42dc3a14ec9a\",\"legacyCostReviews\":[],\"paidLegacyReservations\":[],\"products\":[{\"availableUnits\":10000,\"name\":\"Cost 原文\",\"productId\":\"p\",\"referenceUnitCostCents\":2000,\"referenceValueCents\":20000,\"unit\":\"個\",\"zeroCostNeedsReview\":false}],\"referenceAvailableValueCents\":20000,\"referenceInventoryBalanceCents\":0,\"referenceOwnedValueCents\":20000,\"referenceReservedValueCents\":0,\"reviewFlags\":[\"inventory-reference-reconciliation-needed\"],\"status\":\"reference-only-not-activated\",\"storeId\":\"cost-recovery-baseline\",\"unpaidReservations\":[],\"version\":1},\"profile\":\"pos-stock-opening-preview/v1\"}",
+        "previousHash": null,
+        "sequence": 1,
+        "time": "2026-10-16T04:52:50.181Z"
+      },
+      {
+        "actor": {
+          "role": "owner",
+          "userId": "owner",
+          "username": "Recovery fixture"
+        },
+        "afterDigest": "sha256:d7ab397da865da59c764f24af347cbf0e94ab0a10c06fa4479414294c7c837e7",
+        "beforeDigest": "sha256:be81997de7519602be022405dd4a422f9378edc8628d52240bfaa55e9324bfec",
+        "date": "2026-10-16",
+        "evidence": {
+          "order": {
+            "balanceUsed": 0,
+            "cashier": "Recovery fixture",
+            "change": 0,
+            "change_amount": 0,
+            "discount": 0,
+            "fullRefund": false,
+            "id": "sale",
+            "itemCosts": {
+              "p": 20
+            },
+            "items": [
+              {
+                "id": "p",
+                "name": "Cost 原文",
+                "price": 100,
+                "qty": 11
+              }
+            ],
+            "manualDiscount": 0,
+            "memberId": null,
+            "note": "",
+            "paid": 1100,
+            "payMethod": "card",
+            "payments": [
+              {
+                "amount": 1100,
+                "method": "card"
+              }
+            ],
+            "pointsEarned": 0,
+            "pointsUsed": 0,
+            "refundOf": "",
+            "requestSignature": "",
+            "shiftId": "shift",
+            "source": "pos",
+            "status": "completed",
+            "subtotal": 1100,
+            "tableNum": "",
+            "taxId": "",
+            "time": "2026-10-16T04:52:50.206Z",
+            "total": 1100,
+            "trackingTokenHash": ""
+          },
+          "products": [
+            {
+              "afterUnits": 9000,
+              "beforeUnits": 20000,
+              "id": "p",
+              "referenceUnitCostCents": 2000,
+              "unit": "個"
+            }
+          ]
+        },
+        "hash": "sha256:eb01d848785d76fd2551bf66f8e2f642e5805886e9797d1543ecad2b70e4e088",
+        "id": "stock-6c3889fa-62f1-4da4-94bb-d1df3ef0dcee",
+        "input": {
+          "balanceUsed": 0,
+          "cashier": "Recovery fixture",
+          "change": 0,
+          "discount": 0,
+          "id": "sale",
+          "items": [
+            {
+              "id": "p",
+              "name": "Cost 原文",
+              "price": 100,
+              "qty": 11
+            }
+          ],
+          "manualDiscount": 0,
+          "memberId": "",
+          "paid": 1100,
+          "payMethod": "card",
+          "payments": [
+            {
+              "amount": 1100,
+              "method": "card"
+            }
+          ],
+          "pointsEarned": 0,
+          "pointsUsed": 0,
+          "shiftId": "shift",
+          "subtotal": 1100,
+          "taxId": "",
+          "time": "2026-10-16T04:52:50.206Z",
+          "total": 1100
+        },
+        "method": "checkout",
+        "openingMaterial": null,
+        "previousHash": "sha256:59323a49e4a8a2cffb5200979c8aa3343f65216a450cf026ddcd98b36ef5c4d7",
+        "sequence": 3,
+        "time": "2026-10-16T04:52:50.210Z"
+      },
+      {
+        "actor": {
+          "role": "owner",
+          "userId": "owner",
+          "username": "Recovery fixture"
+        },
+        "afterDigest": "sha256:be81997de7519602be022405dd4a422f9378edc8628d52240bfaa55e9324bfec",
+        "beforeDigest": "sha256:66217a1217c0c6e536bb1cd6054b80b4e5db499bb892df550c8337dfdc3f5db0",
+        "date": "2026-10-16",
+        "evidence": {
+          "inventory": {
+            "beforeReceived": [
+              0
+            ],
+            "creditCents": 0,
+            "event": {
+              "amount": 300,
+              "date": "2026-10-16",
+              "id": "receive",
+              "quantities": [
+                10
+              ],
+              "time": "2026-10-16T04:52:50.197Z"
+            },
+            "items": [
+              {
+                "catalogId": null,
+                "name": "Cost 原文",
+                "productId": "p",
+                "qty": 10,
+                "received": 10,
+                "unit": "個",
+                "unitCost": 30
+              }
+            ],
+            "kind": "receive",
+            "modern": true,
+            "purchaseId": "po"
+          },
+          "products": [
+            {
+              "afterUnits": 20000,
+              "beforeUnits": 10000,
+              "id": "p",
+              "referenceUnitCostCents": 2000,
+              "unit": "個"
+            }
+          ]
+        },
+        "hash": "sha256:59323a49e4a8a2cffb5200979c8aa3343f65216a450cf026ddcd98b36ef5c4d7",
+        "id": "stock-ee3f8445-f0d1-4229-bc51-d423d3a899d6",
+        "input": {
+          "expectedPurchase": "{\"date\":\"2026-10-16\",\"id\":\"po\",\"items\":[{\"catalogId\":null,\"name\":\"Cost 原文\",\"productId\":\"p\",\"qty\":10,\"received\":0,\"unit\":\"個\",\"unitCost\":30}],\"note\":\"\",\"paidDate\":\"\",\"procurement\":{\"bills\":[],\"cancel\":null,\"createdAt\":\"2026-10-16T04:52:50.191Z\",\"createdOperationId\":\"create\",\"payments\":[],\"receipts\":[],\"reversals\":[],\"revision\":1,\"version\":1},\"receivedDate\":\"\",\"status\":\"ordered\",\"supplierId\":\"s\",\"supplierName\":\"Supplier\",\"total\":300}",
+          "id": "receive",
+          "kind": "receive",
+          "purchaseId": "po",
+          "quantities": [
+            10
+          ],
+          "time": "2026-10-16T04:52:50.197Z"
+        },
+        "method": "applyInventoryOperation",
+        "openingMaterial": null,
+        "previousHash": "sha256:17b1575376232d1bcc24d71164c415f0716d68a66e25125ca8374904eb4e9de4",
+        "sequence": 2,
+        "time": "2026-10-16T04:52:50.200Z"
+      }
+    ],
+    "stockCostOperations": [
+      {
+        "actorId": "owner",
+        "id": "[\"applyInventoryOperation\",\"receive\"]",
+        "method": "applyInventoryOperation",
+        "operationId": "receive",
+        "receipt": {
+          "eventHash": "sha256:59323a49e4a8a2cffb5200979c8aa3343f65216a450cf026ddcd98b36ef5c4d7",
+          "eventId": "stock-ee3f8445-f0d1-4229-bc51-d423d3a899d6",
+          "id": "receive",
+          "protocol": "pos-stock-cost/v1",
+          "sequence": 2,
+          "sourceMethod": "applyInventoryOperation",
+          "stateDigest": "sha256:be81997de7519602be022405dd4a422f9378edc8628d52240bfaa55e9324bfec",
+          "success": true
+        },
+        "signature": "{\"expectedPurchase\":\"{\\\"date\\\":\\\"2026-10-16\\\",\\\"id\\\":\\\"po\\\",\\\"items\\\":[{\\\"catalogId\\\":null,\\\"name\\\":\\\"Cost 原文\\\",\\\"productId\\\":\\\"p\\\",\\\"qty\\\":10,\\\"received\\\":0,\\\"unit\\\":\\\"個\\\",\\\"unitCost\\\":30}],\\\"note\\\":\\\"\\\",\\\"paidDate\\\":\\\"\\\",\\\"procurement\\\":{\\\"bills\\\":[],\\\"cancel\\\":null,\\\"createdAt\\\":\\\"2026-10-16T04:52:50.191Z\\\",\\\"createdOperationId\\\":\\\"create\\\",\\\"payments\\\":[],\\\"receipts\\\":[],\\\"reversals\\\":[],\\\"revision\\\":1,\\\"version\\\":1},\\\"receivedDate\\\":\\\"\\\",\\\"status\\\":\\\"ordered\\\",\\\"supplierId\\\":\\\"s\\\",\\\"supplierName\\\":\\\"Supplier\\\",\\\"total\\\":300}\",\"id\":\"receive\",\"kind\":\"receive\",\"purchaseId\":\"po\",\"quantities\":[10],\"time\":\"2026-10-16T04:52:50.197Z\"}"
+      },
+      {
+        "actorId": "owner",
+        "id": "[\"applyStockCostOperation\",\"opening\"]",
+        "method": "applyStockCostOperation",
+        "operationId": "opening",
+        "receipt": {
+          "eventHash": "sha256:17b1575376232d1bcc24d71164c415f0716d68a66e25125ca8374904eb4e9de4",
+          "eventId": "stock-030aceb6-26ee-4f6e-960f-7bead46b2aec",
+          "id": "opening",
+          "protocol": "pos-stock-cost/v1",
+          "sequence": 1,
+          "stateDigest": "sha256:66217a1217c0c6e536bb1cd6054b80b4e5db499bb892df550c8337dfdc3f5db0",
+          "success": true,
+          "valuation": {
+            "categories": {
+              "available": {
+                "complete": true,
+                "knownValueCents": 20000,
+                "unvalued": [],
+                "valueCents": 20000
+              },
+              "consumed": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              },
+              "reserved": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              },
+              "supplierReturned": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              },
+              "wasted": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              }
+            },
+            "complete": true,
+            "knownSourceValueCents": 20000,
+            "ownedKnownValueCents": 20000,
+            "ownedValueCents": 20000,
+            "totalSourceValueCents": 20000
+          }
+        },
+        "signature": "{\"action\":\"open\",\"epoch\":\"17f54f9e-b827-45b3-ad81-42dc3a14ec9a\",\"id\":\"opening\",\"overrides\":[],\"protocol\":\"pos-stock-cost/v1\",\"reviewed\":true,\"snapshotDigest\":\"sha256:9cf8d07d941313072638fb08c222bbdd92e5891cf0c3e885d5c8d9d0244c6277\",\"storeId\":\"cost-recovery-baseline\",\"time\":\"2026-10-16T04:52:50.174Z\"}"
+      },
+      {
+        "actorId": "owner",
+        "id": "[\"checkout\",\"sale\"]",
+        "method": "checkout",
+        "operationId": "sale",
+        "receipt": {
+          "eventHash": "sha256:eb01d848785d76fd2551bf66f8e2f642e5805886e9797d1543ecad2b70e4e088",
+          "eventId": "stock-6c3889fa-62f1-4da4-94bb-d1df3ef0dcee",
+          "id": "sale",
+          "protocol": "pos-stock-cost/v1",
+          "sequence": 3,
+          "sourceMethod": "checkout",
+          "stateDigest": "sha256:d7ab397da865da59c764f24af347cbf0e94ab0a10c06fa4479414294c7c837e7",
+          "success": true
+        },
+        "signature": "{\"balanceUsed\":0,\"cashier\":\"Recovery fixture\",\"change\":0,\"discount\":0,\"id\":\"sale\",\"items\":[{\"id\":\"p\",\"name\":\"Cost 原文\",\"price\":100,\"qty\":11}],\"manualDiscount\":0,\"memberId\":\"\",\"paid\":1100,\"payMethod\":\"card\",\"payments\":[{\"amount\":1100,\"method\":\"card\"}],\"pointsEarned\":0,\"pointsUsed\":0,\"shiftId\":\"shift\",\"subtotal\":1100,\"taxId\":\"\",\"time\":\"2026-10-16T04:52:50.206Z\",\"total\":1100}"
+      }
+    ],
+    "_revision": "9a6f1e24ec291efa66ca8e940a5ba389ae41c3cbc12725f0dec64aaaf3985257"
+  }
+}

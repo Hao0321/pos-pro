@@ -1,67 +1,68 @@
 const {createHash,randomUUID}=require('node:crypto')
 const {canonicalSignature}=require('./operationRules.mjs')
-const {costCustodySummary}=require('./stockCustody.mjs')
-const {planStockOpening,planOpeningCostPrice,stockCostCommand,stockLedgerError,STOCK_LEDGER_PROTOCOL}=require('./stockOpeningPlan.mjs')
-const {planStockBusiness,clearStockReturnSuspense,STOCK_BUSINESS_METHODS}=require('./stockBusinessPlan.mjs')
+const {stockLedgerError}=require('./stockOpeningPlan.mjs')
+const {projectStockLedger,stockLedgerAcknowledgement:acknowledgement,replayStockLedger}=require('./stockLedgerModel.mjs')
+const {hasStockCostHistory,STOCK_COMPAT_SETTING}=require('./stockCompatibility.mjs')
 const digest=value=>'sha256:'+createHash('sha256').update(typeof value==='string'?value:canonicalSignature(value)).digest('hex')
+const project=(previous,body)=>projectStockLedger(previous,body,digest)
 const METHOD='applyStockCostOperation'
 
 // Connection-private write scope. No renderer or shared-store route exposes it.
 // Unintegrated stock writers fail closed after an internal opening; activation
 // will remain absent from the public UI until every business adapter is ready.
 module.exports=function stockLedgerStorage(db){
- let depth=0
+ let depth=0,restoreDepth=0
+ const compatibility=db.prepare('SELECT value FROM settings WHERE key=?').get(STOCK_COMPAT_SETTING)
+ if(compatibility&&compatibility.value!=='1')throw stockLedgerError('HISTORY')
  db.function('pos_stock_write_allowed',()=>{if(!depth)throw stockLedgerError('FLOW');return 1})
- db.exec('CREATE TABLE IF NOT EXISTS stock_cost_entries (id TEXT PRIMARY KEY,sequence INTEGER UNIQUE NOT NULL,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS stock_cost_operations (id TEXT PRIMARY KEY,data TEXT NOT NULL);')
+ db.function('pos_stock_restore_allowed',()=>restoreDepth>0?1:0)
+ db.exec('CREATE TABLE IF NOT EXISTS stock_cost_entries (id TEXT PRIMARY KEY,sequence INTEGER UNIQUE NOT NULL,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS stock_cost_operations (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS stock_cost_runtime (id TEXT PRIMARY KEY,opening_hash TEXT NOT NULL,epoch TEXT NOT NULL);')
  const active=()=>!!db.prepare('SELECT 1 FROM stock_cost_entries LIMIT 1').get()
  function scope(work){depth++;try{return work()}finally{depth--}}
+ function restore(work){if(!db.inTransaction)throw stockLedgerError('HISTORY');restoreDepth++;try{return scope(work)}finally{restoreDepth--}}
  function fence(){
   require('./databaseFeatureFence.cjs').installStockFence(db)
-  const tables=['products','orders','order_items','purchases','restaurant_orders','restaurant_operations','waste_log','sales_documents','sales_operations','manual_journal','sales_runtime','stock_cost_entries','stock_cost_operations']
-  for(const table of tables)for(const action of ['insert','update','delete'])db.exec(`CREATE TRIGGER IF NOT EXISTS pos_stock_commit_${table}_${action} BEFORE ${action.toUpperCase()} ON ${table} BEGIN SELECT pos_stock_write_allowed(); END;`)
+  db.prepare('INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('stockCostVersionFence','1')
+  const tables=['products','orders','order_items','purchases','restaurant_orders','restaurant_operations','waste_log','sales_documents','sales_operations','manual_journal','sales_runtime','stock_cost_entries','stock_cost_operations','stock_cost_runtime']
+  for(const table of tables)for(const action of ['insert','update','delete']){
+   const name=`pos_stock_commit_${table}_${action}`,conditional=!table.startsWith('stock_cost_'),old=db.prepare("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?").get(name)
+   if(old&&conditional&&!old.sql.includes('WHEN EXISTS'))db.exec('DROP TRIGGER '+name)
+   db.exec(`CREATE TRIGGER IF NOT EXISTS ${name} BEFORE ${action.toUpperCase()} ON ${table}${conditional?' WHEN EXISTS (SELECT 1 FROM stock_cost_entries)':''} BEGIN SELECT pos_stock_write_allowed(); END;`)
+  }
   for(const action of ['insert','update','delete']){
    const row=action==='delete'?'OLD':'NEW'
-   db.exec(`CREATE TRIGGER IF NOT EXISTS pos_stock_identity_${action} BEFORE ${action.toUpperCase()} ON settings WHEN ${row}.key IN ('sharedStoreId','restaurantConfig') BEGIN SELECT pos_stock_write_allowed(); END;`)
+   const name=`pos_stock_identity_${action}`,old=db.prepare("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?").get(name)
+   if(old&&!old.sql.includes('stock_cost_entries'))db.exec('DROP TRIGGER '+name)
+   db.exec(`CREATE TRIGGER IF NOT EXISTS ${name} BEFORE ${action.toUpperCase()} ON settings WHEN ${row}.key IN ('sharedStoreId','restaurantConfig') AND EXISTS (SELECT 1 FROM stock_cost_entries) BEGIN SELECT pos_stock_write_allowed(); END;`)
   }
-  for(const table of ['stock_cost_entries','stock_cost_operations'])for(const action of ['update','delete'])db.exec(`CREATE TRIGGER IF NOT EXISTS pos_stock_immutable_${table}_${action} BEFORE ${action.toUpperCase()} ON ${table} BEGIN SELECT RAISE(ABORT,'庫存成本回執需要核對，請保留原編號與資料'); END;`)
- }
- function project(previous,body){
-  if(body.method&&body.method!==METHOD)return planStockBusiness(previous,body)
-  const input=stockCostCommand(body.input)
-  if(input.action==='open'){
-   if(previous||typeof body.openingMaterial!=='string'||digest(body.openingMaterial)!==input.snapshotDigest)throw stockLedgerError('HISTORY')
-   const material=JSON.parse(body.openingMaterial)
-   if(material.profile!=='pos-stock-opening-preview/v1')throw stockLedgerError('HISTORY')
-   const plan=planStockOpening(material.preview,input,body.date)
-   return {version:1,custody:plan.custody,sourceEvidence:plan.sourceEvidence,legacyJournals:material.legacyJournal,legacyCostReviews:material.preview.legacyCostReviews,journals:[plan.journal],...(material.legacyOperationIds?{legacyOperationIds:material.legacyOperationIds}:{})}
+  for(const table of ['stock_cost_entries','stock_cost_operations'])for(const action of ['update','delete']){
+   const name=`pos_stock_immutable_${table}_${action}`,old=db.prepare("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?").get(name)
+   if(old&&!old.sql.includes('pos_stock_restore_allowed'))db.exec('DROP TRIGGER '+name)
+   db.exec(`CREATE TRIGGER IF NOT EXISTS ${name} BEFORE ${action.toUpperCase()} ON ${table} WHEN pos_stock_restore_allowed()=0 BEGIN SELECT RAISE(ABORT,'庫存成本回執需要核對，請保留原編號與資料'); END;`)
   }
-  if(!previous||body.openingMaterial!==null)throw stockLedgerError('HISTORY')
-  const plan=planOpeningCostPrice(previous,input,body.date)
-  return clearStockReturnSuspense({...previous,custody:plan.state,journals:[...previous.journals,plan.journal]},body.date,input.id)
- }
- function acknowledgement(body,hash,projection){
-  const method=body.method||METHOD,common={protocol:STOCK_LEDGER_PROTOCOL,success:true,id:body.input.id,eventId:body.id,eventHash:hash,stateDigest:body.afterDigest,sequence:body.sequence}
-  return method===METHOD?{...common,valuation:costCustodySummary(projection.custody)}:{...common,sourceMethod:method}
  }
  const rows=table=>db.prepare('SELECT * FROM '+table+' ORDER BY id').all().map(row=>{const data=JSON.parse(row.data);if(row.id!==data.id||table==='stock_cost_entries'&&row.sequence!==data.sequence)throw stockLedgerError('HISTORY');return data})
  function read(){
   try{
-   const entries=rows('stock_cost_entries').sort((a,b)=>a.sequence-b.sequence),operations=rows('stock_cost_operations')
-   let projection=null,previousHash=null
-   if(operations.length!==entries.length)throw stockLedgerError('HISTORY')
-   const operationMap=new Map(operations.map(row=>[row.id,row]))
-   for(let index=0;index<entries.length;index++){
-    const {hash,...body}=entries[index]
-    const method=body.method||METHOD
-    if(method!==METHOD&&!STOCK_BUSINESS_METHODS.includes(method)||body.sequence!==index+1||body.previousHash!==previousHash||hash!==digest(body)||body.beforeDigest!==digest(projection)||!['owner',...(method===METHOD?[]:['staff'])].includes(body.actor?.role)||typeof body.actor.userId!=='string'||!body.actor.userId)throw stockLedgerError('HISTORY')
-    const next=project(projection,body)
-    if(body.afterDigest!==digest(next))throw stockLedgerError('HISTORY')
-    const operation=operationMap.get(canonicalSignature([method,body.input.id])),expectedReceipt=acknowledgement(body,hash,next)
-    if(!operation||operation.method!==method||operation.operationId!==body.input.id||operation.actorId!==body.actor.userId||operation.signature!==canonicalSignature(body.input)||canonicalSignature(operation.receipt)!==canonicalSignature(expectedReceipt))throw stockLedgerError('HISTORY')
-    projection=next;previousHash=hash
-   }
-   return {entries,operations,projection,head:previousHash,stateDigest:digest(projection),valuation:projection?costCustodySummary(projection.custody):null}
+   return replayStockLedger(rows('stock_cost_entries'),rows('stock_cost_operations'),digest)
   }catch(error){if(error.code==='STOCK_LEDGER_HISTORY')throw error;throw stockLedgerError('HISTORY')}
+ }
+ function bindEpoch(){
+  const state=read()
+  if(!state.projection){db.prepare('DELETE FROM stock_cost_runtime').run();return}
+  const epoch=db.prepare('SELECT value FROM sales_runtime WHERE id=?').get('epoch')?.value
+  if(!epoch)throw stockLedgerError('HISTORY')
+  db.prepare('INSERT INTO stock_cost_runtime VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET opening_hash=excluded.opening_hash,epoch=excluded.epoch').run('binding',state.entries[0].hash,epoch)
+ }
+ function matchesEpoch(state=read()){if(!state.projection)return true;const row=db.prepare('SELECT * FROM stock_cost_runtime WHERE id=?').get('binding');return !!row&&row.opening_hash===state.entries[0].hash&&row.epoch===db.prepare('SELECT value FROM sales_runtime WHERE id=?').get('epoch')?.value}
+ function replace(data){
+  if(!restoreDepth)throw stockLedgerError('HISTORY')
+  const state=require('./stockBackup.mjs').validateStockCostBook(data)
+  db.prepare('DELETE FROM stock_cost_entries').run();db.prepare('DELETE FROM stock_cost_operations').run()
+  if(state.projection||hasStockCostHistory(data))fence()
+  for(const row of state.entries)db.prepare('INSERT INTO stock_cost_entries VALUES (?,?,?)').run(row.id,row.sequence,canonicalSignature(row))
+  for(const row of state.operations)db.prepare('INSERT INTO stock_cost_operations VALUES (?,?)').run(row.id,canonicalSignature(row))
+  bindEpoch();read()
  }
  function lookup(input,actor,method=METHOD){
   const key=canonicalSignature([method,input.id]),saved=db.prepare('SELECT data FROM stock_cost_operations WHERE id=?').get(key)
@@ -81,10 +82,12 @@ module.exports=function stockLedgerStorage(db){
    fence()
    db.prepare('INSERT INTO stock_cost_entries (id,sequence,data) VALUES (?,?,?)').run(body.id,body.sequence,canonicalSignature({...body,hash}))
    db.prepare('INSERT INTO stock_cost_operations (id,data) VALUES (?,?)').run(operation.id,canonicalSignature(operation))
+   if(!before.entries.length)bindEpoch()
   })
   read()
   return receipt
  }
- if(active())db.transaction(()=>{fence();read()})()
- return {active,read,lookup,append,scope}
+ const ensureCompatibility=()=>scope(fence)
+ if(active()||compatibility)db.transaction(()=>{ensureCompatibility();const state=read();if(!state.projection)return;const binding=db.prepare('SELECT 1 FROM stock_cost_runtime WHERE id=?').get('binding');if(!binding){if(state.entries[0].input.epoch!==db.prepare('SELECT value FROM sales_runtime WHERE id=?').get('epoch')?.value)throw stockLedgerError('HISTORY');scope(bindEpoch)}if(!matchesEpoch(state))throw stockLedgerError('HISTORY')})()
+ return {active,read,lookup,append,scope,restore,replace,matchesEpoch,ensureCompatibility}
 }

@@ -18,7 +18,7 @@ module.exports=function installRecovery(db,api,replaceAllTx){
   const insertIndex=db.prepare('INSERT OR IGNORE INTO recovery_original_ids VALUES (?,?,?)')
   const material=book=>sha(materialSignature(book))
   const owner=actor=>{
-    if(actor?.role!=='owner'||!api.getUsers().some(user=>user.id===actor.userId&&user.role==='owner'))throw Error('權限不足')
+    if(actor?.role!=='owner'||!api.getUsers().some(user=>user.id===actor.userId&&user.role==='owner'&&user.username===actor.username))throw Error('權限不足')
     return actor
   }
   const internalActor=()=>{const user=api.getUsers().find(u=>u.role==='owner');return {role:'owner',userId:user?.id||'internal-local-system',username:user?.username||''}}
@@ -101,6 +101,7 @@ module.exports=function installRecovery(db,api,replaceAllTx){
     if(!data||typeof data!=='object'||Array.isArray(data)||!Object.values(data).some(Array.isArray))throw Error('備份格式錯誤')
     return db.transaction(()=>{
       const current=api.exportData();if(expectedRevision&&expectedRevision!==current._revision)throw Error('本機資料已改變，已取消覆蓋')
+      if(require('./stockCompatibility.mjs').hasStockCostHistory(current)||require('./stockCompatibility.mjs').hasStockCostHistory(data))throw Error('成本帳請使用完整備份還原預覽，不能部分同步')
       const who=actor||internalActor(),id='import-'+randomUUID()
       // The legacy cloud projection imports named collections. Full backup/file
       // restores use previewRestore instead and replace the complete business book.
@@ -151,6 +152,8 @@ module.exports=function installRecovery(db,api,replaceAllTx){
   // Index all original formal IDs at the same boundary as every supported
   // restore. A missing historical receipt is uncertain, never a new payment.
   const descriptors={
+    applyStockCostOperation:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM stock_cost_operations WHERE id=?').get(canonicalSignature(['applyStockCostOperation',id]))},
+    addProduct:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM products WHERE id=?').get(id)},
     checkout:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM orders WHERE id=?').get(id)},
     refundOrder:{id:a=>a[1]?.id,active:id=>db.prepare('SELECT 1 FROM orders WHERE id=?').get(id)},
     addTopup:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM member_topups WHERE id=?').get(id)},
@@ -171,13 +174,13 @@ module.exports=function installRecovery(db,api,replaceAllTx){
   for(const [method,descriptor] of Object.entries(descriptors)){
     const original=api[method]
     api[method]=function(...args){
-      if(method.startsWith('apply')&&(!args[1]||!['owner','staff'].includes(args[1].role)||['applySalesOperation','applyCustomerLedgerOperation','applySupplierLedgerOperation','applyExchangeOperation','applyScenarioTemplate'].includes(method)&&args[1].role!=='owner'))return original.apply(api,args)
+      if(method.startsWith('apply')&&(!args[1]||!['owner','staff'].includes(args[1].role)||['applyStockCostOperation','applySalesOperation','applyCustomerLedgerOperation','applySupplierLedgerOperation','applyExchangeOperation','applyScenarioTemplate'].includes(method)&&args[1].role!=='owner'))return original.apply(api,args)
       return db.transaction(()=>{
         const id=recoveryOperationId(descriptor.id(args))
         if(typeof id!=='string')return original.apply(api,args)
         const known=typeof id==='string'&&db.prepare('SELECT 1 FROM recovery_original_ids WHERE method=? AND operation_id=? LIMIT 1').get(method,id)
         let available=!!descriptor.active(id,args)
-        if(known&&available&&['checkout','refundOrder','addTopup','addCashLog','addWaste','applyInventoryOperation','applyExchangeOperation','applyRestaurantOperation','applySalesOperation','applyCustomerLedgerOperation','applySupplierLedgerOperation'].includes(method)){
+        if(known&&available&&['applyStockCostOperation','addProduct','checkout','refundOrder','addTopup','addCashLog','addWaste','applyInventoryOperation','applyExchangeOperation','applyRestaurantOperation','applySalesOperation','applyCustomerLedgerOperation','applySupplierLedgerOperation'].includes(method)){
           const active=operationRecords(api.exportData()).find(row=>row.method===method&&row.id===id)
           const request=method==='refundOrder'?{...args[1],refundOf:args[0]}:args[0]
           available=!!active&&originalMatches(active,{method,id,request},proof)

@@ -150,7 +150,7 @@ function roundTrip(pending,commit){
   pass('the oldest original ID and complete protected history remain available beyond 2100 cash rows, independent of display limits')
   close();db=init(path.join(root,'fresh-store.db'));raw=new Database(path.join(root,'fresh-store.db'))
   const freshPassword=password('new-device-password');db.addUser({id:'owner',username:'New device owner',password:freshPassword,role:'owner'});db.setSetting('sharedStoreId','fresh-device-generated-id')
-  const freshPreview=db.previewRestore({kind:'import',data:knownSource},owner);assert.equal(db.applyRestorePreview(freshPreview.id,owner).storeId,'recovery-store');assert.equal(db.getUsers()[0].password,freshPassword);assert.equal(db.getUsers()[0].username,'New device owner')
+  const freshOwner={...owner,username:'New device owner'},freshPreview=db.previewRestore({kind:'import',data:knownSource},freshOwner);assert.equal(db.applyRestorePreview(freshPreview.id,freshOwner).storeId,'recovery-store');assert.equal(db.getUsers()[0].password,freshPassword);assert.equal(db.getUsers()[0].username,'New device owner')
   pass('a genuinely empty new device adopts its original store identity while preserving the new device owner credentials')
   close();seed('scenario-fence');saved=backup()
   const template={templateId:'donburi-takeaway-v1',operationId:'recovery_template_original',items:{pork:{price:95,cost:40,stock:10},beef:{price:115,cost:50,stock:10},tea:{price:10,cost:4,stock:20}}}

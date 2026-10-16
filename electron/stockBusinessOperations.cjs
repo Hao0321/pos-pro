@@ -17,7 +17,7 @@ module.exports=function installStockBusinessOperations(db,api,store){
  }
  function current(){
   const data=store.read(),opening=data.entries[0]?.input
-  if(!data.projection||opening.storeId!==api.getSetting('sharedStoreId')||opening.epoch!==db.prepare('SELECT value FROM sales_runtime WHERE id=?').get('epoch')?.value)throw stockLedgerError('HISTORY')
+  if(!data.projection||opening.storeId!==api.getSetting('sharedStoreId')||!store.matchesEpoch(data))throw stockLedgerError('HISTORY')
   assertStockCustodyMatchesBook(data.projection.custody,api.getProducts(),api.getRestaurantState().entries)
   return data
  }

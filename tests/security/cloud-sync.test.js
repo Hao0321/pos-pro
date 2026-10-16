@@ -19,6 +19,10 @@ beforeEach(()=>{
   }}
 })
 afterEach(()=>vi.unstubAllGlobals())
+test('a retained cost compatibility fence rejects partial cloud sync even after an older empty-cost restore',async()=>{
+ const record=readRecords();record.data.pos_business_settings.push({key:'stockCostVersionFence',value:'1'});map.set(RECORD_KEY,JSON.stringify(record));const before=map.get(RECORD_KEY)
+ await expect(pushAll()).rejects.toThrow('完整備份');await expect(pullAll()).rejects.toThrow('完整備份');expect(queries).toEqual([]);expect(map.get(RECORD_KEY)).toBe(before)
+})
 test('application sync rejects anonymous identity before any business-table query',async()=>{
   authenticated=false;await expect(pushAll()).rejects.toThrow('禁止匿名');await expect(pullAll()).rejects.toThrow('禁止匿名');expect(queries).toEqual([])
 })

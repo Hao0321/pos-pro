@@ -46,6 +46,7 @@
     "build:icons": "node scripts/generate-icon.js"
   },
   "dependencies": {
+    "@noble/hashes": "2.4.0",
     "@supabase/supabase-js": "^2.106.2",
     "better-sqlite3": "13.0.3",
     "cloudflared": "^0.7.1",
