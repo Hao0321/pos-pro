@@ -37,6 +37,7 @@ import { fireWebhook, payloadFromOrder, payloadFromLowStock, payloadFromShift, p
 import { getReorderList, getExpiringProducts } from '../utils/analytics'
 import {validateManualEntry} from '../../electron/manualJournalRules.mjs'
 import {defaultRestaurantConfig} from '../../electron/restaurantRules.mjs'
+import {prepareRestaurantCommand} from '../utils/restaurantCommand.mjs'
 
 function loadLS(k,fb){const v=browserStorage.getItem(k);return v?JSON.parse(v):fb}
 function saveLS(k,v){browserStorage.setItem(k,JSON.stringify(v))}
@@ -75,6 +76,7 @@ export function useStore(session){
   const [pointsRule,    setPointsRule]    = useState({ earn: 10, redeem: 1 }) // 消費 X 元 1 點；1 點折抵 X 元
   const [birthdayBonus, setBirthdayBonus] = useState(100)
   const [restaurantConfig,setRestaurantConfig]=useState(defaultRestaurantConfig)
+  const [restaurantEntries,setRestaurantEntries]=useState([])
 
   const checkoutRef = useRef(null)
   if (!checkoutRef.current) checkoutRef.current=createCheckoutCoordinator({
@@ -139,6 +141,7 @@ export function useStore(session){
       setTopups(Array.isArray(tps) ? tps : [])
       setOpenShiftState(shift || null)
       setRestaurantConfig(restaurant.config)
+      setRestaurantEntries(restaurant.entries||[])
       // 載入點數規則 / 生日贈點
       try {
         const [earn, redeem, bday] = await Promise.all([
@@ -185,7 +188,7 @@ export function useStore(session){
   // Each browser command commits before updating state. Re-saving UI snapshots
   // here could overwrite a newer durable operation when its reply is delayed.
 
-  const autoJournal = useMemo(()=>automaticBusinessJournal({orders,products,topups,wasteLog,purchases,salesDocuments:sales.documents,customerEntries:sales.customerLedger?.entries||[],supplierEntries:supplierState?.supplierLedger.entries||[]}),[orders,products,topups,wasteLog,purchases,sales,supplierState])
+  const autoJournal = useMemo(()=>automaticBusinessJournal({orders,products,topups,wasteLog,purchases,salesDocuments:sales.documents,customerEntries:sales.customerLedger?.entries||[],supplierEntries:supplierState?.supplierLedger.entries||[],restaurantEntries}),[orders,products,topups,wasteLog,purchases,sales,supplierState,restaurantEntries])
   const allJournal  = useMemo(()=>[...autoJournal,...manualEntries].sort((a,b)=>b.date.localeCompare(a.date)),[autoJournal,manualEntries])
 
   const addManualEntry = useCallback(async e=>{
@@ -427,7 +430,8 @@ export function useStore(session){
   async function commitRestaurant(input,identity=null){
     if(dataError)throw Error(dataError)
     if(checkoutRef.current.getState().phase!=='idle')throw Error('請先確認原收款交易')
-    const result=await executeFinancial('restaurant',{...input,kind:'restaurant'},request=>applyRestaurantOperation(request,session),setFinancialState,identity)
+    const pending=readPendingFinancial(),state=!pending&&input.action!=='configure'?await loadRestaurantState():null,command=prepareRestaurantCommand(input,{state,pending,identity})
+    const result=await executeFinancial('restaurant',command.input,request=>applyRestaurantOperation(request,session),setFinancialState,command.identity)
     await applyRestaurantResult(result)
     return result
   }
@@ -465,11 +469,9 @@ export function useStore(session){
 
   // 點數規則設定
   async function applyRestaurantResult(result){
-    window.dispatchEvent(new CustomEvent('pos-restaurant-operation',{detail:result}))
-    setProducts(p=>p.map(i=>result.products.find(n=>n.id===i.id)||i))
-    const rows=[result.refund,result.order].filter(Boolean)
-    if(rows.length)setOrders(p=>[...rows,...p.filter(o=>!rows.some(n=>n.id===o.id))])
     try{await reloadFromDB();window.dispatchEvent(new Event('pos-data-refreshed'))}catch(e){setDataError('異動已保存，但重新讀取資料失敗；請恢復連線並重新載入：'+e.message)}
+    window.dispatchEvent(new CustomEvent('pos-restaurant-operation',{detail:result}))
+    if(result.cashLog)window.dispatchEvent(new Event('pos-cash-operation'))
   }
   const updatePointsRule = useCallback(async (earn, redeem) => {
     if(!Number.isInteger(Number(earn))||Number(earn)<=0||!Number.isFinite(Number(redeem))||Number(redeem)<=0)throw Error('點數規則需為正數')
@@ -536,23 +538,27 @@ export function useStore(session){
       const s=await window.electronAPI.db.getStoreSnapshot()
       setProducts(s.products);setMembers(s.members);setOrders(s.orders);setManualEntries(s.manualEntries);setHeldOrders(s.heldOrders);setWasteLog(s.wasteLog);setTopups(s.topups);setOpenShiftState(s.openShift);setPurchases(s.purchases||[])
       setRestaurantConfig(s.restaurantConfig||defaultRestaurantConfig())
+      setRestaurantEntries(s.restaurantEntries||[])
       setSales(s.sales||{documents:[]})
       salesRef.current=s.sales||{documents:[]};supplierRef.current=s.supplierState||null;setSupplierState(s.supplierState||null)
       setPointsRule({earn:s.rules.earn==null?10:Number(s.rules.earn),redeem:s.rules.redeem==null?1:Number(s.rules.redeem)});setBirthdayBonus(s.rules.birthdayBonus==null?100:Number(s.rules.birthdayBonus));return
     }
-    const [p, m, o, j] = await Promise.all([
+    const [p,m,o,j,restaurant,waste,tps,shift,held,po,salesState,suppliers] = await Promise.all([
       loadProducts([]),
       loadMembers([]),
       loadOrders([]),
       loadManualJournal([]),
+      loadRestaurantState(),loadWasteLog(),loadTopups(),getOpenShift(),loadHeldOrders(),
+      session?.role==='owner'?loadPurchases([]):Promise.resolve([]),
+      session?.role==='owner'?loadSalesState(session):Promise.resolve({documents:[]}),
+      session?.role==='owner'?loadSupplierState(session):Promise.resolve(null),
     ])
     setProducts(p)
     setMembers(m)
     setOrders(o)
     setManualEntries(j)
-    if(session?.role==='owner'){setPurchases(await loadPurchases([]));const salesState=await loadSalesState(session);salesRef.current=salesState;setSales(salesState);const suppliers=await loadSupplierState(session);supplierRef.current=suppliers;setSupplierState(suppliers)}
-    else {setSales({documents:[]});salesRef.current={documents:[]};supplierRef.current=null;setSupplierState(null)}
-    setWasteLog(await loadWasteLog());setRestaurantConfig((await loadRestaurantState()).config)
+    setPurchases(po);salesRef.current=salesState;setSales(salesState);supplierRef.current=suppliers;setSupplierState(suppliers)
+    setWasteLog(waste);setTopups(tps);setOpenShiftState(shift||null);setHeldOrders(held);setRestaurantConfig(restaurant.config);setRestaurantEntries(restaurant.entries||[])
   }, [session?.userId,session?.role])
   async function reloadAfterRecovery(){
     try{await reloadFromDB();setDataError('');window.dispatchEvent(new Event('pos-data-refreshed'))}

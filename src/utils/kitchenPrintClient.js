@@ -3,6 +3,7 @@ import {loadKitchenPrintState,applyKitchenPrintOperation,loadRestaurantState,app
 import {canonicalSignature,operationHeader} from '../../electron/operationRules.mjs'
 import {getRecoveryState} from './recoveryClient'
 import {normalizeKitchenPrinting,validateKitchenJob} from '../../electron/kitchenPrint.mjs'
+import {validateKitchenPreparationReview} from '../../electron/fundedKitchenPrint.mjs'
 import messages from '../../public/i18n/messages.mjs'
 
 export const KITCHEN_PRINT_PENDING='pos_pending_kitchen_print_v1'
@@ -24,7 +25,11 @@ function decodePending(raw){
  try{const value=JSON.parse(raw),r=value?.request,s=value?.scope;operationHeader(r)
   if(!own(value,['version','kind','scope','request','signature'])||value.version!==1||!['kitchen-print','restaurant'].includes(value.kind)||!own(s,['storeId','userId','role'])||typeof s.storeId!=='string'||!s.storeId||typeof s.userId!=='string'||!s.userId||!['owner','staff'].includes(s.role)||r.kind!==value.kind||value.signature!==canonicalSignature(r)||r.operatorId!==s.userId||r.operatorRole!==s.role)throw invalid()
   if(value.kind==='restaurant'){if(s.role!=='owner'||r.action!=='configure'||typeof r.expectedConfig!=='string'||!own(r,['id','kind','action','time','expectedConfig','config','kitchenPaperAcknowledged','operatorId','operatorRole']))throw invalid();normalizeKitchenPrinting(r.config?.kitchenPrinting)}
-  else if(!own(r,['id','kind','action','time','entryId','jobId','expectedVersion','acknowledgeDuplicateRisk','operatorId','operatorRole'])||!['request','send','confirm','reprint'].includes(r.action)||typeof r.entryId!=='string'||!r.entryId||r.action!=='request'&&(typeof r.jobId!=='string'||!r.jobId||!Number.isSafeInteger(r.expectedVersion)||r.expectedVersion<1)||r.action==='reprint'&&r.acknowledgeDuplicateRisk!==true||r.action!=='reprint'&&Object.hasOwn(r,'acknowledgeDuplicateRisk'))throw invalid()
+  else{
+   if(!own(r,['id','kind','action','time','entryId','jobId','expectedVersion','acknowledgeDuplicateRisk','operatorId','operatorRole','review'])||!['request','send','confirm','reprint'].includes(r.action)||typeof r.entryId!=='string'||!r.entryId||r.action!=='request'&&(typeof r.jobId!=='string'||!r.jobId||!Number.isSafeInteger(r.expectedVersion)||r.expectedVersion<1)||r.action==='reprint'&&r.acknowledgeDuplicateRisk!==true||!['request','reprint'].includes(r.action)&&Object.hasOwn(r,'acknowledgeDuplicateRisk'))throw invalid()
+   if(Object.hasOwn(r,'review')){if(r.action!=='request'||validateKitchenPreparationReview(r.review).entryId!==r.entryId)throw invalid()}
+   if(r.action==='request'&&Object.hasOwn(r,'acknowledgeDuplicateRisk')&&(r.acknowledgeDuplicateRisk!==true||!r.review))throw invalid()
+  }
   return value
  }catch{throw invalid()}
 }
@@ -36,10 +41,11 @@ export function assertKitchenPrintAcknowledgement(pending,result){
  if(receipt.internal!==false||receipt.actor?.userId!==pending.scope.userId||receipt.actor.role!==pending.scope.role||receipt.time!==r.time||new Set(changes.map(c=>c.id)).size!==changes.length)throw Error('列印回覆與原單不同，請保留原編號')
  for(const c of changes){const current=jobs.find(j=>j?.id===c.id),saved=c.job;validateKitchenJob(saved);validateKitchenJob(current);if(c.id!==saved.id||!Number.isSafeInteger(c.beforeVersion)||c.beforeVersion<0||saved.version!==c.beforeVersion+1||saved.entryId!==r.entryId||current.version<saved.version||!same(immutable(current),immutable(saved)))throw Error('列印回覆與原單不同，請保留原編號')}
  const only=changes[0]
- if(r.action==='request'&&(changes.length!==1||only.beforeVersion!==0||only.job.state!=='queued'||only.job.copy!==0||only.job.dispatch!=='manual'))throw Error('列印回覆與原單不同，請保留原編號')
+ if(r.action==='request'&&(changes.length!==1||only.beforeVersion!==0||only.job.kind!=='prepare'||only.job.state!=='queued'||only.job.copy!==0||only.job.dispatch!=='manual'||r.review&&(!same(only.job.ticket.items,r.review.items)||only.job.ticket.total!==r.review.total)))throw Error('列印回覆與原單不同，請保留原編號')
  if(r.action==='send'&&(changes.length!==1||only.id!==r.jobId||only.beforeVersion!==r.expectedVersion||only.job.state!=='queued'||only.job.dispatch!=='manual'))throw Error('列印回覆與原單不同，請保留原編號')
  if(r.action==='confirm'&&(changes.length!==1||only.id!==r.jobId||only.beforeVersion!==r.expectedVersion||only.job.state!=='confirmed'||only.job.paper?.actor.userId!==pending.scope.userId||only.job.paper?.actor.role!==pending.scope.role))throw Error('紙張確認結果尚未保存，請核對原編號')
  if(r.action==='reprint'&&(changes.length!==2||changes.filter(c=>c.job.parentId===r.jobId&&c.job.copy>0&&c.beforeVersion===0&&c.job.state==='queued'&&c.job.dispatch==='manual').length!==1||!changes.some(c=>c.id===r.jobId&&c.beforeVersion===r.expectedVersion)))throw Error('補印副本尚未確認，請沿用原編號')
+ if(r.action==='reprint'){const parent=changes.find(c=>c.id===r.jobId).job,copy=changes.find(c=>c.job.parentId===r.jobId).job;if(parent.sourceOperationId!==copy.sourceOperationId||parent.sourceSignature!==copy.sourceSignature||!same({...parent.ticket,copy:copy.copy},copy.ticket))throw Error('補印副本尚未確認，請沿用原編號')}
  return result
 }
 function assertContext(state,actor){if(state?.protocol!=='pos-kitchen-print-state/v1'||typeof state.storeId!=='string'||!state.storeId||state.actor?.userId!==actor.userId||state.actor.role!==actor.role||typeof state.now!=='string'||!Number.isFinite(Date.parse(state.now)))throw Error('列印店面或帳號需要重新核對')}

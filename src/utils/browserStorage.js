@@ -17,13 +17,14 @@ import {guardUnintegratedStockWrite} from '../../electron/stockBrowserGuard.mjs'
 import {STOCK_COMPAT_SETTING} from '../../electron/stockCompatibility.mjs'
 import {browserProtectionGraph,browserProtectionMetadata,browserProtectionRevision,validateBrowserProtection} from './browserProtection'
 import {mergeRecoveryGraphs} from '../../electron/recoveryGraph.mjs'
-import {retainRecoveryFeatures} from '../../electron/recoveryBook.mjs'
+import {retainRecoveryFeatures,recoveryFeatureFloor} from '../../electron/recoveryBook.mjs'
 import {appendPhysicalStocktakeBook} from '../../electron/physicalStocktakeCommit.mjs'
 import {appendBrowserStockBusiness} from '../../electron/browserStockCommit.mjs'
 import {STOCK_BOOK_HEAD} from '../../electron/stockBookAnchor.mjs'
 import {validateSettingRows,updateBrowserSettings} from '../../electron/settingEncoding.mjs'
 import {usesRestaurantIntake} from '../../electron/tableOrdering.mjs'
 import {usesKitchenPrinting,validateKitchenRecords,appendKitchenRestaurant,planKitchenAction} from '../../electron/kitchenPrint.mjs'
+import {usesRestaurantFunds} from '../../electron/restaurantFunds.mjs'
 export const RECORD_KEY = 'pos_atomic_records_v1'
 export const DATA_KEYS = ['pos2_products','pos2_members','pos2_orders','pos2_manual_j',
   'pos_users','pos_suppliers','pos_purchases','pos_promotions','pos2_held_orders',
@@ -56,16 +57,18 @@ export function readRecords() {
     if(Object.keys(record.data).some(key=>!keys.has(key)))throw Error('備份含有目前版本不支援的資料，請保留原檔並使用相容版本')
     recoveryMetadata(record)
     validateSettingRows(record.data.pos_business_settings,'browser')
-    if(record.data.pos_business_settings.some(row=>row.encoding)&&![2,3,4,5].includes(record.recovery?.version))throw Error('復原保護索引損壞，請保留原資料核對')
+    if(record.data.pos_business_settings.some(row=>row.encoding)&&![2,3,4,5,6].includes(record.recovery?.version))throw Error('復原保護索引損壞，請保留原資料核對')
     validateBrowserProtection(record)
     validateStockCostBook(browserToBook(record.data))
     const rawRestaurant=record.data.pos_business_settings.find(s=>s.key==='restaurantConfig')?.value,config=readRestaurantConfig(rawRestaurant==null?null:JSON.parse(rawRestaurant),record.data.pos2_products)
     if(usesRestaurantIntake(config,record.data.pos_restaurant_orders,record.data.pos2_orders)){
-      if(![4,5].includes(record.recovery?.version))throw Error('復原保護索引損壞，請保留原資料核對')
-      validateRestaurantRecords(record.data.pos_restaurant_orders,record.data.pos_restaurant_operations,record.data.pos2_orders,record.data.pos2_products)
+      if(![4,5,6].includes(record.recovery?.version))throw Error('復原保護索引損壞，請保留原資料核對')
     }
+    const funded=usesRestaurantFunds(config,record.data.pos_restaurant_orders,record.data.pos2_orders)
+    if(funded&&(record.recovery?.version!==6||!record.salesEpoch||!readExchangeTextSetting(record.data.pos_business_settings,'sharedStoreId')))throw Error('預訂款項缺少店面或復原識別，請保留原資料核對。')
+    if(funded||usesRestaurantIntake(config,record.data.pos_restaurant_orders,record.data.pos2_orders))validateRestaurantRecords(record.data.pos_restaurant_orders,record.data.pos_restaurant_operations,record.data.pos2_orders,record.data.pos2_products,{cashLogs:record.data.pos2_cash_log,waste:record.data.pos2_waste,storeId:readExchangeTextSetting(record.data.pos_business_settings,'sharedStoreId')})
     validateKitchenRecords(record.data.pos_kitchen_print_jobs||[],record.data.pos_kitchen_print_operations||[],{entries:record.data.pos_restaurant_orders,restaurantOperations:record.data.pos_restaurant_operations})
-    if(usesKitchenPrinting(config,record.data.pos_kitchen_print_jobs,record.data.pos_kitchen_print_operations)&&record.recovery?.version!==5)throw Error('復原保護索引損壞，請保留原資料核對')
+    if(usesKitchenPrinting(config,record.data.pos_kitchen_print_jobs,record.data.pos_kitchen_print_operations)&&!(record.recovery?.version>=5))throw Error('復原保護索引損壞，請保留原資料核對')
     return record
   }
   const data = {}
@@ -77,12 +80,14 @@ export function readRecords() {
   }
   if((nativeStorage().getItem('pos_stock_cost_entries')!==null)!==(nativeStorage().getItem('pos_stock_cost_operations')!==null))throw Error('庫存成本回執需要核對，請保留原編號與資料')
   if(nativeStorage().getItem('pos_stock_cost_entries')===null&&data.pos_business_settings.some(row=>row.key===STOCK_COMPAT_SETTING&&row.value==='1'))throw Error('庫存成本回執需要核對，請保留原編號與資料')
+  const legacyConfig=data.pos_business_settings.find(row=>row.key==='restaurantConfig')?.value
+  if(usesRestaurantFunds(readRestaurantConfig(legacyConfig==null?null:JSON.parse(legacyConfig),data.pos2_products),data.pos_restaurant_orders,data.pos2_orders))throw Error('預訂款項缺少店面或復原識別，請保留原資料核對。')
   validateStockCostBook(browserToBook(data))
   return {version:1,revision:0,data}
 }
 export function recoveryMetadata(record=readRecords()){
   const value=record.recovery??{version:1,snapshots:[],originalIds:[],events:[]}
-  if(![1,2,3,4,5].includes(value.version)||!Array.isArray(value.snapshots)||!Array.isArray(value.originalIds)||!Array.isArray(value.events)
+  if(![1,2,3,4,5,6].includes(value.version)||!Array.isArray(value.snapshots)||!Array.isArray(value.originalIds)||!Array.isArray(value.events)
     ||value.snapshots.some(s=>typeof s.id!=='string'||!s.data||typeof s.contentSignature!=='string'||typeof s.afterMaterial!=='string')
     ||value.originalIds.some(row=>!Array.isArray(row)||row.length!==3||row.some(v=>typeof v!=='string'))
     ||value.events.some(row=>typeof row.id!=='string'||typeof row.signature!=='string'||!row.receipt))throw Error('復原保護索引損壞，請保留原資料核對')
@@ -142,7 +147,7 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
     const originalIds=operationRecords(before).map(row=>[row.method,row.id,snapshotId])
     const receipt=recoveryCommand?{protocol:RECOVERY_PROTOCOL,success:true,id:recoveryCommand.id,sourceId:snapshotId,revision:String(next.revision),storeId:recoveryStoreId(target),
       ...(recoveryCommand.restoredSourceId?{restoredSourceId:recoveryCommand.restoredSourceId,originalOperationId:recoveryCommand.originalOperationId}:{})}:null
-    next.recovery={version:protection.version===5||transfer?.features?.includes('kitchen-print-v1')?5:protection.version===4||transfer?.features?.includes('restaurant-intake-v1')?4:protection.version===3||transfer?.features?.includes('record-shapes-v1')?3:protection.version===2||transfer?.features?.includes('cross-storage-v1')?2:1,snapshots:[...protection.snapshots,snapshot],originalIds:[...protection.originalIds,...originalIds],
+    next.recovery={version:recoveryFeatureFloor(transfer?.features||[],protection.version),snapshots:[...protection.snapshots,snapshot],originalIds:[...protection.originalIds,...originalIds],
       events:[...protection.events,...(receipt?[{id:recoveryCommand.id,actorId:recoveryCommand.actorId,signature:recoveryCommand.signature,receipt}]:[])]}
     if(transfer?.protection)next.recovery=browserProtectionMetadata(mergeRecoveryGraphs(browserProtectionGraph(next),transfer.protection,'browser'))
   }else if(protection.originalIds.length){
@@ -160,16 +165,24 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
   validateSalesRecords(next.data.pos_sales_documents,next.data.pos_sales_operations,next.data.pos2_cash_log,readExchangeTextSetting(next.data.pos_business_settings,'sharedStoreId'),next.data.pos2_products,readExchangeStore(readExchangeTextSetting(next.data.pos_business_settings,EXCHANGE_SETTING)).quotes)
   validateCustomerLedgerRecords(next.data.pos_customer_entries,next.data.pos_customer_operations,{storeId:readExchangeTextSetting(next.data.pos_business_settings,'sharedStoreId'),documents:next.data.pos_sales_documents,salesOperations:next.data.pos_sales_operations,cashLogs:next.data.pos2_cash_log})
   validateSupplierLedgerRecords(next.data.pos_supplier_entries,next.data.pos_supplier_operations,{storeId:readExchangeTextSetting(next.data.pos_business_settings,'sharedStoreId'),suppliers:next.data.pos_suppliers,purchases:next.data.pos_purchases,inventoryAudits:next.data.pos_audit_log,cashLogs:next.data.pos2_cash_log,supplierFence:next.supplierFence})
-  validateRestaurantRecords(next.data.pos_restaurant_orders,next.data.pos_restaurant_operations,next.data.pos2_orders,next.data.pos2_products)
+  validateRestaurantRecords(next.data.pos_restaurant_orders,next.data.pos_restaurant_operations,next.data.pos2_orders,next.data.pos2_products,{cashLogs:next.data.pos2_cash_log,waste:next.data.pos2_waste,storeId:readExchangeTextSetting(next.data.pos_business_settings,'sharedStoreId')})
   const rawConfig=next.data.pos_business_settings.find(s=>s.key==='restaurantConfig')?.value
   const restaurantConfig=readRestaurantConfig(rawConfig==null?null:JSON.parse(rawConfig),next.data.pos2_products)
   if(usesRestaurantIntake(restaurantConfig,next.data.pos_restaurant_orders,next.data.pos2_orders))next.recovery={...recoveryMetadata(next),version:Math.max(4,recoveryMetadata(next).version)}
+  if(usesRestaurantFunds(restaurantConfig,next.data.pos_restaurant_orders,next.data.pos2_orders)){
+    if(!readExchangeTextSetting(next.data.pos_business_settings,'sharedStoreId'))throw Error('預訂款項缺少店面或復原識別，請保留原資料核對。')
+    next.salesEpoch??=crypto.randomUUID()
+    next.recovery={...recoveryMetadata(next),version:6}
+  }
   validateKitchenRecords(next.data.pos_kitchen_print_jobs||[],next.data.pos_kitchen_print_operations||[],{entries:next.data.pos_restaurant_orders,restaurantOperations:next.data.pos_restaurant_operations})
-  if(usesKitchenPrinting(restaurantConfig,next.data.pos_kitchen_print_jobs,next.data.pos_kitchen_print_operations))next.recovery={...recoveryMetadata(next),version:5}
+  if(usesKitchenPrinting(restaurantConfig,next.data.pos_kitchen_print_jobs,next.data.pos_kitchen_print_operations)){
+    next.recovery={...recoveryMetadata(next),version:Math.max(5,recoveryMetadata(next).version)}
+    next.data.pos_kitchen_print_jobs??=[];next.data.pos_kitchen_print_operations??=[]
+  }
   if(next.recovery?.version===5){next.data.pos_kitchen_print_jobs??=[];next.data.pos_kitchen_print_operations??=[]}
   validateStockCostBook(browserToBook(next.data))
   validateSettingRows(next.data.pos_business_settings,'browser')
-  if(next.data.pos_business_settings.some(row=>row.encoding)&&![2,3,4,5].includes(next.recovery?.version))throw Error('復原保護索引損壞，請保留原資料核對')
+  if(next.data.pos_business_settings.some(row=>row.encoding)&&![2,3,4,5,6].includes(next.recovery?.version))throw Error('復原保護索引損壞，請保留原資料核對')
   validateBrowserProtection(next)
   // setItem is atomic: quota/security failure keeps the previous complete record.
   nativeStorage().setItem(RECORD_KEY, JSON.stringify(next))

@@ -12,6 +12,7 @@ import {captureRestaurantCostBasis} from './stockReportBasis.mjs'
 import {stockUnits} from './stockBusinessPlan.mjs'
 import {validateCustomerLedgerRecords} from './customerLedger.mjs'
 import {verifyRefundReview} from './refundReview.mjs'
+import {salesDate} from './salesRules.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 export function browserStockActor(book,actor,method,input=null){
@@ -40,9 +41,10 @@ export function browserStockContexts(book,runtime){
   data.customerLedger=validateCustomerLedgerRecords(data.customerEntries,data.customerOperations,data)
   return data
 }
-export function browserRestaurantData(book){
+export function browserRestaurantData(book,runtime={}){
   const settings=Object.fromEntries(book.settings.map(row=>[row.key,JSON.parse(row.value)]))
-  return {products:book.products,entries:book.restaurantOrders,operations:book.restaurantOperations,orders:book.orders,waste:book.wasteLog,shifts:book.shifts,settings,config:readRestaurantConfig(settings.restaurantConfig,book.products)}
+  const now=Date.parse(runtime.timestamp||new Date().toISOString())
+  return {products:book.products,entries:book.restaurantOrders,operations:book.restaurantOperations,orders:book.orders,waste:book.wasteLog,cashLogs:book.cashLog,shifts:book.shifts,settings,config:readRestaurantConfig(settings.restaurantConfig,book.products),storeId:settings.sharedStoreId||'',epoch:runtime.epoch,costMode:book.stockCostEntries?.length?'active':'reference',now,date:salesDate(new Date(now))}
 }
 function productWithDefaults(data){
   for(const key of ['price','cost'])moneyValue(data[key]??0,key)
@@ -84,8 +86,8 @@ export function planBrowserStockBusiness(book,runtime,method,request,actor){
     next.members=book.members.map(row=>row.id===plan.member?.id?plan.member:row)
     result={...result,order:plan.order,original:updated}
   }else if(method==='applyRestaurantOperation'){
-    const data=browserRestaurantData(book),plan=planRestaurant(request,data,actor,{prepareCheckout,prepareRefund})
-    Object.assign(next,{products:plan.next.products,orders:plan.next.orders,wasteLog:plan.next.waste,restaurantOrders:plan.next.entries,restaurantOperations:[...data.operations,plan.receipt]})
+    const data=browserRestaurantData(book,runtime),plan=planRestaurant(request,data,actor,{prepareCheckout,prepareRefund})
+    Object.assign(next,{products:plan.next.products,orders:plan.next.orders,wasteLog:plan.next.waste,cashLog:plan.next.cashLogs||book.cashLog,restaurantOrders:plan.next.entries,restaurantOperations:[...data.operations,plan.receipt]})
     if(request.action==='configure')next.settings=updateBrowserSettings(book.settings,{restaurantConfig:JSON.stringify(JSON.stringify(plan.config))})
     result.plan=plan
   }else if(method==='applyInventoryOperation'){

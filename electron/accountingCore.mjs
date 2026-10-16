@@ -3,6 +3,7 @@ import {salesDate as localDate} from './salesRules.mjs'
 import {spreadsheetRowsCSV} from './spreadsheetCsv.mjs'
 import {financialPnL,financialBalance} from './ledgerReports.mjs'
 import {journalLineCents,spreadsheetMoneyCents} from './journalAmounts.mjs'
+import {restaurantFundedOrderToJournalEntries} from './restaurantFundsJournal.mjs'
 export {formatMoneyCents,centsDecimal,journalLineCents} from './journalAmounts.mjs'
 // 會計引擎 — 複式記帳 + 科目表 + 報表生成
 // ═══════════════════════════════════════════════════════════
@@ -22,6 +23,7 @@ export const ACCOUNTS = {
   '2111': { name: '銷項稅額',     type: 'liability', normal: 'credit', group: '流動負債' },
   '2191': { name: '預收款',       type: 'liability', normal: 'credit', group: '流動負債' },
   '2192': { name: '客戶預收款',   type: 'liability', normal: 'credit', group: '流動負債' },
+  '2193': { name: '餐飲預收款',   type: 'liability', normal: 'credit', group: '流動負債' },
   '2291': { name: '待核對成本暫記', type: 'liability', normal: 'credit', group: '流動負債' },
   // 業主權益 Equity (3xxx)
   '3101': { name: '業主資本',     type: 'equity',   normal: 'credit', group: '業主權益' },
@@ -51,7 +53,8 @@ export const ACCOUNT_GROUPS = {
 }
 
 // ── 從訂單自動產生分錄 ────────────────────────────────────
-export function orderToJournalEntries(order, products) {
+export function orderToJournalEntries(order, products, restaurantEntry) {
+  if(order.source==='restaurant-funded')return restaurantFundedOrderToJournalEntries(order,restaurantEntry)
   if(order.source==='customer' || order.payMethod==='pending' || (order.status && !['completed','refunded'].includes(order.status)))return []
   const entries = []
   const items = order.items || []

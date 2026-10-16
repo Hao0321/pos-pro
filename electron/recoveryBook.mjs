@@ -12,9 +12,14 @@ import {validateSettingRows,settingsForValidation} from './settingEncoding.mjs'
 import {convertLogicalBook} from './storageConversion.mjs'
 import {usesRestaurantIntake,RESTAURANT_INTAKE_FEATURE} from './tableOrdering.mjs'
 import {usesKitchenPrinting,validateKitchenRecords,KITCHEN_PRINT_FEATURE} from './kitchenPrint.mjs'
+import {usesRestaurantFunds,RESTAURANT_FUNDS_FEATURE} from './restaurantFunds.mjs'
 
-export const RECOVERY_FEATURES=[KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
+export const RECOVERY_FEATURES=[RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
 export const recoveryDataError=()=>Error('備份保護紀錄不完整或內容不同，請保留原檔核對')
+export function recoveryFeatureFloor(features=[],minimum=1){
+ if(![1,2,3,4,5,6].includes(minimum)||!Array.isArray(features)||features.some(feature=>!RECOVERY_FEATURES.includes(feature)))throw recoveryDataError()
+ return Math.max(minimum,features.includes(RESTAURANT_FUNDS_FEATURE)?6:features.includes(KITCHEN_PRINT_FEATURE)?5:features.includes(RESTAURANT_INTAKE_FEATURE)?4:features.includes('record-shapes-v1')?3:features.includes('cross-storage-v1')?2:1)
+}
 export function retainRecoveryFeatures(book,features){
  if(!features.includes('stock-cost-v1'))return book
  const settings=new Map(book.settings.map(row=>[row.key,row]));settings.set(STOCK_COMPAT_SETTING,{key:STOCK_COMPAT_SETTING,value:'1'});return {...book,settings:[...settings.values()]}
@@ -40,10 +45,11 @@ export function recoveryBook(data,storage,{complete=false,digest=stockLedgerDige
  validateSalesRecords(book.salesDocuments,book.salesOperations,book.cashLog,storeId,book.products,exchange.quotes)
  validateCustomerLedgerRecords(book.customerEntries,book.customerOperations,{storeId,documents:book.salesDocuments,salesOperations:book.salesOperations,cashLogs:book.cashLog})
  validateSupplierLedgerRecords(book.supplierEntries,book.supplierOperations,{storeId,suppliers:book.suppliers,purchases:book.purchases,inventoryAudits:book.auditLog,cashLogs:book.cashLog})
- validateRestaurantRecords(book.restaurantOrders,book.restaurantOperations,book.orders,book.products)
+ validateRestaurantRecords(book.restaurantOrders,book.restaurantOperations,book.orders,book.products,{cashLogs:book.cashLog,waste:book.wasteLog,storeId})
  const restaurantConfig=settings.find(row=>row.key==='restaurantConfig')?.value
  const checkedRestaurantConfig=readRestaurantConfig(storage==='browser'&&restaurantConfig!=null?JSON.parse(restaurantConfig):restaurantConfig??null,book.products)
  const features=[]
+ if(usesRestaurantFunds(checkedRestaurantConfig,book.restaurantOrders,book.orders))features.push(RESTAURANT_FUNDS_FEATURE)
  validateKitchenRecords(book.kitchenPrintJobs||[],book.kitchenPrintOperations||[],{entries:book.restaurantOrders,restaurantOperations:book.restaurantOperations})
  if(usesKitchenPrinting(checkedRestaurantConfig,book.kitchenPrintJobs,book.kitchenPrintOperations)){if(!optional.every(key=>Object.hasOwn(data,key)))throw recoveryDataError();features.push(KITCHEN_PRINT_FEATURE)}
  if(usesRestaurantIntake(checkedRestaurantConfig,book.restaurantOrders,book.orders))features.push(RESTAURANT_INTAKE_FEATURE)

@@ -6,6 +6,7 @@ import {STOCK_COMPAT_SETTING} from './stockCompatibility.mjs'
 import {PHYSICAL_STOCKTAKE,physicalStocktakeAudits} from './physicalStocktake.mjs'
 import {assertStockBusinessCoverage} from './stockBusinessCoverage.mjs'
 import {assertStockBookHead} from './stockBookAnchor.mjs'
+import {validateFundedRestaurantRecords,fundedRestaurantSnapshot} from './restaurantFundedRecords.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 const orderFields=['id','subtotal','discount','manualDiscount','balanceUsed','total','payMethod','paid','change','payments','memberId','pointsUsed','pointsEarned','time','source','items','taxId','shiftId','refundOf','cashier','fullRefund','trackingTokenHash','requestSignature','itemCosts','tableNum','note']
@@ -22,6 +23,7 @@ export function validateStockCostBook(book,validatedState=null){
   const state=validatedState||replayStockLedger(book.stockCostEntries||[],book.stockCostOperations||[])
   assertStockBookHead(book,state)
   if(!state.projection){if(physicalAudits.some(row=>row.request.context.costMode==='active'))throw stockLedgerError('HISTORY');return state}
+  validateFundedRestaurantRecords(book.restaurantOrders||[],book.restaurantOperations||[],book.orders||[],book.products||[],{cashLogs:book.cashLog,waste:book.wasteLog,storeId:readExchangeTextSetting(book.settings||[],'sharedStoreId')})
   for(const row of physicalAudits.filter(row=>row.request.context.costMode==='active')){const event=state.entries.find(event=>event.method==='applyInventoryOperation'&&event.input.id===row.request.id);if(!event||!same(event.input,row.request)||!same(event.evidence?.stocktake,row.receipt))throw stockLedgerError('HISTORY')}
   if(state.entries[0].input.storeId!==readExchangeTextSetting(book.settings||[],'sharedStoreId'))throw stockLedgerError('HISTORY')
   assertStockCustodyMatchesBook(state.projection.custody,book.products||[],book.restaurantOrders||[])
@@ -37,7 +39,10 @@ export function validateStockCostBook(book,validatedState=null){
    }else if(method==='applyRestaurantOperation'){
     receipt(book.restaurantOperations,input.id,input)
     const entry=restaurant.get(evidence.entry.id)
-    if(!entry||!same(entry.items,evidence.entry.items)||!same(entry.allocations,evidence.entry.allocations)||evidence.entry.saleId&&entry.saleId!==evidence.entry.saleId||evidence.entry.refundId&&entry.refundId!==evidence.entry.refundId)throw stockLedgerError('HISTORY')
+    if(entry?.funds){
+      const source=book.restaurantOperations.find(row=>row.id===input.id)
+      if(source.entityId!==entry.id||source.entityVersion!==evidence.entry.version||!same(source.actor,body.actor)||!same(evidence.entry,fundedRestaurantSnapshot(entry,book.restaurantOperations,source.entityVersion))||!same(evidence.beforeEntry,source.entityVersion===1?null:fundedRestaurantSnapshot(entry,book.restaurantOperations,source.entityVersion-1)))throw stockLedgerError('HISTORY')
+    }else if(!entry||!same(entry.items,evidence.entry.items)||!same(entry.allocations,evidence.entry.allocations)||evidence.entry.saleId&&entry.saleId!==evidence.entry.saleId||evidence.entry.refundId&&entry.refundId!==evidence.entry.refundId)throw stockLedgerError('HISTORY')
    }else if(method==='applySalesOperation'){
     receipt(book.salesOperations,input.id,input)
     const doc=(book.salesDocuments||[]).find(row=>row.id===evidence.document.id),event=doc?.[input.action==='deliver'?'deliveries':'returns']?.find(row=>row.id===input.id)

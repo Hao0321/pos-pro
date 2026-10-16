@@ -3,6 +3,7 @@ import {beforeEach,afterEach,test,expect,vi} from 'vitest'
 import native from '../fixtures/kitchen-print-native-v1.json'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
 import {planKitchenAction,kitchenPrintReceipt} from '../../electron/kitchenPrint.mjs'
+import {kitchenPreparationReview} from '../../electron/fundedKitchenPrint.mjs'
 const mocks=vi.hoisted(()=>({values:new Map(),storage:{getItem:vi.fn(),setItem:vi.fn(),removeItem:vi.fn()},read:vi.fn(),apply:vi.fn(),restaurant:vi.fn(),configure:vi.fn(),recovery:vi.fn()}))
 vi.mock('../../src/utils/browserStorage',()=>({browserStorage:mocks.storage}))
 vi.mock('../../src/utils/dataAccess',()=>({loadKitchenPrintState:mocks.read,applyKitchenPrintOperation:mocks.apply,loadRestaurantState:mocks.restaurant,applyRestaurantOperation:mocks.configure}))
@@ -20,7 +21,7 @@ beforeEach(()=>{
  mocks.storage.getItem.mockImplementation(key=>mocks.values.get(key)??null);mocks.storage.setItem.mockImplementation((key,value)=>mocks.values.set(key,value));mocks.storage.removeItem.mockImplementation(key=>mocks.values.delete(key))
  mocks.read.mockImplementation(async current=>({protocol:'pos-kitchen-print-state/v1',storeId,actor:current,now:new Date().toISOString(),policy:config.kitchenPrinting,jobs:print.jobs}))
  mocks.restaurant.mockImplementation(async()=>({config:clone(config)}))
- mocks.apply.mockImplementation(async(r,current)=>{print=planKitchenAction(r,print,{entries:book.restaurantOrders,restaurantOperations:book.restaurantOperations},current,{epoch:print.jobs[0].epoch,session:'',activeAttempts:[]}).state;const result=clone(kitchenPrintReceipt(r,print));if(lost){lost=false;throw Error('fixture reply lost after commit')}if(partial)delete result.jobs;return result})
+ mocks.apply.mockImplementation(async(r,current)=>{print=planKitchenAction(r,print,{entries:book.restaurantOrders,restaurantOperations:book.restaurantOperations},current,{epoch:book.kitchenPrintJobs[0].epoch,session:'',activeAttempts:[]}).state;const result=clone(kitchenPrintReceipt(r,print));if(lost){lost=false;throw Error('fixture reply lost after commit')}if(partial)delete result.jobs;return result})
  mocks.configure.mockImplementation(async r=>{config=clone(r.config);const result={success:true,config,receipt:{id:r.id,kind:'restaurant',action:'configure',signature:canonicalSignature(r)}};if(lost){lost=false;throw Error('fixture configuration reply lost after commit')}return result})
  mocks.recovery.mockResolvedValue({active:'matched',storeId});vi.stubGlobal('navigator',{locks:{request:async(_key,action)=>action()}})
  delete window.electronAPI
@@ -35,6 +36,20 @@ test('a reply lost after paper confirmation resumes the same original ID and nev
  lost=true;await expect(submitKitchenPrint(input(),actor)).rejects.toThrow('reply lost');const original=readKitchenPrintPending(),raw=mocks.values.get(KITCHEN_PRINT_PENDING),count=print.operations.length
  await expect(submitKitchenPrint(input(),actor)).rejects.toThrow();expect(mocks.values.get(KITCHEN_PRINT_PENDING)).toBe(raw)
  const result=await retryKitchenPrint(actor);expect(result.receipt.id).toBe(original.request.id);expect(mocks.apply.mock.calls[1][0]).toEqual(original.request);expect(print.operations).toHaveLength(count);expect(readKitchenPrintPending()).toBe(null)
+})
+
+test('a reviewed current-meal request keeps its complete preview in the original journal and survives lost reply without another ticket',async()=>{
+ print={jobs:[],operations:[]};const entry=book.restaurantOrders[0],review=kitchenPreparationReview(entry);lost=true
+ await expect(submitKitchenPrint({action:'request',entryId:entry.id,review,acknowledgeDuplicateRisk:true},actor)).rejects.toThrow('reply lost')
+ const pending=readKitchenPrintPending(),count=print.jobs.length;expect(pending.request.review).toEqual(review)
+ const result=await retryKitchenPrint(actor);expect(result.receipt.id).toBe(pending.request.id);expect(print.jobs).toHaveLength(count);expect(result.jobs[0].ticket.items).toEqual(review.items);expect(readKitchenPrintPending()).toBeNull()
+})
+
+test.each(['wrong-current-quantity','wrong-current-total','cancellation-instead-of-preparation'])('a structurally valid %s cannot clear a reviewed preparation request',async mode=>{
+ print={jobs:[],operations:[]};const entry=book.restaurantOrders[0],actual=mocks.apply.getMockImplementation()
+ mocks.apply.mockImplementation(async(r,current)=>{const result=await actual(r,current);for(const job of [result.jobs[0],result.receipt.changes[0].job]){if(mode==='wrong-current-quantity')job.ticket.items[0].qty++;if(mode==='wrong-current-total')job.ticket.total++;if(mode==='cancellation-instead-of-preparation'){job.kind='cancel';job.ticket.kind='cancel'}}return result})
+ await expect(submitKitchenPrint({action:'request',entryId:entry.id,review:kitchenPreparationReview(entry),acknowledgeDuplicateRisk:true},actor)).rejects.toThrow()
+ expect(readKitchenPrintPending()).not.toBeNull()
 })
 test.each(['missing-jobs','wrong-quantity','wrong-version','wrong-actor','contradictory-rejection'])('a %s response preserves the original journal instead of claiming paper success',async mode=>{
  const actual=mocks.apply.getMockImplementation();mocks.apply.mockImplementation(async(r,current)=>{const result=await actual(r,current);if(mode==='missing-jobs')delete result.jobs;if(mode==='wrong-quantity')result.jobs[0].ticket.items[0].qty++;if(mode==='wrong-version')result.receipt.changes[0].beforeVersion++;if(mode==='wrong-actor')result.receipt.actor.userId='forged';if(mode==='contradictory-rejection'){result.success=false;result.committed=false}return result})

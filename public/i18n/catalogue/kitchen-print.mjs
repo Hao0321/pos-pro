@@ -1,4 +1,9 @@
 const rows={
+ '工作單已更新，請重新核對目前餐點。':['The work order changed. Review the current meals again.','作業伝票が更新されました。現在の料理を再確認してください。','工作单已更新，请重新核对当前餐点。'],
+ '餐點份數已變更，請核對目前餐點再列印。':['Meal quantities changed. Review the current meals before printing.','料理の数量が変更されました。現在の料理を確認してから印刷してください。','餐点份数已变更，请核对当前餐点再打印。'],
+ '印目前餐點':['Print current meals','現在の料理を印刷','打印当前餐点'],
+ '我已核對紙張，只印目前餐點':['I checked the paper. Print only the current meals.','用紙を確認しました。現在の料理だけを印刷します','我已核对纸张，只打印当前餐点'],
+ '確認列印目前餐點':['Confirm current meals','現在の料理の印刷を確認','确认打印当前餐点'],
  '印表機':['Printer','プリンター','打印机'],
  '列印暫時無法處理，請稍後再試。':['Printing is temporarily unavailable. Please try again later.','現在、印刷操作を処理できません。しばらくしてから再試行してください。','暂时无法处理打印，请稍后再试。'],
  '請先核對已保存的正式收款單':['Check the saved payment receipt first','先に保存済みの正式な入金伝票を確認してください','请先核对已保存的正式收款单'],
@@ -81,5 +86,6 @@ const rows={
  '請先確認可能已印出的紙張，再建立補印副本':['Check for an existing print before creating a reprint','すでに印刷された用紙を確認してから、再印刷を作成してください','请先确认可能已打印的纸张，再创建补印副本'],
  '補印次數過多，請先核對印表機':['Too many reprints. Check the printer first.','再印刷が多すぎます。先にプリンターを確認してください','补印次数过多，请先核对打印机'],
  '請在店面電腦或配對手機確認印表機':['Confirm the printer on the store PC or a paired phone','店舗PCまたはペアリング済みスマートフォンでプリンターを確認してください','请在门店电脑或配对手机确认打印机'],
+ '工作單尚未讀取完成，請稍後再試。':['The work order could not be loaded yet. Please try again shortly.','作業伝票をまだ読み込めません。しばらくしてから再試行してください。','工作单尚未读取完成，请稍后再试。'],
 }
 export default Object.fromEntries(Object.entries(rows).map(([key,row],index)=>[key,[...row,21000+index]]))

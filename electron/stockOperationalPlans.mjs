@@ -1,5 +1,6 @@
 import {stockLedgerError} from './stockOpeningPlan.mjs'
 import {PHYSICAL_STOCKTAKE,PHYSICAL_MEANING,assertPhysicalStocktakeReceipt} from './physicalStocktake.mjs'
+import {planFundedRestaurantStock} from './restaurantFundsStock.mjs'
 
 export function planOperationalStock(c,method){
  const {input,evidence,stockOwner:owner,stockUnits:units,stockLineValue:value}=c
@@ -48,6 +49,7 @@ export function planOperationalStock(c,method){
 function restaurant(c){
  const {input,evidence,stockOwner:owner,stockUnits:units,stockLineValue:value}=c,{beforeEntry:before,entry}=evidence
  if(!entry||!Array.isArray(entry.allocations))throw stockLedgerError('HISTORY')
+ if(entry.funds)return planFundedRestaurantStock(c)
  const held=owner('reserved','reservation',entry.id),used=owner('consumed','restaurant',entry.id)
  if(input.action==='create'){
   if(before)throw stockLedgerError('HISTORY')

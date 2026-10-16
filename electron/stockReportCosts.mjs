@@ -20,9 +20,18 @@ export function stockReportCostPostings(state,data){
  const add=(date,scope,shares,sourceId=null,unresolved=false)=>{
   for(const share of shares)rows.push({date,scope,productId:share.productId,amountCents:share.amountCents,pendingTargets:share.pendingTargets||[],...(unresolved?{unknownUntil:confirmations.get(sourceId)||null}:{})})
  }
- const shares=(event,raw,value)=>event.method==='applyRestaurantOperation'?restaurantCostShares(event.evidence.entry||event.evidence.beforeEntry,reservations.get((event.evidence.entry||event.evidence.beforeEntry).id)?.basis,raw,value):[{productId:raw,amountCents:value.toString()}]
+ const shares=(event,raw,value,effect=null)=>{
+  if(event.method!=='applyRestaurantOperation')return [{productId:raw,amountCents:value.toString()}]
+  if(event.evidence.entry.funds){
+   const result=ownerShares(effect?.from?.stage==='consumed'?effect.from:effect?.to,raw,value)
+   if(result.scope!=='pos')throw Error('成本分攤需要核對')
+   return result.shares
+  }
+  return restaurantCostShares(event.evidence.entry||event.evidence.beforeEntry,reservations.get((event.evidence.entry||event.evidence.beforeEntry).id)?.basis,raw,value)
+ }
  const ownerShares=(owner,raw,value)=>{
   let domain,id;try{[domain,id]=JSON.parse(owner.referenceId)}catch{return {scope:'adjustment',shares:[{productId:null,amountCents:value.toString()}]}}
+  if(domain==='restaurant-funded-item'&&Array.isArray(id)&&id.length===2)return {scope:'pos',shares:[{productId:id[1],amountCents:value.toString()}]}
   if(domain==='restaurant'){const reservation=reservations.get(id);return {scope:'pos',shares:restaurantCostShares(reservation?.entry,reservation?.basis,raw,value)}}
   return {scope:domain==='checkout'?'pos':domain==='delivery'?'business':'adjustment',shares:[{productId:raw,amountCents:value.toString()}]}
  }
@@ -65,7 +74,7 @@ export function stockReportCostPostings(state,data){
     if(value){const target=ownerShares(position.owner,source.productId,value);add(event.date,target.scope,target.shares)}
    }
    if(projection.sourceEvidence.find(row=>row.sourceId===source.id)?.creditAccount==='5101'){
-    const origin=originFor(source.id);add(event.date,origin?scopeFor(origin.method):'adjustment',origin?shares(origin,source.productId,-BigInt(source.valueCents)):[{productId:null,amountCents:(-BigInt(source.valueCents)).toString()}])
+    const origin=originFor(source.id),effect=origin&&projection.business?.find(row=>row.eventId===origin.id)?.effects.find(row=>row.segments?.some(segment=>segment.sourceId===source.id));add(event.date,origin?scopeFor(origin.method):'adjustment',origin?shares(origin,source.productId,-BigInt(source.valueCents),effect):[{productId:null,amountCents:(-BigInt(source.valueCents)).toString()}])
    }
    projection=clearStockReturnSuspense({...projection,custody:plan.state,journals:[...projection.journals,plan.journal]},event.date,event.input.id)
    continue
@@ -77,7 +86,7 @@ export function stockReportCostPostings(state,data){
    if(!sign)continue
    for(const segment of effect.segments){
     const source=next.custody.sources.find(row=>row.id===segment.sourceId),value=costSegmentValue(source,segment.offsetUnits,segment.quantityUnits)
-    add(event.date,scopeFor(event.method),shares(event,source.productId,BigInt(value??0)*BigInt(sign)),source.id,value===null)
+    add(event.date,scopeFor(event.method),shares(event,source.productId,BigInt(value??0)*BigInt(sign),effect),source.id,value===null)
    }
   }
   projection=next

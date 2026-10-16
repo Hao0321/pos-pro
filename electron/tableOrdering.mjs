@@ -1,4 +1,5 @@
 import {canonicalSignature,moneyValue,quantityValue} from './operationRules.mjs'
+import {summarizeRestaurantFunds} from './restaurantFunds.mjs'
 
 export const RESTAURANT_INTAKE_FEATURE='restaurant-intake-v1'
 export function normalizeTableOrdering(value){
@@ -32,11 +33,16 @@ export function customerIntakeSource(request,data){
 export function customerOrderView(order,entries){
  const entry=entries.find(e=>e.customerOrderId===order.id)
  if(!entry)return order
+ if(entry.funds){
+  const summary=summarizeRestaurantFunds(entry.funds)
+  return {...order,status:entry.status==='cancelled'?'rejected':entry.status==='completed'?'completed':'accepted',restaurantId:entry.id,fulfilmentStatus:entry.status,pickupNumber:entry.pickupNumber,paymentReceived:entry.status!=='cancelled'&&summary.dueCents===0,currentTotal:summary.totalCents/100,amountReceived:summary.retainedCents/100,amountDue:summary.dueCents/100,amountRefunded:summary.refundedCents/100,remainingItems:entry.items.map(({id,name,price,qty})=>({id,name,price,qty}))}
+ }
  return {...order,status:entry.status==='cancelled'?'rejected':entry.status==='completed'?'completed':'accepted',restaurantId:entry.id,fulfilmentStatus:entry.status,pickupNumber:entry.pickupNumber,paymentReceived:!!entry.saleId}
 }
 export function assertCustomerOrderLink(entry,orders){
  const source=orders.find(o=>o.id===entry.customerOrderId)
- if(!source||source.source!=='customer'||source.payMethod!=='pending'||source.paid!==0||source.refundOf||entry.channel!=='walkin'||(entry.tableNum||'')!==(source.tableNum||'')||(entry.tableId||'')!==(source.tableId||'')||entry.total!==source.total||canonicalSignature(entry.items.map(i=>({id:i.id,price:i.price,qty:i.qty})))!==canonicalSignature(source.items.map(i=>({id:i.id,price:i.price,qty:i.qty}))))throw Error('顧客原單與出餐紀錄需要核對')
+ const originalItems=entry.funds?.items||entry.items,originalTotal=entry.funds?summarizeRestaurantFunds(entry.funds).originalTotalCents/100:entry.total
+ if(!source||source.source!=='customer'||source.payMethod!=='pending'||source.paid!==0||source.refundOf||entry.channel!=='walkin'||(entry.tableNum||'')!==(source.tableNum||'')||(entry.tableId||'')!==(source.tableId||'')||originalTotal!==source.total||canonicalSignature(originalItems.map(i=>({id:i.id,price:i.price,qty:i.qty})))!==canonicalSignature(source.items.map(i=>({id:i.id,price:i.price,qty:i.qty}))))throw Error('顧客原單與出餐紀錄需要核對')
 }
 const units=v=>BigInt(Math.round(quantityValue(v,'庫存數量')*1000))
 export function publicOrderingMenu(products,config){

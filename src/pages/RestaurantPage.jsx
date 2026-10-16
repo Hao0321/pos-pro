@@ -9,6 +9,9 @@ import TableOrderingPanel from './restaurant/TableOrderingPanel'
 import useKitchenPrinting from '../hooks/useKitchenPrinting'
 import KitchenPrintPanel from './restaurant/KitchenPrintPanel'
 import KitchenPrintStatus from './restaurant/KitchenPrintStatus'
+import useRestaurantFundsForms from '../hooks/useRestaurantFundsForms'
+import RestaurantFundsForm,{RestaurantFundsNotice} from './restaurant/RestaurantFundsForm'
+import {restaurantFundingView,fundsAmountText} from '../utils/restaurantFundsView.mjs'
 
 const labels={reserved:'已預留',cooking:'製作中',ready:'可取餐',dispatched:'配送中',completed:'已交付',cancelled:'已取消'}
 const channels={preorder:'預訂',walkin:'現場',delivery:'外送'}
@@ -17,15 +20,27 @@ const initialForm=()=>({channel:'preorder',day:dateText(),slot:'12:00',customer:
 const grid={display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12}
 function Field({label,children}){return <label style={{display:'flex',flexDirection:'column',gap:5,fontSize:13}}>{tr(label)}{children}</label>}
 export default function RestaurantPage({store,session}){
-  const printing=useKitchenPrinting(session)
+  const reloadRef=useRef(null)
+  const printing=useKitchenPrinting(session,()=>reloadRef.current?.())
   const [showCreate,setShowCreate]=useState(false),viewport=useVisibleViewport()
   const panel={...modal,top:viewport.top+16,bottom:'auto',maxHeight:Math.max(120,viewport.height-32)}
   const [data,setData]=useState(null),[draft,setDraft]=useState(defaultRestaurantConfig),[form,setForm]=useState(initialForm),[chosen,setChosen]=useState(''),[recipeTarget,setRecipeTarget]=useState(''),[ingredient,setIngredient]=useState(''),[pay,setPay]=useState(null),[cancel,setCancel]=useState(null),[error,setError]=useState(''),[message,setMessage]=useState(''),[saving,setSaving]=useState(false),[filter,setFilter]=useState('active')
-  const busy=useRef(false),dirty=useRef(false),baseline=useRef(''),reloadRef=useRef(null)
+  const busy=useRef(false),dirty=useRef(false),baseline=useRef(''),setupProposal=useRef(false)
   const owner=session.role==='owner',products=store.products
+  function acceptState(next){setData(next);if(!dirty.current){setupProposal.current=owner&&next.fundsSetup?.newStore===true;setDraft(setupProposal.current?{...next.config,fundsEnabled:true}:next.config);baseline.current=canonicalSignature(next.config)}}
+  const funds=useRestaurantFundsForms({data,session,store,onState:acceptState,onResult:result=>setMessage(result.receipt.action==='funds-receive'?'已保存這次收款':result.receipt.action==='funds-refund'?'已保存這次退款':'已保存取消與款項')})
   useEffect(()=>{
-    let closed=false,running=false,again=false
-    const load=async()=>{if(running){again=true;return}running=true;do{again=false;try{const next=await loadRestaurantState();if(!closed){setData(next);if(!dirty.current){setDraft(next.config);baseline.current=canonicalSignature(next.config)};setPay(p=>p&&next.entries.find(e=>e.id===p.entry.id)?.saleId?null:p);setCancel(c=>c&&next.entries.find(e=>e.id===c.entry.id)?.status==='cancelled'?null:c)}}catch(e){if(!closed)setError(e.message)}}while(again&&!closed);running=false}
+    let closed=false,running=null,again=false
+    const load=()=>{
+      if(closed)return Promise.resolve(null)
+      if(running){again=true;return running}
+      running=(async()=>{
+        let result=null
+        do{again=false;try{const next=await loadRestaurantState();result=next;if(!closed){acceptState(next);setPay(p=>p&&next.entries.find(e=>e.id===p.entry.id)?.saleId?null:p);setCancel(c=>c&&next.entries.find(e=>e.id===c.entry.id)?.status==='cancelled'?null:c)}}catch(e){result=null;if(!closed)setError(e.message)}}while(again&&!closed)
+        return closed?null:result
+      })().finally(()=>{running=null})
+      return running
+    }
     reloadRef.current=load;load();window.addEventListener('pos-data-refreshed',load);window.addEventListener('pos-restaurant-operation',load);const removeOrder=window.electronAPI?.onNewOrder?.(load)
     return()=>{closed=true;window.removeEventListener('pos-data-refreshed',load);window.removeEventListener('pos-restaurant-operation',load);removeOrder?.();reloadRef.current=null}
   },[])
@@ -35,7 +50,7 @@ export default function RestaurantPage({store,session}){
     try{const result=await store.commitRestaurant(input,identity);await reloadRef.current?.();setMessage(input.customerOrderId?'已加入備餐工作單':input.action==='pay'?`已保存收款 ${result.order.id}，找零 NT$ ${result.order.change}`:input.action==='cancel'?`已保存取消 ${result.receipt.id}${result.refund?'，退款 NT$ '+Math.abs(result.refund.total):''}`:'已保存 '+result.receipt.id);return result}
     catch(e){setError(e.message);return null}finally{busy.current=false;setSaving(false)}
   }
-  async function configure(){const r=await commit({action:'configure',config:draft,expectedConfig:baseline.current});if(r){dirty.current=false;setDraft(r.config);baseline.current=canonicalSignature(r.config)}}
+  async function configure(){const r=await commit({action:'configure',config:draft,expectedConfig:baseline.current,...(setupProposal.current?{fundsSetupProposal:true}:{})});if(r){dirty.current=false;setupProposal.current=false;setDraft(r.config);baseline.current=canonicalSignature(r.config)}}
   async function create(e){e.preventDefault();const r=await commit({action:'create',...form});if(r){setForm(initialForm());setShowCreate(false)}}
   const config=data?.config||defaultRestaurantConfig(),ingredients=new Set(Object.values(config.recipes).flat().map(r=>r.id)),menu=products.filter(p=>!ingredients.has(p.id))
   const list=data?.entries.filter(e=>filter==='all'||!['cancelled','completed'].includes(e.status)).sort((a,b)=>a.day.localeCompare(b.day)||a.slot.localeCompare(b.slot)||(a.pickupNumber||0)-(b.pickupNumber||0))||[]
@@ -43,6 +58,7 @@ export default function RestaurantPage({store,session}){
     <h2 className="page-title">{tr("預訂出餐")}</h2><p>{tr('接單、備餐、收款，都在這裡。')}</p>
     {error&&<p role="alert" style={{color:'var(--red)',overflowWrap:'anywhere'}}>{trMessage(error)}</p>}
     {message&&<p role="status" style={{color:'var(--green)',overflowWrap:'anywhere'}}>{trMessage(message)}</p>}
+    <RestaurantFundsNotice controller={funds}/>
     {!data&&<p>{tr("載入正式預訂紀錄中…")}</p>}
     {data&&<CustomerIntakePanel data={data} store={store} commit={commit} reload={()=>reloadRef.current?.()}/>}
     {data&&owner&&<TableOrderingPanel config={config} store={store} settingsDirty={dirty.current} reload={()=>reloadRef.current?.()}/>}
@@ -54,7 +70,9 @@ export default function RestaurantPage({store,session}){
         <Field label={tr("每日最多品項份數")}><input aria-label={tr("每日預訂產能")} className="field" type="number" min="1" value={draft.dailyCapacity} onChange={e=>editConfig(c=>({...c,dailyCapacity:Number(e.target.value)}))}/></Field>
         <Field label={tr("每 15 分鐘最多品項份數")}><input aria-label={tr("時段預訂產能")} className="field" type="number" min="1" value={draft.slotCapacity} onChange={e=>editConfig(c=>({...c,slotCapacity:Number(e.target.value)}))}/></Field>
         <label><input type="checkbox" aria-label={tr("啟用正式預訂")} checked={draft.enabled} onChange={e=>editConfig(c=>({...c,enabled:e.target.checked}))}/>{tr(" 啟用正式預訂出餐")}</label>
+        <label style={{display:'flex',gap:10,alignItems:'center',minHeight:48}}><input data-funds-enable type="checkbox" aria-label={tr('可以先收訂金、分次收款')} checked={draft.fundsEnabled===true} onChange={event=>{setupProposal.current=false;editConfig(config=>({...config,fundsEnabled:event.target.checked}))}}/>{tr('可以先收訂金、分次收款')}</label>
       </div>
+      <p>{tr('只影響新訂單，舊單保留原來的方式。')}</p>
       <div style={{...grid,marginTop:14}}>
         <Field label={tr("要設定配方的菜單品項")}><select aria-label={tr("配方菜單")} className="field" value={recipeTarget} onChange={e=>setRecipeTarget(e.target.value)}><option value="">{tr("選擇品項")}</option>{products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
         <Field label={tr("使用的原料／包材")}><select aria-label={tr("配方原料")} className="field" value={ingredient} onChange={e=>setIngredient(e.target.value)}><option value="">{tr("選擇原料")}</option>{products.filter(p=>p.id!==recipeTarget).map(p=><option key={p.id} value={p.id}>{p.name}（{p.unit||tr("個")}）</option>)}</select></Field>
@@ -82,22 +100,24 @@ export default function RestaurantPage({store,session}){
     <div style={{display:'flex',justifyContent:'space-between',gap:10}}><h3>{tr("出餐工作單（")}{list.length}）</h3><select aria-label={tr("出餐篩選")} className="field" style={{width:150}} value={filter} onChange={e=>setFilter(e.target.value)}><option value="active">{tr("待處理")}</option><option value="all">{tr("全部歷史")}</option></select></div>
     {!list.length&&data&&<p>{tr("沒有符合條件的正式預訂。")}</p>}
     {list.map(e=>{
+      const funding=restaurantFundingView(e,session.role),money=cents=>'NT$ '+fundsAmountText(cents)
       const status={reserved:'cooking',cooking:'ready',ready:e.channel==='delivery'?'dispatched':'completed',dispatched:'completed'}[e.status]
       const nextAction={cooking:'開始製作',ready:'餐點好了',dispatched:'出發配送',completed:e.channel==='delivery'?'完成交付':'交給客人'}[status]
       return <article className="card" key={e.id} data-restaurant-id={e.id} style={{padding:14,marginBottom:12,overflowWrap:'anywhere'}}>
         <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',gap:10}}><h3 style={{fontSize:22,marginBottom:4}}>{e.tableNum?tr('桌號 {0}',{0:e.tableNum}):e.customer||tr(channels[e.channel])}</h3><strong>NT$ {e.total}</strong></div>
-        <strong>{!e.customerOrderId&&<>{e.day} {e.slot} · </>}{tr('取餐號 {0}',{0:e.pickupNumber?String(e.pickupNumber).padStart(3,'0'):e.id})}</strong><p>{e.items.map(i=>`${i.name} × ${i.qty}`).join('、')}</p><p data-kitchen-status={e.status}>{tr(labels[e.status])} · {e.saleId?tr("已收款"):tr("未收款")}{e.contact?' · '+e.contact:''}</p>{e.note&&<p>{e.note}</p>}
+        <strong>{!e.customerOrderId&&<>{e.day} {e.slot} · </>}{tr('取餐號 {0}',{0:e.pickupNumber?String(e.pickupNumber).padStart(3,'0'):e.id})}</strong><p>{e.items.map(i=>`${i.name} × ${i.qty}`).join('、')}</p><p data-kitchen-status={e.status}>{tr(labels[e.status])} · {funding.funded?<span data-restaurant-funding data-funds-due={funding.dueCents} data-funds-retained={funding.retainedCents}>{e.status==='cancelled'?funding.summary.refundedCents?tr('已退回 {0}',{0:money(funding.summary.refundedCents)}):tr('不需收款'):!funding.totalCents?tr('不需收款'):funding.dueCents?tr('已收 {0}，還差 {1}',{0:money(funding.retainedCents),1:money(funding.dueCents)}):tr('款項已收齊')}</span>:e.saleId?tr("已收款"):tr("未收款")}{e.contact?' · '+e.contact:''}</p>{e.note&&<p>{e.note}</p>}
         <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>
-          {status&&<button className="btn btn-primary" data-kitchen-action={status} aria-label={tr(labels[status])} style={{minHeight:48,flexBasis:'100%'}} disabled={saving||status==='completed'&&!e.saleId} onClick={()=>commit({action:'advance',entryId:e.id,expectedVersion:e.version,status})}>{tr(nextAction)}</button>}
-          {!e.saleId&&e.status!=='cancelled'&&<button className="btn btn-ghost" data-kitchen-pay aria-label={tr("確認此單收款")} style={{minHeight:48,flex:1}} disabled={saving||!store.openShift} onClick={()=>setPay({entry:e,paid:String(e.total),method:'cash'})}>{tr('登記收款')}</button>}
-          {e.status!=='cancelled'&&(!e.saleId||owner)&&<button className="btn btn-ghost" data-kitchen-cancel aria-label={e.saleId?tr("取消並全額退款"):tr("取消預訂")} style={{minHeight:48,flex:1}} disabled={saving} onClick={()=>setCancel({entry:e,reason:''})}>{e.saleId?tr('取消並退款'):tr('取消這單')}</button>}
+          {status&&<button className="btn btn-primary" data-kitchen-action={status} aria-label={tr(labels[status])} style={{minHeight:48,flexBasis:'100%'}} disabled={saving||funds.busy||status==='completed'&&!funding.canComplete} onClick={()=>commit({action:'advance',entryId:e.id,expectedVersion:e.version,status})}>{tr(nextAction)}</button>}
+          {funding.canReceive&&<button className="btn btn-ghost" data-kitchen-pay aria-label={tr("確認此單收款")} style={{minHeight:48,flex:1}} disabled={saving||funds.busy||!store.openShift} onClick={()=>funding.funded?funds.open(e,'receive'):setPay({entry:e,paid:String(e.total),method:'cash'})}>{tr(funding.funded?funding.retainedCents?'收剩餘款項':'收款':'登記收款')}</button>}
+          {funding.canCancel&&<button className="btn btn-ghost" data-kitchen-cancel aria-label={funding.funded?tr('取消餐點'):e.saleId?tr("取消並全額退款"):tr("取消預訂")} style={{minHeight:48,flex:1}} disabled={saving||funds.busy} onClick={()=>funding.funded?funds.open(e,'cancel'):setCancel({entry:e,reason:''})}>{tr(funding.funded?'取消餐點':e.saleId?'取消並退款':'取消這單')}</button>}
         </div>
-        {status==='completed'&&!e.saleId&&<p>{tr('先登記收款，再交給客人')}</p>}
-        <details style={{marginTop:12}}><summary>{tr('原單資料')}</summary><p>{e.day} {e.slot} · {tr(channels[e.channel])}</p><small>{tr("單號 ")}{e.id}{tr(" · 版本 ")}{e.version}{e.saleId?tr(" · 收款 {0}", {0: e.saleId}):''}{e.refundId?tr(" · 退款 {0}", {0: e.refundId}):''}</small></details>
+        {status==='completed'&&!funding.canComplete&&<p>{tr('先登記收款，再交給客人')}</p>}
+        <details style={{marginTop:12}}><summary>{tr('原單資料')}</summary><p>{e.day} {e.slot} · {tr(channels[e.channel])}</p><small>{tr("單號 ")}{e.id}{tr(" · 版本 ")}{e.version}{e.saleId?tr(" · 收款 {0}", {0: e.saleId}):''}{e.refundId?tr(" · 退款 {0}", {0: e.refundId}):''}</small>{funding.canRefund&&<p><button className="btn btn-ghost" data-funds-open-refund style={{minHeight:48}} disabled={saving||funds.busy} onClick={()=>funds.open(e,'refund')}>{tr('只退回款項')}</button></p>}</details>
         <KitchenPrintStatus printing={printing} entry={e}/>
-        {!e.saleId&&e.status!=='cancelled'&&!store.openShift&&<p>{tr("請先到班別交班開班，再登記收款。")}</p>}
+        {funding.canReceive&&!store.openShift&&<p>{tr("請先到班別交班開班，再登記收款。")}</p>}
       </article>
     })}
+    <RestaurantFundsForm controller={funds} data={data} session={session} shiftId={store.openShift?.id||''}/>
     {pay&&<form className="card" onSubmit={async e=>{e.preventDefault();const r=await commit({action:'pay',entryId:pay.entry.id,expectedVersion:pay.entry.version,shiftId:store.openShift?.id||'',payMethod:pay.method,paid:Number(pay.paid)});if(r)setPay(null)}} style={panel}>
       <h3>{tr("此單收款 NT$ ")}{pay.entry.total}</h3><p>{tr("請先核對款項；保存中與未確認時勿再次收款。")}</p><Field label={tr("付款方式")}><select aria-label={tr("預訂付款方式")} className="field" value={pay.method} onChange={e=>setPay(p=>({...p,method:e.target.value}))}><option value="cash">{tr("現金")}</option><option value="card">{tr("刷卡／轉帳（非現金）")}</option></select></Field><Field label={tr("實收金額")}><input aria-label={tr("預訂實收")} className="field" type="number" min="0" step="0.01" required value={pay.paid} onChange={e=>setPay(p=>({...p,paid:e.target.value}))}/></Field><p>{tr("找零 NT$ ")}{pay.method==='cash'?Math.max(0,Number(pay.paid)-pay.entry.total):0}</p><div style={{display:'flex',gap:10}}><button className="btn btn-primary" disabled={saving} type="submit">{tr("保存此單收款")}</button><button className="btn btn-ghost" type="button" disabled={saving} onClick={()=>setPay(null)}>{tr("返回工作單")}</button></div>
     </form>}

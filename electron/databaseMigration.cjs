@@ -19,6 +19,7 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
     for(const [key,table]of [['salesDocuments','sales_documents'],['salesOperations','sales_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
     const restaurantConfig=data.settings?.find(s=>s.key==='restaurantConfig')
     const checkedConfig=require('./restaurantRules.mjs').readRestaurantConfig(restaurantConfig?.value??null,data.products||[])
+    if(require('./restaurantFunds.mjs').usesRestaurantFunds(checkedConfig,data.restaurantOrders||[],data.orders||[]))require('./databaseFeatureFence.cjs').installFundsFence(db)
     if(Object.hasOwn(data,'kitchenPrintJobs')!==Object.hasOwn(data,'kitchenPrintOperations'))throw Error('廚房列印紀錄需要核對，請保留原單')
     if(Object.hasOwn(checkedConfig,'kitchenPrinting')&&!Object.hasOwn(data,'kitchenPrintJobs'))throw Error('廚房列印紀錄需要核對，請保留原單')
     require('./kitchenPrint.mjs').validateKitchenRecords(data.kitchenPrintJobs||[],data.kitchenPrintOperations||[],{entries:data.restaurantOrders||[],restaurantOperations:data.restaurantOperations||[]})
@@ -26,7 +27,7 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
     for(const [key,table]of [['kitchenPrintJobs','kitchen_print_jobs'],['kitchenPrintOperations','kitchen_print_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
     if(require('./tableOrdering.mjs').usesRestaurantIntake(checkedConfig,data.restaurantOrders||[],data.orders||[]))require('./databaseFeatureFence.cjs').installIntakeFence(db)
     if(data.restaurantOrders||data.restaurantOperations){
-      require('./restaurantRules.mjs').validateRestaurantRecords(data.restaurantOrders||[],data.restaurantOperations||[],data.orders||[],data.products||[])
+      require('./restaurantRules.mjs').validateRestaurantRecords(data.restaurantOrders||[],data.restaurantOperations||[],data.orders||[],data.products||[],{cashLogs:data.cashLog||[],waste:data.wasteLog||[],storeId:data.settings?.find(row=>row.key==='sharedStoreId')?.value})
       for(const [key,table] of [['restaurantOrders','restaurant_orders'],['restaurantOperations','restaurant_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
     }
     for(const row of rawSettings)stmts.setRawSetting.run(row)

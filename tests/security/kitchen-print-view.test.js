@@ -6,3 +6,9 @@ test('a lexically earlier copy supersedes the first ticket, independent of SQL I
  expect(latestKitchenPrintJob(jobs,original.entryId)).toBe(second);expect(jobs).toEqual(before);expect(latestKitchenPrintJob([...jobs].reverse(),original.entryId)).toBe(second)
  const cancel={...original,id:'cancellation-notice',kind:'cancel',state:'queued',copy:0};expect(latestKitchenPrintJob([...jobs,cancel],original.entryId)).toBe(cancel);expect(latestKitchenPrintJob(jobs,'missing')).toBeUndefined()
 })
+
+test('funded cancellation sources use immutable source versions before copy numbers or database/clock ordering',()=>{
+ const entry={id:'funded',funds:{events:[{id:'partial-z',version:3},{id:'partial-a',version:6}]}},older={entryId:'funded',kind:'cancel',sourceOperationId:'partial-z',copy:99},latest={entryId:'funded',kind:'cancel',sourceOperationId:'partial-a',copy:0},copy={...latest,copy:1},prep={entryId:'funded',kind:'prepare',sourceOperationId:'partial-a',copy:100}
+ expect(latestKitchenPrintJob([older,latest,prep],entry.id,entry)).toBe(latest)
+ expect(latestKitchenPrintJob([copy,older,latest],entry.id,entry)).toBe(copy)
+})

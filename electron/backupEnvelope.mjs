@@ -1,5 +1,5 @@
 import {stockLedgerDigest} from './stockLedgerModel.mjs'
-import {recoveryBook,recoveryDataError,RECOVERY_FEATURES} from './recoveryBook.mjs'
+import {recoveryBook,recoveryDataError,RECOVERY_FEATURES,recoveryFeatureFloor} from './recoveryBook.mjs'
 import {validateRecoveryGraph,portableRecoveryGraph,emptyRecoveryGraph} from './recoveryGraph.mjs'
 import {detectBookStorage,convertStorageBook,assertConversionReversible} from './storageConversion.mjs'
 import {bookToBrowser} from './recoveryRules.mjs'
@@ -33,7 +33,7 @@ export function readPortableBackup(input,storage,options={}){
  if(origin===storage)return {...incoming,features,protection:incoming.protection??(features.includes('cross-storage-v1')?emptyRecoveryGraph(2):null),sourceStorage:origin,converted:false}
  const normalized=origin==='sqlite'?checked.book:bookToBrowser(checked.book),book=assertConversionReversible(normalized,convertStorageBook(normalized,origin,storage),origin,storage)
  recoveryBook(book,storage,{complete:true,...options})
- const version=features.includes('kitchen-print-v1')?5:features.includes('restaurant-intake-v1')?4:3,protection=incoming.protection?portableRecoveryGraph(incoming.protection,origin,{...options,version}):emptyRecoveryGraph(version)
+ const version=recoveryFeatureFloor(features,3),protection=incoming.protection?portableRecoveryGraph(incoming.protection,origin,{...options,version}):emptyRecoveryGraph(version)
  validateRecoveryGraph(protection,storage,options)
  return {...incoming,book,protection,features:[...new Set([...features,'cross-storage-v1','record-shapes-v1'])].sort(),sourceStorage:origin,converted:true}
 }

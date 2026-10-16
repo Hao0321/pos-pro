@@ -1,5 +1,6 @@
 import {canonicalSignature} from './operationRules.mjs'
 import {stockLedgerError} from './stockOpeningPlan.mjs'
+import {expectedRestaurantFundedPostings,restaurantFundsWaste} from './restaurantFundedPlan.mjs'
 
 // A valid event prefix alone is insufficient: a full refund or a zero-effect
 // change can leave today's quantities unchanged after its cost tail is lost.
@@ -15,7 +16,7 @@ export function assertStockBusinessCoverage(book,state){
     if(order.source==='customer')continue
     const method=order.refundOf?'refundOrder':'checkout'
     if(original(method,order.id))continue
-    if(!restaurants.some(row=>row.input.action==='pay'&&row.evidence.entry.saleId===order.id||row.input.action==='cancel'&&row.evidence.entry.refundId===order.id))throw stockLedgerError('HISTORY')
+    if(!restaurants.some(row=>row.evidence.entry.funds?expectedRestaurantFundedPostings(row.evidence.entry).some(posting=>posting.eventId===row.input.id&&posting.order.id===order.id):row.input.action==='pay'&&row.evidence.entry.saleId===order.id||row.input.action==='cancel'&&row.evidence.entry.refundId===order.id))throw stockLedgerError('HISTORY')
   }
   for(const product of book.products||[]){
     if(original('addProduct',product.id))continue
@@ -23,6 +24,7 @@ export function assertStockBusinessCoverage(book,state){
   }
   for(const waste of book.wasteLog||[]){
     if(original('addWaste',waste.id))continue
+    if(restaurants.some(row=>row.evidence.entry.funds&&row.evidence.entry.funds.events.filter(event=>event.id===row.input.id).flatMap(restaurantFundsWaste).some(expected=>canonicalSignature(expected)===canonicalSignature(waste))))continue
     const cancellation=restaurants.find(row=>row.input.action==='cancel'&&row.evidence.beforeEntry?.startedAt&&row.evidence.beforeEntry.allocations.some((allocation,index)=>{
       const expected={id:'rw-'+row.input.id+'-'+index,productId:allocation.id,productName:allocation.name,qty:allocation.qty,reason:'預訂取消：'+row.input.reason.trim(),cost:allocation.unitCost,time:row.input.time,cashier:row.actor.username||''}
       return Object.entries(expected).every(([key,value])=>waste[key]===value)

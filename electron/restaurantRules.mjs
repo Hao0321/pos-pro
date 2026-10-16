@@ -1,6 +1,10 @@
 import {operationHeader,moneyValue,quantityValue,canonicalSignature} from './operationRules.mjs'
 import {normalizeTableOrdering,customerIntakeSource,assertCustomerOrderLink,validateTableOrderSources} from './tableOrdering.mjs'
 import {normalizeKitchenPrinting} from './kitchenPrint.mjs'
+import {initializeFundedRestaurant,planFundedRestaurant,fundedRestaurantReceipt} from './restaurantFundedPlan.mjs'
+import {validateFundedRestaurantRecords} from './restaurantFundedRecords.mjs'
+import {restaurantCapacityQuantity} from './restaurantFunds.mjs'
+import {assertRestaurantFundsSetupProposal} from './restaurantFundsSetup.mjs'
 
 export const RESTAURANT_KIND='restaurant'
 export const RESTAURANT_STATES=['reserved','cooking','ready','dispatched','completed','cancelled']
@@ -13,6 +17,7 @@ const positiveInt=(v,label,max=100000)=>{if(!Number.isSafeInteger(v)||v<1||v>max
 
 export function normalizeRestaurantConfig(input,products){
   if(!input||typeof input!=='object'||Array.isArray(input)||typeof input.enabled!=='boolean'||!input.recipes||typeof input.recipes!=='object'||Array.isArray(input.recipes))throw Error('預訂設定格式不正確')
+  if(Object.hasOwn(input,'fundsEnabled')&&typeof input.fundsEnabled!=='boolean')throw Error('分次收款設定格式不正確。')
   const recipes=Object.entries(input.recipes).map(([target,rows])=>{
     id(target);if(!products.some(p=>p.id===target)||!Array.isArray(rows)||!rows.length||rows.length>100)throw Error('配方商品不存在或明細不正確')
     const seen=new Set(),items=rows.map(row=>{
@@ -26,7 +31,7 @@ export function normalizeRestaurantConfig(input,products){
   // Recipe outputs cannot also be ingredient inputs: production has one explicit level.
   const outputs=new Set(recipes.map(([target])=>target))
   if(recipes.some(([,rows])=>rows.some(r=>outputs.has(r.id))))throw Error('配方不支援相互引用；請以原料與包材建檔')
-  return {enabled:input.enabled,dailyCapacity:positiveInt(input.dailyCapacity,'每日產能'),slotCapacity:positiveInt(input.slotCapacity,'時段產能'),recipes:Object.fromEntries(recipes),...(Object.hasOwn(input,'tableOrdering')?{tableOrdering:normalizeTableOrdering(input.tableOrdering)}:{}),...(Object.hasOwn(input,'kitchenPrinting')?{kitchenPrinting:normalizeKitchenPrinting(input.kitchenPrinting)}:{})}
+  return {enabled:input.enabled,dailyCapacity:positiveInt(input.dailyCapacity,'每日產能'),slotCapacity:positiveInt(input.slotCapacity,'時段產能'),recipes:Object.fromEntries(recipes),...(Object.hasOwn(input,'fundsEnabled')?{fundsEnabled:input.fundsEnabled}:{}),...(Object.hasOwn(input,'tableOrdering')?{tableOrdering:normalizeTableOrdering(input.tableOrdering)}:{}),...(Object.hasOwn(input,'kitchenPrinting')?{kitchenPrinting:normalizeKitchenPrinting(input.kitchenPrinting)}:{})}
 }
 export function readRestaurantConfig(raw,products){
   return raw==null?defaultRestaurantConfig():normalizeRestaurantConfig(typeof raw==='string'?JSON.parse(raw):raw,products)
@@ -39,12 +44,18 @@ function validateSchedule(day,slot){
   if(typeof day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(Date.parse(day+'T00:00:00Z'))||new Date(day+'T00:00:00Z').toISOString().slice(0,10)!==day)throw Error('取餐日期不正確')
   if(typeof slot!=='string'||!/^([01]\d|2[0-3]):(00|15|30|45)$/.test(slot))throw Error('請選擇每 15 分鐘的取餐時段')
 }
-export function validateRestaurantRecords(entries,operations,orders,products){
+export function validateRestaurantRecords(entries,operations,orders,products,context={}){
   if(!Array.isArray(entries)||!Array.isArray(operations))throw Error('預訂紀錄格式不正確')
   validateTableOrderSources(orders)
+  validateFundedRestaurantRecords(entries,operations,orders,products,context)
   const seen=new Set(),customerIds=new Set()
   for(const e of entries){
     id(e?.id);validateSchedule(e.day,e.slot)
+    if(Object.hasOwn(e,'funds')){
+      if(seen.has(e.id))throw Error('預訂歷史紀錄需要核對');seen.add(e.id)
+      if(Object.hasOwn(e,'customerOrderId')){id(e.customerOrderId);if(customerIds.has(e.customerOrderId))throw Error('顧客原單已重複接單');customerIds.add(e.customerOrderId);assertCustomerOrderLink(e,orders)}
+      continue
+    }
     if(seen.has(e.id)||!RESTAURANT_STATES.includes(e.status)||!['preorder','walkin','delivery'].includes(e.channel)||!Number.isSafeInteger(e.version)||e.version<1||!Array.isArray(e.items)||!e.items.length||!Array.isArray(e.allocations)||!e.allocations.length)throw Error('預訂歷史紀錄需要核對')
     seen.add(e.id);text(e.customer,100,'稱呼');text(e.contact,100,'聯絡方式');text(e.note,1000,'備註');operationHeader({id:e.id,time:e.createdAt})
     if(Object.hasOwn(e,'customerOrderId')){id(e.customerOrderId);if(customerIds.has(e.customerOrderId))throw Error('顧客原單已重複接單');customerIds.add(e.customerOrderId);assertCustomerOrderLink(e,orders)}
@@ -64,6 +75,7 @@ export function validateRestaurantRecords(entries,operations,orders,products){
   for(const op of operations){id(op?.id);if(operationIds.has(op.id)||typeof op.signature!=='string'||op.kind!==RESTAURANT_KIND||op.entityId&&!seen.has(op.entityId))throw Error('預訂操作回執需要核對');operationIds.add(op.id);const original=JSON.parse(op.signature);operationHeader(original);if(original.id!==op.id||original.action!==op.action||canonicalSignature(original)!==op.signature)throw Error('預訂回執內容需要核對')}
 }
 export function restaurantReceipt(request,receipt,data){
+  if(receipt.fundsProtocol)return fundedRestaurantReceipt(request,receipt,data)
   if(receipt.signature!==canonicalSignature(request))throw Object.assign(Error('原操作編號已存在且內容不同，請核對已建立單據；新單請重新整理草稿'),{operationConflict:true})
   const entry=receipt.entityId?data.entries.find(e=>e.id===receipt.entityId):null
   if(receipt.entityId&&!entry)throw Error('原預訂紀錄已不存在，請核對備份')
@@ -72,6 +84,11 @@ export function restaurantReceipt(request,receipt,data){
   return {success:true,receipt,entry,products,config:data.config,order:entry?.saleId?data.orders.find(o=>o.id===entry.saleId):null,refund:entry?.refundId?data.orders.find(o=>o.id===entry.refundId):null}
 }
 export function planRestaurant(request,data,actor,finance){
+  if(request.action!=='configure'&&data.entries.some(entry=>entry.id===request.entryId&&entry.funds))return planFundedRestaurant(request,data,actor)
+  const plan=planLegacyRestaurant(request,data,actor,finance)
+  return request.action==='create'&&data.config.fundsEnabled?initializeFundedRestaurant(plan,request,data,actor):plan
+}
+function planLegacyRestaurant(request,data,actor,finance){
   operationHeader(request)
   if(!actor||!['owner','staff'].includes(actor.role))throw Error('權限不足')
   if(request.kind!==RESTAURANT_KIND)throw Error('預訂操作類型不正確')
@@ -81,6 +98,7 @@ export function planRestaurant(request,data,actor,finance){
   if(request.action==='configure'){
     if(actor.role!=='owner')throw Error('只有老闆能修改預訂設定')
     if(request.expectedConfig!==canonicalSignature(config))throw Error('預訂設定已變更，請重新核對')
+    assertRestaurantFundsSetupProposal(request,data)
     config=normalizeRestaurantConfig(request.config,data.products);next.config=config
   }else if(request.action==='create'){
     if(!config.enabled)throw Error('請先由老闆確認產能與配方，啟用預訂出餐')
@@ -98,8 +116,8 @@ export function planRestaurant(request,data,actor,finance){
       return {id:p.id,name:customerSource?.items.find(row=>row.id===p.id)?.name||p.name,price:p.price,qty:i.qty,cost:Math.round(cost*100)/100}
     })
     const quantity=items.reduce((n,i)=>n+i.qty,0),used=data.entries.filter(e=>e.day===request.day&&(e.status!=='cancelled'||e.startedAt))
-    if(used.reduce((n,e)=>n+e.quantity,0)+quantity>config.dailyCapacity)throw Error('已超過當日產能，請選其他日期')
-    if(used.filter(e=>e.slot===request.slot).reduce((n,e)=>n+e.quantity,0)+quantity>config.slotCapacity)throw Error('這個時段已滿，請選其他時段')
+    if(used.reduce((n,e)=>n+restaurantCapacityQuantity(e),0)+quantity>config.dailyCapacity)throw Error('已超過當日產能，請選其他日期')
+    if(used.filter(e=>e.slot===request.slot).reduce((n,e)=>n+restaurantCapacityQuantity(e),0)+quantity>config.slotCapacity)throw Error('這個時段已滿，請選其他時段')
     entry={id:request.id,version:1,channel:request.channel,day:request.day,slot:request.slot,customer:text(request.customer,100,'稱呼'),contact:text(request.contact,100,'聯絡方式'),note:text(request.note,1000,'備註'),items,allocations:[...resources.values()],quantity,total:moneyValue(items.reduce((n,i)=>n+cents(i.price)*i.qty,0)/100,'應收'),status:'reserved',createdAt:request.time,startedAt:'',saleId:'',refundId:''}
     entry.pickupNumber=positiveInt(data.entries.filter(e=>e.day===entry.day).reduce((n,e)=>Math.max(n,e.pickupNumber||0),0)+1,'取餐號',1000000)
     if(customerSource){entry.customerOrderId=customerSource.id;entry.tableNum=customerSource.tableNum||'';if(customerSource.tableId)entry.tableId=customerSource.tableId;assertCustomerOrderLink(entry,data.orders)}

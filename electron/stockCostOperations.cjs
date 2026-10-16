@@ -38,7 +38,7 @@ module.exports=function stockCostOperations(db,api,store){
     const state=current()
     if(!state.projection)return {status:'reference-only-not-activated'}
     const sales=api.getSalesState(actor),supplier=api.getSupplierState(actor)
-    return require('./stockAccounting.mjs').makeStockAccountingReport(state,{products:api.getProducts(),orders:api.getOrders(),topups:api.getTopups(),wasteLog:api.getWasteLog(),purchases:api.getPurchases(),salesDocuments:sales.documents,customerEntries:sales.customerLedger.entries,supplierEntries:supplier.supplierLedger.entries,manualJournal:api.getManualJournal()})
+    return require('./stockAccounting.mjs').makeStockAccountingReport(state,{products:api.getProducts(),orders:api.getOrders(),topups:api.getTopups(),wasteLog:api.getWasteLog(),purchases:api.getPurchases(),salesDocuments:sales.documents,customerEntries:sales.customerLedger.entries,supplierEntries:supplier.supplierLedger.entries,manualJournal:api.getManualJournal(),restaurantEntries:api.getRestaurantState().entries})
    })()
   },
   getStockCostState(actor){owner(actor);return db.transaction(()=>{owner(actor);const state=current();return {status:state.projection?'active':'reference-only-not-activated',sequence:state.entries.length,stateDigest:state.stateDigest,projection:state.projection,valuation:state.valuation}})()},

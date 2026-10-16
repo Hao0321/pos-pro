@@ -1,5 +1,16 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--restaurant-funds-resilience-ui':['native-restaurant-funds-resilience-ui.cjs','POS_RESTAURANT_FUNDS_RESILIENCE_UI_PASS',true],
+  '--restaurant-funds-locale-ui':['native-restaurant-funds-locale-ui.cjs','POS_RESTAURANT_FUNDS_LOCALE_UI_PASS',true],
+  '--restaurant-funds-setup-ui':['native-restaurant-funds-setup-ui.cjs','POS_RESTAURANT_FUNDS_SETUP_UI_PASS',true],
+  '--restaurant-funds-setup-race-ui':['native-restaurant-funds-setup-race-ui.cjs','POS_RESTAURANT_FUNDS_SETUP_UI_PASS',true],
+  '--restaurant-funds-setup':['native-restaurant-funds-setup.cjs','POS_RESTAURANT_FUNDS_SETUP_PASS',false],
+  '--restaurant-funds-forms-ui':['native-restaurant-funds-forms-ui.cjs','POS_RESTAURANT_FUNDS_FORMS_UI_PASS',true],
+  '--restaurant-funds-worklist-ui':['native-restaurant-funds-worklist-ui.cjs','POS_RESTAURANT_FUNDS_WORKLIST_UI_PASS',true],
+  '--restaurant-funds-kitchen-ui':['native-restaurant-funds-kitchen-ui.cjs','POS_RESTAURANT_FUNDS_KITCHEN_UI_PASS',true],
+  '--restaurant-funds-kitchen':['native-restaurant-funds-kitchen.cjs','POS_RESTAURANT_FUNDS_KITCHEN_PASS',false],
+  '--restaurant-funds-cost':['native-restaurant-funds-cost.cjs','POS_RESTAURANT_FUNDS_COST_PASS',false],
+  '--restaurant-funds':['native-restaurant-funds.cjs','POS_RESTAURANT_FUNDS_PASS',false],
   '--receipt-print-ui':['native-receipt-print-ui.cjs','POS_RECEIPT_PRINT_UI_PASS',true],
   '--login-reachability':['native-login-reachability.cjs','POS_LOGIN_REACHABILITY_PASS',true],
   '--customer-key-continuity':['native-customer-key-continuity.cjs','POS_CUSTOMER_KEY_CONTINUITY_PASS',false],

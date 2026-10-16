@@ -11,6 +11,7 @@ import {PHYSICAL_STOCKTAKE,assertPhysicalStocktakeResult} from '../../electron/p
 import {assertReviewedRefundResult} from '../../electron/refundReview.mjs'
 import {assertStockSetupResult} from '../../electron/stockSetupReview.mjs'
 import {assertStoredBrowserStockSetupResult} from './browserStockSetup'
+import {needsRestaurantFundsResult,assertRestaurantFundsResult} from '../../electron/restaurantFundsResult.mjs'
 export const FINANCIAL_PENDING='pos_pending_financial_v1'
 const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt','stock-cost':'receipt'}
 for(const kind of PROCUREMENT_KINDS)fields[kind]='receipt'
@@ -46,9 +47,12 @@ function assertReceipt(kind,request,result){
     if(row.kind!==kind||row.action!==request.action||row.signature!==JSON.stringify(canonical(request))||!Array.isArray(row.productIds)||new Set(row.productIds).size!==row.productIds.length||!Array.isArray(result.products)||row.productIds.length!==result.products.length||row.productIds.some(id=>!result.products.some(p=>p.id===id))||!result.config)throw Error('預訂保存結果尚未確認：回覆內容不符')
     if(request.action!=='configure'&&result.entry?.id!==(request.action==='create'?request.id:request.entryId))throw Error('預訂回覆缺少原單')
     if(request.action!=='configure'&&(!Number.isSafeInteger(row.entityVersion)||row.entityVersion<1||result.entry.version<row.entityVersion))throw Error('預訂回覆缺少保存版本')
-    if(request.action==='pay'&&(!row.saleId||result.order?.id!==row.saleId))throw Error('預訂回覆缺少收款流水')
-    if(request.action==='pay'&&(result.order.shiftId!==request.shiftId||result.order.total!==result.entry.total||result.order.payMethod!==request.payMethod))throw Error('預訂回覆收款內容不符')
-    if(request.action==='cancel'&&row.refundId&&(result.refund?.id!==row.refundId||result.refund.shiftId!==request.shiftId||result.refund.total!==-result.entry.total))throw Error('預訂回覆缺少退款流水')
+    if(needsRestaurantFundsResult(request,result))assertRestaurantFundsResult(request,result)
+    else{
+      if(request.action==='pay'&&(!row.saleId||result.order?.id!==row.saleId))throw Error('預訂回覆缺少收款流水')
+      if(request.action==='pay'&&(result.order.shiftId!==request.shiftId||result.order.total!==result.entry.total||result.order.payMethod!==request.payMethod))throw Error('預訂回覆收款內容不符')
+      if(request.action==='cancel'&&row.refundId&&(result.refund?.id!==row.refundId||result.refund.shiftId!==request.shiftId||result.refund.total!==-result.entry.total))throw Error('預訂回覆缺少退款流水')
+    }
   }
   if(['stocktake','receive',...PROCUREMENT_KINDS].includes(kind)){
     assertSupplierInventoryResult(request,result)
