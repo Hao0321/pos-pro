@@ -41,7 +41,8 @@ module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
   app.get('/.well-known/pos-business-exchange',(_req,res)=>res.json({protocol:'pos-business-exchange-discovery/v1',catalogue:'/api/catalogue',manifest:'/agent/manifest.json',guide:'/llms.txt',humanReviewRequired:true,anonymousWrites:false}))
   app.get('/api/menu',(_req,res)=>{
     const products=db.getProducts().filter(p=>p.stock>0&&p.price>0).map(publicProduct)
-    res.json({success:true,products,categories:[...new Set(products.map(p=>p.category))],storeName:db.getSetting('storeName')||'商店'})
+    const storeName=db.getSetting('storeName')
+    res.json({success:true,products,categories:[...new Set(products.map(p=>p.category))],storeName:storeName||'商店',storeNameIsDefault:!storeName})
   })
   app.get('/api/catalogue',async(_req,res)=>res.json(await db.getPublicCatalogue()))
   app.post('/api/order',(req,res,next)=>{

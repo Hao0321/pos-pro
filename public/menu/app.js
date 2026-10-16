@@ -9,7 +9,7 @@ let activeCategory = null
 let ws = null
 let currentOrderId = null
 let submitting = false
-let storeName=null,lastOrderStatus='pending',menuFailed=false,preferenceFailed=false
+let storeName=null,storeNameIsDefault=false,lastOrderStatus='pending',menuFailed=false,preferenceFailed=false
 
 function applyMenuLanguage(){
   initDisplayPreferences()
@@ -18,8 +18,9 @@ function applyMenuLanguage(){
   const prefs=getDisplayPreferences();document.getElementById('menu-language').value=prefs.locale;document.getElementById('menu-style').value=prefs.style
   document.getElementById('menu-language').setAttribute('aria-label',tr('語言'));document.getElementById('menu-style').setAttribute('aria-label',tr('介面風格'))
   document.getElementById('preference-warning').textContent=preferenceFailed?tr('這次已切換；這台裝置無法記住偏好，下次開啟需重新選擇。'):''
-  document.getElementById('store-name').textContent=storeName??tr(menuFailed?'無法連線':'載入中...')
-  document.title=storeName?storeName+' - '+tr('線上點餐'):tr('線上點餐')
+  const displayName=storeNameIsDefault?tr('商店'):storeName
+  document.getElementById('store-name').textContent=displayName??tr(menuFailed?'無法連線':'載入中...')
+  document.title=displayName?displayName+' - '+tr('線上點餐'):tr('線上點餐')
   document.getElementById('checkout-btn').textContent=tr('送出訂單')
   document.querySelector('.order-form [data-action="confirmOrder"]').textContent=tr(submitting?'送出中...':'確認送出')
   document.getElementById('cart-fab').setAttribute('aria-label',tr('購物車'))
@@ -42,6 +43,7 @@ async function init() {
       products = data.products
       categories = data.categories
       storeName=data.storeName
+      storeNameIsDefault=data.storeNameIsDefault===true
       applyMenuLanguage()
     }else{throw Error('Menu unavailable')
     }
