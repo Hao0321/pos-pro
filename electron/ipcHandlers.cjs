@@ -14,6 +14,7 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:checkoutReceipt', (_e, id) => db.checkoutReceipt(id))
   handle('db:getStoreSnapshot',()=>require('./storeSnapshot.cjs')(db,ipcSecurity.current()))
   handle('db:getStockAccountingState',()=>db.getStockAccountingState(ipcSecurity.current()))
+  handle('db:getStockSalesState',()=>db.getStockSalesState(ipcSecurity.current()))
   handle('db:getRestaurantState',()=>db.getRestaurantState())
   handle('db:getAgentContext',()=>db.getAgentContext(ipcSecurity.current()))
   handle('db:getExchangeContext',()=>db.getExchangeContext(ipcSecurity.current()))

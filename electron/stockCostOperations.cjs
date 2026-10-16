@@ -6,6 +6,20 @@ module.exports=function stockCostOperations(db,api,store){
  const owner=actor=>{const user=actor?.userId&&api.getUsers().find(row=>row.id===actor.userId);if(actor?.role!=='owner'||user?.role!=='owner'||user.username!==actor.username)throw Error('權限不足');return actor}
  function current(){const state=store.read();if(state.projection)assertStockCustodyMatchesBook(state.projection.custody,api.getProducts(),api.getRestaurantState().entries);return state}
  return {
+  getStockSalesState(actor){
+   const verify=()=>{const user=actor?.userId&&api.getUsers().find(row=>row.id===actor.userId);if(!user||!['owner','staff'].includes(user.role)||actor.role!==user.role||actor.username!==user.username)throw Error('權限不足');return user.role}
+   verify()
+   return db.transaction(()=>{
+    const role=verify(),state=current()
+    if(!state.projection)return {status:'reference-only-not-activated'}
+    const data={products:api.getProducts(),orders:api.getOrders(),members:api.getMembers(),restaurantEntries:api.getRestaurantState().entries}
+    if(role==='owner'){
+     data.sales=api.getSalesState(actor);data.supplierState=api.getSupplierState(actor)
+     Object.assign(data,{topups:api.getTopups(),wasteLog:api.getWasteLog(),purchases:api.getPurchases(),salesDocuments:data.sales.documents,customerEntries:data.sales.customerLedger.entries,supplierEntries:data.supplierState.supplierLedger.entries,manualJournal:api.getManualJournal()})
+    }
+    return require('./stockSalesReports.mjs').makeStockSalesReport(state,data,salesDate(new Date()),role)
+   })()
+  },
   getStockAccountingState(actor){
    owner(actor)
    return db.transaction(()=>{

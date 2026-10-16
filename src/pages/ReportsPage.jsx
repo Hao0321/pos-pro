@@ -6,8 +6,14 @@ import { exportXLS } from '../utils/exportXLS'
 import { productPerformance,classifyProductRevenue } from '../utils/analytics'
 import {businessReportRows,businessCashFlows,reportDay,reportLineRevenue} from '../utils/businessReports'
 import {salesDate,salesSummary} from '../../electron/salesRules.mjs'
+import useSalesReportView from '../hooks/useSalesReportView'
+import ReportCostStatus from '../components/ReportCostStatus'
+import {formatMoneyCents,centsNumber,spreadsheetMoneyCents} from '../../electron/journalAmounts.mjs'
+import {salesRevenuePostings} from '../../electron/stockSalesReports.mjs'
 
-export default function ReportsPage({ store }) {
+export default function ReportsPage({ store:sourceStore,session }) {
+  const view=useSalesReportView(sourceStore,session),report=view.report,actual=report?.status==='active',waiting=view.loading||!!view.error
+  const store=actual?{...sourceStore,...report.data}:sourceStore
   const { orders: rawOrders, products, members } = store
   const [range, setRange] = useState('today')
 
@@ -17,8 +23,8 @@ export default function ReportsPage({ store }) {
   const customerEntries=store.sales?.customerLedger?.entries
   const supplierEntries=store.supplierState?.supplierLedger.entries
   const orders = useMemo(()=>[...settledOrders(rawOrders),...businessReportRows(businessDocuments)],[rawOrders,businessDocuments])
-  const today=store.sales?.today||salesDate(now)
-  function inRange(day){const age=(Date.parse(today)-Date.parse(day))/86400000;return range==='today'?day===today:range==='week'?age>=0&&age<7:range==='month'?day.slice(0,7)===today.slice(0,7):true}
+  const today=report?.today||store.sales?.today||salesDate(now),period=actual?report.periods[range]:null
+  function inRange(day){const age=(Date.parse(today)-Date.parse(day))/86400000;return range==='today'?day===today:range==='week'?age>=0&&age<7:range==='month'?day.slice(0,7)===today.slice(0,7)&&day<=today:true}
   const filtered = useMemo(() => orders.filter(o => {
     return inRange(reportDay(o))
   }), [orders, range,today])
@@ -31,11 +37,14 @@ export default function ReportsPage({ store }) {
     })
   }, [orders, range,today])
 
-  const revenue = Math.round(filtered.reduce((s,o)=>s+netSale(o),0)*100)/100
+  const revenue = actual?centsNumber(period.revenueCents):Math.round(filtered.reduce((s,o)=>s+netSale(o),0)*100)/100
   const prevRevenue = Math.round(prev.reduce((s,o)=>s+netSale(o),0)*100)/100
   const revDelta = prevRevenue ? ((revenue-prevRevenue)/prevRevenue*100).toFixed(1) : null
 
-  const profit=useMemo(()=>Math.round(filtered.reduce((sum,o)=>sum+netSale(o)-orderCost(o,products),0)*100)/100,[filtered,products])
+  const referenceProfit=useMemo(()=>Math.round(filtered.reduce((sum,o)=>sum+netSale(o)-orderCost(o,products),0)*100)/100,[filtered,products])
+  const profit=waiting?null:actual?(period.profitCents===null?null:centsNumber(period.profitCents)):referenceProfit
+  const moneyText=value=>formatMoneyCents(value)
+  const profitText=waiting?'—':profit===null?tr('成本待確認'):actual?moneyText(period.profitCents):profit.toLocaleString()
 
   const saleCount=filtered.filter(row=>!row.refundOf).length
   const avgOrder = saleCount ? Math.round(revenue / saleCount) : 0
@@ -50,13 +59,14 @@ export default function ReportsPage({ store }) {
   // Top products
   const topProducts = useMemo(() => {
     const map = {}
+    if(actual){for(const row of salesRevenuePostings(filtered)){if(!row.productId)continue;const p=map[row.productId]||{id:row.productId,name:row.name,qty:0,revenue:0,revenueCents:0n};p.qty+=Number(row.quantityUnits)/1000;p.revenueCents+=BigInt(row.amountCents);map[row.productId]=p}return Object.values(map).map(row=>({...row,revenue:centsNumber(row.revenueCents),revenueCents:row.revenueCents.toString()})).sort((a,b)=>BigInt(a.revenueCents)>BigInt(b.revenueCents)?-1:BigInt(a.revenueCents)<BigInt(b.revenueCents)?1:a.id.localeCompare(b.id)).slice(0,8)}
     filtered.forEach(o => o.items.forEach(i => {
       if (!map[i.id]) map[i.id] = { name:i.name, qty:0, revenue:0 }
       map[i.id].qty += i.qty
       map[i.id].revenue += reportLineRevenue(i)
     }))
     return Object.values(map).sort((a,b)=>b.revenue-a.revenue).slice(0,8)
-  }, [filtered])
+  }, [filtered,actual])
 
   const maxRevenue = topProducts[0]?.revenue || 1
 
@@ -86,7 +96,9 @@ export default function ReportsPage({ store }) {
   }, [filtered,businessDocuments,customerEntries,store.purchases,supplierEntries,range,today])
 
   // 30 天商品表現分析（基於 store.orders 全部訂單，獨立於 range filter）
-  const perf30d = useMemo(() => productPerformance(products, orders, 30), [products, orders])
+  const perf30d = useMemo(() => waiting?{enriched:[],topSellers:[],slowMovers:[],highMargin:[]}:actual?report.performance:productPerformance(products, orders, 30), [products, orders,actual,report,waiting])
+  const stockAmount=p=>actual&&perf30d.stockBasis==='actual'?(p.stockValue.available.valueCents===null?tr('成本待確認'):moneyText(p.stockValue.available.valueCents)):Math.round(p.stock*(p.cost||0)*100)/100
+  const slowTotal=actual&&perf30d.stockBasis==='actual'?(perf30d.slowMovers.some(p=>p.stockValue.available.valueCents===null)?tr('成本待確認'):moneyText(perf30d.slowMovers.reduce((n,p)=>n+BigInt(p.stockValue.available.valueCents),0n))):Math.round(perf30d.slowMovers.reduce((s,p)=>s+p.stock*(p.cost||0),0)*100)/100
 
   // 員工績效（依當前期間）
   const staffPerf = useMemo(() => {
@@ -119,8 +131,9 @@ export default function ReportsPage({ store }) {
       map.get(i.id).qty += i.qty
       map.get(i.id).revenue += reportLineRevenue(i)
     }))
+    if(actual){for(const row of map.values())row.revenueCents='0';for(const row of salesRevenuePostings(filtered))if(map.has(row.productId)){const item=map.get(row.productId);item.revenueCents=(BigInt(item.revenueCents)+BigInt(row.amountCents)).toString()}for(const row of map.values())row.revenue=centsNumber(row.revenueCents)}
     return classifyProductRevenue([...map.values()])
-  }, [filtered])
+  }, [filtered,actual])
 
   function exportReport() {
     const rangeLabel = { today:'今日', week:'本週', month:'本月', all:'全部' }[range]
@@ -129,9 +142,11 @@ export default function ReportsPage({ store }) {
       [`匯出時間：${new Date().toLocaleString('zh-TW')}`],
       [],
       ['指標', '數值'],
-      ['營業額', revenue],
-      ['毛利', profit],
-      ['毛利率(%)', revenue > 0 ? (profit/revenue*100).toFixed(1) : 0],
+      ['成本依據',actual?'實際成本':'參考成本'],
+      ['營業額', actual?spreadsheetMoneyCents(period.revenueCents):revenue],
+      ['毛利', profit===null?'成本待確認':actual?spreadsheetMoneyCents(period.profitCents):profit],
+      ['毛利率(%)',profit===null?'成本待確認':actual?period.margin:revenue>0?(profit/revenue*100).toFixed(1):0],
+      ...(actual?[['其他收入調整',spreadsheetMoneyCents(period.otherRevenueCents)],['未分配成本調整',spreadsheetMoneyCents(period.unallocatedCostCents)]]:[]),
       ['銷售筆數', saleCount],
       ['每筆銷售平均', avgOrder],
       ['現金淨收付', payBreakdown.cash],
@@ -140,12 +155,13 @@ export default function ReportsPage({ store }) {
       [],
       ['暢銷商品 Top 8'],
       ['排名', '商品', '數量', '營收'],
-      ...topProducts.map((p,i) => [i+1, p.name, p.qty, p.revenue]),
+      ...topProducts.map((p,i) => [i+1, p.name, p.qty, actual?spreadsheetMoneyCents(p.revenueCents):p.revenue]),
+      ...(actual?[[],['30天 商品成本'],['商品','營收','成本','毛利','可用庫存金額','預留庫存金額'],...perf30d.enriched.map(p=>[p.name,spreadsheetMoneyCents(p.revenueCents),p.costCents===null?'成本待確認':spreadsheetMoneyCents(p.costCents),p.profitCents===null?'成本待確認':spreadsheetMoneyCents(p.profitCents),p.stockValue?(p.stockValue.available.valueCents===null?'成本待確認':spreadsheetMoneyCents(p.stockValue.available.valueCents)):'參考成本',p.stockValue?(p.stockValue.reserved.valueCents===null?'成本待確認':spreadsheetMoneyCents(p.stockValue.reserved.valueCents)):'參考成本'])]:[]),
       [],
       ['ABC 分析'],
       ['商品', '銷量', '營收', '營收佔比%', '累計%', '類別'],
       ...abcAnalysis.items.map(p => [
-        p.name, p.qty, p.revenue,
+        p.name, p.qty, actual?spreadsheetMoneyCents(p.revenueCents):p.revenue,
         (abcAnalysis.total>0?Math.max(0,p.revenue)/abcAnalysis.total*100:0).toFixed(2),
         p.cumPct.toFixed(2),
         p.cls,
@@ -168,18 +184,18 @@ export default function ReportsPage({ store }) {
 
   const RANGES = [['today','今日'],['week','本週'],['month','本月'],['all','全部']]
   const KPIS = [
-    { label:'營業額', value:`NT$ ${revenue.toLocaleString()}`, delta:revDelta, icon:<TrendingUp size={16}/>, color:'var(--gold)' },
-    { label:'毛利',   value:`NT$ ${profit.toLocaleString()}`,  delta:null,     icon:<ArrowUp size={16}/>,   color:'var(--green)' },
+    { label:'營業額', value:waiting?'—':`NT$ ${actual?moneyText(period.revenueCents):revenue.toLocaleString()}`, delta:waiting||actual?null:revDelta, icon:<TrendingUp size={16}/>, color:'var(--gold)' },
+    { label:'毛利',   value:profit===null?profitText:`NT$ ${profitText}`,  delta:null,     icon:<ArrowUp size={16}/>,   color:'var(--green)' },
     { label:'銷售筆數', value:`${saleCount} 筆`,           delta:null,     icon:<ShoppingCart size={16}/>, color:'var(--blue)' },
     { label:'每筆銷售平均', value:`NT$ ${avgOrder.toLocaleString()}`, delta:null,    icon:<Package size={16}/>,   color:'var(--teal)' },
   ]
 
   return (
-    <div style={rs.root}>
+    <div style={rs.root} data-sales-reports>
       <div style={rs.topBar}>
         <h2 className="page-title" style={rs.title}>{tr("報表分析")}</h2>
-        <div style={{display:'flex', gap:8, alignItems:'center'}}>
-          <div style={{display:'flex', gap:4}}>
+        <div style={{display:'flex', gap:8, alignItems:'center',flexWrap:'wrap',maxWidth:'100%'}}>
+          <div style={{display:'flex', gap:4,flexWrap:'wrap'}}>
             {RANGES.map(([k,l])=>(
               <button key={k} onClick={()=>setRange(k)} style={{
                 ...rs.rangeBtn,
@@ -188,16 +204,17 @@ export default function ReportsPage({ store }) {
               }}>{tr(l)}</button>
             ))}
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={exportReport} style={{display:'flex', alignItems:'center', gap:4}}>
+          <button className="btn btn-ghost btn-sm" disabled={waiting} onClick={exportReport} style={{display:'flex', alignItems:'center', gap:4,minHeight:48}}>
             <Download size={14}/>{tr(" 匯出 Excel")}</button>
         </div>
       </div>
+      <ReportCostStatus view={view}/>
 
       {/* KPI row */}
       {businessDocuments.length>0&&<section className="card" style={{padding:18,marginBottom:16,lineHeight:1.8}} data-business-report><p>{tr('營業額與毛利包含收銀及客戶交付，分批交付每批算一筆銷售；收款不再重複計入營業額。')}</p><p>{tr('目前全部客戶未付款：{0}',{0:'NT$ '+currentReceivables.toLocaleString(undefined,{maximumFractionDigits:2})})}</p><button className="btn btn-ghost" style={{minHeight:48}} onClick={()=>store.setView('sales')}>{tr('查看銷售與應收')}</button></section>}
       <div style={rs.kpiGrid}>
         {KPIS.map((kpi, i) => (
-          <div key={i} className="card animate-up" style={{padding:'16px 18px', animationDelay:`${i*40}ms`, borderTop:`2px solid ${kpi.color}`}}>
+          <div key={i} data-report-kpi={i} className="card animate-up" style={{padding:'16px 18px',minWidth:0,overflowWrap:'anywhere', animationDelay:`${i*40}ms`, borderTop:`2px solid ${kpi.color}`}}>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10}}>
               <div style={{fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.06em', textTransform:'uppercase'}}>{tr(kpi.label)}</div>
               <div style={{color:kpi.color, opacity:.7}}>{kpi.icon}</div>
@@ -211,7 +228,8 @@ export default function ReportsPage({ store }) {
           </div>
         ))}
       </div>
-
+      <details data-report-details><summary style={{minHeight:48,cursor:'pointer',fontSize:16,padding:'12px 0'}}>{tr('看明細')}</summary><div style={{display:'flex',flexDirection:'column',gap:16}}>
+      {actual&&(period.unallocatedCostCents!=='0'||period.otherRevenueCents!=='0')&&<p data-report-adjustments>{tr('其他收入調整')} NT$ {moneyText(period.otherRevenueCents)} · {tr('未分配成本調整')} NT$ {moneyText(period.unallocatedCostCents)}</p>}
       <div style={rs.twoCol}>
         {/* Hourly bars */}
         <div className="card" style={{padding:'18px 20px'}}>
@@ -286,7 +304,7 @@ export default function ReportsPage({ store }) {
       )}
 
       {/* 30 天商品分析：熱賣 / 滯銷 / 高毛利 */}
-      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:12, flexShrink:0}}>
+      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(min(100%,300px), 1fr))', gap:12, flexShrink:0}}>
         {/* 熱賣 Top 10 */}
         <div className="card" style={{padding:'16px 18px'}}>
           <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:10}}>
@@ -302,7 +320,7 @@ export default function ReportsPage({ store }) {
                 <span style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name}</span>
               </span>
               <span style={{fontFamily:'var(--font-mono)', color:'var(--text-secondary)', whiteSpace:'nowrap'}}>
-                {Math.round(p.totalSold)}{tr(" 件 · NT$ ")}{Math.round(p.revenue).toLocaleString()}
+                {p.totalSold}{tr(" 件 · NT$ ")}{actual?moneyText(p.revenueCents):Math.round(p.revenue).toLocaleString()}
               </span>
             </div>
           ))}
@@ -318,12 +336,12 @@ export default function ReportsPage({ store }) {
             <div style={{color:'var(--green)', fontSize:12, padding:'20px 0', textAlign:'center'}}>{tr("🎉 沒有滯銷商品")}</div>
           ) : (
             <>
-              <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:8}}>{tr("共 ")}{perf30d.slowMovers.length}{tr(" 項，積壓成本 NT$ ")}{Math.round(perf30d.slowMovers.reduce((s,p)=>s+(p.stock*(p.cost||0)),0)).toLocaleString()}
+              <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:8}}>{tr(actual&&perf30d.stockBasis==='actual'?'實際成本':'參考成本')} · NT$ {slowTotal}
               </div>
               {perf30d.slowMovers.slice(0, 10).map(p => (
-                <div key={p.id} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'6px 0', borderBottom:'1px solid var(--border-dim)', fontSize:12}}>
+                <div key={p.id} data-slow-product={p.id} style={{display:'flex', justifyContent:'space-between', alignItems:'center',flexWrap:'wrap',gap:6, padding:'6px 0', borderBottom:'1px solid var(--border-dim)', fontSize:12}}>
                   <span style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name}</span>
-                  <span style={{fontFamily:'var(--font-mono)', color:'var(--text-secondary)', whiteSpace:'nowrap'}}>{tr("積壓 ")}{p.stock}{tr(" 件 · NT$ ")}{Math.round(p.stock*(p.cost||0)).toLocaleString()}
+                  <span style={{fontFamily:'var(--font-mono)', color:'var(--text-secondary)', whiteSpace:'nowrap'}}>{tr("積壓 ")}{p.stock}{tr(" 件 · NT$ ")}{stockAmount(p)}
                   </span>
                 </div>
               ))}
@@ -346,11 +364,12 @@ export default function ReportsPage({ store }) {
                 <span style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name}</span>
               </span>
               <span style={{fontFamily:'var(--font-mono)', whiteSpace:'nowrap'}}>
-                <span style={{color:'var(--green)'}}>{tr("毛利 ")}{p.margin.toFixed(0)}%</span>
-                <span style={{color:'var(--text-tertiary)'}}> · NT$ {Math.round(p.profit).toLocaleString()}</span>
+                <span style={{color:'var(--green)'}}>{tr("毛利 ")}{actual?p.margin:p.margin.toFixed(0)}%</span>
+                <span style={{color:'var(--text-tertiary)'}}> · NT$ {actual?moneyText(p.profitCents):Math.round(p.profit).toLocaleString()}</span>
               </span>
             </div>
           ))}
+          {actual&&perf30d.pendingProducts.length>0&&<details data-pending-product-cost><summary style={{minHeight:48,cursor:'pointer'}}>{tr('成本待確認')} · {perf30d.pendingProducts.length}</summary>{perf30d.pendingProducts.map(p=><p key={p.id}>{p.name}</p>)}</details>}
         </div>
       </div>
 
@@ -415,13 +434,14 @@ export default function ReportsPage({ store }) {
                 </div>
                 <span style={{fontSize:12, color:'var(--text-secondary)', fontFamily:'var(--font-mono)', textAlign:'right'}}>{p.qty}{tr(" 件")}</span>
                 <span style={{fontFamily:'var(--font-mono)', fontSize:13, fontWeight:500, color:'var(--gold-bright)', textAlign:'right'}}>
-                  NT$ {p.revenue.toLocaleString()}
+                  NT$ {actual?moneyText(p.revenueCents):p.revenue.toLocaleString()}
                 </span>
               </div>
             ))}
           </div>
         )}
       </div>
+      </div></details>
     </div>
   )
 }
@@ -430,8 +450,8 @@ const rs = {
   root:{ display:'flex', flexDirection:'column', height:'100%', padding:'16px', gap:16, overflowY:'auto' },
   topBar:{ display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0, flexWrap:'wrap', gap:10 },
   title:{ fontFamily:'var(--font-serif)', fontSize:20, fontWeight:600 },
-  rangeBtn:{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:500, cursor:'pointer', transition:'all 150ms' },
-  kpiGrid:{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, flexShrink:0 },
-  twoCol:{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, flexShrink:0 },
+  rangeBtn:{ padding:'6px 14px',minHeight:48, borderRadius:20, fontSize:12, fontWeight:500, cursor:'pointer', transition:'all 150ms' },
+  kpiGrid:{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,200px),1fr))', gap:12, flexShrink:0 },
+  twoCol:{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,300px),1fr))', gap:12, flexShrink:0 },
   cardTitle:{ fontSize:12, fontWeight:600, color:'var(--text-secondary)', letterSpacing:'.04em', textTransform:'uppercase' },
 }

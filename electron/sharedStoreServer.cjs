@@ -63,6 +63,7 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(method==='db:exportRecoverySource')return db.exportRecoverySource(args[0],actor)
     if(method==='db:exportRecoveryDiagnostics')return db.exportRecoveryDiagnostics(actor)
     if(method==='db:getStockAccountingState')return db.getStockAccountingState(actor)
+    if(method==='db:getStockSalesState')return db.getStockSalesState(actor)
     if(method==='db:applySalesOperation')return db.applySalesOperation(args[0],actor)
     if(method==='db:applyCustomerLedgerOperation')return db.applyCustomerLedgerOperation(args[0],actor)
     if(method==='db:getSupplierState')return db.getSupplierState(actor)

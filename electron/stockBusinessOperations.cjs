@@ -37,7 +37,7 @@ module.exports=function installStockBusinessOperations(db,api,store){
   const products=api.getProducts(),facts={products}
   if(method==='refundOrder'){facts.original=api.getOrder(input.refundOf);facts.previousRefunds=api.getOrders().filter(row=>row.refundOf===input.refundOf)}
   if(method==='applyInventoryOperation')facts.purchase=api.getPurchases().find(row=>row.id===input.purchaseId)
-  if(method==='applyRestaurantOperation')facts.beforeEntry=api.getRestaurantState().entries.find(row=>row.id===(input.action==='create'?input.id:input.entryId))||null
+  if(method==='applyRestaurantOperation'){const restaurant=api.getRestaurantState();facts.beforeEntry=restaurant.entries.find(row=>row.id===(input.action==='create'?input.id:input.entryId))||null;facts.restaurantConfig=restaurant.config}
   return facts
  }
  function evidence(method,input,facts,result){
@@ -50,6 +50,7 @@ module.exports=function installStockBusinessOperations(db,api,store){
   else if(method==='addWaste'){output.waste=api.getWasteLog().find(row=>row.id===input.id);ids.add(input.productId)}
   else if(method==='applyRestaurantOperation'){
    output.beforeEntry=facts.beforeEntry;output.entry=api.getRestaurantState().entries.find(row=>row.id===(input.action==='create'?input.id:input.entryId))
+   if(input.action==='create')output.costBasis=require('./stockReportBasis.mjs').captureRestaurantCostBasis(output.entry,facts.restaurantConfig)
    include(output.beforeEntry?.allocations);include(output.entry?.allocations)
   }else if(method==='applyInventoryOperation'){
    if(input.kind==='stocktake')include(input.counts)

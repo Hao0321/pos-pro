@@ -28,6 +28,19 @@ export function validateStockJournalSelection(journals){
  return canonicalSignature(journals)
 }
 
+// A legacy zero reference does not prove a zero-cost delivery. New actual zero
+// receipts are distinguishable by their cost history and are not marked here.
+export function stockLegacySalesReferences(projection,data){
+ const frozen=new Set((projection.legacyJournals||[]).map(row=>row.id)),rows=[]
+ for(const doc of data.salesDocuments||[])for(const event of [...doc.deliveries,...doc.returns]){
+  const suffix=event.action==='deliver'?'-revenue':'-credit'
+  if(!frozen.has('JS-'+event.id+suffix))continue
+  const original=event.action==='deliver'?event:doc.deliveries.find(row=>row.id===event.deliveryId)
+  doc.items.forEach((item,index)=>{if(event.quantities[index]>0&&original?.unitCosts[index]===0)rows.push({orderId:'business-report:'+event.id,productId:item.productId,date:event.date})})
+ }
+ return rows
+}
+
 export function stockAccountingTimeline(state,data){
  const first=state.entries[0],opening=planStockOpening(JSON.parse(first.openingMaterial).preview,first.input,first.date),sources=opening.custody.sources.map(row=>({sourceId:row.id,productId:row.productId,createdDate:first.date,unknownAtBirth:row.valueCents===null})),moves=[],confirmations=[]
  for(const node of opening.custody.positions)for(const segment of node.segments)moves.push({sourceId:segment.sourceId,date:first.date,from:null,to:node.owner.stage,quantityUnits:segment.quantityUnits})
@@ -44,7 +57,7 @@ export function stockAccountingTimeline(state,data){
   }
  }
  const orders=new Map(data.orders.map(row=>[row.id,row]))
- return {sources,moves,confirmations,legacyReferences:state.projection.legacyCostReviews.map(row=>({orderId:row.orderId,productId:row.productId,date:orders.get(row.orderId)?.time?salesDate(new Date(orders.get(row.orderId).time)):''}))}
+ return {sources,moves,confirmations,legacyReferences:[...state.projection.legacyCostReviews.map(row=>({orderId:row.orderId,productId:row.productId,date:orders.get(row.orderId)?.time?salesDate(new Date(orders.get(row.orderId).time)):''})),...stockLegacySalesReferences(state.projection,data)]}
 }
 
 export function stockPeriodDisclosure(report,from,to){
