@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import fs from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
+import { renderOfflineWorker } from './scripts/offlineWorker.mjs'
 
 function offlineShell() {
   const hash=bytes=>createHash('sha256').update(bytes).digest('hex')
@@ -17,11 +18,11 @@ function offlineShell() {
     const cachedFiles=['index.html','manifest.webmanifest','apple-touch-icon.png','icon-192.png','icon-512.png',...bundleFiles]
     const version=hash(Buffer.concat(cachedFiles.flatMap(name=>[Buffer.from(name),fs.readFileSync(path.join(output,name))])))
     const core=['./',...cachedFiles.map(name=>'./'+name)]
-    const worker=fs.readFileSync(path.join(root,'public/sw.js'),'utf8').replace("'__BUILD_VERSION__'",JSON.stringify('pos-pro-'+version)).replace(/const CORE = .*\n/, 'const CORE = '+JSON.stringify(core)+'\n')
+    const {source:worker,files:workerFiles}=renderOfflineWorker(fs.readFileSync(path.join(root,'public/sw.js'),'utf8'),'pos-pro-'+version,core)
     fs.writeFileSync(path.join(output,'sw.js'),worker)
     const evidence=path.join(root,'.rd/build');fs.mkdirSync(evidence,{recursive:true})
     fs.writeFileSync(path.join(evidence,'frontend-receipt.json'),JSON.stringify({schemaVersion:1,nodeVersion:process.version,
-      executable:process.execPath,executableSha256:hash(fs.readFileSync(process.execPath)),offlineAssetCount:core.length,
+      executable:process.execPath,executableSha256:hash(fs.readFileSync(process.execPath)),offlineAssetCount:workerFiles.length,
       bundleSha256:version,workerSha256:hash(Buffer.from(worker)),completedAt:new Date().toISOString()},null,2))
   }}
 }
