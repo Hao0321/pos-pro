@@ -74,6 +74,8 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(method==='db:exportFullBackup')return db.exportFullBackup(actor)
     if(method==='db:getProtectedBackups')return db.getProtectedBackups(actor)
     if(method==='db:getStocktakeState')return db.getStocktakeState(actor)
+    if(method==='db:getWarehouseState')return db.getWarehouseState(actor)
+    if(method==='db:applyWarehouseOperation')return db.applyWarehouseOperation(args[0],actor)
     if(method==='db:getStockSetupAccess')return {enabled:stockSetupEnabled===true}
     if(method==='db:getStockSetupState'){if(!stockSetupEnabled)throw Error('成本設定尚未開放新保存，請保留原編號核對');return db.getStockSetupState(actor)}
     if(method==='db:previewStockSetup'){if(!stockSetupEnabled)throw Error('成本設定尚未開放新保存，請保留原編號核對');return db.previewStockSetup(args[0],actor)}

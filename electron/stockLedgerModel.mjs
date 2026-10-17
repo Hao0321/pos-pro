@@ -5,12 +5,15 @@ import {costCustodySummary} from './stockCustody.mjs'
 import {planStockOpening,planOpeningCostPrice,stockCostCommand,stockLedgerError,STOCK_LEDGER_PROTOCOL} from './stockOpeningPlan.mjs'
 import {planStockBusiness,clearStockReturnSuspense,STOCK_BUSINESS_METHODS} from './stockBusinessPlan.mjs'
 import {assertStockSetupProjection} from './stockSetupReview.mjs'
+import {WAREHOUSE_METHOD} from './warehouseRules.mjs'
+import {planWarehouse} from './warehousePlan.mjs'
 
 export const STOCK_COST_METHOD='applyStockCostOperation'
 // The same bytes and model verify native and browser backups. This remains an
 // integrity checksum of the selected book, not a signature authenticating it.
 export const stockLedgerDigest=value=>'sha256:'+bytesToHex(sha256(utf8ToBytes(typeof value==='string'?value:canonicalSignature(value))))
 export function projectStockLedger(previous,body,digest=stockLedgerDigest){
+ if(body.method===WAREHOUSE_METHOD)return planWarehouse(previous,body)
  if(body.method&&body.method!==STOCK_COST_METHOD)return planStockBusiness(previous,body)
  const input=stockCostCommand(body.input)
  if(input.action==='open'){
@@ -38,7 +41,7 @@ export function replayStockLedger(rawEntries=[],rawOperations=[],digest=stockLed
   let projection=null,previousHash=null
   for(let index=0;index<entries.length;index++){
    const {hash,...body}=entries[index],method=body.method||STOCK_COST_METHOD
-   if(typeof body.id!=='string'||!body.id||method!==STOCK_COST_METHOD&&!STOCK_BUSINESS_METHODS.includes(method)||body.sequence!==index+1||body.previousHash!==previousHash||hash!==digest(body)||body.beforeDigest!==digest(projection)||!['owner',...(method===STOCK_COST_METHOD?[]:['staff'])].includes(body.actor?.role)||typeof body.actor.userId!=='string'||!body.actor.userId)throw stockLedgerError('HISTORY')
+   if(typeof body.id!=='string'||!body.id||method!==STOCK_COST_METHOD&&method!==WAREHOUSE_METHOD&&!STOCK_BUSINESS_METHODS.includes(method)||body.sequence!==index+1||body.previousHash!==previousHash||hash!==digest(body)||body.beforeDigest!==digest(projection)||!['owner',...(method===STOCK_COST_METHOD?[]:['staff'])].includes(body.actor?.role)||typeof body.actor.userId!=='string'||!body.actor.userId)throw stockLedgerError('HISTORY')
    const next=projectStockLedger(projection,body,digest)
    if(body.afterDigest!==digest(next))throw stockLedgerError('HISTORY')
    const operation=operationMap.get(canonicalSignature([method,body.input.id])),expectedReceipt=stockLedgerAcknowledgement(body,hash,next)

@@ -16,16 +16,19 @@ import {usesRestaurantFunds,RESTAURANT_FUNDS_FEATURE} from './restaurantFunds.mj
 import {usesRestaurantMenu,RESTAURANT_MENU_FEATURE,RESTAURANT_MENU_CONFIG_KEY} from './restaurantMenuOriginal.mjs'
 import {usesRestaurantPublicMenu,RESTAURANT_PUBLIC_MENU_FEATURE} from './restaurantCustomerMenu.mjs'
 import {usesPrivateQuickDrafts,PRIVATE_QUICK_FEATURE} from './privateDrafts.mjs'
+import {WAREHOUSE_FEATURE,WAREHOUSE_SETTING} from './warehouseRules.mjs'
 
-export const RECOVERY_FEATURES=[PRIVATE_QUICK_FEATURE,RESTAURANT_PUBLIC_MENU_FEATURE,RESTAURANT_MENU_FEATURE,RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
+export const RECOVERY_FEATURES=[WAREHOUSE_FEATURE,PRIVATE_QUICK_FEATURE,RESTAURANT_PUBLIC_MENU_FEATURE,RESTAURANT_MENU_FEATURE,RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
 export const recoveryDataError=()=>Error('備份保護紀錄不完整或內容不同，請保留原檔核對')
 export function recoveryFeatureFloor(features=[],minimum=1){
  if(![1,2,3,4,5,6,7,8,9].includes(minimum)||!Array.isArray(features)||features.some(feature=>!RECOVERY_FEATURES.includes(feature)))throw recoveryDataError()
  return Math.max(minimum,features.includes(PRIVATE_QUICK_FEATURE)?9:features.includes(RESTAURANT_PUBLIC_MENU_FEATURE)?8:features.includes(RESTAURANT_MENU_FEATURE)?7:features.includes(RESTAURANT_FUNDS_FEATURE)?6:features.includes(KITCHEN_PRINT_FEATURE)?5:features.includes(RESTAURANT_INTAKE_FEATURE)?4:features.includes('record-shapes-v1')?3:features.includes('cross-storage-v1')?2:1)
 }
 export function retainRecoveryFeatures(book,features){
- if(!features.includes('stock-cost-v1'))return book
- const settings=new Map(book.settings.map(row=>[row.key,row]));settings.set(STOCK_COMPAT_SETTING,{key:STOCK_COMPAT_SETTING,value:'1'});return {...book,settings:[...settings.values()]}
+ const settings=new Map(book.settings.map(row=>[row.key,row]))
+ if(features.includes('stock-cost-v1'))settings.set(STOCK_COMPAT_SETTING,{key:STOCK_COMPAT_SETTING,value:'1'})
+ if(features.includes(WAREHOUSE_FEATURE))settings.set(WAREHOUSE_SETTING,{key:WAREHOUSE_SETTING,value:'1'})
+ return {...book,settings:[...settings.values()]}
 }
 export function recoveryBook(data,storage,{complete=false,digest=stockLedgerDigest}={}){
  if(!data||typeof data!=='object'||Array.isArray(data)||!['sqlite','browser'].includes(storage))throw recoveryDataError()
@@ -65,6 +68,7 @@ export function recoveryBook(data,storage,{complete=false,digest=stockLedgerDige
  if(book.settings.some(row=>Object.hasOwn(row,'encoding')||storage==='sqlite'&&Object.hasOwn(row,'id')))features.push('cross-storage-v1')
  if(book.customerEntries.length)features.push('customer-ledger-v1')
  if(state.projection||settings.some(row=>row.key===STOCK_COMPAT_SETTING&&row.value==='1'))features.push('stock-cost-v1')
+ if(state.projection?.warehousing||settings.some(row=>row.key===WAREHOUSE_SETTING&&row.value==='1'))features.push(WAREHOUSE_FEATURE)
  if(book.supplierEntries.length)features.push('supplier-ledger-v1')
  return {book,storeId:storeId||'',features}
 }

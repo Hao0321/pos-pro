@@ -3,7 +3,7 @@ module.exports=function installStockSetup(db,api,store){
   const owner=actor=>{const user=api.getUsers().find(row=>row.id===actor?.userId);if(actor?.role!=='owner'||!user||user.role!==actor.role||user.username!==actor.username)throw Error('只有目前店主能核對庫存成本')}
   const data=actor=>{
     owner(actor);const sales=api.getSalesState(actor),state=store.read(),products=api.getProducts()
-    if(state.projection){if(!store.matchesEpoch(state))throw Error('庫存成本回執需要核對，請保留原編號與資料');assertStockCustodyMatchesBook(state.projection.custody,products,api.getRestaurantState().entries)}
+    if(state.projection){if(!store.matchesEpoch(state))throw Error('庫存成本回執需要核對，請保留原編號與資料');assertStockCustodyMatchesBook(state.projection.custody,products,api.getRestaurantState().entries,state.projection.warehousing)}
     return {storeId:sales.storeId,epoch:sales.epoch,state,products,preview:state.projection?null:api.getStockCostPreview(actor)}
   }
   const result=(request,receipt)=>assertStockSetupResult(request,{success:true,command:structuredClone(request),receipt})

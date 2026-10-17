@@ -4,5 +4,6 @@ export function retainStockCostCompatibility(current,next){
  if(!hasStockCostHistory(current)&&!hasStockCostHistory(next))return next
  const settings=new Map((next.settings||[]).map(row=>[row.key,row]))
  settings.set(STOCK_COMPAT_SETTING,{key:STOCK_COMPAT_SETTING,value:'1'})
+ if([current,next].some(book=>book.stockCostEntries?.some(row=>row.method==='applyWarehouseOperation')||book.settings?.some(row=>row.key==='warehouseVersionFence'&&row.value==='1')))settings.set('warehouseVersionFence',{key:'warehouseVersionFence',value:'1'})
  return {...next,settings:[...settings.values()]}
 }

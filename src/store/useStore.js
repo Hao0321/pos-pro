@@ -1,7 +1,7 @@
 import { settledOrders, netSale, orderCost } from '../utils/orderLedger'
 import { executeFinancial, FINANCIAL_PENDING,readPendingFinancial } from '../utils/financialCommand'
 import {loadRefundContext} from '../utils/dataAccess'
-import {loadStockSetupAccess,loadStockSetupState,applyStockSetupOperation} from '../utils/dataAccess'
+import {loadStockSetupAccess,loadStockSetupState,applyStockSetupOperation,loadWarehouseState,applyWarehouseOperation} from '../utils/dataAccess'
 import { browserStorage, writeRecords, acquireBrowserEditor } from '../utils/browserStorage'
 import { prepareCheckout } from '../utils/checkoutSafety.mjs'
 import { createCheckoutCoordinator } from '../utils/checkoutCoordinator.mjs'
@@ -440,6 +440,7 @@ export function useStore(session){
     const ports={restaurant:r=>applyRestaurantOperation(r,session),refund:r=>dbRefund(r.refundOf,r,null,null,sessionRef.current),topup:addTopup,waste:r=>addWaste(r,sessionRef.current),cashlog:addCashLog,stocktake:r=>applyInventoryOperation(r,session),receive:r=>applyInventoryOperation(r,session)}
     ports.exchange=r=>applyExchangeOperation(r,session)
     ports['stock-cost']=r=>applyStockSetupOperation(r,sessionRef.current)
+    ports.warehouse=r=>applyWarehouseOperation(r,sessionRef.current)
     ports.sales=r=>applySalesOperation(r,session)
     ports['customer-ledger']=r=>applyCustomerLedgerOperation(r,session)
     ports['supplier-ledger']=r=>applySupplierLedgerOperation(r,session)
@@ -455,6 +456,7 @@ export function useStore(session){
     if(pending.kind==='sales')applySalesResult(result)
     if(pending.kind==='customer-ledger')applyCustomerLedgerResult(result)
     if(pending.kind==='supplier-ledger')applySupplierResult(result)
+    if(pending.kind==='warehouse')await reloadFromDB()
     return result
   }
   async function commitStockSetup(input){
@@ -465,6 +467,14 @@ export function useStore(session){
     const result=await executeFinancial('stock-cost',input,request=>applyStockSetupOperation(request,sessionRef.current),setFinancialState,identity)
     window.dispatchEvent(new CustomEvent('pos-stock-cost-changed',{detail:{id:result.receipt.id}}))
     return result
+  }
+  async function commitWarehouse(input){
+    if(dataError)throw Error(dataError)
+    if(checkoutRef.current.getState().phase!=='idle')throw Error('請先確認原收款交易')
+    const state=await loadWarehouseState(sessionRef.current)
+    if(state.context.storeId!==input.storeId||state.context.epoch!==input.epoch||state.context.stateDigest!==input.expectedStateDigest)throw Object.assign(Error('庫存或存放地點已更新，請重新看結果'),{notCommitted:true})
+    const result=await executeFinancial('warehouse',input,request=>applyWarehouseOperation(request,sessionRef.current),setFinancialState,{id:'warehouse-'+crypto.randomUUID(),time:state.context.now})
+    await reloadFromDB();window.dispatchEvent(new Event('pos-data-refreshed'));return result
   }
 
   // 點數規則設定
@@ -582,7 +592,7 @@ export function useStore(session){
 
   return {
     settingsTarget,openHardwareSettings:()=>{setSettingsTarget({tab:'hardware'});setView('settings')},consumeSettingsTarget:()=>setSettingsTarget(null),
-    stockSetupEnabled,commitStockSetup,
+    stockSetupEnabled,commitStockSetup,commitWarehouse,
     supplierState,supplierTarget,openSupplierLedger:(supplierId='',purchaseId='')=>{setSupplierTarget({supplierId,purchaseId});setView('suppliers')},consumeSupplierTarget:()=>setSupplierTarget(null),purchaseTarget,openPurchaseSuppliers:()=>{setPurchaseTarget({tab:'suppliers'});setView('purchase')},openPurchaseDocument:id=>{setPurchaseTarget({id});setView('purchase')},consumePurchaseTarget:()=>setPurchaseTarget(null),commitSupplierLedger,refreshSuppliers,
     products,members,orders,purchases,sales,salesQuote,openSalesQuote:quote=>{setSalesQuote({id:quote.id,revision:quote.revision});setView('sales')},consumeSalesQuote:()=>setSalesQuote(null),cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitInventory,commitRestaurant,commitExchange,commitSales,commitCustomerLedger,refreshTrading,customerTarget,openCustomerLedger:id=>{setCustomerTarget(id);setView("customers")},consumeCustomerTarget:()=>setCustomerTarget(""),salesTarget,openSalesDocument:id=>{setSalesTarget(id);setView("sales")},consumeSalesTarget:()=>setSalesTarget(""),restaurantConfig,
     activeMember,setActiveMember:value=>{ensureCartEditable();setActiveMember(value)},

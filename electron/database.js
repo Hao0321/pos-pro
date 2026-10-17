@@ -571,7 +571,7 @@ module.exports = function initDatabase(dbPath) {
       }
       const stock=stockStore.read()
       if(stock.projection){
-        require('./stockOpeningPlan.mjs').assertStockCustodyMatchesBook(stock.projection.custody,data.products,data.restaurantOrders)
+        require('./stockOpeningPlan.mjs').assertStockCustodyMatchesBook(stock.projection.custody,data.products,data.restaurantOrders,stock.projection.warehousing)
       }
       data.stockCostEntries=stock.entries;data.stockCostOperations=stock.operations
       const kitchen=kitchenStore.read();if(require('./kitchenPrint.mjs').usesKitchenPrinting(kitchen.data.config,kitchen.jobs,kitchen.operations)){data.kitchenPrintJobs=kitchen.jobs;data.kitchenPrintOperations=kitchen.operations}
@@ -739,6 +739,7 @@ module.exports = function initDatabase(dbPath) {
   require('./stockSetupOperations.cjs')(db,api,stockStore)
   require('./refundReviewOperations.cjs')(db,api,stockStore)
   require('./stockBusinessOperations.cjs')(db,api,stockStore)
+  require('./warehouseOperations.cjs')(db,api,stockStore)
   require('./recoveryOperations.cjs')(db,api,replaceAllTx,recordShapes)
   recordShapes.attachFinancial(api)
   require('./tableOrderingOperations.cjs')(db,api)

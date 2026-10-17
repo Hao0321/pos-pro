@@ -140,8 +140,8 @@
       "id": "inventory.warehouses-lots",
       "name": "多倉、調撥、批次、效期及 FEFO",
       "status": "planned",
-      "implementation": "not-started",
-      "nextExperiment": "以兩倉、兩批、到期隔離和原單退貨驗證可售與保留數量"
+      "implementation": "partial",
+      "nextExperiment": "開發分支接通兩地點原子調撥、原來源成本與商品包裝換算；接續原批號／效期、FEFO、到期隔離、原單退貨及在途，多倉批次與公開驗收仍未完成。"
     },
     {
       "id": "inventory.units-counting",

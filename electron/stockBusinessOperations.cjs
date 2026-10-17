@@ -18,7 +18,7 @@ module.exports=function installStockBusinessOperations(db,api,store){
  function current(){
   const data=store.read(),opening=data.entries[0]?.input
   if(!data.projection||opening.storeId!==api.getSetting('sharedStoreId')||!store.matchesEpoch(data))throw stockLedgerError('HISTORY')
-  assertStockCustodyMatchesBook(data.projection.custody,api.getProducts(),api.getRestaurantState().entries)
+  assertStockCustodyMatchesBook(data.projection.custody,api.getProducts(),api.getRestaurantState().entries,data.projection.warehousing)
   return data
  }
  function normalize(method,args){
@@ -124,7 +124,7 @@ module.exports=function installStockBusinessOperations(db,api,store){
  function metadata(method,id,data,who){
   actor(who,method==='deleteProduct')
   return db.transaction(()=>{
-   const state=current(),product=api.getProducts().find(row=>row.id===id),history=state.projection.custody.sources.some(row=>row.productId===id)||state.projection.legacyOperationIds?.addProduct?.includes(id)||state.entries.some(row=>row.method==='addProduct'&&row.input.id===id)||!!db.prepare('SELECT 1 FROM order_items WHERE productId=? LIMIT 1').get(id)
+  const state=current(),product=api.getProducts().find(row=>row.id===id),history=state.projection.warehousing?.units.some(row=>row.productId===id)||state.projection.custody.sources.some(row=>row.productId===id)||state.projection.legacyOperationIds?.addProduct?.includes(id)||state.entries.some(row=>row.method==='addProduct'&&row.input.id===id)||!!db.prepare('SELECT 1 FROM order_items WHERE productId=? LIMIT 1').get(id)
    if(method==='updateProduct'&&product){
     if(data.stock!=null&&data.stock!==product.stock)throw stockLedgerError('ADJUST')
     if(history&&data.unit!=null&&data.unit!==product.unit)throw stockLedgerError('RETAIN')

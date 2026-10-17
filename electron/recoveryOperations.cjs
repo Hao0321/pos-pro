@@ -7,7 +7,7 @@ const {createCompleteBackup,readPortableBackup,backupProtectionSummary}=require(
 const {convertLogicalBook}=require('./storageConversion.mjs')
 const {bookToBrowser}=require('./recoveryRules.mjs')
 const {mergeRecoveryGraphs,validateRecoveryGraph}=require('./recoveryGraph.mjs')
-const {recoveryBook,recoveryBoundaryMatches}=require('./recoveryBook.mjs')
+const {recoveryBook,recoveryBoundaryMatches,retainRecoveryFeatures}=require('./recoveryBook.mjs')
 const {STOCK_COMPAT_SETTING}=require('./stockCompatibility.mjs')
 const sha=value=>createHash('sha256').update(typeof value==='string'?value:canonicalSignature(value)).digest('hex')
 const proof={checkoutSignature,refundSignature}
@@ -24,7 +24,7 @@ module.exports=function installRecovery(db,api,replaceAllTx,recordShapes){
     CREATE TABLE IF NOT EXISTS recovery_source_formats (snapshot_id TEXT PRIMARY KEY, storage TEXT NOT NULL CHECK(storage IN ('sqlite','browser')));`)
   const insertIndex=db.prepare('INSERT OR IGNORE INTO recovery_original_ids VALUES (?,?,?)')
   const graphStore=require('./recoveryGraphStorage.cjs')(db),graphOptions=graphStore.options
-  function retainFeatures(book,features){if(!features.includes('stock-cost-v1'))return book;const settings=new Map(book.settings.map(row=>[row.key,row]));settings.set(STOCK_COMPAT_SETTING,{key:STOCK_COMPAT_SETTING,value:'1'});return {...book,settings:[...settings.values()]}}
+  function retainFeatures(book,features){return retainRecoveryFeatures(book,features)}
   const material=book=>sha(materialSignature(book))
   const owner=actor=>{
     if(actor?.role!=='owner'||!api.getUsers().some(user=>user.id===actor.userId&&user.role==='owner'&&user.username===actor.username))throw Error('權限不足')
@@ -184,6 +184,7 @@ module.exports=function installRecovery(db,api,replaceAllTx,recordShapes){
   // Index all original formal IDs at the same boundary as every supported
   // restore. A missing historical receipt is uncertain, never a new payment.
   const descriptors={
+    applyWarehouseOperation:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM stock_cost_operations WHERE id=?').get(canonicalSignature(['applyWarehouseOperation',id]))},
     applyStockCostOperation:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM stock_cost_operations WHERE id=?').get(canonicalSignature(['applyStockCostOperation',id]))},
     addProduct:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM products WHERE id=?').get(id)},
     checkout:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM orders WHERE id=?').get(id)},
@@ -212,7 +213,7 @@ module.exports=function installRecovery(db,api,replaceAllTx,recordShapes){
         if(typeof id!=='string')return original.apply(api,args)
         const known=typeof id==='string'&&db.prepare('SELECT 1 FROM recovery_original_ids WHERE method=? AND operation_id=? LIMIT 1').get(method,id)
         let available=!!descriptor.active(id,args)
-        if(known&&available&&['applyStockCostOperation','addProduct','checkout','refundOrder','addTopup','addCashLog','addWaste','applyInventoryOperation','applyExchangeOperation','applyRestaurantOperation','applySalesOperation','applyCustomerLedgerOperation','applySupplierLedgerOperation'].includes(method)){
+        if(known&&available&&['applyWarehouseOperation','applyStockCostOperation','addProduct','checkout','refundOrder','addTopup','addCashLog','addWaste','applyInventoryOperation','applyExchangeOperation','applyRestaurantOperation','applySalesOperation','applyCustomerLedgerOperation','applySupplierLedgerOperation'].includes(method)){
           const active=operationRecords(api.exportData()).find(row=>row.method===method&&row.id===id)
           const request=method==='refundOrder'?{...args[1],refundOf:args[0]}:args[0]
           available=!!active&&originalMatches(active,{method,id,request},proof)

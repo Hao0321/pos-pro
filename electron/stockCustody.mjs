@@ -71,9 +71,10 @@ function acquire(current,step,discarded=false){
   return {kind:discarded?'acquire-disposed':'acquire',to,segments:added,cost:stockCostSummary(current.sources,added)}
 }
 const EDGES=new Set(['available:reserved','available:consumed','available:wasted','available:supplierReturned','reserved:available','reserved:consumed','reserved:wasted','consumed:available','consumed:wasted','wasted:available','supplierReturned:available'])
-function move(current,step,unused=false){
+function move(current,step,unused=false,relocate=false){
   record(step,['kind','from','to','productId','unit','quantityUnits']);const from=costOwner(step.from),to=costOwner(step.to),transfer=from.stage==='available'&&to.stage==='available'&&from.locationId!==to.locationId
   if(key(from)===key(to)||!transfer&&!EDGES.has(from.stage+':'+to.stage))fail('STATES')
+  if(relocate&&!transfer)fail('STATES')
   if(unused&&(from.stage!=='consumed'||to.stage!=='available'||from.locationId!==to.locationId))fail('STATES')
   if((to.stage!=='available'||from.stage==='reserved')&&from.locationId!==to.locationId)fail('STATES')
   const origin=node(current,from);if(!origin)fail('INSUFFICIENT')
@@ -81,11 +82,11 @@ function move(current,step,unused=false){
   const taken=takeFifoSegments(current.sources,selected,{productId:step.productId,unit:step.unit,quantityUnits:step.quantityUnits})
   origin.segments=normalizeCostSegments(current.sources,[...other,...taken.remaining]);const destination=node(current,to,true)
   if(to.stage==='available'){
-    const released=from.stage==='reserved'||unused
+    const released=from.stage==='reserved'||unused||relocate
     destination.segments=restoreCostSegments(current.sources,destination.segments,taken.allocations,released?{kind:'release-reservation'}:{kind:'customer-return',queueOrder:current.nextQueueOrder})
     if(!released)current.nextQueueOrder=increment(greatestQueue(current.positions))
   }else destination.segments=normalizeCostSegments(current.sources,[...destination.segments,...taken.allocations])
-  return {kind:unused?'release-unused':'move',from,to,productId:step.productId,unit:step.unit,quantityUnits:step.quantityUnits,segments:taken.allocations,cost:taken.cost}
+  return {kind:relocate?'relocate':unused?'release-unused':'move',from,to,productId:step.productId,unit:step.unit,quantityUnits:step.quantityUnits,segments:taken.allocations,cost:taken.cost}
 }
 function price(current,step){
   record(step,['kind','sourceId','valueCents']);const index=current.sources.findIndex(source=>source.id===step.sourceId)
@@ -105,6 +106,7 @@ export function planCostCustody(input,command){
     else if(step.kind==='acquire-disposed')effects.push(acquire(current,step,true))
     else if(step.kind==='move')effects.push(move(current,step))
     else if(step.kind==='release-unused')effects.push(move(current,step,true))
+    else if(step.kind==='relocate')effects.push(move(current,step,false,true))
     else if(step.kind==='price')effects.push(price(current,step))
     else fail('STATES')
   }

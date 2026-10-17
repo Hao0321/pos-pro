@@ -94,10 +94,15 @@ export function planOpeningCostPrice(projection,input,date){
  return {...plan,journal:{id:'stock-price:'+request.id,date,type:'stock-cost',amountUnit:'cents',description:'期初庫存成本補登',costComplete:plan.valuation.ownedValueCents!==null,lines}}
 }
 
-export function assertStockCustodyMatchesBook(custody,products,reservations){
+export function assertStockCustodyMatchesBook(custody,products,reservations,warehousing){
  const sources=new Map(custody.sources.map(source=>[source.id,source])),totals=new Map(),expected=new Map()
  const key=(owner,productId,unit)=>canonicalSignature([owner,productId,unit])
- for(const node of custody.positions)if(['available','reserved'].includes(node.owner.stage))for(const segment of node.segments){const source=sources.get(segment.sourceId),id=key(node.owner,source.productId,source.unit);totals.set(id,(totals.get(id)||0)+segment.quantityUnits)}
+ const locations=new Set(warehousing?.locations?.map(row=>row.id)||['main'])
+ for(const node of custody.positions){
+  if(!locations.has(node.owner.locationId)||node.owner.stage!=='available'&&node.owner.locationId!=='main')throw stockLedgerError('HISTORY')
+  if(node.owner.stage==='available'&&node.owner.locationId!=='main')continue
+  if(['available','reserved'].includes(node.owner.stage))for(const segment of node.segments){const source=sources.get(segment.sourceId),id=key(node.owner,source.productId,source.unit);totals.set(id,(totals.get(id)||0)+segment.quantityUnits)}
+ }
  const units=value=>{if(typeof value!=='number'||!Number.isFinite(value)||value<0||!Number.isSafeInteger(Math.round(value*1000))||Math.abs(value-Math.round(value*1000)/1000)>1e-7)throw stockLedgerError('HISTORY');return Math.round(value*1000)}
  const productMap=new Map(products.map(product=>[product.id,product]))
  for(const product of products){const count=units(product.stock);if(count)expected.set(key(available,product.id,product.unit),count)}

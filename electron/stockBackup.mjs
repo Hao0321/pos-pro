@@ -7,6 +7,7 @@ import {PHYSICAL_STOCKTAKE,physicalStocktakeAudits} from './physicalStocktake.mj
 import {assertStockBusinessCoverage} from './stockBusinessCoverage.mjs'
 import {assertStockBookHead} from './stockBookAnchor.mjs'
 import {validateFundedRestaurantRecords,fundedRestaurantSnapshot} from './restaurantFundedRecords.mjs'
+import {WAREHOUSE_METHOD,WAREHOUSE_SETTING,warehouseDirectory} from './warehouseRules.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 const orderFields=['id','subtotal','discount','manualDiscount','balanceUsed','total','payMethod','paid','change','payments','memberId','pointsUsed','pointsEarned','time','source','items','taxId','shiftId','refundOf','cashier','fullRefund','trackingTokenHash','requestSignature','itemCosts','tableNum','note']
@@ -22,17 +23,21 @@ export function validateStockCostBook(book,validatedState=null){
   if(hasEntries&&(!Array.isArray(book.stockCostEntries)||!Array.isArray(book.stockCostOperations)))throw stockLedgerError('HISTORY')
   const state=validatedState||replayStockLedger(book.stockCostEntries||[],book.stockCostOperations||[])
   assertStockBookHead(book,state)
+  const warehouseFlag=(book.settings||[]).find(row=>row.key===WAREHOUSE_SETTING)
+  if(warehouseFlag&&warehouseFlag.value!=='1'||state.projection?.warehousing&&!warehouseFlag)throw stockLedgerError('HISTORY')
   if(!state.projection){if(physicalAudits.some(row=>row.request.context.costMode==='active'))throw stockLedgerError('HISTORY');return state}
   validateFundedRestaurantRecords(book.restaurantOrders||[],book.restaurantOperations||[],book.orders||[],book.products||[],{cashLogs:book.cashLog,waste:book.wasteLog,storeId:readExchangeTextSetting(book.settings||[],'sharedStoreId'),menuReceiptKey:readExchangeTextSetting(book.settings||[],'orderReceiptSecret')})
   for(const row of physicalAudits.filter(row=>row.request.context.costMode==='active')){const event=state.entries.find(event=>event.method==='applyInventoryOperation'&&event.input.id===row.request.id);if(!event||!same(event.input,row.request)||!same(event.evidence?.stocktake,row.receipt))throw stockLedgerError('HISTORY')}
   if(state.entries[0].input.storeId!==readExchangeTextSetting(book.settings||[],'sharedStoreId'))throw stockLedgerError('HISTORY')
-  assertStockCustodyMatchesBook(state.projection.custody,book.products||[],book.restaurantOrders||[])
+  if(state.projection.warehousing){const directory=warehouseDirectory(state.projection.warehousing);for(const row of directory.units)if(!book.products.some(product=>product.id===row.productId&&product.unit===row.productUnit))throw stockLedgerError('HISTORY')}
+  assertStockCustodyMatchesBook(state.projection.custody,book.products||[],book.restaurantOrders||[],state.projection.warehousing)
   assertStockBusinessCoverage(book,state)
   const orders=new Map((book.orders||[]).map(row=>[row.id,row])),restaurant=new Map((book.restaurantOrders||[]).map(row=>[row.id,row]))
   const receipt=(rows,id,input)=>{const row=(rows||[]).find(row=>row.id===id);if(!row||row.signature!==canonicalSignature(input))throw stockLedgerError('HISTORY')}
   for(const body of state.entries){
    const {method,input,evidence}=body
    if(!method||method==='applyStockCostOperation')continue
+   if(method===WAREHOUSE_METHOD){if(input.storeId!==state.entries[0].input.storeId)throw stockLedgerError('HISTORY');continue}
    if(method==='checkout'||method==='refundOrder'){
     const order=orders.get(evidence.order.id)
     if(!order||!same(immutableOrder(order),immutableOrder(evidence.order)))throw stockLedgerError('HISTORY')

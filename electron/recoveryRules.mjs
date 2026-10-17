@@ -88,7 +88,7 @@ export function operationRecords(book){
 export function pendingOperation(pending){
   if(!pending||JSON.stringify(pending).length>1024*1024)throw Error('待確認異動紀錄需要核對')
   const request=pending.kind==='checkout'?pending.plan?.order:pending.request
-  const method=({checkout:'checkout',refund:'refundOrder',topup:'addTopup',cashlog:'addCashLog',waste:'addWaste',restaurant:'applyRestaurantOperation','kitchen-print':'applyKitchenPrintOperation',exchange:'applyExchangeOperation',sales:'applySalesOperation','customer-ledger':'applyCustomerLedgerOperation','supplier-ledger':'applySupplierLedgerOperation','stock-cost':'applyStockCostOperation','product-open':'addProduct'})[pending.kind]
+  const method=({checkout:'checkout',refund:'refundOrder',topup:'addTopup',cashlog:'addCashLog',waste:'addWaste',restaurant:'applyRestaurantOperation','kitchen-print':'applyKitchenPrintOperation',exchange:'applyExchangeOperation',sales:'applySalesOperation','customer-ledger':'applyCustomerLedgerOperation','supplier-ledger':'applySupplierLedgerOperation','stock-cost':'applyStockCostOperation',warehouse:'applyWarehouseOperation','product-open':'addProduct'})[pending.kind]
     ||(['stocktake','receive'].includes(pending.kind)||pending.kind?.startsWith('purchase-')?'applyInventoryOperation':null)
   if(!method||typeof request?.id!=='string'||!request.id||request.id.length>128)throw Error('待確認異動紀錄需要核對')
   return {method,id:request.id,request}

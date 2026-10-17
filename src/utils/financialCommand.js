@@ -12,8 +12,10 @@ import {assertReviewedRefundResult} from '../../electron/refundReview.mjs'
 import {assertStockSetupResult} from '../../electron/stockSetupReview.mjs'
 import {assertStoredBrowserStockSetupResult} from './browserStockSetup'
 import {needsRestaurantFundsResult,assertRestaurantFundsResult} from '../../electron/restaurantFundsResult.mjs'
+import {assertWarehouseResult} from '../../electron/browserWarehouse.mjs'
+import {assertStoredBrowserWarehouse} from './browserWarehouse'
 export const FINANCIAL_PENDING='pos_pending_financial_v1'
-const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt','stock-cost':'receipt'}
+const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt','stock-cost':'receipt',warehouse:'receipt'}
 for(const kind of PROCUREMENT_KINDS)fields[kind]='receipt'
 let running=false
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value
@@ -34,6 +36,7 @@ export function assertReceipt(kind,request,result){
   if(kind==='sales')assertSalesResult(request,result)
   if(kind==='customer-ledger')assertCustomerLedgerResult(request,result)
   if(kind==='supplier-ledger')assertSupplierLedgerResult(request,result)
+  if(kind==='warehouse'){assertWarehouseResult(request,result);if(!globalThis.window?.electronAPI)assertStoredBrowserWarehouse(request,result)}
   if(kind==='topup'&&(['memberId','amount','bonus','payMethod','shiftId'].some(k=>(row[k]??'')!==(request[k]??''))||result.member?.id!==request.memberId))throw Error('儲值保存結果尚未確認：回覆內容不符')
   if(kind==='refund'&&(row.refundOf!==request.refundOf||result.original?.id!==request.refundOf))throw Error('退款保存結果尚未確認：原單不符')
   if(kind==='refund')assertReviewedRefundResult(request,result)
@@ -112,7 +115,7 @@ export async function executeFinancial(kind, input, persist,onState=()=>{},ident
   }
   notify('saving','保存中，請勿重複異動')
   let result
-  try {result=await persist(pending.request)} catch {throw new Error(kind==='exchange'?'報價保存結果尚未確認。請用原編號確認，先不要再開一張。':'保存結果尚未確認。請以原內容重試；系統會沿用原單號，勿重複付款或退款。')}
+  try {result=await persist(pending.request)} catch {throw new Error(kind==='warehouse'?'搬貨結果尚未確認，請用原編號核對，先不要再搬一次。':kind==='exchange'?'報價保存結果尚未確認。請用原編號確認，先不要再開一張。':'保存結果尚未確認。請以原內容重試；系統會沿用原單號，勿重複付款或退款。')}
   if (result?.success===false && result.committed===false) {
     const rejectedId=pending.request.id
     clearOriginal(pending)
@@ -125,7 +128,7 @@ export async function executeFinancial(kind, input, persist,onState=()=>{},ident
   notify('idle')
   return result
   }catch(error){
-    if(browserStorage.getItem(FINANCIAL_PENDING))notify('uncertain',kind==='exchange'?'報價保存結果尚未確認。請用原編號確認，先不要再開一張。':'異動結果尚未確認，請以原編號核對或重試；不要重新收款或扣庫存')
+    if(browserStorage.getItem(FINANCIAL_PENDING))notify('uncertain',kind==='warehouse'?'搬貨結果尚未確認，請用原編號核對，先不要再搬一次。':kind==='exchange'?'報價保存結果尚未確認。請用原編號確認，先不要再開一張。':'異動結果尚未確認，請以原編號核對或重試；不要重新收款或扣庫存')
     else notify('idle')
     throw error
   }finally{running=false}

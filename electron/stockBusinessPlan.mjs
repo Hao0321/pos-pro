@@ -14,7 +14,7 @@ export const stockUnits=value=>{if(typeof value!=='number'||!Number.isFinite(val
 export function stockLineValue(quantityUnits,rateCents){safe(quantityUnits);safe(rateCents);const result=(BigInt(quantityUnits)*BigInt(rateCents)+500n)/1000n;if(result>BigInt(Number.MAX_SAFE_INTEGER))throw stockLedgerError('BALANCE');return Number(result)}
 export function stockLegacyInterval(originalUnits,valueCents,returnedUnits,takeUnits){return valueCents===null?null:costSegmentValue({id:'legacy-reference',productId:'legacy',unit:'reference',currency:'TWD',quantityUnits:originalUnits,valueCents},returnedUnits,takeUnits)}
 
-function available(custody,id,unit){const sources=new Map(custody.sources.map(row=>[row.id,row]));return custody.positions.filter(row=>row.owner.stage==='available').flatMap(row=>row.segments).filter(row=>{const source=sources.get(row.sourceId);return source.productId===id&&source.unit===unit}).reduce((sum,row)=>sum+row.quantityUnits,0)}
+function available(custody,id,unit){const sources=new Map(custody.sources.map(row=>[row.id,row]));return custody.positions.filter(row=>row.owner.stage==='available'&&row.owner.locationId==='main').flatMap(row=>row.segments).filter(row=>{const source=sources.get(row.sourceId);return source.productId===id&&source.unit===unit}).reduce((sum,row)=>sum+row.quantityUnits,0)}
 export function planStockBusiness(previous,body){
  const {method,input,evidence,date,id:eventId}=body
  if(!previous||!STOCK_BUSINESS_METHODS.includes(method)||!input||typeof input.id!=='string'||!input.id||!evidence||!Array.isArray(evidence.products))throw stockLedgerError('INPUT')

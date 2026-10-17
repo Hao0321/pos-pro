@@ -5,7 +5,7 @@ const {createHash}=require('node:crypto')
 const {verifyStockSetupReview}=require('./stockSetup.mjs')
 module.exports=function stockCostOperations(db,api,store){
  const owner=actor=>{const user=actor?.userId&&api.getUsers().find(row=>row.id===actor.userId);if(actor?.role!=='owner'||user?.role!=='owner'||user.username!==actor.username)throw Error('權限不足');return actor}
- function current(){const state=store.read();if(state.projection){if(!store.matchesEpoch(state))throw stockLedgerError('HISTORY');assertStockCustodyMatchesBook(state.projection.custody,api.getProducts(),api.getRestaurantState().entries)}return state}
+ function current(){const state=store.read();if(state.projection){if(!store.matchesEpoch(state))throw stockLedgerError('HISTORY');assertStockCustodyMatchesBook(state.projection.custody,api.getProducts(),api.getRestaurantState().entries,state.projection.warehousing)}return state}
  return {
   getStockHistory(input,actor){
    owner(actor);require('./stockHistory.mjs').stockHistoryQuery(input)

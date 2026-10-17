@@ -18,6 +18,8 @@ import {stockSetupBrowserEnabled} from './stockSetupAvailability.mjs'
 import {hasBrowserStockCost,commitBrowserStockBusiness,commitBrowserProduct,assertStoredBrowserCostReceipt} from './browserStockBusiness'
 // 資料存取抽象層 — 自動判斷 Electron (SQLite) 或 瀏覽器 (localStorage)
 export const isElectron = !!(typeof window !== 'undefined' && window.electronAPI)
+export async function loadWarehouseState(actor){return isElectron?window.electronAPI.db.getWarehouseState():(await import('./browserWarehouse')).getBrowserWarehouseState(actor)}
+export async function applyWarehouseOperation(input,actor){return isElectron?window.electronAPI.db.applyWarehouseOperation(input):(await import('./browserWarehouse')).commitBrowserWarehouse(input,actor)}
 export async function loadPrivateDraftContext(actor){return isElectron?window.electronAPI.db.getPrivateDraftContext():getBrowserPrivateDraftContext(actor)}
 export async function lookupPrivateDraftOriginal(input,actor){return isElectron?window.electronAPI.db.lookupPrivateDraftOriginal(input):lookupBrowserPrivateDraftOriginal(input,actor)}
 export const isSharedStore = !!(typeof window !== 'undefined' && window.electronAPI?.sharedStore)

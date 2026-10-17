@@ -1,5 +1,8 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--warehouse':['native-warehouse.cjs','POS_WAREHOUSE_NATIVE_PASS',false],
+  '--warehouse-ui':['native-warehouse-ui.cjs','POS_WAREHOUSE_UI_PASS',true],
+  '--warehouse-browser-ui':['native-warehouse-browser-ui.cjs','POS_WAREHOUSE_BROWSER_PASS',true],
   '--customer-pending-reopen':['native-customer-pending-reopen.cjs','POS_PENDING_REOPEN_PASS',true],
   '--customer-drafts-late':['native-customer-drafts-late.cjs','POS_CUSTOMER_DRAFTS_LATE_PASS',true],
   '--customer-drafts-scope':['native-customer-drafts-scope.cjs','POS_CUSTOMER_DRAFTS_SCOPE_PASS',true],
