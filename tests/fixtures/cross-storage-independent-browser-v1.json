@@ -1,0 +1,412 @@
+{
+  "provenance": {
+    "synthetic": true,
+    "realMerchantData": false,
+    "producer": "actual browser product, shift and checkout writers, no native-derived business rows"
+  },
+  "owner": {
+    "userId": "independent-browser-owner",
+    "username": "Independent browser owner",
+    "role": "owner"
+  },
+  "before": {
+    "pos2_products": [
+      {
+        "id": "independent-bowl",
+        "name": "獨立建立的丼飯",
+        "price": 100,
+        "cost": 30,
+        "stock": 10,
+        "category": "餐點",
+        "unit": "碗",
+        "barcode": "",
+        "noBarcode": true,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0
+      }
+    ],
+    "pos2_members": [],
+    "pos2_orders": [],
+    "pos2_manual_j": [],
+    "pos_users": [
+      {
+        "id": "independent-browser-owner",
+        "username": "Independent browser owner",
+        "role": "owner",
+        "password": "synthetic-browser-only"
+      }
+    ],
+    "pos_suppliers": [],
+    "pos_purchases": [],
+    "pos_promotions": [],
+    "pos2_held_orders": [],
+    "pos2_shifts": [
+      {
+        "id": "independent-shift",
+        "cashier": "Independent browser owner",
+        "openCash": 100,
+        "openTime": "2026-10-16T12:42:55.062Z",
+        "status": "open"
+      }
+    ],
+    "pos2_cash_log": [],
+    "pos2_waste": [],
+    "pos2_topups": [],
+    "pos_audit_log": [],
+    "pos_business_settings": [
+      {
+        "key": "sharedStoreId",
+        "value": "\"independent-store\""
+      }
+    ],
+    "pos_restaurant_orders": [],
+    "pos_restaurant_operations": [],
+    "pos_sales_documents": [],
+    "pos_sales_operations": [],
+    "pos_customer_entries": [],
+    "pos_customer_operations": [],
+    "pos_supplier_entries": [],
+    "pos_supplier_operations": [],
+    "pos_stock_cost_entries": [],
+    "pos_stock_cost_operations": []
+  },
+  "original": {
+    "pos2_products": [
+      {
+        "id": "independent-bowl",
+        "name": "獨立建立的丼飯",
+        "price": 100,
+        "cost": 30,
+        "stock": 9,
+        "category": "餐點",
+        "unit": "碗",
+        "barcode": "",
+        "noBarcode": true,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0
+      }
+    ],
+    "pos2_members": [],
+    "pos2_orders": [
+      {
+        "id": "independent-original-sale",
+        "items": [
+          {
+            "id": "independent-bowl",
+            "name": "獨立建立的丼飯",
+            "price": 100,
+            "qty": 1
+          }
+        ],
+        "subtotal": 100,
+        "discount": 0,
+        "manualDiscount": 0,
+        "balanceUsed": 0,
+        "total": 100,
+        "payMethod": "cash",
+        "paid": 100,
+        "change": 0,
+        "payments": [
+          {
+            "method": "cash",
+            "amount": 100
+          }
+        ],
+        "memberId": null,
+        "pointsUsed": 0,
+        "pointsEarned": 0,
+        "time": "2026-10-16T12:42:55.068Z",
+        "taxId": "",
+        "cashier": "Independent browser owner",
+        "shiftId": "independent-shift",
+        "status": "completed",
+        "itemCosts": {
+          "independent-bowl": 30
+        }
+      }
+    ],
+    "pos2_manual_j": [],
+    "pos_users": [
+      {
+        "id": "independent-browser-owner",
+        "username": "Independent browser owner",
+        "role": "owner",
+        "password": "synthetic-browser-only"
+      }
+    ],
+    "pos_suppliers": [],
+    "pos_purchases": [],
+    "pos_promotions": [],
+    "pos2_held_orders": [],
+    "pos2_shifts": [
+      {
+        "id": "independent-shift",
+        "cashier": "Independent browser owner",
+        "openCash": 100,
+        "openTime": "2026-10-16T12:42:55.062Z",
+        "status": "open"
+      }
+    ],
+    "pos2_cash_log": [],
+    "pos2_waste": [],
+    "pos2_topups": [],
+    "pos_audit_log": [
+      {
+        "id": "AL1792154575067mdi7",
+        "timestamp": "2026-10-16T12:42:55.067Z",
+        "action": "BACKUP_CREATE",
+        "level": "info",
+        "label": "建立備份",
+        "userId": "independent-browser-owner",
+        "username": "Independent browser owner",
+        "role": "owner",
+        "detail": "{\"label\":\"Before first sale\"}"
+      }
+    ],
+    "pos_business_settings": [
+      {
+        "key": "sharedStoreId",
+        "value": "\"independent-store\""
+      }
+    ],
+    "pos_restaurant_orders": [],
+    "pos_restaurant_operations": [],
+    "pos_sales_documents": [],
+    "pos_sales_operations": [],
+    "pos_customer_entries": [],
+    "pos_customer_operations": [],
+    "pos_supplier_entries": [],
+    "pos_supplier_operations": [],
+    "pos_stock_cost_entries": [],
+    "pos_stock_cost_operations": []
+  },
+  "packet": {
+    "format": "pos-complete-backup/v1",
+    "storage": "browser",
+    "storeId": "independent-store",
+    "features": [],
+    "book": {
+      "pos2_products": [
+        {
+          "id": "independent-bowl",
+          "name": "獨立建立的丼飯",
+          "price": 100,
+          "cost": 30,
+          "stock": 10,
+          "category": "餐點",
+          "unit": "碗",
+          "barcode": "",
+          "noBarcode": true,
+          "imageUrl": "",
+          "expiryDate": "",
+          "supplierId": "",
+          "reorderLevel": 0
+        }
+      ],
+      "pos2_members": [],
+      "pos2_orders": [],
+      "pos2_manual_j": [],
+      "pos_users": [
+        {
+          "id": "independent-browser-owner",
+          "username": "Independent browser owner",
+          "role": "owner",
+          "password": "synthetic-browser-only"
+        }
+      ],
+      "pos_suppliers": [],
+      "pos_purchases": [],
+      "pos_promotions": [],
+      "pos2_held_orders": [],
+      "pos2_shifts": [
+        {
+          "id": "independent-shift",
+          "cashier": "Independent browser owner",
+          "openCash": 100,
+          "openTime": "2026-10-16T12:42:55.062Z",
+          "status": "open"
+        }
+      ],
+      "pos2_cash_log": [],
+      "pos2_waste": [],
+      "pos2_topups": [],
+      "pos_audit_log": [
+        {
+          "id": "AL1792154575067mdi7",
+          "timestamp": "2026-10-16T12:42:55.067Z",
+          "action": "BACKUP_CREATE",
+          "level": "info",
+          "label": "建立備份",
+          "userId": "independent-browser-owner",
+          "username": "Independent browser owner",
+          "role": "owner",
+          "detail": "{\"label\":\"Before first sale\"}"
+        }
+      ],
+      "pos_business_settings": [
+        {
+          "key": "sharedStoreId",
+          "value": "\"independent-store\""
+        }
+      ],
+      "pos_restaurant_orders": [],
+      "pos_restaurant_operations": [],
+      "pos_sales_documents": [],
+      "pos_sales_operations": [],
+      "pos_customer_entries": [],
+      "pos_customer_operations": [],
+      "pos_supplier_entries": [],
+      "pos_supplier_operations": [],
+      "pos_stock_cost_entries": [],
+      "pos_stock_cost_operations": []
+    },
+    "protection": {
+      "version": 1,
+      "books": [
+        {
+          "id": "sha256:61ce408074a8cf9a425ebba95ee1c1849ae3daa0f999f41fd506a880b4bf9ce0",
+          "data": "{\"pos2_products\":[{\"id\":\"independent-bowl\",\"name\":\"獨立建立的丼飯\",\"price\":100,\"cost\":30,\"stock\":9,\"category\":\"餐點\",\"unit\":\"碗\",\"barcode\":\"\",\"noBarcode\":true,\"imageUrl\":\"\",\"expiryDate\":\"\",\"supplierId\":\"\",\"reorderLevel\":0}],\"pos2_members\":[],\"pos2_orders\":[{\"id\":\"independent-original-sale\",\"items\":[{\"id\":\"independent-bowl\",\"name\":\"獨立建立的丼飯\",\"price\":100,\"qty\":1}],\"subtotal\":100,\"discount\":0,\"manualDiscount\":0,\"balanceUsed\":0,\"total\":100,\"payMethod\":\"cash\",\"paid\":100,\"change\":0,\"payments\":[{\"method\":\"cash\",\"amount\":100}],\"memberId\":null,\"pointsUsed\":0,\"pointsEarned\":0,\"time\":\"2026-10-16T12:42:55.068Z\",\"taxId\":\"\",\"cashier\":\"Independent browser owner\",\"shiftId\":\"independent-shift\",\"status\":\"completed\",\"itemCosts\":{\"independent-bowl\":30}}],\"pos2_manual_j\":[],\"pos_users\":[{\"id\":\"independent-browser-owner\",\"username\":\"Independent browser owner\",\"role\":\"owner\",\"password\":\"synthetic-browser-only\"}],\"pos_suppliers\":[],\"pos_purchases\":[],\"pos_promotions\":[],\"pos2_held_orders\":[],\"pos2_shifts\":[{\"id\":\"independent-shift\",\"cashier\":\"Independent browser owner\",\"openCash\":100,\"openTime\":\"2026-10-16T12:42:55.062Z\",\"status\":\"open\"}],\"pos2_cash_log\":[],\"pos2_waste\":[],\"pos2_topups\":[],\"pos_audit_log\":[{\"id\":\"AL1792154575067mdi7\",\"timestamp\":\"2026-10-16T12:42:55.067Z\",\"action\":\"BACKUP_CREATE\",\"level\":\"info\",\"label\":\"建立備份\",\"userId\":\"independent-browser-owner\",\"username\":\"Independent browser owner\",\"role\":\"owner\",\"detail\":\"{\\\"label\\\":\\\"Before first sale\\\"}\"}],\"pos_business_settings\":[{\"key\":\"sharedStoreId\",\"value\":\"\\\"independent-store\\\"\"}],\"pos_restaurant_orders\":[],\"pos_restaurant_operations\":[],\"pos_sales_documents\":[],\"pos_sales_operations\":[],\"pos_customer_entries\":[],\"pos_customer_operations\":[],\"pos_supplier_entries\":[],\"pos_supplier_operations\":[],\"pos_stock_cost_entries\":[],\"pos_stock_cost_operations\":[]}",
+          "contentSignature": "{\"pos2_cash_log\":[],\"pos2_held_orders\":[],\"pos2_manual_j\":[],\"pos2_members\":[],\"pos2_orders\":[{\"balanceUsed\":0,\"cashier\":\"Independent browser owner\",\"change\":0,\"discount\":0,\"id\":\"independent-original-sale\",\"itemCosts\":{\"independent-bowl\":30},\"items\":[{\"id\":\"independent-bowl\",\"name\":\"獨立建立的丼飯\",\"price\":100,\"qty\":1}],\"manualDiscount\":0,\"memberId\":null,\"paid\":100,\"payMethod\":\"cash\",\"payments\":[{\"amount\":100,\"method\":\"cash\"}],\"pointsEarned\":0,\"pointsUsed\":0,\"shiftId\":\"independent-shift\",\"status\":\"completed\",\"subtotal\":100,\"taxId\":\"\",\"time\":\"2026-10-16T12:42:55.068Z\",\"total\":100}],\"pos2_products\":[{\"barcode\":\"\",\"category\":\"餐點\",\"cost\":30,\"expiryDate\":\"\",\"id\":\"independent-bowl\",\"imageUrl\":\"\",\"name\":\"獨立建立的丼飯\",\"noBarcode\":true,\"price\":100,\"reorderLevel\":0,\"stock\":9,\"supplierId\":\"\",\"unit\":\"碗\"}],\"pos2_shifts\":[{\"cashier\":\"Independent browser owner\",\"id\":\"independent-shift\",\"openCash\":100,\"openTime\":\"2026-10-16T12:42:55.062Z\",\"status\":\"open\"}],\"pos2_topups\":[],\"pos2_waste\":[],\"pos_audit_log\":[{\"action\":\"BACKUP_CREATE\",\"detail\":\"{\\\"label\\\":\\\"Before first sale\\\"}\",\"id\":\"AL1792154575067mdi7\",\"label\":\"建立備份\",\"level\":\"info\",\"role\":\"owner\",\"timestamp\":\"2026-10-16T12:42:55.067Z\",\"userId\":\"independent-browser-owner\",\"username\":\"Independent browser owner\"}],\"pos_business_settings\":[{\"key\":\"sharedStoreId\",\"value\":\"\\\"independent-store\\\"\"}],\"pos_customer_entries\":[],\"pos_customer_operations\":[],\"pos_promotions\":[],\"pos_purchases\":[],\"pos_restaurant_operations\":[],\"pos_restaurant_orders\":[],\"pos_sales_documents\":[],\"pos_sales_operations\":[],\"pos_stock_cost_entries\":[],\"pos_stock_cost_operations\":[],\"pos_supplier_entries\":[],\"pos_supplier_operations\":[],\"pos_suppliers\":[],\"pos_users\":[{\"id\":\"independent-browser-owner\",\"password\":\"synthetic-browser-only\",\"role\":\"owner\",\"username\":\"Independent browser owner\"}]}"
+        }
+      ],
+      "snapshots": [
+        {
+          "id": "rescue-59afa637-b59b-4d90-a4cd-7e07105b45c4",
+          "createdAt": "2026-10-16T12:42:55.074Z",
+          "actorId": "independent-browser-owner",
+          "storeId": "independent-store",
+          "afterMaterial": "{\"auditLog\":[],\"cashLog\":[],\"customerEntries\":[],\"customerOperations\":[],\"heldOrders\":[],\"manualJournal\":[],\"memberTopups\":[],\"members\":[],\"orders\":[],\"products\":[{\"barcode\":\"\",\"category\":\"餐點\",\"cost\":30,\"expiryDate\":\"\",\"id\":\"independent-bowl\",\"imageUrl\":\"\",\"name\":\"獨立建立的丼飯\",\"noBarcode\":true,\"price\":100,\"reorderLevel\":0,\"stock\":10,\"supplierId\":\"\",\"unit\":\"碗\"}],\"promotions\":[],\"purchases\":[],\"restaurantOperations\":[],\"restaurantOrders\":[],\"salesDocuments\":[],\"salesOperations\":[],\"settings\":[],\"shifts\":[{\"cashier\":\"Independent browser owner\",\"id\":\"independent-shift\",\"openCash\":100,\"openTime\":\"2026-10-16T12:42:55.062Z\",\"status\":\"open\"}],\"supplierEntries\":[],\"supplierOperations\":[],\"suppliers\":[],\"wasteLog\":[]}",
+          "operationId": "restore-e44741d0-34b7-43f4-a95e-188618307463",
+          "bookId": "sha256:61ce408074a8cf9a425ebba95ee1c1849ae3daa0f999f41fd506a880b4bf9ce0"
+        }
+      ],
+      "originalIds": [
+        [
+          "checkout",
+          "independent-original-sale",
+          "rescue-59afa637-b59b-4d90-a4cd-7e07105b45c4"
+        ],
+        [
+          "openShift",
+          "independent-shift",
+          "rescue-59afa637-b59b-4d90-a4cd-7e07105b45c4"
+        ]
+      ],
+      "events": [
+        {
+          "id": "restore-e44741d0-34b7-43f4-a95e-188618307463",
+          "actorId": "independent-browser-owner",
+          "signature": "{\"kind\":\"restore-preview\",\"previewId\":\"restore-e44741d0-34b7-43f4-a95e-188618307463\"}",
+          "receipt": "{\"protocol\":\"pos-recovery-v1\",\"success\":true,\"id\":\"restore-e44741d0-34b7-43f4-a95e-188618307463\",\"sourceId\":\"rescue-59afa637-b59b-4d90-a4cd-7e07105b45c4\",\"revision\":\"6\",\"storeId\":\"independent-store\"}"
+        }
+      ]
+    },
+    "checksum": "sha256:9ab946c62b21ca2950ec9cc80368e445905bf095bc920e767b50196adb9165c5"
+  },
+  "plan": {
+    "order": {
+      "id": "independent-original-sale",
+      "items": [
+        {
+          "id": "independent-bowl",
+          "name": "獨立建立的丼飯",
+          "price": 100,
+          "qty": 1
+        }
+      ],
+      "subtotal": 100,
+      "discount": 0,
+      "manualDiscount": 0,
+      "balanceUsed": 0,
+      "total": 100,
+      "payMethod": "cash",
+      "paid": 100,
+      "change": 0,
+      "payments": [
+        {
+          "method": "cash",
+          "amount": 100
+        }
+      ],
+      "memberId": null,
+      "pointsUsed": 0,
+      "pointsEarned": 0,
+      "time": "2026-10-16T12:42:55.068Z",
+      "taxId": "",
+      "cashier": "Independent browser owner",
+      "shiftId": "independent-shift",
+      "status": "completed"
+    },
+    "stockUpdates": [
+      {
+        "id": "independent-bowl",
+        "delta": -1
+      }
+    ],
+    "memberUpdate": null,
+    "member": null
+  },
+  "receipt": {
+    "protocol": "pos-checkout-v5",
+    "success": true,
+    "orderId": "independent-original-sale",
+    "order": {
+      "id": "independent-original-sale",
+      "items": [
+        {
+          "id": "independent-bowl",
+          "name": "獨立建立的丼飯",
+          "price": 100,
+          "qty": 1
+        }
+      ],
+      "subtotal": 100,
+      "discount": 0,
+      "manualDiscount": 0,
+      "balanceUsed": 0,
+      "total": 100,
+      "payMethod": "cash",
+      "paid": 100,
+      "change": 0,
+      "payments": [
+        {
+          "method": "cash",
+          "amount": 100
+        }
+      ],
+      "memberId": null,
+      "pointsUsed": 0,
+      "pointsEarned": 0,
+      "time": "2026-10-16T12:42:55.068Z",
+      "taxId": "",
+      "cashier": "Independent browser owner",
+      "shiftId": "independent-shift",
+      "status": "completed",
+      "itemCosts": {
+        "independent-bowl": 30
+      }
+    },
+    "products": [
+      {
+        "id": "independent-bowl",
+        "name": "獨立建立的丼飯",
+        "price": 100,
+        "cost": 30,
+        "stock": 9,
+        "category": "餐點",
+        "unit": "碗",
+        "barcode": "",
+        "noBarcode": true,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0
+      }
+    ],
+    "member": null
+  }
+}

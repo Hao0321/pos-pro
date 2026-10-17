@@ -1,4 +1,5 @@
 import { browserStorage } from './browserStorage'
+import {assertStoredBrowserCostReceipt} from './browserStockBusiness'
 import {PROCUREMENT_KINDS,isProcurement,procurementEvent,validateProcurement} from '../../electron/procurementRules.mjs'
 import {operationHeader} from '../../electron/operationRules.mjs'
 import {assertExchangeReceipt} from '../../electron/businessExchange.mjs'
@@ -6,8 +7,15 @@ import {assertSalesResult} from '../../electron/salesPlan.mjs'
 import {assertCustomerLedgerResult} from '../../electron/customerLedger.mjs'
 import {assertSupplierLedgerResult} from '../../electron/supplierLedger.mjs'
 import {assertSupplierInventoryResult} from '../../electron/supplierInventory.mjs'
+import {PHYSICAL_STOCKTAKE,assertPhysicalStocktakeResult} from '../../electron/physicalStocktake.mjs'
+import {assertReviewedRefundResult} from '../../electron/refundReview.mjs'
+import {assertStockSetupResult} from '../../electron/stockSetupReview.mjs'
+import {assertStoredBrowserStockSetupResult} from './browserStockSetup'
+import {needsRestaurantFundsResult,assertRestaurantFundsResult} from '../../electron/restaurantFundsResult.mjs'
+import {assertWarehouseResult} from '../../electron/browserWarehouse.mjs'
+import {assertStoredBrowserWarehouse} from './browserWarehouse'
 export const FINANCIAL_PENDING='pos_pending_financial_v1'
-const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt'}
+const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt','stock-cost':'receipt',warehouse:'receipt'}
 for(const kind of PROCUREMENT_KINDS)fields[kind]='receipt'
 let running=false
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value
@@ -20,7 +28,7 @@ export function readPendingFinancial(){
   if(JSON.stringify(canonical(input))!==JSON.stringify(canonical(s.input)))throw Error('待確認異動內容不一致，請保留紀錄核對')
   return p
 }
-function assertReceipt(kind,request,result){
+export function assertReceipt(kind,request,result){
   finiteTree(result)
   const row=result?.[fields[kind]]
   if(result?.success!==true||row?.id!==request.id)throw Error('保存結果尚未確認：回覆缺少正確的異動編號')
@@ -28,22 +36,32 @@ function assertReceipt(kind,request,result){
   if(kind==='sales')assertSalesResult(request,result)
   if(kind==='customer-ledger')assertCustomerLedgerResult(request,result)
   if(kind==='supplier-ledger')assertSupplierLedgerResult(request,result)
+  if(kind==='warehouse'){assertWarehouseResult(request,result);if(!globalThis.window?.electronAPI)assertStoredBrowserWarehouse(request,result)}
   if(kind==='topup'&&(['memberId','amount','bonus','payMethod','shiftId'].some(k=>(row[k]??'')!==(request[k]??''))||result.member?.id!==request.memberId))throw Error('儲值保存結果尚未確認：回覆內容不符')
   if(kind==='refund'&&(row.refundOf!==request.refundOf||result.original?.id!==request.refundOf))throw Error('退款保存結果尚未確認：原單不符')
+  if(kind==='refund')assertReviewedRefundResult(request,result)
+  if(kind==='stock-cost'){
+    assertStockSetupResult(request,result)
+    if(!globalThis.window?.electronAPI)assertStoredBrowserStockSetupResult(request,result)
+  }
   if(kind==='cashlog'&&['shiftId','type','amount','reason'].some(k=>(row[k]??'')!==(request[k]??'')))throw Error('現金流水保存結果尚未確認：回覆內容不符')
   if(kind==='waste'&&(row.productId!==request.productId||row.qty!==request.qty||result.product?.id!==request.productId))throw Error('損耗保存結果尚未確認：回覆內容不符')
   if(kind==='restaurant'){
     if(row.kind!==kind||row.action!==request.action||row.signature!==JSON.stringify(canonical(request))||!Array.isArray(row.productIds)||new Set(row.productIds).size!==row.productIds.length||!Array.isArray(result.products)||row.productIds.length!==result.products.length||row.productIds.some(id=>!result.products.some(p=>p.id===id))||!result.config)throw Error('預訂保存結果尚未確認：回覆內容不符')
     if(request.action!=='configure'&&result.entry?.id!==(request.action==='create'?request.id:request.entryId))throw Error('預訂回覆缺少原單')
     if(request.action!=='configure'&&(!Number.isSafeInteger(row.entityVersion)||row.entityVersion<1||result.entry.version<row.entityVersion))throw Error('預訂回覆缺少保存版本')
-    if(request.action==='pay'&&(!row.saleId||result.order?.id!==row.saleId))throw Error('預訂回覆缺少收款流水')
-    if(request.action==='pay'&&(result.order.shiftId!==request.shiftId||result.order.total!==result.entry.total||result.order.payMethod!==request.payMethod))throw Error('預訂回覆收款內容不符')
-    if(request.action==='cancel'&&row.refundId&&(result.refund?.id!==row.refundId||result.refund.shiftId!==request.shiftId||result.refund.total!==-result.entry.total))throw Error('預訂回覆缺少退款流水')
+    if(needsRestaurantFundsResult(request,result))assertRestaurantFundsResult(request,result)
+    else{
+      if(request.action==='pay'&&(!row.saleId||result.order?.id!==row.saleId))throw Error('預訂回覆缺少收款流水')
+      if(request.action==='pay'&&(result.order.shiftId!==request.shiftId||result.order.total!==result.entry.total||result.order.payMethod!==request.payMethod))throw Error('預訂回覆收款內容不符')
+      if(request.action==='cancel'&&row.refundId&&(result.refund?.id!==row.refundId||result.refund.shiftId!==request.shiftId||result.refund.total!==-result.entry.total))throw Error('預訂回覆缺少退款流水')
+    }
   }
   if(['stocktake','receive',...PROCUREMENT_KINDS].includes(kind)){
     assertSupplierInventoryResult(request,result)
     if(row.kind!==kind||row.signature!==JSON.stringify(canonical(request))||!Array.isArray(row.productIds)||!row.productIds.length&&!PROCUREMENT_KINDS.includes(kind)||!Array.isArray(result.products)||result.products.length!==row.productIds.length||new Set(row.productIds).size!==row.productIds.length||row.productIds.some(id=>!result.products.some(p=>p.id===id)))throw Error('庫存保存結果尚未確認：回覆內容不符')
     if(kind==='stocktake'&&(row.productIds.length!==request.counts.length||request.counts.some(c=>!row.productIds.includes(c.id))))throw Error('盤點回覆缺少原品項')
+    if(kind==='stocktake'&&request.protocol===PHYSICAL_STOCKTAKE)assertPhysicalStocktakeResult(request,result)
     if(kind==='receive'&&(row.purchaseId!==request.purchaseId||result.purchase?.id!==request.purchaseId))throw Error('到貨回覆缺少原進貨單')
     if(PROCUREMENT_KINDS.includes(kind)||row.document){
       const po=result.purchase
@@ -57,6 +75,10 @@ function assertReceipt(kind,request,result){
       }
       if(row.cashLogId&&result.cashLog?.id!==row.cashLogId)throw Error('採購回覆缺少現金流水')
     }
+  }
+  if(!globalThis.window?.electronAPI){
+    const method={refund:'refundOrder',waste:'addWaste',restaurant:'applyRestaurantOperation',sales:'applySalesOperation',stocktake:'applyInventoryOperation',receive:'applyInventoryOperation'}[kind]||(PROCUREMENT_KINDS.includes(kind)?'applyInventoryOperation':null)
+    if(method)assertStoredBrowserCostReceipt(method,request,result)
   }
 }
 function clearOriginal(pending){
@@ -93,7 +115,7 @@ export async function executeFinancial(kind, input, persist,onState=()=>{},ident
   }
   notify('saving','保存中，請勿重複異動')
   let result
-  try {result=await persist(pending.request)} catch {throw new Error(kind==='exchange'?'報價保存結果尚未確認。請用原編號確認，先不要再開一張。':'保存結果尚未確認。請以原內容重試；系統會沿用原單號，勿重複付款或退款。')}
+  try {result=await persist(pending.request)} catch {throw new Error(kind==='warehouse'?'搬貨結果尚未確認，請用原編號核對，先不要再搬一次。':kind==='exchange'?'報價保存結果尚未確認。請用原編號確認，先不要再開一張。':'保存結果尚未確認。請以原內容重試；系統會沿用原單號，勿重複付款或退款。')}
   if (result?.success===false && result.committed===false) {
     const rejectedId=pending.request.id
     clearOriginal(pending)
@@ -106,7 +128,7 @@ export async function executeFinancial(kind, input, persist,onState=()=>{},ident
   notify('idle')
   return result
   }catch(error){
-    if(browserStorage.getItem(FINANCIAL_PENDING))notify('uncertain',kind==='exchange'?'報價保存結果尚未確認。請用原編號確認，先不要再開一張。':'異動結果尚未確認，請以原編號核對或重試；不要重新收款或扣庫存')
+    if(browserStorage.getItem(FINANCIAL_PENDING))notify('uncertain',kind==='warehouse'?'搬貨結果尚未確認，請用原編號核對，先不要再搬一次。':kind==='exchange'?'報價保存結果尚未確認。請用原編號確認，先不要再開一張。':'異動結果尚未確認，請以原編號核對或重試；不要重新收款或扣庫存')
     else notify('idle')
     throw error
   }finally{running=false}

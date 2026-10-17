@@ -3,6 +3,7 @@ import {INVENTORY_ACTION,INVENTORY_PREFIX} from './inventoryOperations.mjs'
 import {isProcurement,validateProcurement,procurementEvent,planProcurement,recordProcurementReceipt,procurementDate,PROCUREMENT_KINDS} from './procurementRules.mjs'
 import {procurementApprovalMaterial,purchaseMatchesApproval,supplierActor} from './supplierControl.mjs'
 import {only,businessId} from './businessExchange.mjs'
+import {assertPrivateQuickPurchase} from './privateDrafts.mjs'
 const groups=['receipts','bills','payments','reversals','returns','refunds','refundReversals']
 const collection={receive:'receipts','purchase-bill':'bills','purchase-pay':'payments','purchase-reverse':'reversals','purchase-return':'returns','purchase-refund':'refunds','purchase-refund-reverse':'refundReversals'}
 export function supplierInventoryContext(request){
@@ -20,7 +21,7 @@ export function procurementCreationRequests(audits=[],purchases=[]){
    const receipt=typeof audit.detail==='string'?JSON.parse(audit.detail):audit.detail,request=JSON.parse(receipt.signature);operationHeader(request)
    const po=purchases.find(row=>row.procurement?.createdOperationId===request.id)
    if(audit.id!==INVENTORY_PREFIX+request.id||seen.has(request.id)||receipt.id!==request.id||request.kind!=='purchase-create'||receipt.kind!==request.kind||receipt.signature!==canonicalSignature(request)||!po||po.id!==request.purchase?.id||po.procurement.createdAt!==request.time||receipt.purchaseVersion!==1||canonicalSignature(receipt.document)!==canonicalSignature(procurementEvent(po,request)))throw Error()
-   supplierInventoryContext(request);seen.add(request.id);requests.push(request)
+   supplierInventoryContext(request);assertPrivateQuickPurchase(request,{receiptActor:audit});seen.add(request.id);requests.push(request)
   }catch{throw Error('採購原始回執需要核對')}
  }
  return requests
@@ -34,6 +35,7 @@ export function readSupplierInventoryOperations(audits=[]){
     if(!['receive',...PROCUREMENT_KINDS].includes(request.kind))return []
     const purchaseId=request.kind==='purchase-create'?request.purchase?.id:request.purchaseId;businessId(purchaseId)
     const context=supplierInventoryContext(request),actor={userId:row.userId||'',username:row.username||'',role:row.role}
+    assertPrivateQuickPurchase(request,{receiptActor:actor})
     if(context)supplierActor(actor)
     return [{request,receipt,actor,purchaseId,seenRevision:context?.revision||0,context}]
   })

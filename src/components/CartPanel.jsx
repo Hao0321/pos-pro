@@ -1,6 +1,7 @@
 import {tr,trMessage} from "../i18n"
 import { useState, useRef } from 'react'
-import { Trash2, Plus, Minus, User, X, CreditCard, Banknote, Check, ChevronRight, Gift, Printer, Pause, Percent, Wallet, Receipt, ShoppingCart } from 'lucide-react'
+import { Trash2, Plus, Minus, User, X, CreditCard, Banknote, Check, ChevronRight, Gift, Pause, Percent, Wallet, Receipt, ShoppingCart } from 'lucide-react'
+import ReceiptPrintControl from './ReceiptPrintControl'
 
 export default function CartPanel({
   cart, cartSubtotal, activeMember,
@@ -117,12 +118,7 @@ export default function CartPanel({
             <Gift size={13}/>{tr(" 獲得 ")}{lastOrder.pointsEarned}{tr(" 點")}</div>
         )}
         <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:12}}>{tr("訂單 ")}{lastOrder.id}</div>
-        {window.electronAPI && (
-          <button className="btn btn-ghost btn-sm"
-            style={{marginTop:12, display:'flex', alignItems:'center', gap:6, justifyContent:'center', width:'100%'}}
-            onClick={() => window.electronAPI.printer.printReceipt(lastOrder).catch(() => {})}>
-            <Printer size={14}/>{tr(" 列印收據")}</button>
-        )}
+        <ReceiptPrintControl key={lastOrder.id} orderId={lastOrder.id}/>
       </div>
       <div style={cs.stageFooter}>
         <button className="btn btn-primary" style={{width:'100%', padding:14}} onClick={reset}>{tr("繼續收銀")}</button>

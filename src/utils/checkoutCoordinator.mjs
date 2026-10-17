@@ -94,6 +94,7 @@ export function createCheckoutCoordinator(ports) {
           throw failure('ACK_INVALID','回覆的會員快照不正確。')
       } else if (result.member!==null) throw failure('ACK_INVALID','非會員交易出現不符的會員資料。')
     } catch (error) { throw uncertain(error) }
+    try { if(ports.verifyReceipt)await ports.verifyReceipt(pending.order,result) } catch(error){throw uncertain(error)}
     // apply must replace touched product/member values, not apply deltas a second time.
     try {
       await ports.apply(result)

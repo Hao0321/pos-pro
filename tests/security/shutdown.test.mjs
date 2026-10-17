@@ -25,8 +25,8 @@ test('a failed service inventory is handled without closing SQLite',async()=>{
   await expect(stop()).rejects.toThrow('inventory unavailable');expect(closed).toBe(false)
 })
 
-async function mainFixture({lock=true,fail=false}={}){
-  const gates=[deferred(),deferred()],events=[],windows=[]
+async function mainFixture({lock=true,fail=false,failPrint=false}={}){
+  const gates=[deferred(),deferred(),deferred()],events=[],windows=[]
   const app=new EventEmitter();app.requestSingleInstanceLock=()=>lock;app.getPath=()=>'/isolated-profile'
   app.whenReady=()=>Promise.resolve();app.isPackaged=false
   app.quit=()=>{const event={preventDefault(){this.prevented=true}};app.emit('will-quit',event);events.push(event.prevented?'quit-held':'quit-allowed')}
@@ -38,6 +38,7 @@ async function mainFixture({lock=true,fail=false}={}){
   const stubs={electron:{app,BrowserWindow:Window,ipcMain:{},shell:{},dialog:{showErrorBox:()=>events.push('error-visible')}},
     './database':()=>{events.push('db-open');return db},
     './sharedStoreServer.cjs':()=>({stop:()=>{events.push('shared-stop');return gates[0].promise}}),
+    './kitchenPrintWorker.cjs':()=>({start:()=>events.push('print-start'),stop:()=>{events.push('print-stop');return failPrint?Promise.reject(Error('print drain failed')):gates[2].promise}}),
     './server':()=>({close:()=>{events.push('order-stop');if(fail)return Promise.reject(Error('close failed'));return gates[1].promise}}),
     './ipcSecurity.cjs':{createIpcSecurity:()=>({current:()=>null})},'./ipcHandlers.cjs':()=>{}}
   const source=readFileSync(new URL('../../electron/main.js',import.meta.url),'utf8')
@@ -48,11 +49,17 @@ test.each(['window-all-closed','global-quit'])('%s actually reaches the main-pro
   const f=await mainFixture();if(route==='global-quit')f.app.quit();else f.app.emit('window-all-closed')
   await tick();expect(f.events).toContain('quit-held');expect(f.events).not.toContain('db-close')
   f.gates[0].resolve();await tick();expect(f.events).not.toContain('db-close')
-  f.gates[1].resolve();await tick();expect(f.events.filter(x=>x==='db-close')).toHaveLength(1);expect(f.events.at(-1)).toBe('quit-allowed')
+  f.gates[1].resolve();await tick();expect(f.events).not.toContain('db-close');expect(f.events).toContain('print-stop')
+  f.gates[2].resolve();await tick();expect(f.events.filter(x=>x==='db-close')).toHaveLength(1);expect(f.events.at(-1)).toBe('quit-allowed')
 })
 test('failed main-process cleanup retains the database, returns a window and shows recovery',async()=>{
-  const f=await mainFixture({fail:true});f.windows[0].destroyed=true;f.windows[0].emit('closed');f.app.emit('window-all-closed');f.gates[0].resolve();await tick();await tick()
+  const f=await mainFixture({fail:true});f.windows[0].destroyed=true;f.windows[0].emit('closed');f.app.emit('window-all-closed');f.gates[0].resolve();f.gates[2].resolve();await tick();await tick()
   expect(f.events).not.toContain('db-close');expect(f.events).not.toContain('quit-allowed');expect(f.events).toContain('error-visible');expect(f.windows).toHaveLength(2)
+})
+
+test('a failed kitchen-worker drain retains SQLite and presents shutdown recovery',async()=>{
+  const f=await mainFixture({failPrint:true});f.app.quit();f.gates[0].resolve();f.gates[1].resolve();await tick();await tick()
+  expect(f.events).toContain('print-stop');expect(f.events).not.toContain('db-close');expect(f.events).not.toContain('quit-allowed');expect(f.events).toContain('error-visible')
 })
 test('a rejected second instance never initializes a second SQLite database or services',async()=>{
   const f=await mainFixture({lock:false});expect(f.events).not.toContain('db-open');expect(f.windows).toHaveLength(0)

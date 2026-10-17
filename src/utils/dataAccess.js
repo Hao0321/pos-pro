@@ -1,18 +1,42 @@
 import './sharedBridge'
+import {getBrowserPrivateDraftContext,lookupBrowserPrivateDraftOriginal} from './browserPrivateDrafts'
+import {privateDraftContext,privateDraftMappingInput} from '../../electron/privateDrafts.mjs'
 import {browserStorage, writeRecords, readRecords, withSalesLock,writeBusinessSettings,assertOriginalOperationAvailable} from './browserStorage'
 import { commitBrowserSale, browserReceipt, commitBrowserRefund } from './browserSales'
 import { summarizeShift } from '../../electron/shiftReconciliation.mjs'
 import {moneyValue,quantityValue,operationHeader,sameCommand} from '../../electron/operationRules.mjs'
-import {commitBrowserInventory} from './browserInventory'
-import {commitBrowserRestaurant,browserRestaurantState} from './browserRestaurant'
+import {commitBrowserInventory,getBrowserStocktakeState} from './browserInventory'
+import {commitBrowserRestaurant,browserRestaurantState,browserCustomerIntakeContext,browserRestaurantMenuQuote,browserRestaurantMenuSetupPreview,browserRestaurantAgentPreview} from './browserRestaurant'
+import {browserKitchenPrintState,commitBrowserKitchenPrint} from './browserKitchenPrint'
 import {makeAgentContext} from '../../electron/agentDraftRules.mjs'
 import {readAgentMappings,mergeAgentMappings} from '../../electron/businessDocument.mjs'
 import {retainAuditLogs} from './auditRetention'
+import {customerOrderView} from '../../electron/tableOrdering.mjs'
 import {readExchangeTextSetting} from '../../electron/businessExchange.mjs'
+import {getBrowserRefundContext,previewBrowserRefund} from './browserRefundReview'
+import {stockSetupBrowserEnabled} from './stockSetupAvailability.mjs'
+import {hasBrowserStockCost,commitBrowserStockBusiness,commitBrowserProduct,assertStoredBrowserCostReceipt} from './browserStockBusiness'
 // 資料存取抽象層 — 自動判斷 Electron (SQLite) 或 瀏覽器 (localStorage)
 export const isElectron = !!(typeof window !== 'undefined' && window.electronAPI)
+export async function loadWarehouseState(actor){return isElectron?window.electronAPI.db.getWarehouseState():(await import('./browserWarehouse')).getBrowserWarehouseState(actor)}
+export async function applyWarehouseOperation(input,actor){return isElectron?window.electronAPI.db.applyWarehouseOperation(input):(await import('./browserWarehouse')).commitBrowserWarehouse(input,actor)}
+export async function loadPrivateDraftContext(actor){return isElectron?window.electronAPI.db.getPrivateDraftContext():getBrowserPrivateDraftContext(actor)}
+export async function lookupPrivateDraftOriginal(input,actor){return isElectron?window.electronAPI.db.lookupPrivateDraftOriginal(input):lookupBrowserPrivateDraftOriginal(input,actor)}
 export const isSharedStore = !!(typeof window !== 'undefined' && window.electronAPI?.sharedStore)
+export async function loadCustomerIntakeContext(id,actor){return isElectron?window.electronAPI.db.getCustomerIntakeContext(id):browserCustomerIntakeContext(id,actor)}
+export async function loadKitchenPrintState(actor){return isElectron?window.electronAPI.db.getKitchenPrintState():browserKitchenPrintState(actor)}
+export async function applyKitchenPrintOperation(request,actor){return isElectron?window.electronAPI.db.applyKitchenPrintOperation(request):commitBrowserKitchenPrint(request,actor)}
+export async function loadStockSetupAccess(){return isElectron?window.electronAPI.db.getStockSetupAccess():{enabled:stockSetupBrowserEnabled()}}
+export async function loadStockSetupState(actor){return isElectron?window.electronAPI.db.getStockSetupState():(await import('./browserStockSetup')).getBrowserStockSetupState(actor)}
+export async function previewStockSetup(input,actor){return isElectron?window.electronAPI.db.previewStockSetup(input):(await import('./browserStockSetup')).previewBrowserStockSetup(input,actor)}
+export async function applyStockSetupOperation(input,actor){return isElectron?window.electronAPI.db.applyStockSetupOperation(input):(await import('./browserStockSetup')).commitBrowserStockSetup(input,actor)}
+export async function loadStockAccountingState(actor){return isElectron?window.electronAPI.db.getStockAccountingState():(await import('./browserStockReports')).getBrowserStockAccountingState(actor)}
+export async function loadStockSalesState(actor){return isElectron?window.electronAPI.db.getStockSalesState():(await import('./browserStockReports')).getBrowserStockSalesState(actor)}
+export async function loadStockHistory(input,actor){return isElectron?window.electronAPI.db.getStockHistory(input):(await import('./browserStockHistory')).getBrowserStockHistory(input,actor)}
 export async function applyInventoryOperation(request,actor){return isElectron?window.electronAPI.db.applyInventoryOperation(request):commitBrowserInventory(request,actor)}
+export async function loadStocktakeState(actor){return isElectron?window.electronAPI.db.getStocktakeState():getBrowserStocktakeState(actor)}
+export async function loadRefundContext(actor){return isElectron?window.electronAPI.db.getRefundContext():getBrowserRefundContext(actor)}
+export async function previewRefund(input,actor){return isElectron?window.electronAPI.db.previewRefund(input):previewBrowserRefund(input,actor)}
 export async function getExchangeContext(actor){return isElectron?window.electronAPI.db.getExchangeContext():(await import('./browserExchange')).getBrowserExchangeContext(actor)}
 export async function applyExchangeOperation(request,actor){return isElectron?window.electronAPI.db.applyExchangeOperation(request):(await import('./browserExchange')).commitBrowserExchange(request,actor)}
 export async function loadSalesState(actor){return isElectron?window.electronAPI.db.getSalesState():(await import('./browserSalesDocuments')).getBrowserSalesState(actor)}
@@ -21,6 +45,9 @@ export async function applyCustomerLedgerOperation(request,actor){return isElect
 export async function loadSupplierState(actor){return isElectron?window.electronAPI.db.getSupplierState():(await import('./browserSupplierLedger')).getBrowserSupplierState(actor)}
 export async function applySupplierLedgerOperation(request,actor){return isElectron?window.electronAPI.db.applySupplierLedgerOperation(request):(await import('./browserSupplierLedger')).commitBrowserSupplierLedger(request,actor)}
 export async function loadRestaurantState(){return isElectron?window.electronAPI.db.getRestaurantState():browserRestaurantState()}
+export async function loadRestaurantMenuQuote(input,actor){return isElectron?window.electronAPI.db.getRestaurantMenuQuote(input):browserRestaurantMenuQuote(input,actor)}
+export async function loadRestaurantMenuSetupPreview(input,actor){return isElectron?window.electronAPI.db.getRestaurantMenuSetupPreview(input):browserRestaurantMenuSetupPreview(input,actor)}
+export async function loadRestaurantAgentPreview(input,actor){return isElectron?window.electronAPI.db.getRestaurantAgentPreview(input):browserRestaurantAgentPreview(input,actor)}
 export async function applyRestaurantOperation(request,actor){return isElectron?window.electronAPI.db.applyRestaurantOperation(request):commitBrowserRestaurant(request,actor)}
 export async function getAgentContext(actor){
   if(isElectron)return window.electronAPI.db.getAgentContext()
@@ -30,7 +57,7 @@ export async function getAgentContext(actor){
 }
 export async function rememberAgentMappings(input,actor){
   if(isElectron)return window.electronAPI.db.rememberAgentMappings(input)
-  return withSalesLock(()=>{const data=readRecords().data,raw=data.pos_business_settings.find(r=>r.key==='agentMappings')?.value;const mappings=mergeAgentMappings(raw==null?null:JSON.parse(raw),input,data.pos2_products,actor);writeBusinessSettings({agentMappings:JSON.stringify(mappings)});return {success:true,mappings}})
+  return withSalesLock(()=>{const record=readRecords(),data=record.data,raw=data.pos_business_settings.find(r=>r.key==='agentMappings')?.value,current=Object.hasOwn(input||{},'draftContext')?privateDraftContext(readExchangeTextSetting(data.pos_business_settings,'sharedStoreId'),record.salesEpoch,actor,data.pos_users):null,source=privateDraftMappingInput(input,current);const mappings=mergeAgentMappings(raw==null?null:JSON.parse(raw),source,data.pos2_products,actor);writeBusinessSettings({agentMappings:JSON.stringify(mappings)});return {success:true,mappings}})
 }
 
 function loadLS(key, fallback) { const value=browserStorage.getItem(key);return value==null?fallback:JSON.parse(value) }
@@ -45,14 +72,17 @@ export async function loadProducts(fallback) {
 export async function saveProducts(products) {
   if (!isElectron) saveLS('pos2_products', products)
 }
-export async function dbAddProduct(data) {
+export async function dbAddProduct(data,actor) {
   if (isElectron) return window.electronAPI.db.addProduct(data)
+  return commitBrowserProduct('addProduct',data,actor)
 }
-export async function dbUpdateProduct(id, data) {
+export async function dbUpdateProduct(id, data,actor) {
   if (isElectron) return window.electronAPI.db.updateProduct(id, data)
+  return commitBrowserProduct('updateProduct',{id,data},actor)
 }
-export async function dbDeleteProduct(id) {
+export async function dbDeleteProduct(id,actor) {
   if (isElectron) return window.electronAPI.db.deleteProduct(id)
+  return commitBrowserProduct('deleteProduct',{id},actor)
 }
 export async function dbFindByBarcode(code) {
   if (isElectron) return window.electronAPI.db.findByBarcode(code)
@@ -85,14 +115,15 @@ export async function loadOrders(fallback) {
 export async function saveOrders(orders) {
   if (!isElectron) saveLS('pos2_orders', orders)
 }
-export async function dbCheckout(orderData, stockUpdates, memberUpdate) {
+export async function dbCheckout(orderData, stockUpdates, memberUpdate,actor) {
   if (isElectron) return window.electronAPI.db.checkout(orderData, stockUpdates, memberUpdate)
-  return commitBrowserSale(orderData)
+  return commitBrowserSale(orderData,actor)
 }
-export async function lookupCheckout(id) {
+export async function lookupCheckout(id,actor) {
   if (isElectron) return window.electronAPI.db.checkoutReceipt(id)
-  return browserReceipt(id)
+  return browserReceipt(id,actor)
 }
+export function verifyCheckoutCostReceipt(request,result){if(!isElectron)assertStoredBrowserCostReceipt('checkout',request,result)}
 
 // ===== Manual Journal =====
 export async function loadManualJournal(fallback) {
@@ -267,16 +298,16 @@ export async function checkAndMigrate() {
 // ===== Customer Orders =====
 export async function loadCustomerOrders() {
   if (isElectron) return window.electronAPI.db.getCustomerOrders()
-  return []
+  const record=readRecords();return record.data.pos2_orders.filter(o=>o.source==='customer').map(o=>customerOrderView(o,record.data.pos_restaurant_orders))
 }
 export async function updateOrderStatus(id, status) {
   if (isElectron) return window.electronAPI.db.updateOrderStatus(id, status)
 }
 
 // ===== Refund =====
-export async function dbRefund(origId, refundData, stockUpdates, memberUpdate) {
+export async function dbRefund(origId, refundData, stockUpdates, memberUpdate,actor) {
   if (isElectron) return window.electronAPI.db.refundOrder(origId, refundData, stockUpdates, memberUpdate)
-  return commitBrowserRefund(refundData)
+  return commitBrowserRefund(refundData,actor)
 }
 
 // ===== Held Orders 掛單 =====
@@ -355,11 +386,12 @@ export async function loadWasteLog() {
   if (isElectron) return window.electronAPI.db.getWasteLog()
   return loadLS('pos2_waste', [])
 }
-export async function addWaste(data) {
+export async function addWaste(data,actor) {
   if (isElectron) return window.electronAPI.db.addWaste(data)
   return withSalesLock(()=>{
     try{
     const current=readRecords(),records=current.data,p=records.pos2_products.find(p=>p.id===data.productId)
+    if(hasBrowserStockCost(current))return commitBrowserStockBusiness('addWaste',data,actor,current)
     assertOriginalOperationAvailable('addWaste',data.id,current,data)
     operationHeader(data);const old=records.pos2_waste.find(w=>w.id===data.id)
     if(old){if(!sameCommand(old,data,['productId','qty','reason','time','cashier']))throw Error('損耗編號內容不一致');return {success:true,waste:old,product:p||null}}

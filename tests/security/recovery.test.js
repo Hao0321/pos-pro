@@ -152,9 +152,9 @@ it('exports exact original corrupt bytes for review while preserving a pending j
   const p=await recovery.previewRestore({kind:'import',data:target},owner);await recovery.applyRestorePreview(p.id,owner)
   const record=JSON.parse(localStorage.getItem(RECORD_KEY));record.recovery.snapshots[0].data.pos2_cash_log[0].amount=99
   localStorage.setItem(RECORD_KEY,JSON.stringify(record));const before=localStorage.getItem(RECORD_KEY),journal='unreadable-but-preserve-original';localStorage.setItem(FINANCIAL_PENDING,journal)
-  await expect(recovery.getRecoveryState({kind:'cashlog',request:cash},owner)).rejects.toThrow(/保護副本需要核對/)
+  await expect(recovery.getRecoveryState({kind:'cashlog',request:cash},owner)).rejects.toThrow(/保護紀錄.*核對/)
   const diagnostic=await recovery.exportRecoveryDiagnostics(null,owner);expect(diagnostic.importable).toBe(false);expect(diagnostic.raw[RECORD_KEY]).toBe(before);expect(diagnostic.raw[FINANCIAL_PENDING]).toBe(journal)
-  await expect(recovery.previewRestore({kind:'import',data:diagnostic},owner)).rejects.toThrow(/備份格式/);expect(localStorage.getItem(RECORD_KEY)).toBe(before)
+  await expect(recovery.previewRestore({kind:'import',data:diagnostic},owner)).rejects.toThrow(/備份格式|保護紀錄/);expect(localStorage.getItem(RECORD_KEY)).toBe(before)
   localStorage.setItem(RECORD_KEY,'{broken-json');expect((await recovery.exportRecoveryDiagnostics(null,owner)).raw[RECORD_KEY]).toBe('{broken-json')
 })
 it('downloads a protected source in the ordinary backup envelope and reimports it only as a reviewable preview',async()=>{
@@ -166,7 +166,7 @@ it('downloads a protected source in the ordinary backup envelope and reimports i
   try{
     await downloadSource(state.sources[0].id,owner);expect(click).toHaveBeenCalledOnce()
     const text=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsText(downloaded)})
-    const parsed=JSON.parse(text);expect(parsed.storage).toBe('browser');expect(parsed.data.pos2_cash_log).toEqual([cash])
+    const parsed=JSON.parse(text);expect(parsed.storage).toBe('browser');expect(parsed.format).toBe('pos-complete-backup/v1');expect(parsed.book.pos2_cash_log).toEqual([cash]);expect(parsed.protection.originalIds.some(row=>row[0]==='addCashLog'&&row[1]===cash.id)).toBe(true)
     const before=localStorage.getItem(RECORD_KEY),preview=await importBackupFile(new File([text],'protected.json',{type:'application/json'}),owner)
     expect(preview.target.cashLogs).toBe(1);expect(preview.current.cashLogs).toBe(0);expect(localStorage.getItem(RECORD_KEY)).toBe(before)
     await recovery.applyRestorePreview(preview.id,owner);expect(readRecords().data.pos2_cash_log).toEqual([cash])

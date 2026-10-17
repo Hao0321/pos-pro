@@ -2,6 +2,7 @@ import {tr,trMessage,getLocale} from "../i18n"
 import { useState, useEffect, useCallback } from 'react'
 import { Bell, Check, X, Clock, ChefHat, RefreshCw } from 'lucide-react'
 import { isElectron, loadCustomerOrders, updateOrderStatus } from '../utils/dataAccess'
+import RestaurantPage from './RestaurantPage'
 
 const STATUS_MAP = {
   pending:   { label: '待處理', color: '#d97706', icon: Clock },
@@ -10,7 +11,8 @@ const STATUS_MAP = {
   rejected:  { label: '已拒絕', color: '#d94f44', icon: X },
 }
 
-export default function OrdersPage() {
+export default function OrdersPage(props){return props.store?.restaurantConfig?.enabled?<RestaurantPage {...props}/>:<LegacyOrdersPage {...props}/>}
+function LegacyOrdersPage({store}) {
   const [orders, setOrders] = useState([])
   const [filter, setFilter] = useState('pending')
   const [loading, setLoading] = useState(false)
@@ -170,7 +172,8 @@ export default function OrdersPage() {
               )}
 
               {/* 操作按鈕 */}
-              {order.status === 'pending' && (
+              {order.restaurantId&&<button className="btn btn-primary" style={{minHeight:48}} onClick={()=>store?.setView('restaurant')}>{tr('前往出餐工作單')}</button>}
+              {!order.restaurantId&&order.status === 'pending' && (
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     onClick={() => handleAccept(order.id)}
@@ -186,7 +189,7 @@ export default function OrdersPage() {
                     <X size={14} />{tr(" 拒絕")}</button>
                 </div>
               )}
-              {order.status === 'accepted' && (
+              {!order.restaurantId&&order.status === 'accepted' && (
                 <button
                   onClick={() => handleComplete(order.id)}
                   className="btn btn-sm"

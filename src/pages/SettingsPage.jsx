@@ -1,5 +1,5 @@
 import {tr} from "../i18n"
-import { useState } from "react"
+import { useState,useEffect } from "react"
 import { Shield, Users, Database, FileText, Printer, Wifi, Settings as Cog, Gift, Cloud } from "lucide-react"
 import { ROLES } from "../utils/security"
 import { isSharedStore } from "../utils/dataAccess"
@@ -26,6 +26,7 @@ export const TABS = [
 
 export default function SettingsPage({ session, onLogout, store }) {
   const [tab, setTab] = useState('general')
+  useEffect(()=>{if(store?.settingsTarget?.tab==='hardware'&&!isSharedStore){setTab('hardware');store.consumeSettingsTarget()}},[store?.settingsTarget])
 
   return (
     <div style={ss.root}>
@@ -40,7 +41,7 @@ export default function SettingsPage({ session, onLogout, store }) {
       </div>
 
       <div style={ss.tabBar}>
-        {TABS.filter(t=>!isSharedStore||['general','business','audit'].includes(t.key)).map(({key,label,Icon})=>(
+        {TABS.filter(t=>!isSharedStore||['general','business','audit'].includes(t.key)||t.key==='backup'&&session.role==='owner').map(({key,label,Icon})=>(
           <button key={key} onClick={()=>setTab(key)} style={{
             ...ss.tab,
             background: tab===key?'var(--bg-active)':'transparent',

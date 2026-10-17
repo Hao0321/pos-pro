@@ -1,0 +1,41 @@
+{
+  "clock": "2026-10-16T08:30:00.000Z",
+  "actor": {
+    "userId": "owner",
+    "username": "Recovery fixture",
+    "role": "owner"
+  },
+  "request": {
+    "id": "browser-stock-fixed-sale",
+    "items": [
+      {
+        "id": "p",
+        "name": "Cost 原文",
+        "price": 100,
+        "qty": 1
+      }
+    ],
+    "subtotal": 100,
+    "discount": 0,
+    "manualDiscount": 0,
+    "balanceUsed": 0,
+    "total": 100,
+    "payMethod": "cash",
+    "paid": 100,
+    "change": 0,
+    "payments": [
+      {
+        "method": "cash",
+        "amount": 100
+      }
+    ],
+    "memberId": null,
+    "pointsUsed": 0,
+    "pointsEarned": 0,
+    "time": "2026-10-16T08:30:00.000Z",
+    "taxId": "",
+    "cashier": "Recovery fixture",
+    "shiftId": "shift",
+    "status": "completed"
+  }
+}

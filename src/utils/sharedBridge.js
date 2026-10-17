@@ -9,7 +9,7 @@ if(sharedStoreMode&&!window.electronAPI){
     catch{signal('pos-shared-connection',{connected:false});throw Error('連不上店面電腦。已停止保存；恢復連線後請查詢原交易，勿重新收款。')}
     const value=await response.json()
     if(!response.ok){if(response.status===401&&body.method!=='auth:login')signal('pos-shared-auth-expired');throw Error(value.error||'共用店面連線失敗')}
-    if(value.storeId){const old=localStorage.getItem('pos_shared_store_id');if(old&&old!==value.storeId&&(localStorage.getItem('pos_pending_checkout_v1')||localStorage.getItem('pos_pending_financial_v1')))throw Error('這個網址的店面資料庫已更換。請回到原店面核對未確認交易，勿重送到新店面。');localStorage.setItem('pos_shared_store_id',value.storeId)}
+    if(value.storeId){const old=localStorage.getItem('pos_shared_store_id');if(old&&old!==value.storeId&&(localStorage.getItem('pos_pending_checkout_v1')||localStorage.getItem('pos_pending_financial_v1')||localStorage.getItem('pos_pending_kitchen_print_v1')))throw Error('這個網址的店面資料庫已更換。請回到原店面核對未確認交易，勿重送到新店面。');localStorage.setItem('pos_shared_store_id',value.storeId)}
     signal('pos-shared-connection',{connected:true})
     if(value.csrf)csrf=value.csrf
     if(value.revision!=null){if(revision!=null&&revision!==value.revision)signal('pos-store-changed');revision=value.revision}
@@ -20,20 +20,43 @@ if(sharedStoreMode&&!window.electronAPI){
     if(pair){history.replaceState(null,'',location.pathname+location.search);await post('pair',{token:pair},'')}
     else await post('bootstrap',{},'')
   }
-  async function rpc(method,...args){await(boot||=initialize().catch(e=>{boot=null;throw e}));const response=await post('rpc',{method,args});if(method==='auth:session'&&!response.result)signal('pos-shared-auth-expired');return response.result}
+  async function rpc(method,...args){await(boot||=initialize().catch(e=>{boot=null;throw e}));const response=await post(method==='db:previewRestore'?'backup-preview':'rpc',{method,args});if(method==='auth:session'&&!response.result)signal('pos-shared-auth-expired');return response.result}
   const dbMethods=['rememberAgentMappings','getAgentContext','getProducts','addProduct','updateProduct','deleteProduct','findByBarcode','getMembers','addMember','updateMember','deleteMember','getOrders','getOrderItems','checkout','checkoutReceipt','refundOrder','getCustomerOrders','updateOrderStatus','getSuppliers','addSupplier','updateSupplier','deleteSupplier','getPurchases','addPurchase','updatePurchase','deletePurchase','getPromotions','addPromotion','updatePromotion','deletePromotion','getManualJournal','addManualEntry','deleteManualEntry','getAuditLogs','writeAuditLog','getHeldOrders','addHeldOrder','deleteHeldOrder','getShifts','getOpenShift','openShift','closeShift','getCashLog','addCashLog','getWasteLog','addWaste','getTopups','addTopup','applyInventoryOperation','applyScenarioTemplate','getScenarioTemplateReceipt','getBackups','createBackup','exportData','getStoreSnapshot']
   const db=Object.fromEntries(dbMethods.map(method=>[method,(...args)=>rpc('db:'+method,...args)]))
+  db.getPrivateDraftContext=()=>rpc('db:getPrivateDraftContext')
+  db.lookupPrivateDraftOriginal=input=>rpc('db:lookupPrivateDraftOriginal',input)
   db.getExchangeContext=()=>rpc('db:getExchangeContext')
   db.applyExchangeOperation=input=>rpc('db:applyExchangeOperation',input)
   db.getSalesState=()=>rpc('db:getSalesState')
+  db.getStockAccountingState=()=>rpc('db:getStockAccountingState')
+  db.getStockSalesState=()=>rpc('db:getStockSalesState')
+  db.getStockHistory=input=>rpc('db:getStockHistory',input)
+  db.exportFullBackup=()=>rpc('db:exportFullBackup')
+  db.getProtectedBackups=()=>rpc('db:getProtectedBackups')
+  db.getStocktakeState=()=>rpc('db:getStocktakeState')
+  db.getWarehouseState=()=>rpc('db:getWarehouseState')
+  db.applyWarehouseOperation=input=>rpc('db:applyWarehouseOperation',input)
+  db.getStockSetupAccess=()=>rpc('db:getStockSetupAccess')
+  db.getStockSetupState=()=>rpc('db:getStockSetupState')
+  db.previewStockSetup=input=>rpc('db:previewStockSetup',input)
+  db.applyStockSetupOperation=input=>rpc('db:applyStockSetupOperation',input)
+  db.getRefundContext=()=>rpc('db:getRefundContext')
+  db.previewRefund=input=>rpc('db:previewRefund',input)
   db.applySalesOperation=input=>rpc('db:applySalesOperation',input)
   db.applyCustomerLedgerOperation=input=>rpc('db:applyCustomerLedgerOperation',input)
   db.getSupplierState=()=>rpc('db:getSupplierState')
   db.applySupplierLedgerOperation=input=>rpc('db:applySupplierLedgerOperation',input)
-  for(const method of ['getRecoveryState','applyRecoveryOperation','lookupRecoveryOperation','exportRecoverySource','exportRecoveryDiagnostics'])db[method]=input=>rpc('db:'+method,input)
+  for(const method of ['getRecoveryState','applyRecoveryOperation','lookupRecoveryOperation','exportRecoverySource','exportRecoveryDiagnostics','previewRestore','applyRestorePreview','lookupRestorePreview'])db[method]=input=>rpc('db:'+method,input)
   db.getRestaurantState=()=>rpc('db:getRestaurantState')
+  db.getRestaurantMenuQuote=input=>rpc('db:getRestaurantMenuQuote',input)
+  db.getRestaurantMenuSetupPreview=input=>rpc('db:getRestaurantMenuSetupPreview',input)
+  db.getRestaurantAgentPreview=input=>rpc('db:getRestaurantAgentPreview',input)
+  db.getTableOrderingContext=()=>rpc('db:getTableOrderingContext')
+  db.getCustomerIntakeContext=id=>rpc('db:getCustomerIntakeContext',id)
+  db.getKitchenPrintState=()=>rpc('db:getKitchenPrintState')
+  db.applyKitchenPrintOperation=input=>rpc('db:applyKitchenPrintOperation',input)
   db.applyRestaurantOperation=input=>rpc('db:applyRestaurantOperation',input)
-  for(const method of ['migrateFromLocalStorage','importData','restoreBackup','previewRestore','applyRestorePreview','lookupRestorePreview','deleteWaste','addOrder','getUsers','addUser','updateUser','deleteUser'])db[method]=async()=>{throw Error('此項管理操作請在店面電腦執行')}
+  for(const method of ['migrateFromLocalStorage','importData','restoreBackup','deleteWaste','addOrder','getUsers','addUser','updateUser','deleteUser'])db[method]=async()=>{throw Error('此項管理操作請在店面電腦執行')}
   const unavailable=async()=>{throw Error('此設備操作請在店面電腦執行')}
   window.electronAPI={sharedStore:true,db,
     auth:{list:()=>rpc('auth:list'),session:()=>rpc('auth:session'),login:input=>rpc('auth:login',input),logout:()=>rpc('auth:logout'),setup:unavailable},

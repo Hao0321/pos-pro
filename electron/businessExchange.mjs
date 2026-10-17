@@ -94,7 +94,7 @@ export function readExchangeTextSetting(settings,key){
   try{const value=JSON.parse(raw);return typeof value==='string'?value:raw}catch{return raw}
 }
 export function validateExchangeSettings(settings,purchases=[],auditLogs){
-  const raw=settings?.find(s=>s.key===EXCHANGE_SETTING)?.value
+  const raw=readExchangeTextSetting(settings||[],EXCHANGE_SETTING)
   const state=readExchangeStore(raw),storeId=readExchangeTextSetting(settings,'sharedStoreId')
   if((state.quotes.length||state.pricebooks.length)&&(!storeId||state.quotes.some(q=>q.sender.id!==storeId)))throw Error('報價歷史與店面身份不符')
   if(purchases.some(p=>p.procurement?.sourceQuote&&p.procurement.sourceQuote.document.recipient.id!==storeId))throw Error('採購報價與收件店面不符')

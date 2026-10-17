@@ -1,0 +1,34 @@
+import {readRecords,writeRecords,withSalesLock} from './browserStorage'
+import {updateBrowserSettings} from '../../electron/settingEncoding.mjs'
+import {privateDraftContext,assertDraftLookup,privateDraftOriginal,privateQuickOriginal,privateDraftDigest} from '../../electron/privateDrafts.mjs'
+import {assertImportedPurchaseSource} from '../../electron/quickPurchaseOriginal.mjs'
+import {browserRestaurantState} from './browserRestaurant'
+import {browserStockBusinessResult} from './browserStockBusiness'
+import {readBrowserSupplier} from './browserSupplierLedger'
+function context(saved,actor){const raw=saved.data.pos_business_settings.find(row=>row.key==='sharedStoreId')?.value;return privateDraftContext(raw===undefined?'':JSON.parse(raw),saved.salesEpoch,actor,saved.data.pos_users)}
+export function getBrowserPrivateDraftContext(actor){return withSalesLock(()=>{
+ let saved=readRecords();const users=saved.data.pos_users
+ if(!actor||!users.some(row=>row.id===actor.userId&&row.username===actor.username&&row.role===actor.role)||!['owner','staff'].includes(actor.role))throw Error('請先登入，或重新驗證身份')
+ const raw=saved.data.pos_business_settings.find(row=>row.key==='sharedStoreId')?.value,storeId=raw===undefined?'':JSON.parse(raw)
+ if(!saved.salesEpoch||!storeId){writeRecords({pos_business_settings:updateBrowserSettings(saved.data.pos_business_settings,{sharedStoreId:JSON.stringify(storeId||crypto.randomUUID())})},saved.revision,{ensureSalesEpoch:true});saved=readRecords()}
+ return context(saved,actor)
+})}
+export async function lookupBrowserPrivateDraftOriginal(input,actor){await getBrowserPrivateDraftContext(actor);return withSalesLock(()=>{
+ const saved=readRecords(),current=context(saved,actor);assertDraftLookup(input,current)
+ if(input.family){
+  const imported=input.family==='quick-purchase-import',purchase=imported||input.family==='quick-purchase';if(purchase)readBrowserSupplier(saved);else browserRestaurantState()
+  const row=purchase?saved.data.pos_audit_log.find(row=>row.id==='stock-operation:'+input.id):saved.data.pos_restaurant_operations.find(row=>row.id===input.id),receipt=purchase?(row?(typeof row.detail==='string'?JSON.parse(row.detail):row.detail):null):row
+  const lookup=imported&&receipt?{context:input.context,id:input.id,family:'quick-purchase',digest:privateDraftDigest(JSON.parse(receipt.signature))}:input
+  const original=privateQuickOriginal(lookup,receipt,purchase?row:receipt?.actor,actor)
+  if(original.status==='missing')return original
+  const request=JSON.parse(receipt.signature),sourceMatch=imported?assertImportedPurchaseSource(input.document,request):null,result=browserStockBusinessResult(purchase?'applyInventoryOperation':'applyRestaurantOperation',request,saved,actor)
+  if(result?.success!==true||result.receipt?.signature!==receipt.signature)throw Error('保存結果尚未確認，請保留原編號核對。')
+  return {...original,...(sourceMatch?{sourceMatch}:{}),result}
+ }
+ browserRestaurantState()
+ const receipt=saved.data.pos_restaurant_operations.find(row=>row.id===input.id),original=privateDraftOriginal(input,receipt,actor)
+ if(original.status!=='matched'||original.action!=='configure')return original
+ const result=browserStockBusinessResult('applyRestaurantOperation',JSON.parse(receipt.signature),saved,actor)
+ if(result?.success!==true||result.receipt?.signature!==receipt.signature)throw Error('保存結果尚未確認，請保留原編號核對。')
+ return {...original,result}
+})}

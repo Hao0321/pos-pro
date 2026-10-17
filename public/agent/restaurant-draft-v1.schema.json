@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:pos-pro:restaurant-agent-draft:v1",
+  "title": "POS Pro selected restaurant Agent draft v1",
+  "description": "A draft for explicit human review in the authenticated application. Not an order, payment, private quote or authorization token. Limit UTF-8 input to 32768 bytes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "id", "issuedAt", "storeId", "menuRevision", "kind", "items"],
+  "properties": {
+    "protocol": {"const": "pos-restaurant-agent-draft/v1"},
+    "id": {"type": "string", "pattern": "^[-A-Za-z0-9_]{8,80}$"},
+    "issuedAt": {"type": "string", "format": "date-time", "description": "Stable draft creation time with explicit timezone and no more than millisecond precision. Maximum age24h, maximum clock lead5min. Keep on transmission retries."},
+    "storeId": {"type": "string", "pattern": "^[-A-Za-z0-9_:]{1,128}$"},
+    "menuRevision": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Copy context.restaurantMenuRevision. This identifies the public menu version; it does not authenticate a sender."},
+    "kind": {"const": "restaurant"},
+    "items": {"type": "array", "minItems": 1, "maxItems": 100, "items": {
+      "type": "object", "additionalProperties": false, "required": ["offerId", "qty"],
+      "properties": {
+        "offerId": {"type": "string", "pattern": "^[-A-Za-z0-9_:]{1,64}$"},
+        "variantId": {"type": "string", "pattern": "^[-A-Za-z0-9_:]{1,64}$", "description": "Omission uses this menu version's defaultVariantId."},
+        "qty": {"type": "integer", "minimum": 1, "maximum": 100000},
+        "selections": {"type": "array", "maxItems": 8, "description": "An omitted group uses its saved defaults. Explicit choices:[] clears optional defaults. Complete required groups; never guess a customer's choice.", "items": {
+          "type": "object", "additionalProperties": false, "required": ["groupId", "choices"],
+          "properties": {"groupId": {"type": "string", "pattern": "^[-A-Za-z0-9_:]{1,64}$"}, "choices": {"type": "array", "maxItems": 20, "items": {"type": "object", "additionalProperties": false, "required": ["id", "qty"], "properties": {"id": {"type": "string", "pattern": "^[-A-Za-z0-9_:]{1,64}$"}, "qty": {"type": "integer", "minimum": 1, "maximum": 100}}}}}
+        }}
+      }
+    }},
+    "channel": {"enum": ["", "preorder", "walkin", "delivery"]},
+    "day": {"anyOf": [{"const": ""}, {"type": "string", "format": "date"}]},
+    "slot": {"type": "string", "pattern": "^$|^([01][0-9]|2[0-3]):(00|15|30|45)$"},
+    "customer": {"type": "string", "maxLength": 100},
+    "contact": {"type": "string", "maxLength": 100},
+    "note": {"type": "string", "maxLength": 1000}
+  }
+}

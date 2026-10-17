@@ -85,7 +85,7 @@
       "name": "預訂、現場、外送登記、原料預留、收款與交付",
       "status": "unmeasured",
       "implementation": "available",
-      "nextExperiment": "目前版本回歸並在實店演練預訂至交付、取消、日結"
+      "nextExperiment": "開發分支接通簽章桌碼、顧客原單與正式備餐／收款／交付；已測實際 HTTP、SQLite、配對 HTTPS、最後一份、重開及跨格式原單。接續驗收精確新安裝檔、真人、實體手機、廚房紙本出單與長時間營業，完整範圍仍未驗收。"
     },
     {
       "id": "restaurant.deposits-modifiers",
@@ -140,8 +140,8 @@
       "id": "inventory.warehouses-lots",
       "name": "多倉、調撥、批次、效期及 FEFO",
       "status": "planned",
-      "implementation": "not-started",
-      "nextExperiment": "以兩倉、兩批、到期隔離和原單退貨驗證可售與保留數量"
+      "implementation": "partial",
+      "nextExperiment": "開發分支接通兩地點原子調撥、原來源成本與商品包裝換算；接續原批號／效期、FEFO、到期隔離、原單退貨及在途，多倉批次與公開驗收仍未完成。"
     },
     {
       "id": "inventory.units-counting",
@@ -204,7 +204,7 @@
       "name": "LINE、外送、電商及供應商整合",
       "status": "planned",
       "implementation": "partial",
-      "nextExperiment": "以各服務正式沙盒驗證認證、重播、退款及訂單對應"
+      "nextExperiment": "桌碼接入正式備餐不等於外送平台串接；Uber Eats／foodpanda、LINE 及電商仍須以各服務正式沙盒驗證認證、重播、退款及訂單對應。"
     },
     {
       "id": "security.authority",
@@ -218,7 +218,7 @@
       "name": "完整備份、升級、損壞還原與災難演練",
       "status": "unmeasured",
       "implementation": "available",
-      "nextExperiment": "本版跨版本副本升級與完整資料恢復；不覆寫正式店面"
+      "nextExperiment": "開發分支已接通電腦／瀏覽器雙向完整搬移與店主配對手機還原，保留原始副本、原單、設定型別及目前憑證；接續驗證精確新安裝檔、更多舊版、實體裝置、真人與災難復原，公開完成狀態仍未量測。"
     },
     {
       "id": "delivery.devices",

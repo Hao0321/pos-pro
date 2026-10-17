@@ -11,6 +11,7 @@ const NAV = [
   { key:'overview',label:'營運總覽',Icon:BarChart2,perm:'reports.view',accent:'gold' },
   { key:'quick',label:'快速建單',Icon:Sparkles,perm:'pos.use',accent:'green' },
   { key:'pos',        label:'收銀台',   Icon:ShoppingCart,    perm:'pos.use', accent:'green' },
+  { key:'refunds',label:'退貨、退款',Icon:ShoppingCart,perm:'pos.refund',accent:'red' },
   { key:'restaurant',label:'預訂出餐',Icon:ClipboardList,perm:'pos.use',accent:'green' },
   { key:'shifts',     label:'班別交班', Icon:Clock,           perm:'pos.use', accent:'teal' },
   { key:'readiness',  label:'營業前檢查', Icon:CheckCircleIcon, perm:'pos.use', accent:'green' },
@@ -23,6 +24,8 @@ const NAV = [
   { key:'customers',label:'客戶與款項',Icon:Users,perm:'purchase.edit',accent:'teal' },
   { key:'waste',      label:'損耗管理', Icon:Trash2,          perm:'inventory.view', accent:'red' },
   { key:'stocktake',  label:'每日盤點', Icon:ClipboardList,   perm:'stocktake.view', accent:'amber' },
+  { key:'stocksetup',label:'核對庫存成本',Icon:Package,perm:'inventory.cost',accent:'blue',needsStockSetup:true },
+  { key:'stockhistory',label:'庫存去哪了',Icon:Package,perm:'inventory.cost',accent:'blue' },
   { key:'promotions', label:'促銷活動', Icon:Tag,             perm:'promotions.view', accent:'pink' },
   { key:'members',    label:'會員',     Icon:Users,           perm:'members.view', accent:'gold' },
   { key:'reports',    label:'報表分析', Icon:BarChart2,       perm:'reports.view', accent:'blue' },
@@ -32,7 +35,7 @@ const NAV = [
   { key:'scenarios',  label:'情境模板', Icon:Sparkles,        perm:'settings.edit', accent:'green' },
 ]
 
-export default function Sidebar({ view, setView, session, lowStockCount, todayRevenue, todayOrders,todayBusinessCount, onLogout, pendingOrders = 0, openShift = null,largeText=false,toggleLargeText,simpleMode=false,toggleSimpleMode }) {
+export default function Sidebar({ view, setView, session, lowStockCount, todayRevenue, todayOrders,todayBusinessCount, onLogout, pendingOrders = 0, openShift = null,largeText=false,toggleLargeText,simpleMode=false,toggleSimpleMode,stockSetupEnabled=false }) {
   const [now, setNow] = useState(new Date())
   const [showMore,setShowMore]=useState(false)
   const common=new Set(['dashboard','quick','pos','restaurant','shifts','readiness','inventory','purchase','suppliers'])
@@ -79,7 +82,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
 
       {/* 導航 */}
       <nav style={s.nav}>
-        {NAV.filter(n => hasPermission(session, n.perm)).map(({ key, label, Icon, accent }, idx) => {
+        {NAV.filter(n => hasPermission(session, n.perm)&&(!n.needsStockSetup||stockSetupEnabled)).map(({ key, label, Icon, accent }, idx) => {
           const active = view === key
           const badge = key === 'inventory' && lowStockCount > 0 ? lowStockCount
                       : key === 'orders' && pendingOrders > 0 ? pendingOrders

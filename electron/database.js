@@ -14,9 +14,13 @@ module.exports = function initDatabase(dbPath) {
   db.pragma('foreign_keys = ON')
 
   require('./databaseSchema.cjs')(db)
+  const recordShapes=require('./recordShapeStorage.cjs')(db)
+  let stockStore
+  try{stockStore=require('./stockLedgerStorage.cjs')(db)}catch(error){db.close();throw error}
   if(db.prepare('SELECT 1 FROM customer_entries LIMIT 1').get())require('./databaseFeatureFence.cjs').installCustomerFence(db)
   if(db.prepare('SELECT 1 FROM supplier_entries LIMIT 1').get())require('./databaseFeatureFence.cjs').installSupplierFence(db)
   const stmts = require('./databaseStatements.cjs')(db)
+  const kitchenStore=require('./kitchenPrintStorage.cjs')(db,stmts)
 
   const orderInsertParams = (o) => ({
     id: o.id,
@@ -44,6 +48,10 @@ module.exports = function initDatabase(dbPath) {
     fullRefund: o.fullRefund ? 1 : 0,
     trackingTokenHash: o.trackingTokenHash || '',
     requestSignature: o.requestSignature || '',
+    table_id: o.tableId || '',
+    table_signature: o.tableSignature || '',
+    tracking_proof: o.trackingProof?JSON.stringify(o.trackingProof):'',
+    customer_menu: Object.hasOwn(o,'customerMenu')?JSON.stringify(o.customerMenu):'',
     itemCosts: typeof o.itemCosts==='string'?o.itemCosts:JSON.stringify(o.itemCosts||{}),
   })
 
@@ -65,17 +73,18 @@ module.exports = function initDatabase(dbPath) {
   })
 
   function readOrder(id) {
-    const row = stmts.getOrderById.get(id)
-    if (!row) return null
-    return {...row,change:row.change_amount,memberId:row.memberId||null,fullRefund:!!row.fullRefund,itemCosts:JSON.parse(row.itemCosts||'{}'),payments:JSON.parse(row.payments || '[]'),
-      items:stmts.getOrderItems.all(id).map(i=>({id:i.productId,name:i.name,price:i.price,qty:i.qty}))}
+    const raw = stmts.getOrderById.get(id)
+    if (!raw) return null
+    const {table_id,table_signature,tracking_proof,customer_menu,...row}=raw
+    return recordShapes.projectRow('orders',{...row,...(table_id?{tableId:table_id,tableSignature:table_signature}:{}),...(tracking_proof?{trackingProof:JSON.parse(tracking_proof)}:{}),...(customer_menu?{customerMenu:JSON.parse(customer_menu)}:{}),change:row.change_amount,memberId:row.memberId||null,fullRefund:!!row.fullRefund,itemCosts:JSON.parse(row.itemCosts||'{}'),payments:JSON.parse(row.payments || '[]'),
+      items:stmts.getOrderItems.all(id).map(i=>({id:i.productId,name:i.name,price:i.price,qty:i.qty}))})
   }
   function checkoutReceipt(id) {
     const order=readOrder(id)
     if (!order) return {protocol:PROTOCOL,success:true,found:false}
     return {protocol:PROTOCOL,success:true,orderId:id,order,
       ...(order.status==='refunded'&&!order.refundOf?{refunds:db.prepare('SELECT id FROM orders WHERE refundOf=?').all(id).map(row=>readOrder(row.id))}:{}),
-      products:order.items.map(i=>stmts.getProductById.get(i.id)).filter(Boolean),
+      products:order.items.map(i=>stmts.getProductById.get(i.id)).filter(Boolean).map(p=>recordShapes.projectRow('products',{...p,noBarcode:!!p.noBarcode})),
       member:order.memberId ? stmts.getMemberById.get(order.memberId) || null : null}
   }
   const checkoutTx = db.transaction((orderData, stockUpdates, memberUpdate) => {
@@ -150,16 +159,17 @@ module.exports = function initDatabase(dbPath) {
     return {...checkoutReceipt(plan.order.id),original:readOrder(original.id)}
   })
 
-  const {migrateTx,replaceAllTx}=require('./databaseMigration.cjs')(db,stmts,orderInsertParams,supplierParams)
+  const {migrateTx,replaceAllTx}=require('./databaseMigration.cjs')(db,stmts,orderInsertParams,supplierParams,stockStore)
 
   // ===== Public API =====
   const api={
+    ...require('./privateDraftOperations.cjs')(db,stmts),
     async getAgentContext(actor){
       if(!actor||!['owner','staff'].includes(actor.role))throw Error('請先登入')
       let storeId=this.getSetting('sharedStoreId');if(!storeId){storeId=require('node:crypto').randomUUID();this.setSetting('sharedStoreId',storeId)}
       return require('./agentDraftRules.mjs').makeAgentContext({storeId,products:this.getProducts(),suppliers:actor.role==='owner'?this.getSuppliers():[],restaurantConfig:this.getRestaurantState().config,role:actor.role,mappings:require('./businessDocument.mjs').readAgentMappings(this.getSetting('agentMappings'))})
     },
-    rememberAgentMappings(input,actor){return db.transaction(()=>{const mappings=require('./businessDocument.mjs').mergeAgentMappings(stmts.getSetting.get('agentMappings')?.value,input,this.getProducts(),actor);stmts.setSetting.run('agentMappings',JSON.stringify(mappings));return {success:true,mappings}})()},
+    rememberAgentMappings(input,actor){return db.transaction(()=>{const source=require('./privateDrafts.mjs').privateDraftMappingInput(input,Object.hasOwn(input||{},'draftContext')?this.getPrivateDraftContext(actor):null),mappings=require('./businessDocument.mjs').mergeAgentMappings(stmts.getSetting.get('agentMappings')?.value,source,this.getProducts(),actor);stmts.setSetting.run('agentMappings',JSON.stringify(mappings));return {success:true,mappings}})()},
     ...require('./restaurantOperations.cjs')(db,stmts,readOrder,orderInsertParams),
     ...require('./scenarioTemplates.cjs')(db, stmts),
     ...require('./inventoryOperations.cjs')(db,stmts,supplierParams),
@@ -195,6 +205,7 @@ module.exports = function initDatabase(dbPath) {
     updateProduct(id, data) {
       const existing = stmts.getProductById.get(id)
       if (!existing) return { success: false, error: 'not found' }
+      require('./costPricing.mjs').assertProductPricingUnchanged(existing,data._expectedPricing)
       for(const key of ['price','cost'])if(data[key]!=null)moneyValue(data[key],key)
       for(const key of ['stock','reorderLevel'])if(data[key]!=null)quantityValue(data[key],key)
       if(Object.hasOwn(data,'_expectedStock')&&data.stock!=null&&existing.stock!==data._expectedStock)return {success:false,error:'庫存已變更，請重新核對'}
@@ -219,7 +230,7 @@ module.exports = function initDatabase(dbPath) {
       if(db.prepare("SELECT 1 FROM sales_documents d,json_each(json_extract(d.data,'$.items')) i WHERE json_extract(i.value,'$.productId')=? LIMIT 1").get(id))throw Error('商品仍被銷售文件使用，請保留以供核對')
       if(stmts.getAllPurchases.all().some(p=>p.procurement&&JSON.parse(p.items||'[]').some(i=>i.productId===id)))throw Error('品項仍被採購文件使用，請保留以供核對')
       const cfg=JSON.parse(stmts.getSetting.get('restaurantConfig')?.value||'{}')
-      if(Object.hasOwn(cfg.recipes||{},id)||Object.values(cfg.recipes||{}).some(rows=>rows.some(r=>r.id===id))||db.prepare('SELECT data FROM restaurant_orders').all().some(r=>{const e=JSON.parse(r.data);return e.items.some(i=>i.id===id)||e.allocations.some(i=>i.id===id)}))throw Error('品項仍被預訂或配方使用，請保留以供核對')
+      if(require('./restaurantRules.mjs').restaurantProductReferences(cfg,db.prepare('SELECT data FROM restaurant_orders').all().map(row=>JSON.parse(row.data))).has(id))throw Error('品項仍被預訂、菜單或配方使用，請保留以供核對')
       stmts.deleteProduct.run(id)
       return { success: true }
     },
@@ -510,7 +521,7 @@ module.exports = function initDatabase(dbPath) {
       return db.prepare('SELECT id,label,createdAt,createdBy,length(data) AS size FROM backups ORDER BY createdAt DESC').all()
     },
     createBackup(label, createdBy) {
-      const allData = this.exportData()
+      const allData = this.exportFullBackup()
       const id = 'bk-' + randomUUID()
       stmts.insertBackup.run({
         id,
@@ -530,7 +541,8 @@ module.exports = function initDatabase(dbPath) {
       return { success: true, id }
     },
     exportData() {
-      const data = {
+      return db.transaction(()=>{
+      let data = {
         products: stmts.getAllProducts.all().map(p => ({ ...p, noBarcode: !!p.noBarcode })),
         members: stmts.getAllMembers.all(),
         orders: stmts.getAllOrders.all().map(o=>readOrder(o.id)),
@@ -557,26 +569,36 @@ module.exports = function initDatabase(dbPath) {
         supplierEntries:db.prepare('SELECT data FROM supplier_entries ORDER BY id').all().map(r=>JSON.parse(r.data)),
         supplierOperations:db.prepare('SELECT data FROM supplier_operations ORDER BY id').all().map(r=>JSON.parse(r.data)),
       }
+      const stock=stockStore.read()
+      if(stock.projection){
+        require('./stockOpeningPlan.mjs').assertStockCustodyMatchesBook(stock.projection.custody,data.products,data.restaurantOrders,stock.projection.warehousing)
+      }
+      data.stockCostEntries=stock.entries;data.stockCostOperations=stock.operations
+      const kitchen=kitchenStore.read();if(require('./kitchenPrint.mjs').usesKitchenPrinting(kitchen.data.config,kitchen.jobs,kitchen.operations)){data.kitchenPrintJobs=kitchen.jobs;data.kitchenPrintOperations=kitchen.operations}
+      data=recordShapes.project(data)
+      require('./stockBackup.mjs').validateStockCostBook(data,stock)
       // A backup round trip may change insertion order for tied timestamps.
       // Stable collection ordering keeps the revision tied to business content.
       for(const rows of Object.values(data))rows.sort((a,b)=>String(a.id??a.key).localeCompare(String(b.id??b.key)))
       return {...data,_revision:createHash('sha256').update(canonicalSignature(data)).digest('hex')}
+      })()
     },
     // Settings
     getSetting(key) {
-      const row = stmts.getSetting.get(key)
+      const row = stmts.getTypedSetting.get(key)
       return row ? row.value : null
     },
     setSetting(key, value) {
+      if(key==='stockCostVersionFence')throw Error('成本資料的版本保護由完整備份流程管理')
       if(key==='businessExchangeV1')throw Error('報價歷史只能由正式報價或還原流程保存')
       stmts.setSetting.run(key, value)
       return { success: true }
     },
-    setSettings(values){if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');db.transaction(()=>{for(const [key,value]of Object.entries(values))stmts.setSetting.run(key,String(value))})();return {success:true}},
+    setSettings(values){if(Object.hasOwn(values,'stockCostVersionFence'))throw Error('成本資料的版本保護由完整備份流程管理');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');db.transaction(()=>{for(const [key,value]of Object.entries(values))stmts.setSetting.run(key,value)})();return {success:true}},
     getAllSettings() {
       const rows = stmts.getAllSettings.all()
       const result = {}
-      for (const r of rows) result[r.key] = r.value
+      for (const r of rows) result[r.key] = require('./settingEncoding.mjs').settingValue(r,'sqlite')
       return result
     },
 
@@ -588,7 +610,7 @@ module.exports = function initDatabase(dbPath) {
       return migrateTx(data)
     },
     isEmpty() {
-      return ['products','members','orders','suppliers','purchases','promotions','manual_journal','held_orders','shifts','cash_log','waste_log','member_topups','sales_documents','sales_operations','customer_entries','customer_operations','supplier_entries','supplier_operations','restaurant_orders','restaurant_operations'].every(t=>db.prepare('SELECT 1 FROM '+t+' LIMIT 1').get()==null)
+      return ['products','members','orders','suppliers','purchases','promotions','manual_journal','held_orders','shifts','cash_log','waste_log','member_topups','sales_documents','sales_operations','customer_entries','customer_operations','supplier_entries','supplier_operations','restaurant_orders','restaurant_operations','stock_cost_entries','stock_cost_operations'].every(t=>db.prepare('SELECT 1 FROM '+t+' LIMIT 1').get()==null)
     },
 
     // ===== Held Orders 掛單 =====
@@ -712,5 +734,19 @@ module.exports = function initDatabase(dbPath) {
       db.close()
     },
   }
-  return require('./recoveryOperations.cjs')(db,api,replaceAllTx)
+  recordShapes.attachReads(api)
+  Object.assign(api,require('./stockOpeningOperations.cjs')(db,api,stockStore),require('./stockCostOperations.cjs')(db,api,stockStore))
+  require('./stockSetupOperations.cjs')(db,api,stockStore)
+  require('./refundReviewOperations.cjs')(db,api,stockStore)
+  require('./stockBusinessOperations.cjs')(db,api,stockStore)
+  require('./warehouseOperations.cjs')(db,api,stockStore)
+  require('./recoveryOperations.cjs')(db,api,replaceAllTx,recordShapes)
+  recordShapes.attachFinancial(api)
+  require('./tableOrderingOperations.cjs')(db,api)
+  require('./kitchenPrintOperations.cjs')(db,api,kitchenStore)
+  const restaurantWithStock=api.applyRestaurantOperation
+  api.applyRestaurantOperation=function(request,actor){if(require('./privateDrafts.mjs').assertPrivateDraftCaller(request,actor))this.getPrivateDraftContext(actor);return restaurantWithStock.call(this,request,actor)}
+  const inventoryWithStock=api.applyInventoryOperation
+  api.applyInventoryOperation=function(request,actor){if(require('./privateDrafts.mjs').assertPrivateDraftCaller(request,actor))this.getPrivateDraftContext(actor);return inventoryWithStock.call(this,request,actor)}
+  return api
 }

@@ -1,10 +1,11 @@
 import {tr} from "../i18n"
 import { browserStorage } from '../utils/browserStorage'
 import { useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense } from 'react'
-import { Search, ScanLine, X, Tag, ShoppingCart, DollarSign, Pause, Eye, Clock, Camera } from 'lucide-react'
+import { Search, ScanLine, X, Tag, ShoppingCart, DollarSign, Pause, Eye, Clock, Camera, Receipt } from 'lucide-react'
 import CartPanel from '../components/CartPanel'
 import HeldOrdersModal from '../components/HeldOrdersModal'
 import PriceLookupModal from '../components/PriceLookupModal'
+import ReceiptHistoryModal from '../components/ReceiptHistoryModal'
 import { CATEGORY_META } from '../utils/categories'
 import useIsMobile from '../hooks/useIsMobile'
 import useVisibleViewport from '../hooks/useVisibleViewport'
@@ -28,6 +29,7 @@ export default function POSPage({ store, session }) {
   const [showCart,  setShowCart]   = useState(false)
   const [showHeld,  setShowHeld]   = useState(false)
   const [showLookup,setShowLookup] = useState(false)
+  const [showReceipts,setShowReceipts] = useState(false)
   const [showCamera,setShowCamera] = useState(false)
   // 一鍵開班：零用金自動帶上次的值，收銀員不用每天跳去班別管理
   const [quickCash, setQuickCash] = useState(() => { try { return browserStorage.getItem('pos_last_open_cash') || '' } catch { return '' } })
@@ -181,6 +183,9 @@ export default function POSPage({ store, session }) {
               {scanMode ? tr("掃碼中") : tr("掃碼")}
             </button>
           )}
+          <button className="btn btn-ghost btn-sm" data-receipt-find onClick={()=>setShowReceipts(true)} style={{gap:6,minHeight:48,...mobileAction}}>
+            <Receipt size={15}/>{tr('找收據')}
+          </button>
           {/* 手機/PWA 相機掃描 */}
           <button className="btn btn-ghost btn-sm" onClick={() => setShowCamera(true)}
             aria-label={tr("相機掃描")}
@@ -294,6 +299,7 @@ export default function POSPage({ store, session }) {
       {showLookup && (
         <PriceLookupModal products={products} onClose={()=>setShowLookup(false)}/>
       )}
+      {showReceipts&&<ReceiptHistoryModal orders={store.orders} onClose={()=>setShowReceipts(false)}/>}
       {showCamera && (
         <Suspense fallback={null}>
           <BarcodeScannerModal

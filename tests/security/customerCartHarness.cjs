@@ -1,0 +1,14 @@
+const h=require('./tableKitchenHarness.cjs'),{BrowserWindow,session}=require('electron'),http=require('node:http'),https=require('node:https'),path=require('node:path'),{X509Certificate}=require('node:crypto')
+h.app.commandLine.appendSwitch('host-resolver-rules','MAP cart.pos.test 127.0.0.1')
+const guests=[];let tls,stopTls,tlsOrigin,tlsFingerprint
+async function startTls(){if(tls)return tlsOrigin;const certificate=require('../../electron/sharedCertificate.cjs')(path.join(h.root,'guest-tls'),'127.0.0.1');tlsFingerprint=new X509Certificate(certificate.certificate).fingerprint256
+ tls=https.createServer({pfx:certificate.pfx,passphrase:certificate.passphrase},(req,res)=>{const forwarded=http.request({host:'127.0.0.1',port:h.ordering.getActualPort(),path:req.url,method:req.method,headers:{...req.headers}},reply=>{res.writeHead(reply.statusCode,reply.headers);reply.pipe(res)});forwarded.on('error',()=>{if(!res.headersSent)res.writeHead(502);res.end()});req.pipe(forwarded)});stopTls=require('../../electron/serverShutdown.cjs')(tls);await new Promise((resolve,reject)=>{tls.once('error',reject);tls.listen(0,'127.0.0.1',resolve)});tlsOrigin='https://127.0.0.1:'+tls.address().port;return tlsOrigin}
+async function guest(context,{secure=false,index=0,profile='guest-'+Math.random().toString(16).slice(2),product='bowl',sharedSession=null}={}){
+ const origin=secure?await startTls():'http://cart.pos.test:'+h.ordering.getActualPort(),ss=sharedSession||session.fromPartition(profile);await ss.setProxy({mode:'direct'})
+ if(secure)ss.setCertificateVerifyProc((request,done)=>{let match=false;try{match=request.hostname==='127.0.0.1'&&new X509Certificate(request.certificate.data).fingerprint256===tlsFingerprint}catch{}done(match?0:-2)})
+ ss.webRequest.onBeforeRequest({urls:['http://*/*','https://*/*']},(request,done)=>done({cancel:!request.url.startsWith(origin+'/')}))
+ const w=new BrowserWindow({show:false,width:360,height:850,webPreferences:{session:ss,sandbox:true,contextIsolation:true,nodeIntegration:false,offscreen:true,backgroundThrottling:false}});guests.push(w);w.webContents.on('console-message',event=>{if(/TypeError|ReferenceError|Uncaught|Minified React/.test(event.message))h.errors.push(event.message)})
+ const table=context.tables[index],url=new URL('/menu/',origin);url.search=new URLSearchParams({table:table.id,key:table.key}).toString();await w.loadURL(url.href);await h.wait(w,'!!document.querySelector(".add-btn[data-pid='+product+']")','real guest menu');await h.select(w,'#menu-language','zh-TW');await h.select(w,'#menu-style','simple');return w
+}
+async function finish(){for(const w of guests)if(!w.isDestroyed())w.destroy();if(stopTls)await stopTls();await h.finish()}
+module.exports={...h,guest,startTls,finish,get db(){return h.db},get pc(){return h.pc},get shared(){return h.shared},get ordering(){return h.ordering},get origin(){return h.origin},get tlsOrigin(){return tlsOrigin},get tlsFingerprint(){return tlsFingerprint}}

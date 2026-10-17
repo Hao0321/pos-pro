@@ -1,6 +1,8 @@
 import {AGENT_PROTOCOL,validateAgentDraft} from './agentDraftRules.mjs'
 import {canonicalSignature,moneyValue,quantityValue} from './operationRules.mjs'
 import {procurementLineCents} from './procurementRules.mjs'
+import {sha256} from '@noble/hashes/sha2.js'
+import {bytesToHex} from '@noble/hashes/utils.js'
 export const BUSINESS_PROTOCOL='business-document/v1'
 const object=(v,label)=>{if(!v||typeof v!=='object'||Array.isArray(v))throw Error(label+'格式不正確')}
 const only=(v,keys,label)=>{object(v,label);if(Object.keys(v).some(k=>!keys.includes(k)))throw Error(label+'含不支援的欄位')}
@@ -14,7 +16,9 @@ export function mergeAgentMappings(old,input,products,actor){
   return readAgentMappings({...readAgentMappings(old),[sender]:{...own(readAgentMappings(old),sender),...input.entries}})
 }
 const sourceKey=row=>row.sku?'sku:'+row.sku:row.barcode?'barcode:'+row.barcode:'name:'+row.name
-export async function prepareBusinessDocument(doc,context,overrides={},{skuIsLocal=true}={}){
+export function businessDocumentDraftId(senderId,externalId){return 'b-'+bytesToHex(sha256(new TextEncoder().encode(canonicalSignature([BUSINESS_PROTOCOL,senderId,externalId])))).slice(0,48)}
+export async function prepareBusinessDocument(...args){return prepareBusinessDocumentSync(...args)}
+export function prepareBusinessDocumentSync(doc,context,overrides={},{skuIsLocal=true,now=Date.now()}={}){
   only(doc,['protocol','id','createdAt','sender','recipientStoreId','intent','currency','items','total','fulfilment','note'],'交換單據')
   if(doc.protocol!==BUSINESS_PROTOCOL||!['sale','restaurant','purchase'].includes(doc.intent))throw Error('交換協議版本或單據用途不支援')
   const externalId=text(doc.id,'外部單號',128);only(doc.sender,['id','name'],'來源公司');const senderId=text(doc.sender.id,'來源公司代碼',128)
@@ -41,12 +45,12 @@ export async function prepareBusinessDocument(doc,context,overrides={},{skuIsLoc
     items.push({productId:product.id,qty:row.qty,...(doc.intent==='purchase'&&row.unitPrice!==undefined?{unitCost:row.unitPrice}:{})})
   }
   if(unresolved.length)return {unresolved,chosen,draft:null,senderId}
-  const seed=canonicalSignature([BUSINESS_PROTOCOL,senderId,externalId]),digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(seed)),id='b-'+[...new Uint8Array(digest)].map(v=>v.toString(16).padStart(2,'0')).join('').slice(0,48)
+  const id=businessDocumentDraftId(senderId,externalId)
   const fulfilment=doc.fulfilment||{};only(fulfilment,['supplierId','date','channel','day','slot','customer','contact'],'交付資料')
   const source='來源 '+(doc.sender.name||senderId)+' / '+externalId
   const note=doc.note?text(doc.note,'備註',800):''
   const draft={protocol:AGENT_PROTOCOL,id,issuedAt:doc.createdAt,storeId:context.storeId,catalogueRevision:context.catalogueRevision,kind:doc.intent,items,...fulfilment,note:doc.intent==='restaurant'&&fulfilment.channel==='delivery'&&!note?'':source+(note?'；'+note:'')}
-  const preview=validateAgentDraft(draft,context,Date.now(),true)
+  const preview=validateAgentDraft(draft,context,now,true)
   if(doc.total!==undefined){moneyValue(doc.total,'交換合計');if(Math.round(doc.total*100)!==Math.round(preview.total*100))throw Error('外部單據合計與明細不同，請先核對；沒有建立任何單據')}
   return {draft,unresolved:[],chosen,senderId,source,preview}
 }

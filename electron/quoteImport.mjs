@@ -1,18 +1,20 @@
-import {BUSINESS_PROTOCOL,prepareBusinessDocument} from './businessDocument.mjs'
+import {BUSINESS_PROTOCOL,prepareBusinessDocument,businessDocumentDraftId} from './businessDocument.mjs'
 import {validateAgentDraft} from './agentDraftRules.mjs'
 import {QUOTE_PROTOCOL,CATALOGUE_PROTOCOL,validateQuote} from './businessExchange.mjs'
 import {canonicalSignature} from './operationRules.mjs'
+import {sha256} from '@noble/hashes/sha2.js'
+import {bytesToHex} from '@noble/hashes/utils.js'
 
 const sourceNote=quote=>'Quote '+quote.id+' / revision '+quote.revision+' · '+quote.sender.name+(quote.note?'；'+quote.note:'')
+const quoteFamilyId=document=>'q-'+bytesToHex(sha256(new TextEncoder().encode(canonicalSignature([QUOTE_PROTOCOL,document.sender.id,document.id,document.recipient.id])))).slice(0,48)
+export const quoteDocumentDraftId=document=>businessDocumentDraftId(document.sender.id,quoteFamilyId(document))
 export async function prepareExternalDocument(document,context,overrides={}){
   if(document.protocol===CATALOGUE_PROTOCOL)throw Error('這是價目目錄，請讓 Agent 加上數量整理成叫貨單，或取得對方報價')
   if(document.protocol!==QUOTE_PROTOCOL)return prepareBusinessDocument(document,context,overrides)
   validateQuote(document,{now:Date.now(),recipientStoreId:context.storeId})
   // The family key is independent of the revision: accepting a revised quote
   // must never create a second purchase under a newly derived operation ID.
-  const family=canonicalSignature([QUOTE_PROTOCOL,document.sender.id,document.id,document.recipient.id])
-  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(family))
-  const id='q-'+[...new Uint8Array(digest)].map(v=>v.toString(16).padStart(2,'0')).join('').slice(0,48)
+  const id=quoteFamilyId(document)
   // A supplier's SKU is scoped to that supplier. An identical local ID is
   // not a global product identity; use the partner mapping or review by name.
   const result=await prepareBusinessDocument({protocol:BUSINESS_PROTOCOL,id,createdAt:new Date().toISOString(),sender:document.sender,recipientStoreId:document.recipient.id,intent:'purchase',currency:document.currency,items:document.items,total:document.total},context,overrides,{skuIsLocal:false})

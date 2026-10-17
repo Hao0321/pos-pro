@@ -10,9 +10,18 @@ import { getSetting, setSetting } from '../utils/dataAccess'
 import { averageTicket, profitAnalysis, getExpiringProducts, getReorderList, customerSegmentation, computeAllRFM } from '../utils/analytics'
 import {businessReportRows,reportDay,reportLineRevenue} from '../utils/businessReports'
 import {salesDate} from '../../electron/salesRules.mjs'
+import useSalesReportView from '../hooks/useSalesReportView'
+import ReportCostStatus from '../components/ReportCostStatus'
+import {formatMoneyCents,centsNumber} from '../../electron/journalAmounts.mjs'
 
-export default function DashboardPage({ store, session }) {
-  const { products, members, orders:posOrders, todayRevenue, todayOrders, todayProfit, lowStockCount, openShift } = store
+export default function DashboardPage({ store:sourceStore, session }) {
+  const view=useSalesReportView(sourceStore,session),report=view.report,actual=report?.status==='active',waiting=view.loading||!!view.error
+  const store=actual?{...sourceStore,...report.data}:sourceStore
+  const { products, members, orders:posOrders, todayRevenue:referenceRevenue, todayOrders, todayProfit:referenceProfit, lowStockCount, openShift } = store
+  const todayRevenue=actual?centsNumber(report.periods.today.revenueCents):referenceRevenue
+  const todayProfit=waiting?null:actual?(report.periods.today.profitCents===null?null:centsNumber(report.periods.today.profitCents)):referenceProfit
+  const revenueText=waiting?'—':actual?formatMoneyCents(report.periods.today.revenueCents):todayRevenue.toLocaleString()
+  const profitText=waiting?'—':todayProfit===null?tr('成本待確認'):actual?'$'+formatMoneyCents(report.periods.today.profitCents):'$'+todayProfit.toLocaleString()
   const orders=useMemo(()=>[...posOrders,...businessReportRows(store.sales?.documents||[])],[posOrders,store.sales?.documents])
   const [salesGoal, setSalesGoal] = useState(0)
   const [editingGoal, setEditingGoal] = useState(false)
@@ -38,11 +47,11 @@ export default function DashboardPage({ store, session }) {
     // 排除完整退貨配對（原訂單 status='refunded' + 對應的全退負數訂單）；
     // 部分退貨保留：原訂單 (status='completed') 與負數退貨訂單兩邊都計入，總和會正確
     const validOrders = settledOrders(orders)
-    const today = store.sales?.today||salesDate(new Date())
+    const today = report?.today||store.sales?.today||salesDate(new Date())
     const yesterday = new Date(Date.parse(today)-86400000).toISOString().slice(0,10)
     const ordersToday    = validOrders.filter(o => reportDay(o) === today)
     const ordersYesterday = validOrders.filter(o => reportDay(o) === yesterday)
-    const revYesterday    = ordersYesterday.reduce((s,o) => s + netSale(o), 0)
+    const revYesterday    = actual?centsNumber(report.periods.yesterday.revenueCents):ordersYesterday.reduce((s,o) => s + netSale(o), 0)
     const revDelta = revYesterday > 0 ? ((todayRevenue - revYesterday) / revYesterday * 100) : 0
 
     // 最近 7 天
@@ -50,7 +59,7 @@ export default function DashboardPage({ store, session }) {
       const d = new Date(); d.setDate(d.getDate() - (6-i))
       const ds = new Date(Date.parse(today)-(6-i)*86400000).toISOString().slice(0,10)
       const dayOrders = validOrders.filter(o => reportDay(o) === ds)
-      return { date: d, label: d.getDate() + '日', revenue: dayOrders.reduce((s,o)=>s+netSale(o),0), count: dayOrders.length }
+      return { date: d, label: d.getDate() + '日', revenue: actual?centsNumber(report.days[i].revenueCents):dayOrders.reduce((s,o)=>s+netSale(o),0), count: dayOrders.length }
     })
     const max7 = Math.max(...last7.map(d => d.revenue), 1)
 
@@ -79,7 +88,7 @@ export default function DashboardPage({ store, session }) {
     }).slice(0, 5)
 
     return { ordersToday, revDelta, last7, max7, topItems, lowStock, outOfStock, expiringSoon }
-  }, [orders, products, todayRevenue])
+  }, [orders, products, todayRevenue,actual,report])
 
   // 30 天指標（analytics utils）
   const analytics30d = useMemo(() => {
@@ -100,7 +109,8 @@ export default function DashboardPage({ store, session }) {
   const goalPct = salesGoal > 0 ? Math.min(100, todayRevenue / salesGoal * 100) : 0
 
   return (
-    <div style={ds.root}>
+    <div style={ds.root} data-dashboard>
+      <ReportCostStatus view={view}/>
       {/* 營運摘要 */}
       <div style={ds.hero} className="animate-up">
         <div style={{position:'relative', zIndex:1}}>
@@ -108,10 +118,10 @@ export default function DashboardPage({ store, session }) {
             <Calendar size={13}/>
             {new Date().toLocaleDateString(getLocale(), { year:'numeric', month:'long', day:'numeric', weekday:'long' })}
           </div>
-          <h1 style={{fontSize:32, fontWeight:800, letterSpacing:'-.02em', color:'var(--text-primary)'}}>
+          <h1 style={{fontSize:'clamp(22px,3vw,32px)', fontWeight:800, letterSpacing:'-.02em', color:'var(--text-primary)'}}>
             {tr(greet())}，<span style={{background:'var(--accent-grad)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent'}}>{session?.username || tr("使用者")}</span>
           </h1>
-          <div style={{fontSize:14, color:'var(--text-secondary)', marginTop:6}}>{tr("今天有 ")}<strong style={{color:'var(--accent-deep)'}}>{stats.ordersToday.length}</strong>{tr(" 筆訂單，營收 ")}<strong style={{color:'var(--accent-deep)', fontFamily:'var(--font-mono)'}}>${todayRevenue.toLocaleString()}</strong>
+          <div style={{fontSize:14, color:'var(--text-secondary)', marginTop:6}}>{tr("今天有 ")}<strong style={{color:'var(--accent-deep)'}}>{stats.ordersToday.length}</strong>{tr(" 筆訂單，營收 ")}<strong style={{color:'var(--accent-deep)', fontFamily:'var(--font-mono)'}}>${revenueText}</strong>
           </div>
         </div>
         {openShift && (
@@ -123,23 +133,24 @@ export default function DashboardPage({ store, session }) {
 
       {/* KPI cards — 今日 */}
       <div style={ds.kpiGrid}>
-        <KpiCard icon={DollarSign} color="gold" label={tr("今日營收")} value={`$${todayRevenue.toLocaleString()}`}
+        <KpiCard metric="revenue" icon={DollarSign} color="gold" label={tr("今日營收")} value={`$${revenueText}`}
           delta={stats.revDelta} subtitle={tr("比昨日 {0}{1}%", {0: stats.revDelta >= 0 ? '+' : '', 1: stats.revDelta.toFixed(1)})} idx={0}/>
         <KpiCard icon={ShoppingBag} color="blue" label={tr("今日訂單")}
           value={stats.ordersToday.length} subtitle={tr("平均 ${0}/單", {0: stats.ordersToday.length ? Math.round(todayRevenue / stats.ordersToday.length) : 0})} idx={1}/>
-        <KpiCard icon={TrendingUp} color="green" label={tr("今日毛利")}
-          value={`$${todayProfit.toLocaleString()}`} subtitle={tr("毛利率 {0}%", {0: todayRevenue > 0 ? (todayProfit/todayRevenue*100).toFixed(1) : 0})} idx={2}/>
+        <KpiCard metric="profit" icon={TrendingUp} color="green" label={tr("今日毛利")}
+          value={profitText} subtitle={waiting||todayProfit===null?'':tr("毛利率 {0}%", {0: actual?report.periods.today.margin:todayRevenue > 0 ? (todayProfit/todayRevenue*100).toFixed(1) : 0})} idx={2}/>
         <KpiCard icon={Users} color="teal" label={tr("會員 / 商品")} value={`${members.length} / ${products.length}`} subtitle={tr("會員數 / 商品數")} idx={3}/>
       </div>
 
+      <details data-dashboard-details><summary style={{minHeight:48,cursor:'pointer',fontSize:16,padding:'12px 0'}}>{tr('看明細')}</summary>
       {/* 30 天指標 row */}
       <div style={ds.kpiGrid}>
         <KpiCard icon={BarChart2} color="purple" label={tr("30 天客單價")}
           value={`$${Math.round(analytics30d.avgTicket.avg).toLocaleString()}`}
           subtitle={tr("{0} 筆訂單", {0: analytics30d.avgTicket.count})} idx={0}/>
-        <KpiCard icon={Percent} color="green" label={tr("30 天毛利率")}
-          value={`${analytics30d.profit.marginRate.toFixed(1)}%`}
-          subtitle={tr("毛利 ${0}", {0: Math.round(analytics30d.profit.profit).toLocaleString()})} idx={1}/>
+        <KpiCard metric="margin30" icon={Percent} color="green" label={tr("30 天毛利率")}
+          value={waiting?'—':actual?(report.periods.last30.margin===null?tr('成本待確認'):report.periods.last30.margin+'%'):`${analytics30d.profit.marginRate.toFixed(1)}%`}
+          subtitle={waiting?'':actual?(report.periods.last30.profitCents===null?'':tr('毛利 ${0}',{0:formatMoneyCents(report.periods.last30.profitCents)})):tr("毛利 ${0}", {0: Math.round(analytics30d.profit.profit).toLocaleString()})} idx={1}/>
         <KpiCard icon={Truck} color="amber" label={tr("待補貨")}
           value={analytics30d.reorderList.length}
           subtitle={analytics30d.reorderList.length > 0 ? tr("點進貨管理 ➜") : tr("庫存充足")} idx={2}/>
@@ -328,13 +339,14 @@ export default function DashboardPage({ store, session }) {
           })}
         </div>
       </div>
+      </details>
     </div>
   )
 }
 
-function KpiCard({ icon: Icon, color, label, value, subtitle, delta, idx = 0 }) {
+function KpiCard({ icon: Icon, color, label, value, subtitle, delta, idx = 0,metric }) {
   return (
-    <div className="card card-hover animate-up" style={{...ds.kpi, animationDelay:`${idx*60}ms`}}>
+    <div data-dashboard-kpi={metric} className="card card-hover animate-up" style={{...ds.kpi,minWidth:0,overflowWrap:'anywhere', animationDelay:`${idx*60}ms`}}>
       <div style={{display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:14}}>
         <span className="section-title" style={{margin:0}}>{tr(label)}</span>
         <div style={{...ds.kpiIcon, background: `var(--${color}-dim)`, color: `var(--${color})`}}>
@@ -363,10 +375,10 @@ function greet() {
 }
 
 const ds = {
-  root: { flex:1, overflowY:'auto', padding:'24px 28px', background:'var(--bg-base)' },
+  root: { flex:1, overflowY:'auto', padding:'clamp(16px,2vw,24px)', background:'var(--bg-base)' },
   hero: {
     position:'relative',
-    padding:'28px 32px',
+    padding:'20px 24px',
     marginBottom:20,
     borderRadius:'var(--r4)',
     background:'var(--bg-raised)',
@@ -416,7 +428,7 @@ const ds = {
     marginBottom:14, fontSize:13,
   },
   row2: {
-    display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))',
+    display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(min(100%,300px), 1fr))',
     gap:14,
   },
   topRow: {

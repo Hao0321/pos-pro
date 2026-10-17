@@ -1,5 +1,6 @@
 import {readRecords,writeRecords,withSalesLock,assertOriginalOperationAvailable} from './browserStorage'
 import {EXCHANGE_SETTING,EXCHANGE_PREFIX,EXCHANGE_ACTION,readExchangeStore,planExchange,exchangeReceipt,makeCatalogue,makePartyCard,readExchangeTextSetting} from '../../electron/businessExchange.mjs'
+import {updateBrowserSettings} from '../../electron/settingEncoding.mjs'
 
 const getSetting=(data,key)=>readExchangeTextSetting(data.pos_business_settings,key)
 export function getBrowserExchangeContext(actor){
@@ -23,8 +24,8 @@ export function commitBrowserExchange(request,actor){
       replay=!!old;checked=true
       if(old){if(old.action!==EXCHANGE_ACTION)throw Error('報價回執需要核對');return exchangeReceipt(request,typeof old.detail==='string'?JSON.parse(old.detail):old.detail,state)}
       const plan=planExchange(request,state,data.pos2_products,sender,actor)
-      const settings=new Map(data.pos_business_settings.map(s=>[s.key,s.value]));settings.set(EXCHANGE_SETTING,JSON.stringify(plan.state))
-      writeRecords({pos_business_settings:[...settings].map(([key,value])=>({key,value})),pos_audit_log:[{id:EXCHANGE_PREFIX+request.id,action:EXCHANGE_ACTION,label:'客戶報價',timestamp:new Date().toISOString(),userId:actor.userId||'',username:actor.username||'',role:actor.role,detail:plan.receipt},...data.pos_audit_log]},record.revision)
+      const settings=updateBrowserSettings(data.pos_business_settings,{[EXCHANGE_SETTING]:JSON.stringify(plan.state)})
+      writeRecords({pos_business_settings:settings,pos_audit_log:[{id:EXCHANGE_PREFIX+request.id,action:EXCHANGE_ACTION,label:'客戶報價',timestamp:new Date().toISOString(),userId:actor.userId||'',username:actor.username||'',role:actor.role,detail:plan.receipt},...data.pos_audit_log]},record.revision)
       return exchangeReceipt(request,plan.receipt,plan.state)
     }catch(error){return {success:false,committed:error.historyUncertain?null:error.operationConflict===true||checked&&!replay?false:null,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
   })

@@ -1,19 +1,23 @@
 import {canonicalSignature,operationHeader,quantityValue,moneyValue} from './operationRules.mjs'
 import {PROCUREMENT_KINDS,isProcurement,planProcurement,recordProcurementReceipt,procurementEvent,validateProcurement,procurementDate} from './procurementRules.mjs'
+import {PHYSICAL_STOCKTAKE,PHYSICAL_MEANING,planPhysicalStocktake,assertPhysicalStocktakeReceipt} from './physicalStocktake.mjs'
 export const INVENTORY_ACTION='INVENTORY_OPERATION'
 export const INVENTORY_PREFIX='stock-operation:'
 export function planInventory(request,data,actor){
   operationHeader(request)
   const products=new Map(data.products.map(p=>[p.id,{...p}])),changed=new Set(),created=new Set()
-  let purchase=null,supplier=null,cashLog=null
+  let purchase=null,supplier=null,cashLog=null,stocktake=null
   if(request.kind==='stocktake'){
+    if(request.protocol!==undefined&&request.protocol!==PHYSICAL_STOCKTAKE)throw Error('盤點版本不支援，請保留原草稿核對')
+    if(request.protocol===PHYSICAL_STOCKTAKE||request.quantityMeaning===PHYSICAL_MEANING)stocktake=planPhysicalStocktake(request,data)
+    else if(request.quantityMeaning!==undefined&&request.quantityMeaning!=='available'||!request.quantityMeaning&&(data.restaurantEntries||[]).some(row=>!['completed','cancelled'].includes(row.status)))throw Error('請使用實際架上數量盤點，系統會自動核對預留')
     if(!Array.isArray(request.counts)||!request.counts.length||request.counts.length>10000)throw Error('請確認盤點品項')
     for(const count of request.counts){
       const p=products.get(count.id)
       if(!p||changed.has(count.id))throw Error('盤點商品不存在或重複')
-      quantityValue(count.stock,'實盤數量');quantityValue(count.expectedStock,'盤點時庫存')
-      if(p.stock!==count.expectedStock)throw Error('盤點期間庫存已變更，請重新核對 '+p.name)
-      p.stock=count.stock;changed.add(p.id)
+      if(stocktake){p.stock=stocktake.rows.find(row=>row.fact.product.id===p.id).availableAfterUnits/1000}
+      else{quantityValue(count.stock,'實盤數量');quantityValue(count.expectedStock,'盤點時庫存');if(p.stock!==count.expectedStock)throw Error('盤點期間庫存已變更，請重新核對 '+p.name);p.stock=count.stock}
+      changed.add(p.id)
     }
   }else if(request.kind==='receive'){
     const original=data.purchases.find(p=>p.id===request.purchaseId)
@@ -61,12 +65,14 @@ export function planInventory(request,data,actor){
     }
   }else throw Error('庫存異動類型不正確')
   const receipt={id:request.id,kind:request.kind,signature:canonicalSignature(request),productIds:[...changed],purchaseId:purchase?.id||null,supplierId:supplier?.id||null,time:request.time}
+  if(stocktake)receipt.stocktake=stocktake
   if(isProcurement(purchase)){receipt.purchaseVersion=purchase.procurement.revision;receipt.document=procurementEvent(purchase,request)}
   if(cashLog)receipt.cashLogId=cashLog.id
   return {receipt,products:[...changed].map(id=>products.get(id)),created:[...created],purchase,supplier,cashLog,createPurchase:request.kind==='purchase-create'}
 }
 export function inventoryReceipt(request,row,data){
   if(row.signature!==canonicalSignature(request))throw Object.assign(Error('原操作編號已存在且內容不同，請核對已建立單據；新單請重新整理草稿'),{operationConflict:true})
+  if(request.protocol===PHYSICAL_STOCKTAKE)assertPhysicalStocktakeReceipt(request,row.stocktake)
   if(!Array.isArray(row.productIds)||!row.productIds.length&&!PROCUREMENT_KINDS.includes(request.kind))throw Error('庫存異動編號內容不一致')
   const products=row.productIds.map(id=>data.products.find(p=>p.id===id))
   if(products.some(p=>!p))throw Error('原異動商品已不存在，請先核對')

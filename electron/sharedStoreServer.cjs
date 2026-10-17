@@ -3,14 +3,14 @@ const {randomBytes,randomUUID,timingSafeEqual}=require('node:crypto')
 const {verifyPassword,authorizeActor}=require('./ipcSecurity.cjs')
 const snapshot=require('./storeSnapshot.cjs')
 const businessKeys=new Set(['pointsEarnRate','pointsRedeemRate','birthdayBonus','dailySalesGoal','storeName','storePhone','storeAddress','receiptFooter'])
-const readMethods=['getProducts','findByBarcode','getMembers','getOrders','getOrderItems','checkoutReceipt','getCustomerOrders','getSuppliers','getPurchases','getPromotions','getManualJournal','getAuditLogs','getHeldOrders','getShifts','getOpenShift','getCashLog','getWasteLog','getTopups','getBackups','exportData','getScenarioTemplateReceipt']
-const writeMethods=['addProduct','updateProduct','deleteProduct','addMember','updateMember','deleteMember','checkout','refundOrder','updateOrderStatus','addSupplier','updateSupplier','deleteSupplier','addPurchase','updatePurchase','deletePurchase','addPromotion','updatePromotion','deletePromotion','addManualEntry','deleteManualEntry','writeAuditLog','addHeldOrder','deleteHeldOrder','openShift','closeShift','addCashLog','addWaste','addTopup','createBackup']
+const readMethods=['getKitchenPrintState','getProducts','findByBarcode','getMembers','getOrders','getOrderItems','checkoutReceipt','getCustomerOrders','getSuppliers','getPurchases','getPromotions','getManualJournal','getAuditLogs','getHeldOrders','getShifts','getOpenShift','getCashLog','getWasteLog','getTopups','getBackups','exportData','getScenarioTemplateReceipt']
+const writeMethods=['applyKitchenPrintOperation','addProduct','updateProduct','deleteProduct','addMember','updateMember','deleteMember','checkout','refundOrder','updateOrderStatus','addSupplier','updateSupplier','deleteSupplier','addPurchase','updatePurchase','deletePurchase','addPromotion','updatePromotion','deletePromotion','addManualEntry','deleteManualEntry','writeAuditLog','addHeldOrder','deleteHeldOrder','openShift','closeShift','addCashLog','addWaste','addTopup','createBackup']
 const exposed=new Set([...readMethods,...writeMethods].map(k=>'db:'+k))
 const random=()=>randomBytes(32).toString('hex')
 const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b))
 function privateIPv4(host){const n=host.split('.').map(Number);return n.length===4&&n.every((v,i)=>Number.isInteger(v)&&v>=0&&v<=255&&String(v)===host.split('.')[i])&&(n[0]===10||n[0]===192&&n[1]===168||n[0]===172&&n[1]>=16&&n[1]<=31)}
 function addresses(){return [...new Set(Object.values(os.networkInterfaces()).flat().filter(i=>i?.family==='IPv4'&&!i.internal&&privateIPv4(i.address)).map(i=>i.address))]}
-module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{},now=Date.now,allowLoopback=false}){
+module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{},now=Date.now,allowLoopback=false,stockSetupEnabled=false,orderingStatus=()=>null}){
   let server=null,host='',port=0,cert=null,revision=0,startTask=null,stopTask=null,stopServer=null,stopping=false
   const devices=new Map(),pairs=new Map(),attempts=new Map()
   function storeIdentity(){let id=db.getSetting('sharedStoreId');if(!id){id=randomUUID();db.setSetting('sharedStoreId',id)}return id}
@@ -32,10 +32,12 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(req.headers.host!==expected)throw Object.assign(Error('店面網址不符'),{status:403})
     if(req.method==='POST'&&(req.headers.origin!==`https://${expected}`||req.headers['sec-fetch-site']&&req.headers['sec-fetch-site']!=='same-origin'))throw Object.assign(Error('拒絕其他網站的請求'),{status:403})
   }
-  async function body(req){
+  async function body(req,limit=1024*1024){
     if(req.headers['content-type']!=='application/json')throw Object.assign(Error('請使用 JSON 請求'),{status:415})
+    const tooLarge=()=>Object.assign(Error(limit===1024*1024?'請求過大，請分批操作':'備份太大，請保留原檔並在店面電腦核對'),{status:413})
+    if(Number(req.headers['content-length'])>limit)throw tooLarge()
     let size=0,chunks=[]
-    for await(const chunk of req){size+=chunk.length;if(size>1024*1024)throw Object.assign(Error('請求過大，請分批操作'),{status:413});chunks.push(chunk)}
+    for await(const chunk of req){size+=chunk.length;if(size>limit)throw tooLarge();chunks.push(chunk)}
     return JSON.parse(Buffer.concat(chunks).toString('utf8'))
   }
   function throttle(req){const id=req.socket.remoteAddress,old=attempts.get(id);if(!old||now()-old.start>60000){attempts.set(id,{start:now(),count:1});return}if(++old.count>10)throw Object.assign(Error('嘗試次數過多，請一分鐘後再試'),{status:429})}
@@ -53,25 +55,51 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     authorizeActor(db,actor,method,args)
     if(method==='db:getStoreSnapshot')return snapshot(db,actor)
     if(method==='db:getRestaurantState')return db.getRestaurantState()
+    if(method==='db:getRestaurantMenuQuote')return db.getRestaurantMenuQuote(args[0],actor)
+    if(method==='db:getRestaurantMenuSetupPreview')return db.getRestaurantMenuSetupPreview(args[0],actor)
+    if(method==='db:getRestaurantAgentPreview')return db.getRestaurantAgentPreview(args[0],actor)
     if(method==='db:getAgentContext')return db.getAgentContext(actor)
+    if(method==='db:getPrivateDraftContext')return db.getPrivateDraftContext(actor)
+    if(method==='db:lookupPrivateDraftOriginal')return db.lookupPrivateDraftOriginal(args[0],actor)
     if(method==='db:getExchangeContext')return db.getExchangeContext(actor)
     if(method==='db:applyExchangeOperation')return db.applyExchangeOperation(args[0],actor)
     if(method==='db:getSalesState')return db.getSalesState(actor)
     if(method==='db:getRecoveryState')return db.getRecoveryState(args[0],actor)
+    if(method==='db:previewRestore')return db.previewRestore(args[0],actor)
+    if(method==='db:applyRestorePreview')return db.applyRestorePreview(args[0],actor)
+    if(method==='db:lookupRestorePreview')return db.lookupRestorePreview(args[0],actor)
     if(method==='db:applyRecoveryOperation')return db.applyRecoveryOperation(args[0],actor)
     if(method==='db:lookupRecoveryOperation')return db.lookupRecoveryOperation(args[0],actor)
     if(method==='db:exportRecoverySource')return db.exportRecoverySource(args[0],actor)
+    if(method==='db:exportFullBackup')return db.exportFullBackup(actor)
+    if(method==='db:getProtectedBackups')return db.getProtectedBackups(actor)
+    if(method==='db:getStocktakeState')return db.getStocktakeState(actor)
+    if(method==='db:getWarehouseState')return db.getWarehouseState(actor)
+    if(method==='db:applyWarehouseOperation')return db.applyWarehouseOperation(args[0],actor)
+    if(method==='db:getStockSetupAccess')return {enabled:stockSetupEnabled===true}
+    if(method==='db:getStockSetupState'){if(!stockSetupEnabled)throw Error('成本設定尚未開放新保存，請保留原編號核對');return db.getStockSetupState(actor)}
+    if(method==='db:previewStockSetup'){if(!stockSetupEnabled)throw Error('成本設定尚未開放新保存，請保留原編號核對');return db.previewStockSetup(args[0],actor)}
+    if(method==='db:applyStockSetupOperation')return db.applyStockSetupOperation(args[0],actor,{allowNew:stockSetupEnabled===true})
+    if(method==='db:getRefundContext')return db.getRefundContext(actor)
+    if(method==='db:previewRefund')return db.previewRefund(args[0],actor)
     if(method==='db:exportRecoveryDiagnostics')return db.exportRecoveryDiagnostics(actor)
+    if(method==='db:getStockAccountingState')return db.getStockAccountingState(actor)
+    if(method==='db:getStockHistory')return db.getStockHistory(args[0],actor)
+    if(method==='db:getStockSalesState')return db.getStockSalesState(actor)
     if(method==='db:applySalesOperation')return db.applySalesOperation(args[0],actor)
     if(method==='db:applyCustomerLedgerOperation')return db.applyCustomerLedgerOperation(args[0],actor)
     if(method==='db:getSupplierState')return db.getSupplierState(actor)
     if(method==='db:applySupplierLedgerOperation')return db.applySupplierLedgerOperation(args[0],actor)
     if(method==='db:rememberAgentMappings')return db.rememberAgentMappings(args[0],actor)
     if(method==='db:applyRestaurantOperation')return db.applyRestaurantOperation(args[0],actor)
+    if(method==='db:getTableOrderingContext')return db.getTableOrderingContext(actor)
+    if(method==='db:getCustomerIntakeContext')return db.getCustomerIntakeContext(args[0],actor)
+    if(method==='db:getKitchenPrintState')return db.getKitchenPrintState(actor)
+    if(method==='db:applyKitchenPrintOperation')return db.applyKitchenPrintOperation(args[0],actor)
     if(method==='db:applyInventoryOperation')return db.applyInventoryOperation(args[0],actor)
     if(method==='db:applyScenarioTemplate')return db.applyScenarioTemplate(args[0],actor)
     if(method==='shared:getStatus')return {running:true,host,port,revision,shared:true}
-    if(method==='server:getStatus')return {running:false,ip:host,port,shared:true}
+    if(method==='server:getStatus')return orderingStatus()||{running:false,ip:host,port,shared:true}
     if(method==='settings:get'){if(!businessKeys.has(args[0]))throw Error('此項設定請在店面電腦查閱');return db.getSetting(args[0])}
     if(method==='settings:getAll')return Object.fromEntries([...businessKeys].map(k=>[k,db.getSetting(k)]))
     if(method==='settings:set'||method==='settings:setMany'){
@@ -85,6 +113,10 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(name==='updateSupplier'&&Object.hasOwn(args[1]||{},'catalog')&&!Object.hasOwn(args[1],'_expectedCatalog'))throw Error('修改貨源須帶入原目錄，請重新核對')
     if(name==='writeAuditLog'){args[0]={...args[0],userId:actor.userId,username:actor.username,role:actor.role}}
     if(name==='getScenarioTemplateReceipt')return db[name](args[0],actor)
+    if(name==='checkout')return db.checkout(args[0],args[1],args[2],actor)
+    if(name==='refundOrder')return db.refundOrder(args[0],args[1],actor)
+    if(['addProduct','addWaste','deleteProduct','addManualEntry','deleteManualEntry'].includes(name))return db[name](args[0],actor)
+    if(['updateProduct','updateOrderStatus'].includes(name))return db[name](args[0],args[1],actor)
     return db[name](...args)
   }
   async function handle(req,res){
@@ -94,7 +126,16 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
       const pathname=new URL(req.url,`https://${host}:${port}`).pathname
       if(pathname.startsWith('/api/')){
         if(req.method!=='POST')return reply(res,405,{error:'請使用 POST'})
-        const input=await body(req)
+        const backupPreview=pathname==='/api/backup-preview'
+        if(backupPreview){
+          // The larger file route is owner-only BEFORE reading its body. Device,
+          // CSRF, current credentials and role are checked again after upload.
+          const device=sessionFor(req),actor=current(device)
+          if(!actor)throw Object.assign(Error('請重新登入店面帳號'),{status:401})
+          if(!equal(req.headers['x-pos-csrf'],device.csrf))throw Object.assign(Error('請重新整理以驗證連線'),{status:403})
+          authorizeActor(db,actor,'db:previewRestore',[])
+        }
+        const input=await body(req,backupPreview?64*1024*1024+65536:1024*1024)
         if(stopping)throw Object.assign(Error('店面正在關閉，請稍後重試'),{status:503})
         if(!input||typeof input!=='object'||Array.isArray(input))throw Error('請求格式錯誤')
         if(pathname==='/api/pair'){
@@ -109,7 +150,7 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
         const device=sessionFor(req)
         if(pathname==='/api/bootstrap')return reply(res,200,{success:true,csrf:device.csrf,revision,storeId:device.storeId})
         if(!equal(req.headers['x-pos-csrf'],device.csrf))throw Object.assign(Error('請重新整理以驗證連線'),{status:403})
-        if(pathname!=='/api/rpc'||typeof input.method!=='string'||!Array.isArray(input.args)||input.args.length>4)throw Error('請求格式錯誤')
+        if(!['/api/rpc','/api/backup-preview'].includes(pathname)||typeof input.method!=='string'||!Array.isArray(input.args)||input.args.length>4||backupPreview&&(input.method!=='db:previewRestore'||input.args.length!==1))throw Error('請求格式錯誤')
         if(input.method==='auth:login')throttle(req)
         const result=await dispatch(device,input.method,input.args)
         return reply(res,200,{result,revision,storeId:device.storeId})

@@ -3,11 +3,12 @@ const assert=require('node:assert/strict'),path=require('node:path'),fs=require(
 const {js,wait,input,select,tap,button,capture:rawCapture}=require('./rendererHarness.cjs')
 const {tr}=require('../../public/i18n/core.mjs'),{productReference}=require('../../electron/businessExchange.mjs')
 const root=process.env.POS_SECURITY_FIXTURE_ROOT;if(!root)throw Error('isolated fixture required')
+const evidence=process.env.POS_CUSTOMERS_EVIDENCE||root,costMode=process.env.POS_RECOVERY_WITH_COST==='1';fs.mkdirSync(evidence,{recursive:true})
 const rendererPath=path.resolve(process.env.POS_RECOVERY_RENDERER||'dist/index.html'),owner={role:'owner',userId:'owner',username:'Recovery Owner'}
 app.setPath('userData',root);app.disableHardwareAcceleration()
 let db,pc,phone,shared,tests=0;const observations={},q=JSON.stringify,en=source=>tr(source,{},'en')
 const pass=name=>{tests++;console.log('PASS '+name)}
-async function capture(target,folder,name){await js(target,'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');await new Promise(resolve=>setTimeout(resolve,150));await rawCapture(target,folder,name)}
+async function capture(target,folder,name){await js(target,'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');await new Promise(resolve=>setTimeout(resolve,300));await rawCapture(target,folder===root?evidence:folder,name)}
 const doc=()=>db.getSalesState(owner).documents[0]
 async function login(target){await wait(target,'[...document.querySelectorAll("button")].some(b=>b.textContent.includes("Recovery Owner"))','account chooser');await js(target,'[...document.querySelectorAll("button")].find(b=>b.textContent.includes("Recovery Owner")).click()');await input(target,'input[type=password]','fixture-password');await js(target,'document.querySelector("form").requestSubmit()');await wait(target,'!!document.querySelector(".easy-home")','signed-in home')}
 async function task(target,query,label){await input(target,'.easy-search input',query);await wait(target,'[...document.querySelectorAll(".easy-task strong")].some(e=>e.textContent==='+q(en(label))+')','task '+label);await js(target,'[...document.querySelectorAll(".easy-task")].find(e=>e.querySelector("strong")?.textContent==='+q(en(label))+').setAttribute("data-recovery-task","")');await tap(target,'[data-recovery-task]')}
@@ -23,10 +24,12 @@ app.whenReady().then(async()=>{try{
   db=require(process.env.POS_RECOVERY_BACKEND||'../../electron/database.js')(path.join(root,'recovery-ui.db'))
   const password=JSON.stringify({salt:Array(32).fill(1),iter:1000,hash:[...pbkdf2Sync('fixture-password',Buffer.alloc(32,1),1000,32,'sha256')]})
   db.addUser({id:'owner',username:owner.username,password,role:'owner'});db.setSettings({storeName:'Recovery Fixture',sharedStoreId:'recovery-store'});db.addProduct({id:'p',name:'Recovery product',unit:'個',stock:5,cost:4,price:10});db.openShift({id:'shift',openCash:100,cashier:owner.username})
+  if(costMode){const s=db.getSalesState(owner),opened=db.applyStockCostOperation({protocol:'pos-stock-cost/v1',action:'open',id:'recovery-cost-opening',time:new Date().toISOString(),storeId:s.storeId,epoch:s.epoch,reviewed:true,snapshotDigest:db.getStockCostPreview(owner).snapshotDigest,overrides:[]},owner);assert.equal(opened.success,true,opened.error)}
   const context=db.getSalesState(owner),header={kind:'sales',storeId:context.storeId,epoch:context.epoch,date:context.today}
   let result=db.applySalesOperation({...header,id:'recovery-sale',time:new Date().toISOString(),action:'create',document:{customer:{id:'buyer',name:'Recovery customer'},date:context.today,items:[{productId:'p',qty:2,unitPrice:10,expectedProduct:productReference(db.getProducts()[0])}],note:''}},owner);assert.equal(result.success,true,result.error)
   result=db.applySalesOperation({...header,id:'recovery-delivery',time:new Date().toISOString(),action:'deliver',orderId:'recovery-sale',expectedRevision:1,quantities:[2],dueDate:context.today,handedOver:true},owner);assert.equal(result.success,true,result.error)
   const backup=db.createBackup('Before customer payment',owner.username)
+  const originalCost=costMode?db.exportData().stockCostEntries:null
   pc=new BrowserWindow({show:false,width:1380,height:1000,webPreferences:{preload:path.resolve('electron/preload.js'),sandbox:true,contextIsolation:true,nodeIntegration:false,offscreen:true,backgroundThrottling:false}})
   pc.webContents.session.webRequest.onBeforeRequest({urls:['http://*/*','https://*/*']},(_details,done)=>done({cancel:true}))
   const security=require('../../electron/ipcSecurity.cjs').createIpcSecurity({db,getWindow:()=>pc,rendererPath}),persist=db.applySalesOperation;let lost=false,paymentCalls=0
@@ -54,9 +57,10 @@ app.whenReady().then(async()=>{try{
   }
   await button(pc,en('確認還原'));await wait(pc,'(async()=>!(await window.electronAPI.db.getSalesState()).documents[0].payments.length)()','intentional older snapshot restore')
   observations.afterRestore={cashLogs:db.exportData().cashLog.length,payments:doc().payments.length,stock:db.getProducts()[0].stock,backupCount:db.getBackups().length};assert.equal(doc().payments.length,0);assert.equal(db.exportData().cashLog.length,0)
+  if(costMode){assert.deepEqual(db.exportData().stockCostEntries,originalCost);assert.equal(db.getStockCostState(owner).valuation.ownedValueCents,1200);observations.costEntries=originalCost.length}
   await tap(phone,'[data-sales-retry]');const retryDeadline=Date.now()+12000;while(paymentCalls<2&&Date.now()<retryDeadline)await new Promise(resolve=>setTimeout(resolve,40));assert.equal(paymentCalls,2);await wait(phone,'!!document.querySelector("[data-sales-retry]:not(:disabled)")','original retry finished')
   assert.equal(await js(phone,'JSON.parse(localStorage.getItem("pos_pending_financial_v1")).request.id'),pending.request.id);assert.equal(doc().payments.length,0)
-  observations.hasRecoveryEntry=await js(phone,'!!document.querySelector("[data-recovery-open]")');await capture(phone,root,'recovery-missing-record-phone');fs.writeFileSync(path.join(root,'recovery-observations.json'),JSON.stringify(observations,null,2));console.log('RECOVERY_OBSERVATIONS '+JSON.stringify(observations))
+  observations.hasRecoveryEntry=await js(phone,'!!document.querySelector("[data-recovery-open]")');await capture(phone,root,'recovery-missing-record-phone');fs.writeFileSync(path.join(evidence,'recovery-observations.json'),JSON.stringify(observations,null,2));console.log('RECOVERY_OBSERVATIONS '+JSON.stringify(observations))
   assert.equal(observations.hasRecoveryEntry,true,'an uncertain original payment after restore must have an actionable owner recovery guide')
   await tap(phone,'[data-recovery-open]');await wait(phone,'!!document.querySelector("[data-recovery-source]")','protected original payment source')
   const book=db.exportData(),journal=await js(phone,'localStorage.getItem("pos_pending_financial_v1")');observations.locales=[]
@@ -72,6 +76,7 @@ app.whenReady().then(async()=>{try{
   assert.ok(await js(phone,'document.querySelector("[data-recovery-source]").innerText.includes('+q(pending.request.id)+')'));await tap(phone,'[data-recovery-ack]');await wait(phone,'document.querySelector("[data-recovery-ack]").checked&&!!document.querySelector("[data-recovery-restore]:not(:disabled)")','recovery consent applied before scrolling to restore');await tap(phone,'[data-recovery-restore]');await wait(phone,'!localStorage.getItem("pos_pending_financial_v1")&&!!document.querySelector(".recovery-notice")&&!document.querySelector("[data-recovery-original]")','original operation confirmed and final UI rendered')
   await js(phone,'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
   assert.equal(doc().payments.length,1);assert.equal(doc().payments[0].id,pending.request.id);assert.equal(db.exportData().cashLog.length,1+extraCash);assert.equal(db.exportData().cashLog.reduce((sum,row)=>sum+row.amount,0),5+extraCash);assert.equal(db.getProducts()[0].stock,3);await capture(phone,root,'recovery-original-confirmed-phone');pass('owner-guided protected recovery restores the complete original book, including the later cash entry, and clears the same journal after the final success UI renders')
-  fs.writeFileSync(path.join(root,'recovery-observations.json'),JSON.stringify(observations,null,2))
-  console.log(JSON.stringify({success:true,marker:'POS_RECOVERY_UI_PASS',tests,realPhone:false,externalNetwork:false,backupId:backup.id}));await finish();app.exit(0)
+  if(costMode){assert.deepEqual(db.exportData().stockCostEntries,originalCost);assert.equal(db.getStockCostState(owner).valuation.ownedValueCents,1200);pass('actual cost entries, valuation and original receipts survive the desktop restore, lost HTTPS reply and owner-guided full recovery')}
+  fs.writeFileSync(path.join(evidence,'recovery-observations.json'),JSON.stringify(observations,null,2))
+  console.log(JSON.stringify({success:true,marker:costMode?'POS_STOCK_RECOVERY_UI_PASS':'POS_RECOVERY_UI_PASS',tests,costMode,realPhone:false,externalNetwork:false,backupId:backup.id}));await finish();app.exit(0)
 }catch(error){console.error(error.stack);try{if(phone&&!phone.isDestroyed())await capture(phone,root,'recovery-failed-phone')}catch{}await finish();app.exit(1)}})

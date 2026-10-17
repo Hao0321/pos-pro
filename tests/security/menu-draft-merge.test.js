@@ -1,0 +1,54 @@
+import {test,expect} from 'vitest'
+import {restaurantMenuFixture} from '../fixtures/restaurant-menu-v1.mjs'
+import {menuEditorDraft,compileMenuEditor} from '../../src/utils/restaurantMenuEditor.mjs'
+import {rebaseMenuEditorDraft,planMenuEditorMerge,menuDraftUnitBasis,menuDraftResolution} from '../../src/utils/menuDraftMerge.mjs'
+import {validOwnerMenuDraft} from '../../src/utils/restaurantDraftShapes.mjs'
+import {canonicalSignature} from '../../electron/operationRules.mjs'
+test('explicit rebase keeps the user name edit and a concurrent unchanged-field price update',()=>{const seed=restaurantMenuFixture(),local=menuEditorDraft(seed.menu,seed.products),remote=structuredClone(seed.menu);local.offers[0].name='My unfinished meal';remote.offers[0].variants[0].price=110;const merged=rebaseMenuEditorDraft(local,canonicalSignature(seed.menu),remote,seed.products);expect(merged.offers[0].name).toBe('My unfinished meal');expect(merged.offers[0].variants[0].price).toBe('110');expect(compileMenuEditor(merged,seed.products).offers[0].variants[0].price).toBe(110);expect(local.offers[0].variants[0].price).toBe('100')})
+test('same-field conflicts leave every local value intact instead of choosing a price silently',()=>{const seed=restaurantMenuFixture(),local=menuEditorDraft(seed.menu,seed.products),remote=structuredClone(seed.menu);local.offers[0].variants[0].price='105';remote.offers[0].variants[0].price=110;const before=structuredClone(local);expect(()=>rebaseMenuEditorDraft(local,canonicalSignature(seed.menu),remote,seed.products)).toThrow(/同一欄位/);expect(local).toEqual(before)})
+test('deleted rows and concurrent edits conflict while unrelated additions are preserved',()=>{const seed=restaurantMenuFixture(),local=menuEditorDraft(seed.menu,seed.products),remote=structuredClone(seed.menu);local.offers=local.offers.filter(row=>row.id!=='bowl-set');remote.offers.find(row=>row.id==='bowl-set').name='Changed remote combo';expect(()=>rebaseMenuEditorDraft(local,canonicalSignature(seed.menu),remote,seed.products)).toThrow();const another=menuEditorDraft(seed.menu,seed.products);another.offers[0].name='Mine';const added=structuredClone(remote.offers[1]);added.id='added-remote-combo';remote.offers.push(added);const merged=rebaseMenuEditorDraft(another,canonicalSignature(seed.menu),remote,seed.products);expect(merged.offers).toHaveLength(3);expect(merged.offers[0].name).toBe('Mine');expect(merged.offers.find(row=>row.id==='added-remote-combo').name).toBe(added.name)})
+
+const fixture=()=>{const seed=restaurantMenuFixture();return {seed,remote:structuredClone(seed.menu),state:{draft:menuEditorDraft(seed.menu,seed.products),baseline:canonicalSignature(seed.menu),basis:menuDraftUnitBasis(seed.menu,seed.products),reconcile:null,open:true,chosen:''}}}
+const resolve=(state,plan,policy,choices=[])=>({...state,reconcile:{...menuDraftResolution(plan),policy,choices}})
+
+test('nested prices, choice names and group limits produce stable explicit rows while exact unfinished text survives',()=>{
+ const {seed,state,remote}=fixture();state.draft.offers[0].name='My meal';state.draft.offers[0].variants[0].price='';remote.offers[0].variants[0].price=130;state.draft.offers[0].groups[1].choices[0].name='My egg';remote.offers[0].groups[1].choices[0].name='Store egg';state.draft.offers[0].groups[1].max='1.';remote.offers[0].groups[1].max=3;remote.offers[1].name='Latest combo'
+ const frozen=structuredClone({state,remote}),plan=planMenuEditorMerge(state,remote,seed.products);expect(plan.conflicts.map(row=>row.path.at(-1)).sort()).toEqual(['max','name','price']);expect(plan.conflicts.every(row=>row.choice===null)).toBe(true)
+ const chosen=planMenuEditorMerge(resolve(state,plan,'local'),remote,seed.products);expect(chosen.conflicts.every(row=>row.choice==='local')).toBe(true);expect(chosen.draft.offers[0].variants[0].price).toBe('');expect(chosen.draft.offers[0].groups[1].max).toBe('1.');expect(chosen.draft.offers[1].name).toBe('Latest combo');expect({state,remote}).toEqual(frozen)
+})
+test('individual choices override bulk selection without changing independent edits',()=>{
+ const {seed,state,remote}=fixture();state.draft.offers[0].name='Mine';remote.offers[0].name='Store';state.draft.offers[0].variants[0].price='125';remote.offers[0].variants[0].price=130;state.draft.offers[1].name='Independent'
+ const plan=planMenuEditorMerge(state,remote,seed.products),price=plan.conflicts.find(row=>row.path.at(-1)==='price'),chosen=planMenuEditorMerge(resolve(state,plan,'local',[{key:price.key,choice:'remote'}]),remote,seed.products)
+ expect(chosen.draft.offers[0].name).toBe('Mine');expect(chosen.draft.offers[0].variants[0].price).toBe('130');expect(chosen.draft.offers[1].name).toBe('Independent');expect(compileMenuEditor(chosen.draft,seed.products).offers[0].variants[0].price).toBe(130)
+})
+test.each(['local','remote'])('quantity and unit are one choice (%s), never a cross-unit leaf merge',side=>{
+ const {seed,state,remote}=fixture(),component=state.draft.offers[0].variants[1].components[0];component.quantity='0.35';component.unit='kg';remote.offers[0].variants[1].components[0].qty=.4
+ const plan=planMenuEditorMerge(state,remote,seed.products);expect(plan.conflicts).toHaveLength(1);expect(plan.conflicts[0].kind).toBe('measurement');expect(plan.conflicts[0].local.quantity).toBe('0.35');expect(plan.conflicts[0].remote.quantity).toBe('400')
+ const chosen=planMenuEditorMerge(resolve(state,plan,side),remote,seed.products),raw=chosen.draft.offers[0].variants[1].components[0];expect([raw.quantity,raw.unit]).toEqual(side==='local'?['0.35','kg']:['400','g']);expect(compileMenuEditor(chosen.draft,seed.products).offers[0].variants[1].components.find(row=>row.id==='rice').qty).toBe(side==='local'?.35:.4)
+})
+test('saved stock-unit basis reconstructs the old physical quantity after a catalogue unit change',()=>{
+ const {seed,state,remote}=fixture();state.draft.offers[0].variants[1].components[0].quantity='350';const products=seed.products.map(row=>row.id==='rice'?{...row,unit:'g'}:row);remote.offers[0].variants[1].components[0].qty=400
+ const plan=planMenuEditorMerge(state,remote,products);expect(plan.conflicts[0].kind).toBe('measurement');const result=planMenuEditorMerge(resolve(state,plan,'local'),remote,products);expect(compileMenuEditor(result.draft,products).offers[0].variants[1].components.find(row=>row.id==='rice').qty).toBe(350)
+})
+test.each(['local','remote'])('a selected variant deleted elsewhere requires an explicit linked choice (%s)',side=>{
+ const {seed,state,remote}=fixture();state.draft.offers[0].defaultVariantId='large';state.draft.offers[0].name='My independent name';remote.offers[0].variants=remote.offers[0].variants.filter(row=>row.id!=='large');remote.offers[0].variants[0].name='Latest regular'
+ const plan=planMenuEditorMerge(state,remote,seed.products);expect(plan.conflicts).toHaveLength(1);expect(plan.conflicts[0].kind).toBe('default-variant');const result=planMenuEditorMerge(resolve(state,plan,side),remote,seed.products)
+ expect(result.draft.offers[0].name).toBe('My independent name');expect(result.draft.offers[0].variants[0].name).toBe('Latest regular');expect(result.draft.offers[0].defaultVariantId).toBe(side==='local'?'large':'regular');expect(result.draft.offers[0].variants.some(row=>row.id==='large')).toBe(side==='local');expect(()=>compileMenuEditor(result.draft,seed.products)).not.toThrow()
+})
+test.each(['local','remote'])('a preselected option deleted elsewhere is explicitly restored or removed (%s)',side=>{
+ const {seed,state,remote}=fixture();state.draft.offers[0].groups[0].defaults=[{id:'less',qty:'1'}];state.draft.offers[0].groups[0].name='My rice group';remote.offers[0].groups[0].choices=remote.offers[0].groups[0].choices.filter(row=>row.id!=='less');remote.offers[0].groups[0].choices[0].name='Latest normal'
+ const plan=planMenuEditorMerge(state,remote,seed.products);expect(plan.conflicts[0].kind).toBe('default-choice');const result=planMenuEditorMerge(resolve(state,plan,side),remote,seed.products),group=result.draft.offers[0].groups[0];expect(group.name).toBe('My rice group');expect(group.choices[0].name).toBe('Latest normal');expect(group.choices.some(row=>row.id==='less')).toBe(side==='local');expect(group.defaults.some(row=>row.id==='less')).toBe(side==='local');expect(()=>compileMenuEditor(result.draft,seed.products)).not.toThrow()
+})
+test('row deletion versus modification remains a choice and unrelated additions survive either decision',()=>{
+ const {seed,state,remote}=fixture();state.draft.offers=state.draft.offers.filter(row=>row.id!=='bowl-set');remote.offers[1].name='Store combo';const extra=structuredClone(remote.offers[1]);extra.id='new-store-combo';remote.offers.push(extra)
+ const plan=planMenuEditorMerge(state,remote,seed.products);expect(plan.conflicts[0].local).toBeUndefined();for(const side of ['local','remote']){const result=planMenuEditorMerge(resolve(state,plan,side),remote,seed.products);expect(result.draft.offers.some(row=>row.id==='bowl-set')).toBe(side==='remote');expect(result.draft.offers.some(row=>row.id==='new-store-combo')).toBe(true)}
+})
+test.each(['local draft','remote menu','stock unit'])('saved choices are discarded after a changed %s',change=>{
+ const {seed,state,remote}=fixture();state.draft.offers[0].variants[0].price='125';remote.offers[0].variants[0].price=130;const first=planMenuEditorMerge(state,remote,seed.products),saved=resolve(state,first,'remote');let products=seed.products
+ if(change==='local draft')saved.draft.offers[0].variants[0].price='126';if(change==='remote menu')remote.offers[0].variants[0].price=140;if(change==='stock unit')products=products.map(row=>row.id==='bowl'?{...row,unit:'份'}:row)
+ const result=planMenuEditorMerge(saved,remote,products);expect(result.conflicts.find(row=>row.path.at(-1)==='price').choice).toBeNull();expect(menuDraftResolution(result,saved.reconcile).policy).toBeNull()
+})
+test('legacy owner raw caches remain valid; bounded UI metadata cannot carry arbitrary source or duplicate choices',()=>{
+ const {seed,state,remote}=fixture(),legacy={draft:state.draft,baseline:state.baseline,open:true,chosen:''};expect(validOwnerMenuDraft(legacy)).toBe(true);expect(validOwnerMenuDraft(state)).toBe(true)
+ state.draft.offers[0].variants[0].price='125';remote.offers[0].variants[0].price=130;const plan=planMenuEditorMerge(state,remote,seed.products),saved=resolve(state,plan,'local',[{key:plan.conflicts[0].key,choice:'remote'}]);expect(validOwnerMenuDraft(saved)).toBe(true);expect(validOwnerMenuDraft({...saved,reconcile:{...saved.reconcile,source:{secret:'not allowed'}}})).toBe(false);expect(validOwnerMenuDraft({...saved,reconcile:{...saved.reconcile,choices:[...saved.reconcile.choices,...saved.reconcile.choices]}})).toBe(false);expect(validOwnerMenuDraft({...saved,basis:[]})).toBe(false)
+})

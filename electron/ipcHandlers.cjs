@@ -1,4 +1,4 @@
-module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrderServer, getLocalIP,sharedStore }) {
+module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrderServer, getLocalIP,sharedStore,stockSetupEnabled=false }) {
   const orderServer = getOrderServer()
   function handle(channel, handler) {
     ipcMain.handle(channel, (event, ...args) => {
@@ -13,8 +13,26 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   ipcMain.handle('auth:logout', e => ipcSecurity.logout(e))
   handle('db:checkoutReceipt', (_e, id) => db.checkoutReceipt(id))
   handle('db:getStoreSnapshot',()=>require('./storeSnapshot.cjs')(db,ipcSecurity.current()))
+  handle('db:getStockAccountingState',()=>db.getStockAccountingState(ipcSecurity.current()))
+  handle('db:getStockSalesState',()=>db.getStockSalesState(ipcSecurity.current()))
+  handle('db:getStockHistory',(_e,input)=>db.getStockHistory(input,ipcSecurity.current()))
+  handle('db:getWarehouseState',()=>db.getWarehouseState(ipcSecurity.current()))
+  handle('db:applyWarehouseOperation',(_e,input)=>db.applyWarehouseOperation(input,ipcSecurity.current()))
+  handle('db:getStockSetupAccess',()=>({enabled:stockSetupEnabled===true}))
+  handle('db:getStockSetupState',()=>{if(!stockSetupEnabled)throw Error('成本設定尚未開放新保存，請保留原編號核對');return db.getStockSetupState(ipcSecurity.current())})
+  handle('db:previewStockSetup',(_e,input)=>{if(!stockSetupEnabled)throw Error('成本設定尚未開放新保存，請保留原編號核對');return db.previewStockSetup(input,ipcSecurity.current())})
+  handle('db:applyStockSetupOperation',(_e,input)=>db.applyStockSetupOperation(input,ipcSecurity.current(),{allowNew:stockSetupEnabled===true}))
   handle('db:getRestaurantState',()=>db.getRestaurantState())
+  handle('db:getRestaurantMenuQuote',(_e,input)=>db.getRestaurantMenuQuote(input,ipcSecurity.current()))
+  handle('db:getRestaurantMenuSetupPreview',(_e,input)=>db.getRestaurantMenuSetupPreview(input,ipcSecurity.current()))
+  handle('db:getRestaurantAgentPreview',(_e,input)=>db.getRestaurantAgentPreview(input,ipcSecurity.current()))
+  handle('db:getTableOrderingContext',()=>db.getTableOrderingContext(ipcSecurity.current()))
+  handle('db:getCustomerIntakeContext',(_e,id)=>db.getCustomerIntakeContext(id,ipcSecurity.current()))
+  handle('db:getKitchenPrintState',()=>db.getKitchenPrintState(ipcSecurity.current()))
+  handle('db:applyKitchenPrintOperation',(_e,input)=>db.applyKitchenPrintOperation(input,ipcSecurity.current()))
   handle('db:getAgentContext',()=>db.getAgentContext(ipcSecurity.current()))
+  handle('db:getPrivateDraftContext',()=>db.getPrivateDraftContext(ipcSecurity.current()))
+  handle('db:lookupPrivateDraftOriginal',(_e,input)=>db.lookupPrivateDraftOriginal(input,ipcSecurity.current()))
   handle('db:getExchangeContext',()=>db.getExchangeContext(ipcSecurity.current()))
   handle('db:applyExchangeOperation',(_e,input)=>db.applyExchangeOperation(input,ipcSecurity.current()))
   handle('db:getSalesState',()=>db.getSalesState(ipcSecurity.current()))
@@ -35,9 +53,9 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:applyInventoryOperation',(_e,input)=>db.applyInventoryOperation(input,ipcSecurity.current()))
   handle('db:applyScenarioTemplate', (_e, input) => db.applyScenarioTemplate(input, ipcSecurity.current()))
   handle('db:getScenarioTemplateReceipt', (_e, id) => db.getScenarioTemplateReceipt(id, ipcSecurity.current()))
-  handle('db:addProduct', (_e, data) => db.addProduct(data))
-  handle('db:updateProduct', (_e, id, data) => db.updateProduct(id, data))
-  handle('db:deleteProduct', (_e, id) => db.deleteProduct(id))
+  handle('db:addProduct', (_e, data) => db.addProduct(data,ipcSecurity.current()))
+  handle('db:updateProduct', (_e, id, data) => db.updateProduct(id, data,ipcSecurity.current()))
+  handle('db:deleteProduct', (_e, id) => db.deleteProduct(id,ipcSecurity.current()))
   handle('db:findByBarcode', (_e, code) => db.findByBarcode(code))
 
   // ----- Members -----
@@ -53,13 +71,13 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
 
   // ----- Checkout (atomic) -----
   handle('db:checkout', (_e, orderData, stockUpdates, memberUpdate) => {
-    return db.checkout(orderData, stockUpdates, memberUpdate)
+    return db.checkout(orderData, stockUpdates, memberUpdate,ipcSecurity.current())
   })
 
   // ----- Customer Orders -----
   handle('db:getCustomerOrders', () => db.getCustomerOrders())
   handle('db:updateOrderStatus', (_e, id, status) => {
-    const result = db.updateOrderStatus(id, status)
+    const result = db.updateOrderStatus(id, status,ipcSecurity.current())
     // 通知 WebSocket 客戶端
     if (orderServer && orderServer.broadcast) {
       orderServer.broadcast(JSON.stringify({ type: 'order-status', orderId: id, status }))
@@ -107,14 +125,19 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
 
   // ----- Manual Journal -----
   handle('db:getManualJournal', () => db.getManualJournal())
-  handle('db:addManualEntry', (_e, data) => db.addManualEntry(data))
-  handle('db:deleteManualEntry', (_e, id) => db.deleteManualEntry(id))
+  handle('db:addManualEntry', (_e, data) => db.addManualEntry(data,ipcSecurity.current()))
+  handle('db:deleteManualEntry', (_e, id) => db.deleteManualEntry(id,ipcSecurity.current()))
 
   // ----- Backups -----
   handle('db:getBackups', () => db.getBackups())
   handle('db:createBackup', (_e, label, createdBy) => db.createBackup(label, createdBy))
   handle('db:restoreBackup', (_e, id, options) => db.restoreBackup(id,options,ipcSecurity.current()))
   handle('db:exportData', () => db.exportData())
+  handle('db:exportFullBackup', () => db.exportFullBackup(ipcSecurity.current()))
+  handle('db:getProtectedBackups', () => db.getProtectedBackups(ipcSecurity.current()))
+  handle('db:getStocktakeState', () => db.getStocktakeState(ipcSecurity.current()))
+  handle('db:getRefundContext', () => db.getRefundContext(ipcSecurity.current()))
+  handle('db:previewRefund', (_e,input) => db.previewRefund(input,ipcSecurity.current()))
   handle('db:importData', (_e, data, expectedRevision) => db.importData(data, expectedRevision,ipcSecurity.current()))
   handle('db:previewRestore',(_e,input)=>db.previewRestore(input,ipcSecurity.current()))
   handle('db:applyRestorePreview',(_e,id)=>db.applyRestorePreview(id,ipcSecurity.current()))
@@ -136,8 +159,8 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:isEmpty', () => db.isEmpty())
 
   // ----- Refund -----
-  handle('db:refundOrder', (_e, origId, refundData, stockUpdates, memberUpdate) =>
-    db.refundOrder(origId, refundData, stockUpdates, memberUpdate))
+  handle('db:refundOrder', (_e, origId, refundData) =>
+    db.refundOrder(origId, refundData, ipcSecurity.current()))
 
   // ----- Held Orders -----
   handle('db:getHeldOrders', () => db.getHeldOrders())
@@ -154,7 +177,7 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
 
   // ----- Waste -----
   handle('db:getWasteLog', () => db.getWasteLog())
-  handle('db:addWaste', (_e, data) => db.addWaste(data))
+  handle('db:addWaste', (_e, data) => db.addWaste(data,ipcSecurity.current()))
   handle('db:deleteWaste', (_e, id) => db.deleteWaste(id))
 
   // ----- Topups -----
@@ -164,7 +187,11 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   // ----- Printer -----
   handle('printer:printReceipt', async (_e, orderData) => {
     const printer = require('./printer')
-    return printer.printReceipt(orderData, db.getAllSettings())
+    const original=db.getOrder(orderData?.id)
+    if(!original||original.source==='customer'||original.payMethod==='pending'||!['completed','refunded'].includes(original.status))throw Error('請先核對已保存的正式收款單')
+    const saved=db.checkoutReceipt(original.id)
+    if(saved?.success!==true||saved.order?.id!==original.id)throw Error('正式收款原單尚未確認，請先核對')
+    return printer.printReceipt(saved.order, db.getAllSettings())
   })
   handle('printer:openCashDrawer', async () => {
     const printer = require('./printer')
