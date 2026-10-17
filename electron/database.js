@@ -51,6 +51,7 @@ module.exports = function initDatabase(dbPath) {
     table_id: o.tableId || '',
     table_signature: o.tableSignature || '',
     tracking_proof: o.trackingProof?JSON.stringify(o.trackingProof):'',
+    customer_menu: Object.hasOwn(o,'customerMenu')?JSON.stringify(o.customerMenu):'',
     itemCosts: typeof o.itemCosts==='string'?o.itemCosts:JSON.stringify(o.itemCosts||{}),
   })
 
@@ -74,8 +75,8 @@ module.exports = function initDatabase(dbPath) {
   function readOrder(id) {
     const raw = stmts.getOrderById.get(id)
     if (!raw) return null
-    const {table_id,table_signature,tracking_proof,...row}=raw
-    return recordShapes.projectRow('orders',{...row,...(table_id?{tableId:table_id,tableSignature:table_signature}:{}),...(tracking_proof?{trackingProof:JSON.parse(tracking_proof)}:{}),change:row.change_amount,memberId:row.memberId||null,fullRefund:!!row.fullRefund,itemCosts:JSON.parse(row.itemCosts||'{}'),payments:JSON.parse(row.payments || '[]'),
+    const {table_id,table_signature,tracking_proof,customer_menu,...row}=raw
+    return recordShapes.projectRow('orders',{...row,...(table_id?{tableId:table_id,tableSignature:table_signature}:{}),...(tracking_proof?{trackingProof:JSON.parse(tracking_proof)}:{}),...(customer_menu?{customerMenu:JSON.parse(customer_menu)}:{}),change:row.change_amount,memberId:row.memberId||null,fullRefund:!!row.fullRefund,itemCosts:JSON.parse(row.itemCosts||'{}'),payments:JSON.parse(row.payments || '[]'),
       items:stmts.getOrderItems.all(id).map(i=>({id:i.productId,name:i.name,price:i.price,qty:i.qty}))})
   }
   function checkoutReceipt(id) {
@@ -162,12 +163,13 @@ module.exports = function initDatabase(dbPath) {
 
   // ===== Public API =====
   const api={
+    ...require('./privateDraftOperations.cjs')(db,stmts),
     async getAgentContext(actor){
       if(!actor||!['owner','staff'].includes(actor.role))throw Error('請先登入')
       let storeId=this.getSetting('sharedStoreId');if(!storeId){storeId=require('node:crypto').randomUUID();this.setSetting('sharedStoreId',storeId)}
       return require('./agentDraftRules.mjs').makeAgentContext({storeId,products:this.getProducts(),suppliers:actor.role==='owner'?this.getSuppliers():[],restaurantConfig:this.getRestaurantState().config,role:actor.role,mappings:require('./businessDocument.mjs').readAgentMappings(this.getSetting('agentMappings'))})
     },
-    rememberAgentMappings(input,actor){return db.transaction(()=>{const mappings=require('./businessDocument.mjs').mergeAgentMappings(stmts.getSetting.get('agentMappings')?.value,input,this.getProducts(),actor);stmts.setSetting.run('agentMappings',JSON.stringify(mappings));return {success:true,mappings}})()},
+    rememberAgentMappings(input,actor){return db.transaction(()=>{const source=require('./privateDrafts.mjs').privateDraftMappingInput(input,Object.hasOwn(input||{},'draftContext')?this.getPrivateDraftContext(actor):null),mappings=require('./businessDocument.mjs').mergeAgentMappings(stmts.getSetting.get('agentMappings')?.value,source,this.getProducts(),actor);stmts.setSetting.run('agentMappings',JSON.stringify(mappings));return {success:true,mappings}})()},
     ...require('./restaurantOperations.cjs')(db,stmts,readOrder,orderInsertParams),
     ...require('./scenarioTemplates.cjs')(db, stmts),
     ...require('./inventoryOperations.cjs')(db,stmts,supplierParams),
@@ -228,7 +230,7 @@ module.exports = function initDatabase(dbPath) {
       if(db.prepare("SELECT 1 FROM sales_documents d,json_each(json_extract(d.data,'$.items')) i WHERE json_extract(i.value,'$.productId')=? LIMIT 1").get(id))throw Error('商品仍被銷售文件使用，請保留以供核對')
       if(stmts.getAllPurchases.all().some(p=>p.procurement&&JSON.parse(p.items||'[]').some(i=>i.productId===id)))throw Error('品項仍被採購文件使用，請保留以供核對')
       const cfg=JSON.parse(stmts.getSetting.get('restaurantConfig')?.value||'{}')
-      if(Object.hasOwn(cfg.recipes||{},id)||Object.values(cfg.recipes||{}).some(rows=>rows.some(r=>r.id===id))||db.prepare('SELECT data FROM restaurant_orders').all().some(r=>{const e=JSON.parse(r.data);return e.items.some(i=>i.id===id)||e.allocations.some(i=>i.id===id)}))throw Error('品項仍被預訂或配方使用，請保留以供核對')
+      if(require('./restaurantRules.mjs').restaurantProductReferences(cfg,db.prepare('SELECT data FROM restaurant_orders').all().map(row=>JSON.parse(row.data))).has(id))throw Error('品項仍被預訂、菜單或配方使用，請保留以供核對')
       stmts.deleteProduct.run(id)
       return { success: true }
     },
@@ -741,5 +743,9 @@ module.exports = function initDatabase(dbPath) {
   recordShapes.attachFinancial(api)
   require('./tableOrderingOperations.cjs')(db,api)
   require('./kitchenPrintOperations.cjs')(db,api,kitchenStore)
+  const restaurantWithStock=api.applyRestaurantOperation
+  api.applyRestaurantOperation=function(request,actor){if(require('./privateDrafts.mjs').assertPrivateDraftCaller(request,actor))this.getPrivateDraftContext(actor);return restaurantWithStock.call(this,request,actor)}
+  const inventoryWithStock=api.applyInventoryOperation
+  api.applyInventoryOperation=function(request,actor){if(require('./privateDrafts.mjs').assertPrivateDraftCaller(request,actor))this.getPrivateDraftContext(actor);return inventoryWithStock.call(this,request,actor)}
   return api
 }

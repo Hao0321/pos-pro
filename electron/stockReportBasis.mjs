@@ -14,7 +14,8 @@ export function captureRestaurantCostBasis(entry,config){
  const materials=new Map()
  for(const item of entry.items){
   if(!Number.isSafeInteger(item.qty)||item.qty<=0)throw Error('成本分攤需要核對')
-  const recipe=config.recipes?.[item.id]||[{id:item.id,qty:1}]
+  const recipe=entry.menu?entry.menu.quote.itemAllocations.find(row=>row.itemId===item.id)?.rows:config.recipes?.[item.id]||[{id:item.id,qty:1}]
+  if(!recipe)throw Error('成本分攤需要核對')
   for(const raw of recipe){
    const quantity=BigInt(stockUnits(raw.qty))*BigInt(item.qty),row=materials.get(raw.id)||{productId:raw.id,totalUnits:0n,outputs:new Map()}
    row.totalUnits+=quantity;row.outputs.set(item.id,(row.outputs.get(item.id)||0n)+quantity);materials.set(raw.id,row)

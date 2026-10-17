@@ -3,7 +3,7 @@ import {browserToBook,bookToBrowser} from '../../electron/recoveryRules.mjs'
 import {validateStockCostBook} from '../../electron/stockBackup.mjs'
 import {canonicalSignature,operationHeader} from '../../electron/operationRules.mjs'
 import {browserStockActor,normalizeStockBusinessInput,browserBusinessNeedsCost,browserBusinessSource,browserRestaurantData,browserStockContexts,planBrowserStockBusiness} from '../../electron/browserStockPlan.mjs'
-import {restaurantReceipt} from '../../electron/restaurantRules.mjs'
+import {restaurantReceipt,restaurantProductReferences} from '../../electron/restaurantRules.mjs'
 import {salesReceipt} from '../../electron/salesPlan.mjs'
 import {supplierInventoryReceipt} from '../../electron/supplierInventory.mjs'
 import {assertProductPricingUnchanged} from '../../electron/costPricing.mjs'
@@ -88,7 +88,11 @@ export function commitBrowserProduct(method,request,actor){return withSalesLock(
     if(Object.hasOwn(data,'stock')&&old.stock!==data._expectedStock)throw Error('庫存已變更，請重新核對')
     const clean={...data};for(const key of ['_expectedStock','_expectedPricing','_creationId','id'])delete clean[key]
     next=products.map(row=>row.id===request.id?{...row,...clean}:row)
-  }else if(method==='deleteProduct')next=products.filter(row=>row.id!==request.id)
+  }else if(method==='deleteProduct'){
+    const restaurant=browserRestaurantData(browserToBook(record.data))
+    if(restaurantProductReferences(restaurant.config,restaurant.entries).has(request.id))throw Error('商品仍被菜單或原單使用，請保留以供核對')
+    next=products.filter(row=>row.id!==request.id)
+  }
   else throw Error('商品流程不正確')
   writeRecords({pos2_products:next},record.revision)
   return {success:true,product:next.find(row=>row.id===request.id)||null}

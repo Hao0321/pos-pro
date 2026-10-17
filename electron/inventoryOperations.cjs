@@ -18,6 +18,7 @@ module.exports=function(db,stmts,supplierParams){
       const read=()=>{const data=request.supplierContext||fence.hasSupplierFence(db)?readSupplier():{...current(),storeId:stmts.getSetting.get('sharedStoreId')?.value};return request.kind==='stocktake'?{...data,...countData()}:data},data=read()
       if(old){if(old.action!==INVENTORY_ACTION)throw Error('庫存回執需要核對');if(request.protocol===PHYSICAL_STOCKTAKE&&old.userId!==actor.userId&&actor.role!=='owner')throw Error('權限不足');return supplierInventoryReceipt(request,JSON.parse(old.detail),data)}
       const plan=planSupplierInventory(request,data,actor)
+      if(request.draftContext){fence.installPrivateQuickFence(db);stmts.setSetting.run('stockCostVersionFence','1')}
       if(plan.supplierRegistration)fence.installSupplierFence(db)
       for(const p of plan.products){
         if(plan.created.includes(p.id))stmts.insertProduct.run({...p,noBarcode:p.noBarcode?1:0})

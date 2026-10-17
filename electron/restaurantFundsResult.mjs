@@ -1,6 +1,7 @@
 import {canonicalSignature} from './operationRules.mjs'
 import {RESTAURANT_FUNDS_PROTOCOL,summarizeRestaurantFunds} from './restaurantFunds.mjs'
 import {restaurantFundsCashLog,expectedRestaurantFundedPostings,sameRestaurantFundedOrder} from './restaurantFundedPlan.mjs'
+import {fundedRestaurantProductIds,assertMenuCreateResult} from './restaurantMenuOriginal.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 const invalid=()=>Error('預訂款項回覆尚未確認，請保留原編號核對。')
@@ -11,12 +12,12 @@ export function assertRestaurantFundsResult(request,result){
   if(result?.success!==true||receipt?.fundsProtocol!==RESTAURANT_FUNDS_PROTOCOL||receipt.id!==request.id||receipt.kind!=='restaurant'||receipt.action!==request.action||receipt.signature!==canonicalSignature(request)||receipt.entityId!==(request.action==='create'?request.id:request.entryId)||receipt.entityVersion!==version||entry?.id!==receipt.entityId||!Number.isSafeInteger(entry.version)||entry.version<version||entry.funds?.entryId!==entry.id||typeof receipt.actor?.userId!=='string'||!receipt.actor.userId||typeof receipt.actor.username!=='string'||!['owner','staff'].includes(receipt.actor.role))throw invalid()
   const summary=summarizeRestaurantFunds(entry.funds)
   if(!same(result.funding,summary)||entry.total!==summary.totalCents/100||entry.quantity!==summary.quantity||!same(entry.items,summary.items)||!same(entry.allocations,summary.allocations))throw invalid()
-  const productIds=[...new Set([...entry.funds.items.map(row=>row.id),...entry.funds.itemAllocations.flatMap(row=>row.rows.map(row=>row.id))])]
+  const productIds=fundedRestaurantProductIds(entry);assertMenuCreateResult(request,entry,receipt)
   if(!Array.isArray(receipt.productIds)||!Array.isArray(result.products)||receipt.productIds.length!==productIds.length||new Set(receipt.productIds).size!==productIds.length||productIds.some(id=>!receipt.productIds.includes(id)||result.products.filter(product=>product.id===id).length!==1)||result.products.length!==productIds.length)throw invalid()
   const event=entry.funds.events.find(row=>row.id===request.id)||null,requiresEvent=request.action!=='create'&&(request.action!=='advance'||request.status==='completed')
   if(requiresEvent!==!!event||!same(result.fundsEvent??null,event)||(receipt.eventSignature??null)!==(event?canonicalSignature(event):null)||event&&(!same(event.input,request)||event.version!==version||!same(event.actor,receipt.actor)))throw invalid()
   if(request.action==='create'){
-   if(entry.createdAt!==request.time||!same(request.items.map(row=>({id:row.id,price:row.price,qty:row.qty})),entry.funds.items.map(row=>({id:row.id,price:row.price,qty:row.qty})))||receipt.fundsInitialSignature!==canonicalSignature({entryId:entry.id,items:entry.funds.items,itemAllocations:entry.funds.itemAllocations}))throw invalid()
+   if(entry.createdAt!==request.time||!entry.menu&&!same(request.items.map(row=>({id:row.id,price:row.price,qty:row.qty})),entry.funds.items.map(row=>({id:row.id,price:row.price,qty:row.qty})))||receipt.fundsInitialSignature!==canonicalSignature({entryId:entry.id,items:entry.funds.items,itemAllocations:entry.funds.itemAllocations}))throw invalid()
    for(const key of ['day','slot','channel'])if(entry[key]!==request[key])throw invalid()
    for(const key of ['customer','contact','note'])if(entry[key]!==request[key].trim())throw invalid()
   }

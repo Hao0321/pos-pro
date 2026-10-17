@@ -3,6 +3,7 @@ import {bytesToHex} from '@noble/hashes/utils.js'
 import {canonicalSignature,moneyValue,operationHeader,quantityValue} from './operationRules.mjs'
 import {initializeRestaurantFunds,planRestaurantFundsEvent,summarizeRestaurantFunds,RESTAURANT_FUNDS_PROTOCOL} from './restaurantFunds.mjs'
 import {signature as checkoutSignature} from './checkoutSignature.mjs'
+import {fundedRestaurantProductIds,menuOriginalSignature} from './restaurantMenuOriginal.mjs'
 
 export const FUNDED_RESTAURANT_SOURCE='restaurant-funded'
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
@@ -24,7 +25,7 @@ export function assertRestaurantFundsScope(request,data){
 }
 export function initializeFundedRestaurant(plan,request,data,actor){
   assertRestaurantFundsScope(request,data);copyActor(actor)
-  const perItem=plan.entry.items.map(item=>({
+  const perItem=plan.entry.menu?structuredClone(plan.entry.menu.quote.itemAllocations):plan.entry.items.map(item=>({
     itemId:item.id,
     rows:(data.config.recipes[item.id]||[{id:item.id,qty:1}]).map(row=>{
       const product=data.products.find(product=>product.id===row.id)
@@ -35,6 +36,7 @@ export function initializeFundedRestaurant(plan,request,data,actor){
   plan.entry.funds=initializeRestaurantFunds(plan.entry,perItem)
   plan.receipt.fundsProtocol=RESTAURANT_FUNDS_PROTOCOL
   plan.receipt.fundsInitialSignature=canonicalSignature({entryId:plan.entry.id,items:plan.entry.funds.items,itemAllocations:plan.entry.funds.itemAllocations})
+  if(plan.entry.menu){plan.receipt.productIds=fundedRestaurantProductIds(plan.entry);plan.receipt.menuSourceSignature=menuOriginalSignature(plan.entry.menu)}
   return plan
 }
 function payments(rows,sign=1){
@@ -117,8 +119,9 @@ export function planFundedRestaurant(request,data,actor){
     next.orders.unshift(order)
   }
   next.waste.unshift(...waste)
-  const productIds=[...new Set([...entry.funds.items.map(row=>row.id),...entry.funds.itemAllocations.flatMap(row=>row.rows.map(row=>row.id))])]
+  const productIds=fundedRestaurantProductIds(entry)
   const receipt={id:request.id,kind:'restaurant',action:request.action,signature:canonicalSignature(request),entityId:entry.id,entityVersion:entry.version,productIds,saleId:entry.saleId||'',refundId:entry.refundId||'',time:request.time,actor:who,fundsProtocol:RESTAURANT_FUNDS_PROTOCOL,eventSignature:event?canonicalSignature(event):null,orderId:order?.id||null,cashLogId:cashLog?.id||null}
+  if(entry.menu)receipt.menuSourceSignature=menuOriginalSignature(entry.menu)
   return {next,entry,event,order,original,waste,cashLog,config:data.config,receipt}
 }
 export function fundedRestaurantReceipt(request,receipt,data){

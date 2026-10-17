@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   // ----- Products -----
   db: {
+    getPrivateDraftContext:()=>ipcRenderer.invoke('db:getPrivateDraftContext'),
+    lookupPrivateDraftOriginal:input=>ipcRenderer.invoke('db:lookupPrivateDraftOriginal',input),
     getStockAccountingState:()=>ipcRenderer.invoke('db:getStockAccountingState'),
     getStockSalesState:()=>ipcRenderer.invoke('db:getStockSalesState'),
     getStockHistory:input=>ipcRenderer.invoke('db:getStockHistory',input),
@@ -23,6 +25,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     applySupplierLedgerOperation:input=>ipcRenderer.invoke('db:applySupplierLedgerOperation',input),
     rememberAgentMappings:input=>ipcRenderer.invoke('db:rememberAgentMappings',input),
     getRestaurantState:()=>ipcRenderer.invoke('db:getRestaurantState'),
+    getRestaurantMenuQuote:input=>ipcRenderer.invoke('db:getRestaurantMenuQuote',input),
+    getRestaurantMenuSetupPreview:input=>ipcRenderer.invoke('db:getRestaurantMenuSetupPreview',input),
+    getRestaurantAgentPreview:input=>ipcRenderer.invoke('db:getRestaurantAgentPreview',input),
     getTableOrderingContext:()=>ipcRenderer.invoke('db:getTableOrderingContext'),
     getCustomerIntakeContext:id=>ipcRenderer.invoke('db:getCustomerIntakeContext',id),
     getKitchenPrintState:()=>ipcRenderer.invoke('db:getKitchenPrintState'),

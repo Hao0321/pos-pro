@@ -3,14 +3,19 @@ import React from 'react'
 import {beforeEach,afterEach,test,expect,vi} from 'vitest'
 import {render,screen,fireEvent,cleanup,waitFor} from '@testing-library/react'
 const fixture=vi.hoisted(()=>({context:null}))
-vi.mock('../../src/utils/dataAccess',()=>({getAgentContext:()=>Promise.resolve(fixture.context),rememberAgentMappings:vi.fn()}))
+vi.mock('../../src/utils/dataAccess',()=>({getAgentContext:()=>Promise.resolve(fixture.context),loadPrivateDraftContext:async actor=>privateContext(actor),lookupPrivateDraftOriginal:vi.fn(async input=>({protocol:'pos-private-draft-original/v1',status:'missing',id:input.id})),rememberAgentMappings:vi.fn(),loadRestaurantAgentPreview:async input=>previewRestaurantAgent(input,{...fixture.authority,now:Date.now()},session)}))
 import QuickDocumentPage from '../../src/pages/QuickDocumentPage'
 import {makeAgentContext,AGENT_PROTOCOL} from '../../electron/agentDraftRules.mjs'
-import {quickDraftScope,writeQuickDraft} from '../../src/utils/quickDraftCache'
-const session={userId:'owner-journey',role:'owner'}
+import {workspaceScope,writeWorkspaceDraft} from '../../src/utils/workspaceDraft'
+import {validWorkspaceQuickDraft} from '../../src/utils/restaurantDraftShapes.mjs'
+import {previewRestaurantAgent} from '../../electron/restaurantAgent.mjs'
+const session={userId:'owner-journey',username:'Journey owner',role:'owner'}
+const privateContext=(actor=session)=>({protocol:'pos-private-draft-context/v1',storeId:fixture.context.storeId,epoch:fixture.authority.epoch,userId:actor.userId,role:actor.role})
+const scopeFor=(context=fixture.context,actor=session)=>workspaceScope({...privateContext(actor),storeId:context.storeId},'quick')
+const seed=(scope,state)=>writeWorkspaceDraft(localStorage,scope,{documentId:'draft-'+crypto.randomUUID(),state,original:null},null,validWorkspaceQuickDraft)
 let store
-beforeEach(async()=>{localStorage.clear();fixture.context=await makeAgentContext({storeId:'journey',role:'owner',products:[{id:'p',name:'牛丼',unit:'碗',stock:10,price:95,cost:40}],suppliers:[{id:'s',name:'供應商'}],restaurantConfig:{enabled:true,dailyCapacity:30,slotCapacity:5,recipes:{}}});store={cart:[],stageQuickSale:vi.fn(),commitInventory:vi.fn(),commitRestaurant:vi.fn(),setView:vi.fn()}})
-afterEach(()=>{cleanup();vi.restoreAllMocks()})
+beforeEach(async()=>{localStorage.clear();vi.stubGlobal('navigator',{locks:{request:async(_name,options,work)=>{if(typeof options==='function')return options({});if(options.signal?.aborted)throw new DOMException('aborted','AbortError');return work({})}}});fixture.authority={storeId:'journey',epoch:'journey-generation',costMode:'reference',users:[{id:session.userId,username:session.username,role:session.role}],products:[{id:'p',name:'牛丼',unit:'碗',stock:10,price:95,cost:40}],suppliers:[{id:'s',name:'供應商'}],config:{enabled:true,dailyCapacity:30,slotCapacity:5,recipes:{}},entries:[],operations:[],orders:[],cashLogs:[],waste:[],shifts:[]};fixture.context=await makeAgentContext({...fixture.authority,restaurantConfig:fixture.authority.config,role:'owner'});store={cart:[],stageQuickSale:vi.fn(),commitInventory:vi.fn(),commitRestaurant:vi.fn(),setView:vi.fn()}})
+afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()})
 const draft=()=>({protocol:AGENT_PROTOCOL,id:'journey-draft',issuedAt:new Date().toISOString(),storeId:'journey',catalogueRevision:fixture.context.catalogueRevision,kind:'purchase',supplierId:'s',date:'2026-10-15',items:[{productId:'p',qty:2,unitCost:37.5}]})
 const paste=raw=>fireEvent.paste(screen.getByLabelText('建單內容'),{clipboardData:{getData:()=>raw}})
 test('pasting a complete Agent reply opens a priced review without another organize click',async()=>{
@@ -24,7 +29,7 @@ test('one fenced document inside an ordinary Agent reply preserves its ID and ne
 })
 test('leaving and returning to an unfinished purchase preserves the original document identity and quantity',async()=>{
   const first=render(<QuickDocumentPage store={store} session={session} incoming={JSON.stringify(draft())}/>);await screen.findByText('確認建立採購')
-  await waitFor(()=>expect(Object.keys(localStorage).some(key=>key.startsWith('pos_quick_draft_v1:'))).toBe(true))
+  await waitFor(()=>expect(Object.keys(localStorage).some(key=>key.startsWith('pos_workspace_draft_v1:'))).toBe(true))
   first.unmount();render(<QuickDocumentPage store={store} session={session}/>);await screen.findByText('確認建立採購');expect(screen.getByLabelText('數量 牛丼').value).toBe('2')
   fireEvent.click(screen.getByText('確認建立採購'));await waitFor(()=>expect(store.commitInventory).toHaveBeenCalledTimes(1));expect(store.commitInventory.mock.calls[0][2].id).toBe('agent-journey-draft')
 })
@@ -40,8 +45,8 @@ test('delivery guidance focuses the missing contact then address and never creat
 })
 
 test('a saved owner draft never appears under a different user, role or store',async()=>{
-  const scope=quickDraftScope(fixture.context,session),saved={kind:'purchase',text:'',draft:draft(),external:null}
-  writeQuickDraft(localStorage,scope,saved);const raw=localStorage.getItem(scope.key)
+  const scope=scopeFor(),saved={kind:'purchase',text:'',draft:draft(),external:null}
+  seed(scope,saved);const raw=localStorage.getItem(scope.key)
   for(const current of [{userId:'another',role:'owner'},{...session,role:'staff'}]){
     const view=render(<QuickDocumentPage store={store} session={current}/>);await screen.findByLabelText('建單內容');await waitFor(()=>expect(screen.getByText('賣東西').disabled).toBe(false))
     expect(screen.queryByLabelText('單據草稿')).toBeNull();view.unmount()
@@ -51,14 +56,14 @@ test('a saved owner draft never appears under a different user, role or store',a
 })
 
 test('corrupt saved input is preserved for recovery until an explicit discard',async()=>{
-  const scope=quickDraftScope(fixture.context,session);localStorage.setItem(scope.key,'{broken')
-  render(<QuickDocumentPage store={store} session={session}/>);await screen.findByText(/未完成草稿讀不到/);expect(localStorage.getItem(scope.key)).toBe('{broken');expect(store.commitInventory).not.toHaveBeenCalled()
-  fireEvent.click(screen.getByText('放棄這張草稿'));await waitFor(()=>expect(localStorage.getItem(scope.key)).toBeNull());expect(screen.queryByText(/未完成草稿讀不到/)).toBeNull()
+  const scope=scopeFor();localStorage.setItem(scope.key,'{broken')
+  render(<QuickDocumentPage store={store} session={session}/>);await screen.findByText(/草稿讀不到/);expect(localStorage.getItem(scope.key)).toBe('{broken');expect(store.commitInventory).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByText('清除這張未完成草稿'));await waitFor(()=>expect(localStorage.getItem(scope.key)).toBeNull());expect(screen.queryByText(/草稿讀不到/)).toBeNull()
 })
 
 test('quota failure keeps the draft visible and warns before leaving',async()=>{
   const original=Storage.prototype.setItem
-  vi.spyOn(Storage.prototype,'setItem').mockImplementation(function(key,value){if(key.startsWith('pos_quick_draft_v1:'))throw new DOMException('full','QuotaExceededError');return original.call(this,key,value)})
+  vi.spyOn(Storage.prototype,'setItem').mockImplementation(function(key,value){if(key.startsWith('pos_workspace_draft_v1:'))throw new DOMException('full','QuotaExceededError');return original.call(this,key,value)})
   render(<QuickDocumentPage store={store} session={session} incoming={JSON.stringify(draft())}/>);await screen.findByText(/暫時無法保留草稿/)
   expect(screen.getByLabelText('數量 牛丼').value).toBe('2');expect(store.commitInventory).not.toHaveBeenCalled()
 })
@@ -66,14 +71,14 @@ test('quota failure keeps the draft visible and warns before leaving',async()=>{
 test('a temporary zero quantity survives recovery but cannot be committed until corrected',async()=>{
   const view=render(<QuickDocumentPage store={store} session={session} incoming={JSON.stringify(draft())}/>);await screen.findByText('確認建立採購')
   fireEvent.change(screen.getByLabelText('數量 牛丼'),{target:{value:'0'}});view.unmount()
-  render(<QuickDocumentPage store={store} session={session}/>);await screen.findByText('已接回這個裝置上還沒完成的草稿。')
+  render(<QuickDocumentPage store={store} session={session}/>);await screen.findByText('已接回未完成的草稿，確認前會重新核對。')
   expect(screen.getByLabelText('數量 牛丼').value).toBe('0');expect(screen.getByText('確認建立採購').disabled).toBe(true)
   fireEvent.change(screen.getByLabelText('數量 牛丼'),{target:{value:'3'}});fireEvent.click(screen.getByText('確認建立採購'))
   await waitFor(()=>expect(store.commitInventory).toHaveBeenCalledTimes(1));expect(store.commitInventory.mock.calls[0][2].id).toBe('agent-journey-draft')
 })
 
 test('restoring a draft never silently updates its old catalogue or price',async()=>{
-  writeQuickDraft(localStorage,quickDraftScope(fixture.context,session),{kind:'purchase',text:'',draft:draft(),external:null})
+  seed(scopeFor(),{kind:'purchase',text:'',draft:draft(),external:null})
   fixture.context={...fixture.context,catalogueRevision:'new-price-revision',products:fixture.context.products.map(p=>({...p,unitCost:90}))}
   render(<QuickDocumentPage store={store} session={session}/>);await screen.findByText(/品項或價格已更新/)
   expect(screen.getByText('確認建立採購').disabled).toBe(true);expect(store.commitInventory).not.toHaveBeenCalled()
@@ -82,8 +87,8 @@ test('restoring a draft never silently updates its old catalogue or price',async
 test('an unfinished external item mapping returns with the same identity and agreed purchase price',async()=>{
   const doc={protocol:'business-document/v1',id:'PARTNER-RECOVERY-001',createdAt:new Date().toISOString(),sender:{id:'partner',name:'合作公司'},intent:'purchase',currency:'TWD',items:[{sku:'vendor-beef',name:'對方牛肉飯',qty:2,unit:'碗',unitPrice:37.5}],total:75,fulfilment:{supplierId:'s',date:'2026-10-15'}}
   const view=render(<QuickDocumentPage store={store} session={session} incoming={JSON.stringify(doc)}/>);fireEvent.change(await screen.findByLabelText('對照 對方牛肉飯'),{target:{value:'p'}})
-  await screen.findByText('確認建立採購');const scope=quickDraftScope(fixture.context,session);await waitFor(()=>expect(JSON.parse(localStorage.getItem(scope.key)).state.draft?.id).toBeTruthy());const saved=JSON.parse(localStorage.getItem(scope.key)).state
-  view.unmount();render(<QuickDocumentPage store={store} session={session}/>);await screen.findByText('已接回這個裝置上還沒完成的草稿。');expect(screen.getByText('合計 NT$ 75.00')).toBeTruthy()
+  await screen.findByText('確認建立採購');const scope=scopeFor();await waitFor(()=>expect(JSON.parse(localStorage.getItem(scope.key)).state.draft?.id).toBeTruthy());const saved=JSON.parse(localStorage.getItem(scope.key)).state
+  view.unmount();render(<QuickDocumentPage store={store} session={session}/>);await screen.findByText('已接回未完成的草稿，確認前會重新核對。');expect(screen.getByText('合計 NT$ 75.00')).toBeTruthy()
   fireEvent.click(screen.getByRole('checkbox',{name:'記住這家公司的品項對照'}));fireEvent.click(screen.getByText('確認建立採購'))
   await waitFor(()=>expect(store.commitInventory).toHaveBeenCalledTimes(1));expect(store.commitInventory.mock.calls[0][2]).toEqual({id:'agent-'+saved.draft.id,time:doc.createdAt});expect(store.commitInventory.mock.calls[0][1].purchase.items[0].unitCost).toBe(37.5)
 })
@@ -105,8 +110,8 @@ test('an unrelated pending financial operation blocks new quick entry',async()=>
 })
 
 test('reopening with a new link while the original save is pending preserves the original cached draft',async()=>{
-  const original=draft(),scope=quickDraftScope(fixture.context,session)
-  writeQuickDraft(localStorage,scope,{kind:'purchase',text:'',draft:original,external:null})
+  const original=draft(),scope=scopeFor()
+  seed(scope,{kind:'purchase',text:'',draft:original,external:null})
   store.financialState={phase:'uncertain',id:'agent-'+original.id};store.retryFinancial=vi.fn()
   render(<QuickDocumentPage store={store} session={session} incoming={JSON.stringify({...original,id:'new-link-must-wait',items:[{productId:'p',qty:8}]})}/>)
   await screen.findByText('確認這張單的結果');expect(screen.getByLabelText('數量 牛丼').value).toBe('2')

@@ -1,6 +1,8 @@
 import {canonicalSignature,operationHeader} from './operationRules.mjs'
 import {summarizeRestaurantFunds,RESTAURANT_FUNDS_PROTOCOL} from './restaurantFunds.mjs'
 import {expectedRestaurantFundedPostings,restaurantFundsCashLog,restaurantFundsWaste,sameRestaurantFundedOrder,FUNDED_RESTAURANT_SOURCE} from './restaurantFundedPlan.mjs'
+import {validateRestaurantMenuBook,fundedRestaurantProductIds,assertMenuCreateResult} from './restaurantMenuOriginal.mjs'
+import {assertPrivateDraftOperation} from './privateDrafts.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 const invalid=()=>Error('預訂款項、交付或原料來源不完整，請保留原單核對。')
@@ -10,6 +12,7 @@ function request(receipt){
   let input;try{input=JSON.parse(receipt.signature)}catch{throw invalid()}
   operationHeader(input)
   if(receipt.kind!=='restaurant'||input.kind!=='restaurant'||receipt.id!==input.id||receipt.action!==input.action||receipt.time!==input.time||canonicalSignature(input)!==receipt.signature)throw invalid()
+  assertPrivateDraftOperation(input,{receiptActor:receipt.actor})
   return input
 }
 // A cost receipt is a historical snapshot. Later partial cancellations must not
@@ -35,7 +38,8 @@ export function fundedRestaurantSnapshot(entry,operations,version){
  snapshot.refundId=postings.filter(row=>row.order.refundOf).at(-1)?.order.id||''
  return snapshot
 }
-export function validateFundedRestaurantRecords(entries,operations,orders,products,{cashLogs,waste,storeId}={}){
+export function validateFundedRestaurantRecords(entries,operations,orders,products,{cashLogs,waste,storeId,config,menuConfigurationId,menuReceiptKey}={}){
+  validateRestaurantMenuBook(config,entries,operations,menuConfigurationId,orders,menuReceiptKey)
   const modern=entries.filter(entry=>Object.hasOwn(entry,'funds')),sources=orders.filter(order=>order.source===FUNDED_RESTAURANT_SOURCE)
   if(!modern.length){if(sources.length)throw invalid();return}
   if(!Array.isArray(cashLogs)||!Array.isArray(waste))throw invalid()
@@ -49,13 +53,14 @@ export function validateFundedRestaurantRecords(entries,operations,orders,produc
     if(entry.funds.entryId!==entry.id)throw invalid()
     const summary=summarizeRestaurantFunds(entry.funds)
     if(!same(entry.items,summary.items)||!same(entry.allocations,summary.allocations)||entry.total!==summary.totalCents/100||entry.quantity!==summary.quantity)throw invalid()
-    const productIds=new Set([...entry.funds.items.map(row=>row.id),...entry.funds.itemAllocations.flatMap(row=>row.rows.map(row=>row.id))])
+    const productIds=new Set(fundedRestaurantProductIds(entry))
     if([...productIds].some(id=>products.filter(product=>product.id===id).length!==1))throw invalid()
     const history=operations.filter(row=>row.entityId===entry.id).sort((a,b)=>a.entityVersion-b.entityVersion)
     if(history.length!==entry.version||history.some((row,index)=>row.entityVersion!==index+1||row.fundsProtocol!==RESTAURANT_FUNDS_PROTOCOL))throw invalid()
     if(new Set(history.map(row=>row.id)).size!==history.length||history.some(row=>!row.actor?.userId||typeof row.actor.username!=='string'||!['owner','staff'].includes(row.actor.role)||!Array.isArray(row.productIds)||row.productIds.length!==productIds.size||new Set(row.productIds).size!==row.productIds.length||row.productIds.some(id=>!productIds.has(id))))throw invalid()
     const initial=history[0],created=request(initial),facts={entryId:entry.id,items:entry.funds.items,itemAllocations:entry.funds.itemAllocations}
-    if(created.action!=='create'||created.id!==entry.id||created.time!==entry.createdAt||initial.fundsInitialSignature!==canonicalSignature(facts)||!same(created.items.map(row=>({id:row.id,price:row.price,qty:row.qty})),entry.funds.items.map(row=>({id:row.id,price:row.price,qty:row.qty}))))throw invalid()
+    if(created.action!=='create'||created.id!==entry.id||created.time!==entry.createdAt||initial.fundsInitialSignature!==canonicalSignature(facts)||!entry.menu&&!same(created.items.map(row=>({id:row.id,price:row.price,qty:row.qty})),entry.funds.items.map(row=>({id:row.id,price:row.price,qty:row.qty}))))throw invalid()
+    assertMenuCreateResult(created,entry,initial)
     if(!created.storeId||created.storeId!==storeId||!created.epoch||initial.eventSignature||initial.orderId||initial.cashLogId)throw invalid()
     for(const key of ['day','slot','channel'])if(created[key]!==entry[key])throw invalid()
     for(const key of ['customer','contact','note'])if(typeof created[key]!=='string'||created[key].trim()!==entry[key])throw invalid()

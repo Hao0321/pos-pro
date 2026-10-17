@@ -19,6 +19,9 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
     for(const [key,table]of [['salesDocuments','sales_documents'],['salesOperations','sales_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
     const restaurantConfig=data.settings?.find(s=>s.key==='restaurantConfig')
     const checkedConfig=require('./restaurantRules.mjs').readRestaurantConfig(restaurantConfig?.value??null,data.products||[])
+    if(require('./restaurantMenuOriginal.mjs').usesRestaurantMenu(checkedConfig,data.restaurantOrders||[],data.restaurantOperations||[]))require('./databaseFeatureFence.cjs').installMenuFence(db)
+    if(require('./restaurantCustomerMenu.mjs').usesRestaurantPublicMenu(data.orders||[]))require('./databaseFeatureFence.cjs').installPublicMenuFence(db)
+    if(require('./privateDrafts.mjs').usesPrivateQuickDrafts(data.restaurantOperations||[],data.auditLog||[]))require('./databaseFeatureFence.cjs').installPrivateQuickFence(db)
     if(require('./restaurantFunds.mjs').usesRestaurantFunds(checkedConfig,data.restaurantOrders||[],data.orders||[]))require('./databaseFeatureFence.cjs').installFundsFence(db)
     if(Object.hasOwn(data,'kitchenPrintJobs')!==Object.hasOwn(data,'kitchenPrintOperations'))throw Error('廚房列印紀錄需要核對，請保留原單')
     if(Object.hasOwn(checkedConfig,'kitchenPrinting')&&!Object.hasOwn(data,'kitchenPrintJobs'))throw Error('廚房列印紀錄需要核對，請保留原單')
@@ -27,7 +30,7 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
     for(const [key,table]of [['kitchenPrintJobs','kitchen_print_jobs'],['kitchenPrintOperations','kitchen_print_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
     if(require('./tableOrdering.mjs').usesRestaurantIntake(checkedConfig,data.restaurantOrders||[],data.orders||[]))require('./databaseFeatureFence.cjs').installIntakeFence(db)
     if(data.restaurantOrders||data.restaurantOperations){
-      require('./restaurantRules.mjs').validateRestaurantRecords(data.restaurantOrders||[],data.restaurantOperations||[],data.orders||[],data.products||[],{cashLogs:data.cashLog||[],waste:data.wasteLog||[],storeId:data.settings?.find(row=>row.key==='sharedStoreId')?.value})
+      require('./restaurantRules.mjs').validateRestaurantRecords(data.restaurantOrders||[],data.restaurantOperations||[],data.orders||[],data.products||[],{cashLogs:data.cashLog||[],waste:data.wasteLog||[],storeId:data.settings?.find(row=>row.key==='sharedStoreId')?.value,config:checkedConfig,menuConfigurationId:exchange.readExchangeTextSetting(data.settings,require('./restaurantMenuOriginal.mjs').RESTAURANT_MENU_CONFIG_KEY),menuReceiptKey:exchange.readExchangeTextSetting(data.settings,'orderReceiptSecret')})
       for(const [key,table] of [['restaurantOrders','restaurant_orders'],['restaurantOperations','restaurant_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
     }
     for(const row of rawSettings)stmts.setRawSetting.run(row)

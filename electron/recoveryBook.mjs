@@ -13,12 +13,15 @@ import {convertLogicalBook} from './storageConversion.mjs'
 import {usesRestaurantIntake,RESTAURANT_INTAKE_FEATURE} from './tableOrdering.mjs'
 import {usesKitchenPrinting,validateKitchenRecords,KITCHEN_PRINT_FEATURE} from './kitchenPrint.mjs'
 import {usesRestaurantFunds,RESTAURANT_FUNDS_FEATURE} from './restaurantFunds.mjs'
+import {usesRestaurantMenu,RESTAURANT_MENU_FEATURE,RESTAURANT_MENU_CONFIG_KEY} from './restaurantMenuOriginal.mjs'
+import {usesRestaurantPublicMenu,RESTAURANT_PUBLIC_MENU_FEATURE} from './restaurantCustomerMenu.mjs'
+import {usesPrivateQuickDrafts,PRIVATE_QUICK_FEATURE} from './privateDrafts.mjs'
 
-export const RECOVERY_FEATURES=[RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
+export const RECOVERY_FEATURES=[PRIVATE_QUICK_FEATURE,RESTAURANT_PUBLIC_MENU_FEATURE,RESTAURANT_MENU_FEATURE,RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
 export const recoveryDataError=()=>Error('備份保護紀錄不完整或內容不同，請保留原檔核對')
 export function recoveryFeatureFloor(features=[],minimum=1){
- if(![1,2,3,4,5,6].includes(minimum)||!Array.isArray(features)||features.some(feature=>!RECOVERY_FEATURES.includes(feature)))throw recoveryDataError()
- return Math.max(minimum,features.includes(RESTAURANT_FUNDS_FEATURE)?6:features.includes(KITCHEN_PRINT_FEATURE)?5:features.includes(RESTAURANT_INTAKE_FEATURE)?4:features.includes('record-shapes-v1')?3:features.includes('cross-storage-v1')?2:1)
+ if(![1,2,3,4,5,6,7,8,9].includes(minimum)||!Array.isArray(features)||features.some(feature=>!RECOVERY_FEATURES.includes(feature)))throw recoveryDataError()
+ return Math.max(minimum,features.includes(PRIVATE_QUICK_FEATURE)?9:features.includes(RESTAURANT_PUBLIC_MENU_FEATURE)?8:features.includes(RESTAURANT_MENU_FEATURE)?7:features.includes(RESTAURANT_FUNDS_FEATURE)?6:features.includes(KITCHEN_PRINT_FEATURE)?5:features.includes(RESTAURANT_INTAKE_FEATURE)?4:features.includes('record-shapes-v1')?3:features.includes('cross-storage-v1')?2:1)
 }
 export function retainRecoveryFeatures(book,features){
  if(!features.includes('stock-cost-v1'))return book
@@ -45,10 +48,16 @@ export function recoveryBook(data,storage,{complete=false,digest=stockLedgerDige
  validateSalesRecords(book.salesDocuments,book.salesOperations,book.cashLog,storeId,book.products,exchange.quotes)
  validateCustomerLedgerRecords(book.customerEntries,book.customerOperations,{storeId,documents:book.salesDocuments,salesOperations:book.salesOperations,cashLogs:book.cashLog})
  validateSupplierLedgerRecords(book.supplierEntries,book.supplierOperations,{storeId,suppliers:book.suppliers,purchases:book.purchases,inventoryAudits:book.auditLog,cashLogs:book.cashLog})
- validateRestaurantRecords(book.restaurantOrders,book.restaurantOperations,book.orders,book.products,{cashLogs:book.cashLog,waste:book.wasteLog,storeId})
  const restaurantConfig=settings.find(row=>row.key==='restaurantConfig')?.value
  const checkedRestaurantConfig=readRestaurantConfig(storage==='browser'&&restaurantConfig!=null?JSON.parse(restaurantConfig):restaurantConfig??null,book.products)
+ validateRestaurantRecords(book.restaurantOrders,book.restaurantOperations,book.orders,book.products,{cashLogs:book.cashLog,waste:book.wasteLog,storeId,config:checkedRestaurantConfig,menuConfigurationId:readExchangeTextSetting(settings,RESTAURANT_MENU_CONFIG_KEY),menuReceiptKey:readExchangeTextSetting(settings,'orderReceiptSecret')})
  const features=[]
+ if(usesPrivateQuickDrafts(book.restaurantOperations,book.auditLog)){
+  if(!settings.some(row=>row.key===STOCK_COMPAT_SETTING&&row.value==='1'))throw recoveryDataError()
+  features.push(PRIVATE_QUICK_FEATURE)
+ }
+ if(usesRestaurantPublicMenu(book.orders))features.push(RESTAURANT_PUBLIC_MENU_FEATURE)
+ if(usesRestaurantMenu(checkedRestaurantConfig,book.restaurantOrders,book.restaurantOperations))features.push(RESTAURANT_MENU_FEATURE)
  if(usesRestaurantFunds(checkedRestaurantConfig,book.restaurantOrders,book.orders))features.push(RESTAURANT_FUNDS_FEATURE)
  validateKitchenRecords(book.kitchenPrintJobs||[],book.kitchenPrintOperations||[],{entries:book.restaurantOrders,restaurantOperations:book.restaurantOperations})
  if(usesKitchenPrinting(checkedRestaurantConfig,book.kitchenPrintJobs,book.kitchenPrintOperations)){if(!optional.every(key=>Object.hasOwn(data,key)))throw recoveryDataError();features.push(KITCHEN_PRINT_FEATURE)}

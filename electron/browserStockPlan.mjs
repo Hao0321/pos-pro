@@ -3,7 +3,7 @@ import {updateBrowserSettings} from './settingEncoding.mjs'
 import {signature as checkoutSignature} from './checkoutSignature.mjs'
 import {prepareCheckout} from '../src/utils/checkoutSafety.mjs'
 import {prepareRefund,refundSignature} from '../src/utils/refundSafety.mjs'
-import {planRestaurant,readRestaurantConfig} from './restaurantRules.mjs'
+import {planRestaurant,readRestaurantConfig,restaurantProductReferences} from './restaurantRules.mjs'
 import {planSupplierInventory} from './supplierInventory.mjs'
 import {planSales} from './salesPlan.mjs'
 import {readExchangeTextSetting,readExchangeStore,EXCHANGE_SETTING} from './businessExchange.mjs'
@@ -13,6 +13,7 @@ import {stockUnits} from './stockBusinessPlan.mjs'
 import {validateCustomerLedgerRecords} from './customerLedger.mjs'
 import {verifyRefundReview} from './refundReview.mjs'
 import {salesDate} from './salesRules.mjs'
+import {RESTAURANT_MENU_CONFIG_KEY} from './restaurantMenuOriginal.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 export function browserStockActor(book,actor,method,input=null){
@@ -44,7 +45,7 @@ export function browserStockContexts(book,runtime){
 export function browserRestaurantData(book,runtime={}){
   const settings=Object.fromEntries(book.settings.map(row=>[row.key,JSON.parse(row.value)]))
   const now=Date.parse(runtime.timestamp||new Date().toISOString())
-  return {products:book.products,entries:book.restaurantOrders,operations:book.restaurantOperations,orders:book.orders,waste:book.wasteLog,cashLogs:book.cashLog,shifts:book.shifts,settings,config:readRestaurantConfig(settings.restaurantConfig,book.products),storeId:settings.sharedStoreId||'',epoch:runtime.epoch,costMode:book.stockCostEntries?.length?'active':'reference',now,date:salesDate(new Date(now))}
+  return {products:book.products,users:book.users,suppliers:book.suppliers||[],menuConfigurationId:settings[RESTAURANT_MENU_CONFIG_KEY]||'',entries:book.restaurantOrders,operations:book.restaurantOperations,orders:book.orders,waste:book.wasteLog,cashLogs:book.cashLog,shifts:book.shifts,settings,config:readRestaurantConfig(settings.restaurantConfig,book.products),storeId:settings.sharedStoreId||'',epoch:runtime.epoch,costMode:book.stockCostEntries?.length?'active':'reference',now,date:salesDate(new Date(now))}
 }
 function productWithDefaults(data){
   for(const key of ['price','cost'])moneyValue(data[key]??0,key)
@@ -88,7 +89,7 @@ export function planBrowserStockBusiness(book,runtime,method,request,actor){
   }else if(method==='applyRestaurantOperation'){
     const data=browserRestaurantData(book,runtime),plan=planRestaurant(request,data,actor,{prepareCheckout,prepareRefund})
     Object.assign(next,{products:plan.next.products,orders:plan.next.orders,wasteLog:plan.next.waste,cashLog:plan.next.cashLogs||book.cashLog,restaurantOrders:plan.next.entries,restaurantOperations:[...data.operations,plan.receipt]})
-    if(request.action==='configure')next.settings=updateBrowserSettings(book.settings,{restaurantConfig:JSON.stringify(JSON.stringify(plan.config))})
+    if(request.action==='configure')next.settings=updateBrowserSettings(book.settings,{restaurantConfig:JSON.stringify(JSON.stringify(plan.config)),...(plan.config.menu?{[RESTAURANT_MENU_CONFIG_KEY]:JSON.stringify(request.id)}:{})})
     result.plan=plan
   }else if(method==='applyInventoryOperation'){
     const plan=planSupplierInventory(request,browserStockContexts(book,runtime),actor)
@@ -134,7 +135,7 @@ export function planBrowserStockBusiness(book,runtime,method,request,actor){
       next.products=book.products.map(row=>row.id===request.id?{...row,...clean}:row)
     }else{
       const config=browserRestaurantData(book).config
-      if(history||book.salesDocuments.some(row=>row.items.some(item=>item.productId===request.id))||book.purchases.some(row=>row.procurement&&row.items.some(item=>item.productId===request.id))||book.restaurantOrders.some(row=>[...row.items,...row.allocations].some(item=>item.id===request.id))||Object.hasOwn(config.recipes,request.id)||Object.values(config.recipes).some(rows=>rows.some(row=>row.id===request.id)))throw Error('商品已有歷史或仍在使用，請保留以供核對')
+      if(history||book.salesDocuments.some(row=>row.items.some(item=>item.productId===request.id))||book.purchases.some(row=>row.procurement&&row.items.some(item=>item.productId===request.id))||restaurantProductReferences(config,book.restaurantOrders).has(request.id))throw Error('商品已有歷史或仍在使用，請保留以供核對')
       next.products=book.products.filter(row=>row.id!==request.id)
     }
   }else throw Error('庫存業務流程不正確')

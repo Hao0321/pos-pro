@@ -18,13 +18,14 @@ function verifyPassword(password, stored) {
     return timingSafeEqual(pbkdf2Sync(password,Buffer.from(p.salt),p.iter,32,'sha256'),Buffer.from(p.hash))
   } catch { return false }
 }
-const staffChannels = new Set(['db:getKitchenPrintState','db:applyKitchenPrintOperation','db:getCustomerIntakeContext','db:getStocktakeState','db:getStockSalesState','db:getAgentContext','db:getRestaurantState','db:applyRestaurantOperation','db:getStoreSnapshot','db:getProducts','db:addProduct','db:updateProduct','db:findByBarcode','db:applyInventoryOperation',
+const staffChannels = new Set(['db:getRestaurantAgentPreview','db:getRestaurantMenuQuote','db:getKitchenPrintState','db:applyKitchenPrintOperation','db:getCustomerIntakeContext','db:getStocktakeState','db:getStockSalesState','db:getAgentContext','db:getRestaurantState','db:applyRestaurantOperation','db:getStoreSnapshot','db:getProducts','db:addProduct','db:updateProduct','db:findByBarcode','db:applyInventoryOperation',
   'db:getMembers','db:addMember','db:updateMember','db:getOrders','db:getOrderItems','db:checkout','db:checkoutReceipt',
   'db:getCustomerOrders','db:updateOrderStatus','db:getSuppliers','db:getPurchases','db:getPromotions',
   'db:getHeldOrders','db:addHeldOrder','db:deleteHeldOrder','db:getShifts','db:getOpenShift','db:openShift','db:closeShift',
   'db:getCashLog','db:addCashLog','db:getWasteLog','db:addWaste','db:addTopup','db:getTopups','db:writeAuditLog',
   'printer:printReceipt','printer:openCashDrawer','printer:getStatus','barcode:generate','barcode:generateLabel',
   'barcode:printLabels','server:getLocalIP','server:getStatus','shared:getStatus','settings:get'])
+for(const channel of ['db:getPrivateDraftContext','db:lookupPrivateDraftOriginal'])staffChannels.add(channel)
 function authorizeActor(db,s,channel,args=[]){
   if(!s||!['owner','staff'].includes(s.role))throw Error('請先登入，或重新驗證身份')
   if(s.role!=='owner'&&!staffChannels.has(channel))throw Error('權限不足')

@@ -26,7 +26,7 @@ export function readPendingFinancial(){
   if(JSON.stringify(canonical(input))!==JSON.stringify(canonical(s.input)))throw Error('待確認異動內容不一致，請保留紀錄核對')
   return p
 }
-function assertReceipt(kind,request,result){
+export function assertReceipt(kind,request,result){
   finiteTree(result)
   const row=result?.[fields[kind]]
   if(result?.success!==true||row?.id!==request.id)throw Error('保存結果尚未確認：回覆缺少正確的異動編號')

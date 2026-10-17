@@ -1,4 +1,5 @@
 import {readRecords,writeRecords,withSalesLock,assertOriginalOperationAvailable,RECORD_KEY} from './browserStorage'
+import {assertPrivateDraftCaller} from '../../electron/privateDrafts.mjs'
 import {INVENTORY_PREFIX,INVENTORY_ACTION} from '../../electron/inventoryOperations.mjs'
 import {planSupplierInventory,supplierInventoryReceipt} from '../../electron/supplierInventory.mjs'
 import {readBrowserSupplier} from './browserSupplierLedger'
@@ -26,6 +27,7 @@ export function commitBrowserInventory(request,actor){
     let replay=false,historyChecked=false,writing=false,beforeRaw=null
     try{
       const saved=readRecords(),r=saved.data,key=INVENTORY_PREFIX+request.id
+      if(assertPrivateDraftCaller(request,actor))verify(actor,saved)
       if(request.protocol!==PHYSICAL_STOCKTAKE&&hasBrowserStockCost(saved))return commitBrowserStockBusiness('applyInventoryOperation',request,actor,saved)
       if(request.protocol===PHYSICAL_STOCKTAKE)verify(actor,saved)
       assertOriginalOperationAvailable('applyInventoryOperation',request.id,saved,request)

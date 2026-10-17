@@ -165,6 +165,12 @@ function replay(funds){
 export function summarizeRestaurantFunds(funds){return summary(funds,replay(funds))}
 export function restaurantCapacityQuantity(entry){
   if(!entry.funds)return entry.quantity
+  if(entry.menu){
+    const facts=entry.menu.quote?.lineFacts;if(!Array.isArray(facts))throw fail()
+    const counts=new Map(entry.items.map(row=>[row.id,row.qty]))
+    for(const event of entry.funds.events.filter(event=>event.prepared&&['cancel','cancel-part'].includes(event.input.action)))for(const row of event.cancelledItems)counts.set(row.id,(counts.get(row.id)||0)+row.qty)
+    let used=0;for(const [id,qty]of counts){const factor=facts.find(row=>row.lineId===id)?.capacityPerUnit;if(!Number.isSafeInteger(factor)||factor<1||factor>100)throw fail();used+=qty*factor}if(!Number.isSafeInteger(used)||used<0)throw fail();return used
+  }
   const used=entry.quantity+entry.funds.events.filter(event=>event.prepared&&['cancel','cancel-part'].includes(event.input.action)).reduce((sum,event)=>sum+event.cancelledItems.reduce((count,row)=>count+row.qty,0),0)
   if(!Number.isSafeInteger(used)||used<0)throw fail()
   return used

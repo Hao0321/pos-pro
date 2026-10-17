@@ -150,8 +150,8 @@ export function topupToJournalEntries(topup) {
   }]
 }
 
-export function wasteToJournalEntries(waste){
-  const value=Math.round(Number(waste.cost||0)*Math.abs(Number(waste.qty))*100)
+export function wasteToJournalEntries(waste,reference=null){
+  const value=reference?.valueCents??Math.round(Number(waste.cost||0)*Math.abs(Number(waste.qty))*100)
   if(!Number.isSafeInteger(value)||value<0)throw Error('損耗成本需要核對')
   if(!value)return []
   const date=waste.time&&Number.isFinite(Date.parse(waste.time))?localDate(new Date(waste.time)):''

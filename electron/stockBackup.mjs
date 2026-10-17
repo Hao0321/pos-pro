@@ -23,7 +23,7 @@ export function validateStockCostBook(book,validatedState=null){
   const state=validatedState||replayStockLedger(book.stockCostEntries||[],book.stockCostOperations||[])
   assertStockBookHead(book,state)
   if(!state.projection){if(physicalAudits.some(row=>row.request.context.costMode==='active'))throw stockLedgerError('HISTORY');return state}
-  validateFundedRestaurantRecords(book.restaurantOrders||[],book.restaurantOperations||[],book.orders||[],book.products||[],{cashLogs:book.cashLog,waste:book.wasteLog,storeId:readExchangeTextSetting(book.settings||[],'sharedStoreId')})
+  validateFundedRestaurantRecords(book.restaurantOrders||[],book.restaurantOperations||[],book.orders||[],book.products||[],{cashLogs:book.cashLog,waste:book.wasteLog,storeId:readExchangeTextSetting(book.settings||[],'sharedStoreId'),menuReceiptKey:readExchangeTextSetting(book.settings||[],'orderReceiptSecret')})
   for(const row of physicalAudits.filter(row=>row.request.context.costMode==='active')){const event=state.entries.find(event=>event.method==='applyInventoryOperation'&&event.input.id===row.request.id);if(!event||!same(event.input,row.request)||!same(event.evidence?.stocktake,row.receipt))throw stockLedgerError('HISTORY')}
   if(state.entries[0].input.storeId!==readExchangeTextSetting(book.settings||[],'sharedStoreId'))throw stockLedgerError('HISTORY')
   assertStockCustodyMatchesBook(state.projection.custody,book.products||[],book.restaurantOrders||[])

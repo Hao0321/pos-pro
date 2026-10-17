@@ -244,6 +244,7 @@ module.exports=function initializeSchema(db){
     ensureColumn('orders', 'table_id', "TEXT DEFAULT ''")
     ensureColumn('orders', 'table_signature', "TEXT DEFAULT ''")
     ensureColumn('orders', 'tracking_proof', "TEXT DEFAULT ''")
+    ensureColumn('orders', 'customer_menu', "TEXT DEFAULT ''")
     ensureColumn('orders', 'taxId', "TEXT DEFAULT ''")
     ensureColumn('orders', 'shiftId', "TEXT DEFAULT ''")
     ensureColumn('orders', 'refundOf', "TEXT DEFAULT ''")

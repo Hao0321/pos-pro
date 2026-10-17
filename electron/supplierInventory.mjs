@@ -5,6 +5,7 @@ import {planInventory,inventoryReceipt} from './inventoryOperations.mjs'
 import {supplierInventoryContext} from './procurementHistory.mjs'
 import {supplierActor,assertProcurementApproval} from './supplierControl.mjs'
 import {validateSupplierLedgerRecords,planSupplierRegistration,supplierControlFromEntries,supplierLedgerEvidence,assertSupplierLedgerView} from './supplierLedger.mjs'
+import {assertPrivateQuickPurchase} from './privateDrafts.mjs'
 
 const procurement=request=>request.kind==='receive'||PROCUREMENT_KINDS.includes(request.kind)
 function checkContext(request,data){
@@ -17,6 +18,7 @@ function checkContext(request,data){
  return context
 }
 export function planSupplierInventory(request,data,actor){
+ assertPrivateQuickPurchase(request,{scope:data,actor})
  if(!procurement(request))return planInventory(request,data,actor)
  const context=checkContext(request,data)
  if(!context)return planInventory(request,data,actor)

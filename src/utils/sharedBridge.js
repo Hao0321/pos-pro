@@ -23,6 +23,8 @@ if(sharedStoreMode&&!window.electronAPI){
   async function rpc(method,...args){await(boot||=initialize().catch(e=>{boot=null;throw e}));const response=await post(method==='db:previewRestore'?'backup-preview':'rpc',{method,args});if(method==='auth:session'&&!response.result)signal('pos-shared-auth-expired');return response.result}
   const dbMethods=['rememberAgentMappings','getAgentContext','getProducts','addProduct','updateProduct','deleteProduct','findByBarcode','getMembers','addMember','updateMember','deleteMember','getOrders','getOrderItems','checkout','checkoutReceipt','refundOrder','getCustomerOrders','updateOrderStatus','getSuppliers','addSupplier','updateSupplier','deleteSupplier','getPurchases','addPurchase','updatePurchase','deletePurchase','getPromotions','addPromotion','updatePromotion','deletePromotion','getManualJournal','addManualEntry','deleteManualEntry','getAuditLogs','writeAuditLog','getHeldOrders','addHeldOrder','deleteHeldOrder','getShifts','getOpenShift','openShift','closeShift','getCashLog','addCashLog','getWasteLog','addWaste','getTopups','addTopup','applyInventoryOperation','applyScenarioTemplate','getScenarioTemplateReceipt','getBackups','createBackup','exportData','getStoreSnapshot']
   const db=Object.fromEntries(dbMethods.map(method=>[method,(...args)=>rpc('db:'+method,...args)]))
+  db.getPrivateDraftContext=()=>rpc('db:getPrivateDraftContext')
+  db.lookupPrivateDraftOriginal=input=>rpc('db:lookupPrivateDraftOriginal',input)
   db.getExchangeContext=()=>rpc('db:getExchangeContext')
   db.applyExchangeOperation=input=>rpc('db:applyExchangeOperation',input)
   db.getSalesState=()=>rpc('db:getSalesState')
@@ -44,6 +46,9 @@ if(sharedStoreMode&&!window.electronAPI){
   db.applySupplierLedgerOperation=input=>rpc('db:applySupplierLedgerOperation',input)
   for(const method of ['getRecoveryState','applyRecoveryOperation','lookupRecoveryOperation','exportRecoverySource','exportRecoveryDiagnostics','previewRestore','applyRestorePreview','lookupRestorePreview'])db[method]=input=>rpc('db:'+method,input)
   db.getRestaurantState=()=>rpc('db:getRestaurantState')
+  db.getRestaurantMenuQuote=input=>rpc('db:getRestaurantMenuQuote',input)
+  db.getRestaurantMenuSetupPreview=input=>rpc('db:getRestaurantMenuSetupPreview',input)
+  db.getRestaurantAgentPreview=input=>rpc('db:getRestaurantAgentPreview',input)
   db.getTableOrderingContext=()=>rpc('db:getTableOrderingContext')
   db.getCustomerIntakeContext=id=>rpc('db:getCustomerIntakeContext',id)
   db.getKitchenPrintState=()=>rpc('db:getKitchenPrintState')

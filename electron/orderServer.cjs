@@ -5,6 +5,10 @@ const {readRestaurantConfig}=require('./restaurantRules.mjs')
 const {publicOrderingMenu,assertPublicRecipeAvailability,customerOrderView}=require('./tableOrdering.mjs')
 const {resolveTable}=require('./tableCapability.cjs')
 const trackingProof=require('./customerTrackingProof.cjs')
+const {publicRestaurantMenu,CUSTOMER_MENU_PROTOCOL}=require('./restaurantCustomerMenu.mjs')
+const publicReview=require('./publicMenuReview.cjs')
+const cartContexts=require('./customerCartContext.cjs')
+const {PUBLIC_MENU_PROTOCOL}=require('../public/menu/menuProtocol.mjs')
 const digest=value=>createHash('sha256').update(value).digest('hex')
 const same=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b))
 function publicProduct(p) { return {id:p.id,name:p.name,category:p.category,price:p.price,stock:p.stock,unit:p.unit} }
@@ -29,11 +33,17 @@ function prepareCustomerOrder(body,products) {
     tableNum,note:(customerName?customerName+': ':'')+note}
 }
 module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
-  const app=express(),limits=new Map()
+  const app=express(),limits=new Map(),menuQuoteKey=randomBytes(32)
   let closing=false,closeTask=null
   app.disable('x-powered-by')
   const storeIdentity=()=>{let id=db.getSetting('sharedStoreId');if(id==null||id===''){id=randomUUID();db.setSetting('sharedStoreId',id)}if(typeof id!=='string'||!id)throw Error('店面身份需要核對');return id}
   const restaurant=()=>{const products=db.getProducts(),state=typeof db.getRestaurantState==='function'?db.getRestaurantState():null;return {products,config:state?.config||readRestaurantConfig(db.getSetting('restaurantConfig'),products),entries:state?.entries||[]}}
+  const withCartContext=consume=>typeof db.withCustomerCartContext==='function'?db.withCustomerCartContext(consume):consume(null)
+  const menuSnapshot=(input,consume)=>withCartContext(native=>{
+    const state=restaurant(),optionMenu=state.config.menu?publicRestaurantMenu(state.config,state.products):null,products=optionMenu?[]:publicOrderingMenu(state.products,state.config),table=resolveTable(db,state.config,input),storeId=storeIdentity()
+    const cartContext=native?cartContexts.context({storeId,epoch:native.epoch,table,key:input.key,menu:optionMenu,products}):undefined
+    return consume({state,optionMenu,products,table,storeId,cartContext})
+  })
   app.use((req,res,next)=>{
     if(closing)return res.status(503).json({success:false,error:'店面正在關閉，請稍後重試'})
     res.set({'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Cache-Control':'no-store',
@@ -46,25 +56,38 @@ module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
   app.get('/llms.txt',(_req,res)=>res.sendFile(path.join(__dirname,'../dist/llms.txt')))
   app.get('/.well-known/pos-business-exchange',(_req,res)=>res.json({protocol:'pos-business-exchange-discovery/v1',catalogue:'/api/catalogue',manifest:'/agent/manifest.json',guide:'/llms.txt',humanReviewRequired:true,anonymousWrites:false}))
   app.get('/api/menu',(req,res)=>{try{
-    const state=restaurant(),products=publicOrderingMenu(state.products,state.config),table=resolveTable(db,state.config,req.query)
+    const result=menuSnapshot(req.query,({state,optionMenu,products,table,storeId,cartContext})=>{
     const storeName=db.getSetting('storeName')
-    res.json({success:true,products,categories:[...new Set(products.map(p=>p.category))],storeId:storeIdentity(),storeName:storeName||'商店',storeNameIsDefault:!storeName,...(table?{table}:{}),...(state.config.enabled&&state.config.tableOrdering?.enabled?{tableRequired:true}:{})})
+    return {success:true,products,categories:[...new Set((optionMenu?.offers||products).map(p=>p.category))],storeId,storeName:storeName||'商店',storeNameIsDefault:!storeName,...(optionMenu?{menu:optionMenu}:{}),...(table?{table}:{}),...(cartContext?{cartContext}:{}),...(state.config.enabled&&state.config.tableOrdering?.enabled?{tableRequired:true}:{})}
+    });res.json(result)
   }catch(error){res.status(400).json({success:false,error:error.message})}})
   app.get('/api/catalogue',async(_req,res)=>res.json(await db.getPublicCatalogue()))
-  app.post('/api/order',(req,res,next)=>{
+  const admitCustomer=(req,res,next)=>{
     try {
       const origin=new URL(req.get('origin'))
       if (!['http:','https:'].includes(origin.protocol)||origin.host!==req.get('host')||req.get('sec-fetch-site')==='cross-site')
         return res.status(403).json({success:false,error:'拒絕跨站請求'})
     } catch {return res.status(403).json({success:false,error:'缺少有效來源'})}
     if (!req.is('application/json')) return res.status(415).json({success:false,error:'請使用 JSON'})
-    const now=Date.now(),key=req.socket.remoteAddress
+    const now=Date.now(),isQuote=req.path==='/api/menu/quote',key=req.socket.remoteAddress+(isQuote?':quote':':order')
     for (const [ip,state] of limits) if(now-state.start>=60000) limits.delete(ip)
     if (!limits.has(key)&&limits.size>=1000) return res.sendStatus(429)
     const state=limits.get(key)||{start:now,count:0};limits.set(key,state)
-    if (++state.count>30) return res.status(429).json({success:false,error:'送單過於頻繁，請稍後再試'})
+    if (++state.count>(isQuote?120:30)) return res.status(429).json({success:false,error:'送單過於頻繁，請稍後再試'})
     next()
-  },express.json({limit:'32kb',strict:true}),(req,res)=>{
+  }
+  app.post('/api/menu/quote',admitCustomer,express.json({limit:'32kb',strict:true}),(req,res)=>{try{
+    if(!req.body||Object.keys(req.body).some(key=>!['items','table','key'].includes(key)))throw Error('選項需要核對')
+    const result=menuSnapshot(req.body,({state,table,cartContext})=>{
+    if(state.config.enabled&&state.config.tableOrdering?.enabled&&!table)throw Error('桌號需要核對')
+    const menuReview=db.withRestaurantMenuQuote({items:req.body.items},preview=>{
+      if(!preview.availability.available)throw Error('數量需要核對')
+      return publicReview.quote(preview.menuReview,menuQuoteKey)
+    })
+    return {success:true,menuReview,...(cartContext?{cartContext}:{})}
+    });res.json(result)
+  }catch{res.status(400).json({success:false,committed:false,error:'餐點選項或可用量已變更，請重新確認。'})}})
+  app.post('/api/order',admitCustomer,express.json({limit:'32kb',strict:true}),(req,res)=>{
     try {
       if(closing)return res.status(503).json({success:false,error:'店面正在關閉，請稍後重試'})
       const persist=()=>{
@@ -76,10 +99,23 @@ module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
         order=old
       } else {
         if(typeof req.body?.requestId==='string')db.assertCustomerOrderAvailable?.('CO'+req.body.requestId)
-        const state=restaurant(),table=resolveTable(db,state.config,req.body),menu=publicOrderingMenu(state.products,state.config)
+        const {state,table,products:menu}=menuSnapshot(req.body,snapshot=>{
+          cartContexts.assertCurrent(req.get('X-POS-Cart-Scope'),req.get('X-POS-Cart-Revision'),snapshot.cartContext)
+          return snapshot
+        })
         if(state.config.enabled&&state.config.tableOrdering?.enabled&&!table)throw Error('請掃描桌上的點餐碼')
         if(table&&req.body.tableNum!==undefined&&req.body.tableNum!==table.label)throw Error('桌號與桌碼不符，請重新掃描')
-        order=prepareCustomerOrder({...req.body,...(table?{tableNum:table.label}:{})},menu);assertPublicRecipeAvailability(order.items,state.products,state.config);order.requestSignature=signature
+        if(state.config.menu){
+          if(req.body.menuProtocol!==PUBLIC_MENU_PROTOCOL)throw Error('請先核對選餐')
+          order=db.withRestaurantMenuQuote({items:req.body.items},preview=>{
+            const menuReview=publicReview.verify(req.body,preview,menuQuoteKey,Date.now()),items=req.body.menuReview.items,total=req.body.menuReview.totalCents/100
+            return {id:'CO'+req.body.requestId,items:structuredClone(items),subtotal:total,discount:0,total,payMethod:'pending',paid:0,change:0,memberId:null,pointsUsed:0,pointsEarned:0,time:new Date().toISOString(),source:'customer',status:'pending',tableNum:table?.label||req.body.tableNum||'',note:(req.body.customerName?req.body.customerName+': ':'')+(req.body.note||''),customerMenu:{protocol:CUSTOMER_MENU_PROTOCOL,menuReview,request:structuredClone(req.body)}}
+          })
+        }else{
+          if(req.body.menuProtocol!==undefined||req.body.menuReview!==undefined)throw Error('菜單已變更')
+          order=prepareCustomerOrder({...req.body,...(table?{tableNum:table.label}:{})},menu);assertPublicRecipeAvailability(order.items,state.products,state.config)
+        }
+        order.requestSignature=signature
         if(table){order.tableId=table.id;order.tableSignature=req.body.key}
       }
       let token=null
@@ -97,7 +133,7 @@ module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
         try{const w=getMainWindow();if(w&&!w.isDestroyed())w.webContents.send('customer-order:new',saved.order)}catch{}
       }
       res.json(saved.response)
-    } catch(error){const uncertain=error.status===409||error.historyUncertain;res.status(uncertain?409:400).json({success:false,committed:uncertain?null:false,error:uncertain?'原訂單需要店家核對，請勿重新下單':'送單未完成，請確認品項、數量與庫存後重試'})}
+    } catch(error){const uncertain=error.status===409||error.historyUncertain;res.status(uncertain?409:400).json({success:false,committed:uncertain?null:false,...(!uncertain&&error.cartContextCode?{code:error.cartContextCode}:{}),error:uncertain?'原訂單需要店家核對，請勿重新下單':error.cartContextCode?error.message:'送單未完成，請確認品項、數量與庫存後重試'})}
   })
   app.get('/api/order/:id',(req,res)=>{
     const order=db.getOrder(req.params.id),token=req.get('authorization')?.replace(/^Bearer /,'')

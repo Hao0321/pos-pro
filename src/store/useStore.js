@@ -367,13 +367,13 @@ export function useStore(session){
     window.dispatchEvent(new CustomEvent('pos-inventory-operation',{detail:result}))
     return result
   }
-  async function commitInventory(kind,input,identity=null){
+  async function commitInventory(kind,input,identity=null,prepare=null){
     if(dataError)throw Error(dataError)
     const state=kind==='purchase-create'&&identity?await refreshSuppliers():supplierRef.current,original=kind==='receive'?purchases.find(po=>po.id===input.purchaseId):null
     const controlled=kind!=='stocktake'&&!(kind==='receive'&&!original?.procurement&&!state?.legacyReadOnly)
     if(controlled&&!state)throw Error('請先載入供應商與採購資料，再保存原草稿')
     const command=supplierInventoryCommand(kind,input,identity,state,{controlled})
-    const result=await executeFinancial(kind,command.input,request=>applyInventoryOperation(request,session),setFinancialState,command.identity)
+    const result=await executeFinancial(kind,command.input,request=>applyInventoryOperation(request,session),setFinancialState,command.identity,null,prepare)
     return applyInventoryResult(result)
   }
   function applySupplierResult(result){
@@ -427,11 +427,11 @@ export function useStore(session){
   async function refreshTrading(){
     const next=await loadSalesState(session);salesRef.current=next;setSales(next);return next
   }
-  async function commitRestaurant(input,identity=null){
+  async function commitRestaurant(input,identity=null,prepare=null){
     if(dataError)throw Error(dataError)
     if(checkoutRef.current.getState().phase!=='idle')throw Error('請先確認原收款交易')
     const pending=readPendingFinancial(),state=!pending&&input.action!=='configure'?await loadRestaurantState():null,command=prepareRestaurantCommand(input,{state,pending,identity})
-    const result=await executeFinancial('restaurant',command.input,request=>applyRestaurantOperation(request,session),setFinancialState,command.identity)
+    const result=await executeFinancial('restaurant',command.input,request=>applyRestaurantOperation(request,session),setFinancialState,command.identity,null,prepare)
     await applyRestaurantResult(result)
     return result
   }
