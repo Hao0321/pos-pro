@@ -9,10 +9,10 @@ import '../../styles/recovery.css'
 function RestorePreview({entry,busy,onConfirm,onCancel,onRefresh,onRecovery}){
   const dialog=useRef(null),[ack,setAck]=useState(false),heading=useId()
   let pending=false;try{pending=!!readRecoveryCommand('restore')}catch{pending=true}
-  useEffect(()=>{const previous=document.activeElement,el=dialog.current;if(el.showModal)el.showModal();else el.setAttribute('open','');return()=>previous?.focus?.()},[])
+  useEffect(()=>{const previous=document.activeElement,el=dialog.current;if(el.showModal)el.showModal();else el.setAttribute('open','');return()=>previous?.focus?.({preventScroll:true})},[])
   useEffect(()=>setAck(false),[entry.preview?.id])
   const label=entry.preview?.label||entry.label||entry.filename
-  return <dialog ref={dialog} className="recovery-dialog" data-restore-preview aria-labelledby={heading} onCancel={event=>{event.preventDefault();if(!busy)onCancel()}}><div className="recovery-page"><h2 id={heading}>{tr('確認還原？')}</h2><p role={entry.preview||entry.error?undefined:'status'}>{label?(entry.kind==='backup'?label:tr(label)):tr('正在準備還原預覽…')}</p><p>{tr('會先保存目前資料。')}</p>
+  return <dialog ref={dialog} className="recovery-dialog" data-restore-preview data-restore-preview-id={entry.preview?.id||entry.id} aria-labelledby={heading} onCancel={event=>{event.preventDefault();if(!busy)onCancel()}}><div className="recovery-page"><h2 id={heading}>{tr('確認還原？')}</h2><p role={entry.preview||entry.error?undefined:'status'}>{label?(entry.kind==='backup'?label:tr(label)):tr('正在準備還原預覽…')}</p><p>{tr('會先保存目前資料。')}</p>
     {entry.error&&<><p className="recovery-error" role="alert">{trMessage(entry.error)}</p><button className="btn btn-primary" disabled={busy} onClick={pending?onRecovery:onRefresh}>{tr(pending?'核對上次復原':'重新查看還原預覽')}</button></>}
     {entry.preview&&<RecoverySummary current={entry.preview.current} target={entry.preview.target}/>}
     {entry.preview?.protection?.sourceStorage&&<p className="recovery-notice" data-backup-source>{tr(entry.preview.protection.sourceStorage==='sqlite'?'來自電腦版':'來自瀏覽器版')}{entry.preview.protection.converted&&<> · {tr('已自動核對格式')}</>}</p>}

@@ -64,6 +64,8 @@ const modes={
   '--cross-storage-shared':['native-cross-storage-shared.cjs','POS_CROSS_STORAGE_SHARED_PASS',false],
   '--cross-storage-independent':['native-cross-storage-independent.cjs','POS_CROSS_INDEPENDENT_PASS',false],
   '--cross-storage-independent-ui':['native-cross-storage-independent-ui.cjs','POS_CROSS_INDEPENDENT_UI_PASS',true],
+  '--recovery-ack-ui':['native-recovery-ack-ui.cjs','POS_RECOVERY_ACK_UI_PASS',true],
+  '--recovery-ack-browser':['native-recovery-ack-browser.cjs','POS_RECOVERY_ACK_BROWSER_PASS',true],
   '--stock-history':['native-stock-history.cjs','POS_STOCK_HISTORY_PASS',false],
   '--stock-history-ui':['native-stock-history-ui.cjs','POS_STOCK_HISTORY_UI_PASS',true],
   '--stock-setup':['native-stock-setup.cjs','POS_STOCK_SETUP_PASS',false],
