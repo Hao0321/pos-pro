@@ -45,7 +45,8 @@
     "test:scenarios": "node scripts/run-native-security.cjs --scenarios",
     "test:scenario-ui": "npm run build && node scripts/run-native-security.cjs --scenario-ui",
     "postinstall": "electron-builder install-app-deps",
-    "build:icons": "node scripts/generate-icon.js"
+    "build:icons": "node scripts/generate-icon.js",
+    "test:master-migration": "node scripts/run-native-security.cjs --master-migration"
   },
   "dependencies": {
     "@noble/hashes": "2.4.0",

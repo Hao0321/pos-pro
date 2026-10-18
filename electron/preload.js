@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   // ----- Products -----
   db: {
+    previewMasterMigration: input=>ipcRenderer.invoke('db:previewMasterMigration',input),
+    applyMasterMigration: input=>ipcRenderer.invoke('db:applyMasterMigration',input),
     getPrivateDraftContext:()=>ipcRenderer.invoke('db:getPrivateDraftContext'),
     lookupPrivateDraftOriginal:input=>ipcRenderer.invoke('db:lookupPrivateDraftOriginal',input),
     getStockAccountingState:()=>ipcRenderer.invoke('db:getStockAccountingState'),

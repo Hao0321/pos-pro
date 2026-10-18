@@ -79,9 +79,22 @@
     "protocol": "pos-migration-draft/v1",
     "schema": "/agent/migration-draft-v1.schema.json",
     "guide": "/agent/guides/migration.txt",
-    "status": "preview-only",
+    "status": "owner-master-review",
     "businessCommit": false,
     "humanReviewRequired": true,
-    "moneyMovement": false
+    "moneyMovement": false,
+    "localMasterCommit": [
+      "products",
+      "suppliers",
+      "customers"
+    ],
+    "identity": "Exact source system + company + entity + externalId. No name-only merge.",
+    "unsupportedCommit": [
+      "opening-stock",
+      "opening-receivables",
+      "opening-payables",
+      "history-reference"
+    ],
+    "confirmation": "Authenticated owner previews counts, source-ID mappings, source/local field differences and unresolved issues. A single displayed confirmation atomically commits supported masters; Agent cannot approve or execute."
   }
 }

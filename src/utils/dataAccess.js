@@ -23,6 +23,8 @@ export async function applyLotOperation(input,actor){return isElectron?window.el
 export async function loadWasteCostState(actor){if(isElectron)return window.electronAPI.db.getLotState();const record=readRecords();if(!record.data.pos_stock_cost_entries.length){const {stockWasteCosts}=await import('../../electron/stockWasteCosts.mjs');return {costActive:false,wasteCosts:actor?.role==='staff'?null:stockWasteCosts(null,record.data.pos2_waste)}}return (await import('./browserLots')).getBrowserLotState(actor)}
 export async function loadWarehouseState(actor){return isElectron?window.electronAPI.db.getWarehouseState():(await import('./browserWarehouse')).getBrowserWarehouseState(actor)}
 export async function applyWarehouseOperation(input,actor){return isElectron?window.electronAPI.db.applyWarehouseOperation(input):(await import('./browserWarehouse')).commitBrowserWarehouse(input,actor)}
+export async function previewMasterMigration(input,actor){return isElectron?window.electronAPI.db.previewMasterMigration(input):(await import('./browserMasterMigration')).previewBrowserMasterMigration(input,actor)}
+export async function applyMasterMigration(input,actor){return isElectron?window.electronAPI.db.applyMasterMigration(input):(await import('./browserMasterMigration')).commitBrowserMasterMigration(input,actor)}
 export async function loadPrivateDraftContext(actor){return isElectron?window.electronAPI.db.getPrivateDraftContext():getBrowserPrivateDraftContext(actor)}
 export async function lookupPrivateDraftOriginal(input,actor){return isElectron?window.electronAPI.db.lookupPrivateDraftOriginal(input):lookupBrowserPrivateDraftOriginal(input,actor)}
 export const isSharedStore = !!(typeof window !== 'undefined' && window.electronAPI?.sharedStore)

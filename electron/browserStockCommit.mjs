@@ -18,7 +18,7 @@ export function appendBrowserStockBusiness(before,after,state,command,runtime){
   const planned=planBrowserStockBusiness(before,{...runtime,state,timestamp},method,request,actor)
   if(canonicalSignature(after)!==canonicalSignature(planned.book))throw Error('保存內容與原操作不符，原資料已保留')
   if(!cost)return planned.book
-  const body={id:'stock-'+crypto.randomUUID(),sequence:state.entries.length+1,previousHash:state.head,beforeDigest:state.stateDigest,input,actor:{userId:actor.userId,username:actor.username,role:actor.role},time:timestamp,date:method==='applySalesOperation'?input.date:salesDate(new Date(input.time||timestamp)),openingMaterial:null,method,evidence:browserStockEvidence(before,planned.book,method,input,planned.result)}
+  const body={id:runtime.eventId||'stock-'+crypto.randomUUID(),sequence:state.entries.length+1,previousHash:state.head,beforeDigest:state.stateDigest,input,actor:{userId:actor.userId,username:actor.username,role:actor.role},time:timestamp,date:method==='applySalesOperation'?input.date:salesDate(new Date(input.time||timestamp)),openingMaterial:null,method,evidence:browserStockEvidence(before,planned.book,method,input,planned.result)}
   const projection=projectStockLedger(state.projection,body);body.afterDigest=stockLedgerDigest(projection)
   const hash=stockLedgerDigest(body),receipt=stockLedgerAcknowledgement(body,hash,projection)
   const operation={id:canonicalSignature([method,input.id]),method,operationId:input.id,actorId:actor.userId,signature:canonicalSignature(input),receipt}
