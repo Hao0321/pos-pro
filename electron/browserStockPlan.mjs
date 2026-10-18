@@ -1,3 +1,5 @@
+import {isProcurement} from './procurementRules.mjs'
+import {PURCHASE_UNITS_KIND,retainPurchaseUnitFeature} from './purchaseUnitPricing.mjs'
 import {canonicalSignature,operationHeader,moneyValue,quantityValue} from './operationRules.mjs'
 import {updateBrowserSettings} from './settingEncoding.mjs'
 import {signature as checkoutSignature} from './checkoutSignature.mjs'
@@ -97,6 +99,7 @@ export function planBrowserStockBusiness(book,runtime,method,request,actor){
     const plan=planSupplierInventory(request,browserStockContexts(book,runtime),actor)
     next.products=[...book.products.map(row=>plan.products.find(p=>p.id===row.id)||row),...plan.products.filter(row=>plan.created.includes(row.id))]
     next.purchases=plan.createPurchase?[plan.purchase,...book.purchases]:book.purchases.map(row=>row.id===plan.purchase?.id?plan.purchase:row)
+    if(request.kind===PURCHASE_UNITS_KIND)next.settings=retainPurchaseUnitFeature(next).settings
     next.suppliers=book.suppliers.map(row=>row.id===plan.supplier?.id?plan.supplier:row)
     next.cashLog=plan.cashLog?[plan.cashLog,...book.cashLog]:book.cashLog
     next.auditLog=[{id:'stock-operation:'+request.id,action:'INVENTORY_OPERATION',detail:plan.receipt,timestamp:runtime.timestamp,userId:actor.userId,username:actor.username,role:actor.role},...book.auditLog]
@@ -161,7 +164,7 @@ export function browserStockEvidence(before,after,method,input,result){
   }else if(method==='applyInventoryOperation'){
     if(input.kind==='stocktake')include(input.counts)
     else{
-      const purchase=after.purchases.find(row=>row.id===input.purchaseId),old=before.purchases.find(row=>row.id===input.purchaseId),modern=purchase?.procurement?.version===1
+      const purchase=after.purchases.find(row=>row.id===input.purchaseId),old=before.purchases.find(row=>row.id===input.purchaseId),modern=isProcurement(purchase)
       if(!purchase||!old)throw Error('採購來源需要核對')
       const event=modern?purchase.procurement[['receive','receive-lots'].includes(input.kind)?'receipts':'returns'].find(row=>row.id===input.id):null
       evidence.inventory={kind:input.kind,purchaseId:purchase.id,modern,items:purchase.items,beforeReceived:old.items.map(row=>row.received||0),event,creditCents:['purchase-return','purchase-return-lots'].includes(input.kind)?Math.round(event?.amount*100):0}

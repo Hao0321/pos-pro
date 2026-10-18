@@ -1,476 +1,84 @@
-import {tr,trMessage} from "../../i18n"
-import { useState, useMemo, useRef, lazy, Suspense } from "react"
-import { Plus, Check, X, ChevronRight, Zap, Camera } from "lucide-react"
-import { DEFAULT_CATEGORIES, CATEGORY_META, groupByCategory } from "../../utils/categories"
-import { computeSalesVelocity, suggestReorderQty } from "../../utils/analytics"
-import { localDate } from "../../utils/checkoutSafety.mjs"
-import {procurementLineCents} from '../../../electron/procurementRules.mjs'
-import { FL, ps } from "./controls.jsx"
+import {useEffect,useMemo,useRef,useState,lazy,Suspense} from 'react'
+import {tr,trMessage} from '../../i18n'
+import {canonicalSignature} from '../../../electron/operationRules.mjs'
+import {decimalUnits} from '../../../electron/decimalUnits.mjs'
+import {loadProducts} from '../../utils/dataAccess'
+import {computeSalesVelocity,suggestReorderQty} from '../../utils/analytics'
+import {readPendingFinancial} from '../../utils/financialCommand'
+import useArchivedDraft from '../../hooks/useArchivedDraft'
+import {emptyPurchaseDraft,beginPurchaseDraft,validPurchaseDraft,purchaseDraftKey,purchaseChoices,purchaseRow,previousPurchaseRow,purchaseDraftPreview,purchaseDraftCommand,purchaseDraftSignature,purchaseAgentHandoff,readPurchaseAgent} from '../../utils/purchaseDraft.mjs'
+import {purchaseDraftAcknowledged} from '../../utils/purchaseDraftReceipt.mjs'
+import {PurchasePicker,PurchaseItemCard,PurchaseReview,purchaseMoney} from './PurchaseComposerParts'
+import '../../styles/arrival.css'
+import '../../styles/purchase-composer.css'
 
-export const BarcodeScannerModal = lazy(() => import('../../components/BarcodeScannerModal'))
-
-export function NewPurchase({ products, suppliers, purchases, orders = [], onSave }) {
-  const pendingId=useRef('PO'+crypto.randomUUID())
-  // AI: 近 30 天每日銷售速度
-  const salesVelocity = useMemo(() => computeSalesVelocity(orders, 30), [orders])
-  const [supplierId, setSupplierId] = useState('')
-  const [date,       setDate]       = useState(() => localDate())
-  const [items,      setItems]      = useState([])
-  const [note,       setNote]       = useState('')
-  const [addProdId,  setAddProdId]  = useState('')
-  const [catFilter,  setCatFilter]  = useState('all')
-  const [showCamera, setShowCamera] = useState(false)
-  const [camMsg,     setCamMsg]     = useState('')
-  const [confirming, setConfirming] = useState(false) // v2.6: 送出前確認
-  const submitOnce = useRef(false) // 防連點兩下重複送單（setState 是非同步的，state 擋不住同一渲染內的第二下）
-
-  const supplier = suppliers.find(s=>s.id===supplierId)
-
-  // v2.6: 用既有 camMsg toast 告訴使用者為什麼沒反應
-  function toast(msg, ms = 2500) {
-    setCamMsg(msg)
-    setTimeout(() => setCamMsg(''), ms)
-  }
-
-  // 從歷史進貨單找該廠商該商品的最近單價
-  function historicalPrice(productId, sid) {
-    if (!sid) return null
-    const sorted = (purchases || [])
-      .filter(po => po.supplierId === sid)
-      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-    for (const po of sorted) {
-      const found = (po.items || []).find(i => i.productId === productId)
-      if (found && found.unitCost > 0) return found.unitCost
-    }
-    return null
-  }
-
-  // v2.6: 貨源目錄品項的歷史單價（用 catalogId 對過往進貨單）
-  function historicalCatalogPrice(catalogId, sid) {
-    if (!sid || !catalogId) return null
-    const sorted = (purchases || [])
-      .filter(po => po.supplierId === sid)
-      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-    for (const po of sorted) {
-      const found = (po.items || []).find(i => i.catalogId === catalogId)
-      if (found && found.unitCost > 0) return found.unitCost
-    }
-    return null
-  }
-
-  // v2.6: 貨源目錄 → 可叫貨清單。已連到庫存商品的目錄項併回庫存商品（不重複列）；
-  // 未建檔的目錄項變成 pseudo-product，叫貨到貨後才自動建檔
-  const catalogOnly = useMemo(() => {
-    if (!supplier) return []
-    return (supplier.catalog || [])
-      .filter(ci => !ci.productId || !products.find(p => p.id === ci.productId))
-      .map(ci => ({
-        id: 'cat_' + ci.id, isCatalog: true, catalogId: ci.id,
-        name: ci.name, unit: ci.unit || '個', cost: Number(ci.cost) || 0,
-      }))
-  }, [supplier, products])
-
-  // 依供應商過濾商品：選了 → 該供應商的 + 未指定供應商的；沒選 → 全部
-  const filteredProducts = useMemo(() => {
-    let arr = !supplierId ? products : products.filter(p => !p.supplierId || p.supplierId === supplierId)
-    if (catFilter !== 'all') arr = arr.filter(p => (p.category || '未分類') === catFilter)
-    return arr
-  }, [products, supplierId, catFilter])
-
-  // 該供應商有的分類清單（給 chips）
-  const availableCategories = useMemo(() => {
-    if (!supplierId) return []
-    const supplierProds = products.filter(p => p.supplierId === supplierId)
-    const set = new Set(supplierProds.map(p => p.category || '未分類'))
-    // 依 DEFAULT_CATEGORIES 順序排序
-    const ordered = DEFAULT_CATEGORIES.filter(c => set.has(c))
-    const extra = [...set].filter(c => !DEFAULT_CATEGORIES.includes(c))
-    return [...ordered, ...extra]
-  }, [products, supplierId])
-
-  // 該供應商的低庫存商品（stock <= reorderLevel，預設 reorderLevel=0 不算）
-  // audit #13: 強制 Number 轉型，避免字串 reorderLevel 造成 NaN
-  const lowStockForSupplier = useMemo(() => {
-    if (!supplierId) return []
-    return products.filter(p => p.supplierId === supplierId
-      && (Number(p.reorderLevel) || 0) > 0
-      && (Number(p.stock) || 0) <= (Number(p.reorderLevel) || 0)
-      && (catFilter === 'all' || (p.category || '未分類') === catFilter))
-  }, [products, supplierId, catFilter])
-
-  function addItem(prodId) {
-    const id = prodId || addProdId
-    // v2.6: 貨源目錄品項（尚未建檔）→ 用目錄資訊直接開叫貨列
-    if (typeof id === 'string' && id.startsWith('cat_')) {
-      const c = catalogOnly.find(x => x.id === id)
-      if (!c || items.find(i => i.catalogId === c.catalogId)) return
-      setItems(prev => [...prev, {
-        productId: null,
-        isCatalog: true,
-        catalogId: c.catalogId,
-        name: c.name,
-        unit: c.unit,
-        qty: 1,
-        unitCost: c.cost || historicalCatalogPrice(c.catalogId, supplierId) || 0,
-        received: 0,
-      }])
-      setAddProdId('')
-      return
-    }
-    const p = products.find(x => x.id === id)
-    if (!p || items.find(i => i.productId === p.id)) return
-    const histPrice = historicalPrice(p.id, supplierId)
-    const dailyAvg = salesVelocity.get(p.id) || 0
-    // AI 建議：基於近 30 天日均 + 14 天供貨週期；若無銷售資料則回退到 reorderLevel × 2
-    let suggestedQty, aiUsed = false
-    if (dailyAvg > 0) {
-      suggestedQty = suggestReorderQty(p, dailyAvg, 14).suggested
-      aiUsed = true
-    } else {
-      const reorder = Number(p.reorderLevel) || 0
-      const stock = Number(p.stock) || 0
-      suggestedQty = reorder > 0 ? Math.max(1, reorder * 2 - stock) : 1
-    }
-    setItems(prev => [...prev, {
-      productId: p.id,
-      name: p.name,
-      qty: suggestedQty,
-      unitCost: histPrice || Number(p.cost) || 0,
-      received: 0,
-      _fromHistory: !!histPrice,
-      _aiSuggested: aiUsed,
-      _dailyAvg: dailyAvg,
-    }])
-    setAddProdId('')
-  }
-
-  function fillLowStock() {
-    if (!supplierId) return
-    const toAdd = lowStockForSupplier.filter(p => !items.find(i => i.productId === p.id))
-    if (toAdd.length === 0) return
-    const newItems = toAdd.map(p => {
-      const histPrice = historicalPrice(p.id, supplierId)
-      const dailyAvg = salesVelocity.get(p.id) || 0
-      let suggestedQty, aiUsed = false
-      if (dailyAvg > 0) {
-        suggestedQty = suggestReorderQty(p, dailyAvg, 14).suggested
-        aiUsed = true
-      } else {
-        const reorder = Number(p.reorderLevel) || 0
-        const stock = Number(p.stock) || 0
-        suggestedQty = Math.max(1, reorder * 2 - stock)
-      }
-      return {
-        productId: p.id,
-        name: p.name,
-        qty: suggestedQty,
-        unitCost: histPrice || Number(p.cost) || 0,
-        received: 0,
-        _fromHistory: !!histPrice,
-        _autoFilled: true,
-        _aiSuggested: aiUsed,
-        _dailyAvg: dailyAvg,
-      }
-    })
-    setItems(prev => [...prev, ...newItems])
-  }
-
-  function updateItem(i, key, val) {
-    // audit #12: qty 至少 1，避免 qty=0 通過驗證造成空進貨單
-    const num = parseFloat(val) || 0
-    const safe = num
-    setItems(prev=>prev.map((it,idx)=>idx===i?{...it,[key]:safe}:it))
-  }
-
-  const total = items.reduce((s,i)=>{try{return s+procurementLineCents(i.qty,i.unitCost)/100}catch{return s}},0)
-  const unaddedLow = lowStockForSupplier.filter(p => !items.find(i => i.productId === p.id)).length
-  // v2.6: 貨源目錄裡還沒加入清單的品項（給下拉的「📋 貨源目錄」群組）
-  const pickableCatalog = catalogOnly.filter(c => !items.find(i => i.catalogId === c.catalogId))
-  // v2.6: 目前進行到哪一步（給步驟指示高亮）
-  const step = !supplierId ? 1 : items.length === 0 ? 2 : 3
-
-  function handleSave() {
-    // v2.6: 不再沉默 return，用 toast 講清楚缺什麼
-    if (!supplierId) { toast('✗ 請先選擇廠商'); return }
-    if (items.length === 0) { toast('✗ 請先加入至少一項商品'); return }
-    // audit #11: 防 supplier 同步被改造成 undefined（race condition）
-    if (!supplier) { toast('✗ 找不到這家廠商，請重新選擇'); return }
-    // audit #12: 過濾掉 qty<=0 的品項
-    const validItems = items.filter(i => i.qty > 0 && i.unitCost >= 0)
-    if (validItems.length !== items.length) { toast('✗ 每項商品都需要有效數量與單價，請檢查後再送出'); return }
-    try{items.forEach(i=>procurementLineCents(i.qty,i.unitCost))}catch(e){toast('✗ '+e.message);return}
-    setConfirming(true) // v2.6: 先確認再送出，避免誤觸
-  }
-
-  async function doSubmit() {
-    if (submitOnce.current) return
-    submitOnce.current = true
-    const validItems = items.filter(i => i.qty > 0 && i.unitCost >= 0)
-    const po = {
-      id: pendingId.current, supplierId, supplierName: supplier.name || '',
-      status:'ordered', date, receivedDate:null,
-      items: validItems.map(({_fromHistory, _autoFilled, _aiSuggested, _dailyAvg, ...rest}) => rest),
-      note, total,
-    }
-    try {await onSave(po);setConfirming(false)}
-    catch(e) {submitOnce.current=false;toast('✗ '+e.message)}
-  }
-
-  return (
-    <div style={{maxWidth:780, display:'flex', flexDirection:'column', gap:16, overflowY:'auto', height:'100%'}}>
-      {/* v2.6: 三步驟指示，目前這一步高亮 */}
-      <div style={{display:'flex', gap:8, flexShrink:0}}>
-        {[[1,'① 選廠商'],[2,'② 加商品'],[3,'③ 送出叫貨單']].map(([n,l])=>(
-          <div key={n} style={{
-            flex:1, textAlign:'center', padding:'11px 6px', borderRadius:8, fontSize:13,
-            fontWeight: step===n ? 700 : 400,
-            background: step===n ? 'var(--accent-dim)' : 'var(--bg-overlay)',
-            color: step===n ? 'var(--accent)' : 'var(--text-tertiary)',
-            border: `1px solid ${step===n ? 'var(--accent)' : 'var(--border-dim)'}`,
-          }}>{tr(l)}</div>
-        ))}
-      </div>
-      <div style={np.topGrid}>
-        <div>
-          <FL>{tr("供應商 *")}</FL>
-          <select aria-label={tr("採購供應商")} className="field" value={supplierId} onChange={e=>{setSupplierId(e.target.value);setAddProdId('')}} style={{cursor:'pointer',fontSize:16,minHeight:44}}>
-            <option value="">{tr("— 選擇供應商 —")}</option>
-            {suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <FL>{tr("叫貨日期")}</FL>
-          <input aria-label={tr("採購日期")} type="date" className="field" value={date} onChange={e=>setDate(e.target.value)}/>
-        </div>
-      </div>
-
-      {supplier && (
-        <div style={{fontSize:12, color:'var(--text-secondary)', background:'var(--bg-overlay)', borderRadius:8, padding:'10px 14px'}}>
-          📞 {supplier.contact} · {supplier.payTerms}{supplier.note ? ` · ${supplier.note}` : ''}
-          <div style={{marginTop:4, color:'var(--text-tertiary)', fontSize:11}}>{tr("該供應商商品 ")}{products.filter(p=>p.supplierId===supplierId).length}{tr(" 項")}{tr(" · 📋 貨源目錄 ")}{(supplier.catalog||[]).length}{tr(" 項")}
-            {lowStockForSupplier.length > 0 && (
-              <span style={{color:'var(--amber)', marginLeft:8}}>
-                · {lowStockForSupplier.length}{tr(" 項低於安全庫存")}</span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 分類篩選 chips（只在選了供應商且有多個分類時顯示）*/}
-      {supplierId && availableCategories.length > 0 && (
-        <div>
-          <FL>{tr("分類篩選")}</FL>
-          <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
-            <button
-              onClick={()=>setCatFilter('all')}
-              style={{
-                fontSize:12, padding:'5px 11px', borderRadius:14,
-                background: catFilter==='all' ? 'var(--gold-dim)' : 'var(--bg-overlay)',
-                color: catFilter==='all' ? 'var(--gold)' : 'var(--text-secondary)',
-                border:`1px solid ${catFilter==='all' ? 'var(--gold)' : 'var(--border-dim)'}`,
-                fontWeight: catFilter==='all' ? 600 : 400,
-              }}
-            >{tr("全部")}</button>
-            {availableCategories.map(c => (
-              <button
-                key={c}
-                onClick={()=>setCatFilter(c)}
-                style={{
-                  fontSize:12, padding:'5px 11px', borderRadius:14,
-                  background: catFilter===c ? 'var(--gold-dim)' : 'var(--bg-overlay)',
-                  color: catFilter===c ? 'var(--gold)' : 'var(--text-secondary)',
-                  border:`1px solid ${catFilter===c ? 'var(--gold)' : 'var(--border-dim)'}`,
-                  fontWeight: catFilter===c ? 600 : 400,
-                }}
-              >
-                {CATEGORY_META[c]?.icon || '📦'} {c}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 一鍵補貨 */}
-      {supplierId && unaddedLow > 0 && (
-        <button
-          onClick={fillLowStock}
-          style={{
-            display:'flex', alignItems:'center', justifyContent:'space-between', gap:10,
-            padding:'14px 16px', borderRadius:'var(--r3)',
-            background:'var(--amber-dim)',
-            border:'1px solid var(--amber)', cursor:'pointer', textAlign:'left',
-            width:'100%',
-          }}
-        >
-          <div style={{display:'flex', alignItems:'center', gap:10}}>
-            <Zap size={18} style={{color:'var(--amber)'}}/>
-            <div>
-              <div style={{fontWeight:600, fontSize:14, color:'var(--text-primary)'}}>{tr("一鍵帶入低庫存補貨清單")}{catFilter !== 'all' && `（${catFilter}）`}
-              </div>
-              <div style={{fontSize:12, color:'var(--text-secondary)', marginTop:2}}>{unaddedLow}{tr(" 項商品低於安全庫存，自動計算建議叫貨量")}</div>
-            </div>
-          </div>
-          <ChevronRight size={18} style={{color:'var(--amber)'}}/>
-        </button>
-      )}
-
-      <div>
-        <FL>{tr("加入商品 ")}{supplierId && tr("（限 {0} 供應）", {0: supplier?.name})}</FL>
-        <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={()=>setShowCamera(true)}
-            disabled={!supplierId}
-            title={tr("用相機掃條碼加入")}
-          >
-            <Camera size={14}/>{tr("掃條碼")}</button>
-          <select
-            aria-label={tr("採購商品")}
-            className="field"
-            value={addProdId}
-            onChange={e=>setAddProdId(e.target.value)}
-            disabled={!supplierId}
-            style={{cursor:'pointer', flex:1, minWidth:200}}
-          >
-            <option value="">— {supplierId ? tr("選擇商品") : tr("請先選供應商")} —</option>
-            {/* 依分類分組，用 optgroup */}
-            {groupByCategory(filteredProducts.filter(p=>!items.find(i=>i.productId===p.id))).map(g => (
-              <optgroup key={g.category} label={`${CATEGORY_META[g.category]?.icon || '📦'} ${g.category}（${g.products.length}）`}>
-                {g.products.map(p => {
-                  const low = (Number(p.reorderLevel) || 0) > 0 && (Number(p.stock) || 0) <= (Number(p.reorderLevel) || 0)
-                  return (
-                    <option key={p.id} value={p.id}>
-                      {low ? '⚠ ' : ''}{p.name}{tr("（庫存：")}{p.stock}{p.reorderLevel ? tr(" / 安全 {0}", {0: p.reorderLevel}) : ''}）
-                    </option>
-                  )
-                })}
-              </optgroup>
-            ))}
-            {/* v2.6: 貨源目錄（尚未建檔）群組 */}
-            {pickableCatalog.length > 0 && (
-              <optgroup label={tr("📋 貨源目錄（{0}）", {0: pickableCatalog.length})}>
-                {pickableCatalog.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}（{c.unit}{tr("｜進價 $")}{c.cost}）</option>
-                ))}
-              </optgroup>
-            )}
-          </select>
-          <button className="btn btn-ghost btn-sm" onClick={()=>addItem()} disabled={!addProdId}>
-            <Plus size={14}/>{tr("加入")}</button>
-        </div>
-        {/* v2.6: 不讓使用者對著灰色按鈕發呆 */}
-        {!supplierId && (
-          <div style={{fontSize:12, color:'var(--amber)', marginTop:6}}>{tr("請先在上面選擇廠商，就能加商品")}</div>
-        )}
-      </div>
-
-      {items.length > 0 && (
-        <div className="card" style={{overflow:'auto'}}>
-          <div style={np.itemsHead}>
-            <span>{tr("商品")}</span><span style={{textAlign:'right'}}>{tr("數量")}</span><span style={{textAlign:'right'}}>{tr("單價")}</span><span style={{textAlign:'right'}}>{tr("小計")}</span><span/>
-          </div>
-          {items.map((item,i)=>{
-            const daysOfStock = item._dailyAvg > 0 ? (item.qty / item._dailyAvg).toFixed(0) : null
-            return (
-            <div key={i} style={np.itemRow}>
-              <div>
-                <div style={{fontSize:13, fontWeight:500}}>{item.name}</div>
-                <div style={{display:'flex', gap:6, marginTop:2, flexWrap:'wrap'}}>
-                  {item.isCatalog && <span style={{fontSize:10, color:'var(--accent)', background:'var(--accent-dim)', padding:'1px 6px', borderRadius:4}}>{tr("📋 未建檔")}</span>}
-                  {item._fromHistory && <span style={{fontSize:10, color:'var(--blue)', background:'var(--blue-dim)', padding:'1px 6px', borderRadius:4}}>{tr("歷史單價")}</span>}
-                  {item._autoFilled && <span style={{fontSize:10, color:'var(--amber)', background:'var(--amber-dim)', padding:'1px 6px', borderRadius:4}}>{tr("自動補貨")}</span>}
-                  {item._aiSuggested && <span style={{fontSize:10, color:'var(--purple)', background:'var(--purple-dim)', padding:'1px 6px', borderRadius:4}}>{tr("🤖 AI 建議")}</span>}
-                  {daysOfStock && <span style={{fontSize:10, color:'var(--text-tertiary)'}}>{tr("可賣 ~")}{daysOfStock}{tr(" 天")}</span>}
-                </div>
-              </div>
-              <input aria-label={tr("訂購數量 {0}", {0: item.name})} type="number" className="field" value={item.qty} min={0.001} step="0.001" onChange={e=>updateItem(i,'qty',e.target.value)} style={{textAlign:'right', padding:'6px 8px', fontFamily:'var(--font-mono)', fontSize:16,minHeight:44}}/>
-              <input aria-label={tr("採購單價 {0}", {0: item.name})} type="number" className="field" value={item.unitCost} min={0} step="0.01" onChange={e=>updateItem(i,'unitCost',e.target.value)} style={{textAlign:'right', padding:'6px 8px', fontFamily:'var(--font-mono)', fontSize:16,minHeight:44}}/>
-              <span style={{textAlign:'right', fontFamily:'var(--font-mono)', fontSize:13}}>{(item.qty*item.unitCost).toLocaleString()}</span>
-              <button className="btn-icon btn-sm" style={{color:'var(--red)'}} onClick={()=>setItems(prev=>prev.filter((_,idx)=>idx!==i))}><X size={13}/></button>
-            </div>
-          )})}
-          <div style={{display:'flex', justifyContent:'space-between', padding:'12px 14px', borderTop:'1px solid var(--border-mid)', fontWeight:600}}>
-            <span>{tr("總計")}</span>
-            <span style={{fontFamily:'var(--font-mono)', color:'var(--gold-bright)'}}>NT$ {total.toLocaleString()}</span>
-          </div>
-        </div>
-      )}
-
-      <div>
-        <FL>{tr("備註")}</FL>
-        <input className="field" value={note} onChange={e=>setNote(e.target.value)} placeholder={tr("（選填）")}/>
-      </div>
-
-      <button className="btn btn-primary" style={{width:'100%', padding:13}} disabled={!supplierId||items.length===0} onClick={handleSave}>
-        <Check size={16}/>{tr("建立進貨單")}</button>
-      {/* v2.6: 按鈕還不能按時，說清楚缺哪一步 */}
-      {(!supplierId || items.length===0) && (
-        <div style={{fontSize:12, color:'var(--text-tertiary)', textAlign:'center', marginTop:-8}}>
-          {!supplierId ? tr("① 請先選擇廠商") : tr("② 請先加入至少一項商品，才能送出")}
-        </div>
-      )}
-
-      {/* v2.6: 送出前確認 */}
-      {confirming && (
-        <div style={ps.overlay}>
-          <div style={{...ps.modal, maxWidth:400}} className="animate-scale">
-            <div style={{fontWeight:700, fontSize:16, fontFamily:'var(--font-serif)', marginBottom:10}}>{tr("確認送出叫貨單")}</div>
-            <p style={{fontSize:14, color:'var(--text-secondary)', lineHeight:1.7, marginBottom:18}}>{tr("向「")}{supplier?.name}{tr("」叫貨 ")}{items.filter(i=>i.qty>0&&i.unitCost>=0).length}{tr(" 項，共 NT$ ")}{total.toLocaleString()}{tr("。確定送出？")}</p>
-            <div style={{display:'flex', gap:10}}>
-              <button className="btn btn-primary" style={{flex:1, minHeight:44}} onClick={doSubmit}><Check size={15}/>{tr("確定送出")}</button>
-              <button className="btn btn-ghost" style={{flex:1, minHeight:44}} onClick={()=>setConfirming(false)}>{tr("再檢查")}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {camMsg && (
-        <div style={{
-          position:'fixed', bottom:24, left:'50%', transform:'translateX(-50%)',
-          background: camMsg.startsWith('✗') ? 'var(--red-dim)' : 'var(--green-dim)',
-          color: camMsg.startsWith('✗') ? 'var(--red)' : 'var(--green)',
-          border:`1px solid ${camMsg.startsWith('✗') ? 'var(--red)' : 'var(--green)'}`,
-          padding:'8px 14px', borderRadius:8, fontSize:13, zIndex:600,
-        }}>{trMessage(camMsg)}</div>
-      )}
-
-      {showCamera && (
-        <Suspense fallback={null}>
-        <BarcodeScannerModal
-          title={tr("掃條碼加入進貨單")}
-          mode="continuous"
-          onScan={(code) => {
-            const p = products.find(x => x.barcode === code)
-            if (!p) {
-              setCamMsg(`✗ 條碼 ${code} 查無商品`)
-              setTimeout(()=>setCamMsg(''), 2500)
-              return 'keep'
-            }
-            if (p.supplierId && p.supplierId !== supplierId) {
-              setCamMsg(`✗ ${p.name} 屬於其他供應商`)
-              setTimeout(()=>setCamMsg(''), 2500)
-              return 'keep'
-            }
-            if (items.find(i => i.productId === p.id)) {
-              setCamMsg(`已在清單：${p.name}`)
-              setTimeout(()=>setCamMsg(''), 1500)
-              return 'keep'
-            }
-            addItem(p.id)
-            setCamMsg(`✓ 已加入 ${p.name}`)
-            setTimeout(()=>setCamMsg(''), 1500)
-            return 'keep'
-          }}
-          onClose={()=>setShowCamera(false)}
-        />
-        </Suspense>
-      )}
-    </div>
-  )
-}
-
-export const np = {
-  topGrid: { display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:12 },
-  itemsHead: { display:'grid', gridTemplateColumns:'minmax(140px,1fr) 80px 90px 80px 36px', gap:8, padding:'9px 14px', background:'var(--bg-overlay)', fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.05em', minWidth:480 },
-  itemRow: { display:'grid', gridTemplateColumns:'minmax(140px,1fr) 80px 90px 80px 36px', gap:8, padding:'9px 14px', borderTop:'1px solid var(--border-dim)', alignItems:'center', minWidth:480 },
+export const BarcodeScannerModal=lazy(()=>import('../../components/BarcodeScannerModal'))
+const options={empty:emptyPurchaseDraft,valid:validPurchaseDraft,maxLength:4000000,message:'採購草稿讀不到，請保留原輸入',prefix:'pos-purchase-unit-draft:',fileName:'purchase-draft.json',archiveName:'purchase-draft'}
+export function NewPurchase({products,suppliers,purchases,orders=[],store,session,onSave}){
+ const scopeOf=state=>state&&session?.role==='owner'?{storeId:state.storeId,epoch:state.epoch,userId:session.userId,role:session.role}:null
+ const scope=scopeOf(store?.supplierState),key=scope?purchaseDraftKey(scope.storeId,scope.userId,scope.role):null,draft=useArchivedDraft(key,options),form=draft.form
+ const [override,setOverride]=useState(null),[review,setReview]=useState(null),[error,setError]=useState(''),[message,setMessage]=useState(''),[handoffText,setHandoffText]=useState(''),[busy,setBusy]=useState(false),[changed,setChanged]=useState(false),[camera,setCamera]=useState(false),gate=useRef(false),heading=useRef(null)
+ const data=override||{products,suppliers},supplier=data.suppliers.find(row=>row.id===form.supplierId),choices=useMemo(()=>purchaseChoices(data,form.supplierId),[data.products,data.suppliers,form.supplierId]),velocity=useMemo(()=>computeSalesVelocity(orders,30),[orders])
+ let pending=null,pendingError='';try{pending=readPendingFinancial()}catch(cause){pendingError=cause.message}
+ const original=form.attempted||!!pending&&pending.request.id===form.command?.identity.id,stale=changed||!!form.scope&&canonicalSignature(form.scope)!==canonicalSignature(scope),locked=busy||!draft.status.ready||!!draft.status.error||!!pending||!!pendingError||original
+ let preview=null;try{if(scope)preview=purchaseDraftPreview(form,scope,data)}catch{}
+ useEffect(()=>{let alive=true;store?.refreshSuppliers?.().catch(cause=>{if(alive)setError(cause.message)});return()=>{alive=false}},[])
+ useEffect(()=>{if(draft.status.ready&&scope&&!form.scope)draft.setForm(beginPurchaseDraft(scope))},[draft.status.ready,form.scope,scope?.storeId,scope?.epoch])
+ useEffect(()=>{heading.current?.focus({preventScroll:true})},[!!review])
+ useEffect(()=>{const done=event=>{const current=draft.current().form;if(purchaseDraftAcknowledged(current,event.detail)){draft.close(beginPurchaseDraft(current.scope),true);setReview(null)}};window.addEventListener('pos-inventory-operation',done);return()=>window.removeEventListener('pos-inventory-operation',done)},[key])
+ function change(update){if(locked)return;setError('');setMessage('');setHandoffText('');setReview(null);draft.setForm(old=>({...update(old),command:null,attempted:false}))}
+ function suggestion(product){const daily=velocity.get(product.id)||0;if(daily>0)return Math.max(1,suggestReorderQty(product,daily,14).suggested);return Number(product.reorderLevel)>0?Math.max(1,Number(product.reorderLevel)*2-Number(product.stock||0)):1}
+ function seed(choice){
+  let row=purchaseRow(choice),previous=null;try{previous=previousPurchaseRow(choice,purchases,form.supplierId)}catch{}
+  if(previous)row=previous
+  const product=data.products.find(item=>item.id===choice.productId),base=suggestion(product||{id:'',stock:0}),reference=choice.reference?.cost??(!choice.catalogId?product?.cost:null)
+  if(!row.unitPrice&&typeof reference==='number'&&reference>0&&Number.isFinite(reference)&&Math.round(reference*100)/100===reference&&(row.mode==='base'&&(!choice.purchasedUnit||choice.purchasedUnit===row.unit)))row={...row,unitPrice:String(reference)}
+  let quantity=String(base)
+  if(row.mode==='pack')try{const need=BigInt(decimalUnits(String(base),3,1e12,'invalid')),factor=BigInt(decimalUnits(row.baseQuantityPerUnit,3,1e12,'invalid'));if(!factor)throw Error();quantity=String((need+factor-1n)/factor)}catch{quantity=''}
+  return {...row,quantity}
+ }
+ function add(choiceKey){const choice=choices.find(row=>row.key===choiceKey);if(!choice)return;if(form.items.some(row=>row.key===choiceKey)){setMessage('商品已在單內，請直接改數量');return}change(old=>({...old,items:[...old.items,seed(choice)]}));setMessage('建議量與參考進價已帶入，請核對原單。')}
+ function reorder(){const rows=choices.filter(row=>!row.catalogId&&data.products.some(p=>p.id===row.productId&&Number(p.reorderLevel)>0&&Number(p.stock)<=Number(p.reorderLevel))&&!form.items.some(item=>item.key===row.key));if(!rows.length){setMessage('目前沒有需要補貨的商品');return}change(old=>({...old,items:[...old.items,...rows.map(seed)]}));setMessage('建議量與參考進價已帶入，請核對原單。')}
+ function archiveChange(update){if(locked)return;try{draft.keepAndReset({...update(draft.current().form),command:null,attempted:false});setError('');setReview(null);setMessage('舊輸入已保留，請核對新單位的數量與價格。')}catch(cause){setError(cause.message)}}
+ function rowUpdate(index,field,value){
+  if(field==='mode'){archiveChange(old=>({...old,items:old.items.map((row,i)=>i===index?{...row,mode:value,quantity:'',unitPrice:'',purchasedUnit:value==='pack'?(row.purchasedUnit||''):'',...(!row.productId&&value==='pack'?{unit:''}:{})}:row)}));return}
+  change(old=>({...old,items:old.items.map((row,i)=>i===index?{...row,[field]:value}:row)}))
+ }
+ async function fresh(){const state=await store.refreshSuppliers(),nextScope=scopeOf(state),next={products:await loadProducts([]),suppliers:state.suppliers};return {scope:nextScope,data:next,state}}
+ async function inspect(){
+  if(gate.current||locked)return;gate.current=true;setBusy(true);setError('')
+  try{const next=await fresh(),value=purchaseDraftPreview(draft.current().form,next.scope,next.data);draft.save();setReview({...next,preview:value})}catch(cause){setError(cause.message);if(cause.message.includes('已變更'))setChanged(true)}finally{gate.current=false;setBusy(false)}
+ }
+ async function restart(){if(gate.current||locked)return;gate.current=true;setBusy(true);try{const next=await fresh();draft.keepAndReset(beginPurchaseDraft(next.scope));setOverride(next.data);setChanged(false);setReview(null);setError('')}catch(cause){setError(cause.message)}finally{gate.current=false;setBusy(false)}}
+ async function save(){
+  if(gate.current||!draft.status.ready||draft.status.error||pendingError||pending&&pending.request.id!==form.command?.identity.id||!original&&!review)return
+  gate.current=true;setBusy(true);setError('');let submitted=null,dispatched=false
+  try{const current=draft.current().form,command=original?current.command:purchaseDraftCommand(current,review.scope,review.data,review.state);if(!command)throw Error('請先核對上一筆操作')
+   submitted={...current,command,attempted:true};draft.setForm(submitted);draft.save()
+   const prepare=pending=>{const {id,time,...input}=pending.request,next={...draft.current().form,command:{identity:{id,time},input,draftSignature:purchaseDraftSignature(current)},attempted:true};submitted=next;draft.setForm(next);draft.save()}
+   dispatched=true;const result=pending?await store.retryFinancial():await onSave(command.input.purchase,{kind:command.input.kind,input:command.input,identity:command.identity,prepare})
+   if(!purchaseDraftAcknowledged(submitted,result))throw Error('採購保存回覆需要核對，請保留原編號')
+   if(draft.current().form.id===submitted.id)draft.close(beginPurchaseDraft(submitted.scope),true);setReview(null);setMessage('採購已保存，可在進貨單查看。')
+  }catch(cause){setError(cause.message);if(!dispatched||cause.notCommitted){draft.setForm(old=>({...old,command:null,attempted:false}));try{draft.save()}catch{}setReview(null)}}finally{gate.current=false;setBusy(false)}
+ }
+ function supplierChange(value){if(form.items.length){archiveChange(()=>({...beginPurchaseDraft(scope),supplierId:value}));return}change(old=>({...old,supplierId:value}))}
+ return <div className="purchase-composer" data-purchase-composer>
+  {(error||draft.status.error||pendingError)&&<p role="alert" className="arrival-error">{trMessage(error||draft.status.error||pendingError)}</p>}
+  {message&&<p role="status">{trMessage(message)}</p>}
+  {!draft.status.ready&&<p role="status">{tr(draft.status.waiting?'草稿正在另一個視窗使用':'正在核對採購資料…')}</p>}
+  {stale&&!original&&<div><p role="alert">{tr('商品或供應商資料已變更，請保留原輸入重新核對')}</p><button className="btn" data-purchase-reset disabled={locked} onClick={restart}>{tr('保留舊稿，重新填')}</button></div>}
+  {original?<section className="purchase-item"><h3>{tr('先核對原採購')}</h3><p>{tr('沿用原編號，不會再建一張。')}</p><code>{form.command?.identity.id}</code><button className="btn btn-primary" data-purchase-original disabled={busy||!!pending&&pending.request.id!==form.command?.identity.id} onClick={save}>{tr('核對原採購')}</button></section>:<fieldset disabled={locked||stale}>
+   <div className="purchase-fields"><label>{tr('供應商 *')}<select className="field" aria-label={tr('採購供應商')} value={form.supplierId} onChange={event=>supplierChange(event.target.value)}><option value="">{tr('— 選擇供應商 —')}</option>{data.suppliers.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label>{tr('叫貨日期')}<input className="field" aria-label={tr('採購日期')} type="date" value={form.date} onChange={event=>change(old=>({...old,date:event.target.value}))}/></label></div>
+   {supplier&&<details><summary>{tr('供應商資料')}</summary><p>{supplier.contact} · {supplier.payTerms}</p><p>{supplier.note}</p></details>}
+   <PurchasePicker choices={choices} products={data.products} items={form.items} supplierId={form.supplierId} onAdd={add} onReorder={reorder} onScan={()=>setCamera(true)}/>
+   {form.items.map((row,index)=><PurchaseItemCard key={row.key} row={row} index={index} form={form} scope={scope} data={data} choices={choices} purchases={purchases} onUpdate={(field,value)=>rowUpdate(index,field,value)} onRemove={()=>change(old=>({...old,items:old.items.filter((_,i)=>i!==index)}))} onPrevious={previous=>archiveChange(old=>({...old,items:old.items.map((item,i)=>i===index?{...previous,quantity:item.mode===previous.mode&&item.purchasedUnit===previous.purchasedUnit?item.quantity:''}:item)}))}/>)}
+   <p className="purchase-total">{tr('總計')} {preview?purchaseMoney(preview.total):'—'}</p><label>{tr('備註')}<textarea className="field" maxLength={2000} value={form.note} onChange={event=>change(old=>({...old,note:event.target.value}))}/></label>
+   <button className="btn btn-primary" data-purchase-inspect disabled={!form.supplierId||!form.items.length} onClick={inspect}>{tr('建立進貨單')}</button>
+   <details><summary>{tr('讓 Agent 幫忙填')}</summary><button className="btn" disabled={!form.supplierId} onClick={async()=>{try{const text=JSON.stringify(purchaseAgentHandoff(form,scope,data),null,2);setHandoffText(text);try{await navigator.clipboard.writeText(text);setMessage('已複製給 Agent')}catch{setMessage('請複製下方內容給 Agent')}}catch(cause){setError(cause.message)}}}>{tr('複製給 Agent')}</button>{handoffText&&<label>{tr('給 Agent 的內容')}<textarea className="field" data-purchase-handoff readOnly value={handoffText} onFocus={event=>event.target.select()}/></label>}<label>{tr('貼上採購草稿')}<textarea className="field" data-purchase-agent maxLength={250000} value={form.agentText} onChange={event=>change(old=>({...old,agentText:event.target.value}))}/></label><button className="btn" data-purchase-agent-fill onClick={()=>{try{change(old=>readPurchaseAgent(old.agentText,old,scope,data))}catch(cause){setError(cause.message)}}}>{tr('填入草稿')}</button></details>
+  </fieldset>}
+  <details><summary>{tr('保留原輸入')}</summary><button className="btn" onClick={draft.download}>{tr('下載草稿')}</button></details>
+  {draft.archives.length>0&&<details data-purchase-archives><summary>{tr('已保留的舊稿')} ({draft.archives.length})</summary>{draft.archives.map((archive,index)=><button className="btn" key={archive} onClick={()=>{try{draft.downloadArchive(archive)}catch(cause){setError(cause.message)}}}>{tr('下載舊稿 {0}',{0:index+1})}</button>)}</details>}
+  {review&&<PurchaseReview preview={review.preview} supplier={review.data.suppliers.find(row=>row.id===form.supplierId)} busy={busy} heading={heading} onConfirm={save} onBack={()=>setReview(null)}/>}
+  {camera&&<Suspense fallback={null}><BarcodeScannerModal title={tr('掃條碼加入進貨單')} mode="continuous" onScan={code=>{const product=data.products.find(row=>row.barcode===code),choice=choices.find(row=>!row.catalogId&&row.productId===product?.id);if(choice)add(choice.key);else setMessage('條碼查無商品')}} onClose={()=>setCamera(false)}/></Suspense>}
+ </div>
 }

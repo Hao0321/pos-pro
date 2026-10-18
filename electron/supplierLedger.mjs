@@ -1,7 +1,7 @@
 import {canonicalSignature,operationHeader,moneyValue} from './operationRules.mjs'
 import {businessId,businessInstant,only,text} from './businessExchange.mjs'
 import {salesDate,validateSalesDay} from './salesRules.mjs'
-import {procurementSummary} from './procurementRules.mjs'
+import {procurementSummary,isPurchaseCreate} from './procurementRules.mjs'
 import {supplierClaimKey} from './supplierCredit.mjs'
 import {SUPPLIER_CONTROL_ACTIONS,emptySupplierControl,supplierActor,deriveSupplierControl,projectSupplierControl,supplierControlView,assertProcurementApproval,validateSupplierPaymentApproval,consumeSupplierPaymentApproval} from './supplierControl.mjs'
 import {buildSupplierPurchaseTimelines,supplierPurchaseAt,supplierInventoryContext,assertSupplierInventoryTransition} from './procurementHistory.mjs'
@@ -154,7 +154,7 @@ function validateCash(event,receipt,logs=[]){const expected=cashFor(event),actua
 function project(entries=[]){const state=emptyProjection();for(const event of [...entries].sort((a,b)=>a.revision-b.revision))projectOne(state,event);return state}
 export function planSupplierLedger(request,data,actor){const event=derive(request,data,actor,project(data.supplierEntries));return {event,receipt:receiptFor(event),cashLog:cashFor(event)}}
 export function planSupplierRegistration(request,purchase,data,actor){
- if(request.kind!=='purchase-create')throw Error('只有建立新採購能自動登記核准，舊單請明確納入')
+ if(!isPurchaseCreate(request.kind))throw Error('只有建立新採購能自動登記核准，舊單請明確納入')
  const context=supplierInventoryContext(request);if(!context)throw Error('採購登記缺少供應商帳版本')
  const state=project(data.supplierEntries),header={id:request.id,time:request.time,date:salesDate(request.time),action:'purchase-register',storeId:context.storeId,epoch:context.epoch,expectedRevision:context.revision}
  operationHeader(header);businessInstant(header.time)
@@ -164,7 +164,7 @@ export function planSupplierRegistration(request,purchase,data,actor){
 
 function registrationHistory(event,data,state,timelines){
  const request=event.input,context=supplierInventoryContext(request),timeline=timelines.get(event.purchaseId),row=timeline?.rows.find(item=>item.request.id===event.id)
- if(!context||request.kind!=='purchase-create'||!row||row.receipt.purchaseVersion!==1||row.receipt.signature!==canonicalSignature(request)||canonicalSignature(row.actor)!==canonicalSignature(event.actor))throw Error('採購核准登記缺少原建立操作與登入身份')
+ if(!context||!isPurchaseCreate(request.kind)||!row||row.receipt.purchaseVersion!==1||row.receipt.signature!==canonicalSignature(request)||canonicalSignature(row.actor)!==canonicalSignature(event.actor))throw Error('採購核准登記缺少原建立操作與登入身份')
  const header={id:request.id,time:request.time,date:salesDate(request.time),action:'purchase-register',storeId:context.storeId,epoch:context.epoch,expectedRevision:context.revision}
  operationHeader(header);businessInstant(header.time)
  const purchase=timeline.snapshots.get(1),before={...data,purchases:data.purchases.filter(po=>po.id!==purchase.id)}
@@ -189,7 +189,7 @@ function historyScope(entries,data){
    if(entries.length||data.supplierFence)throw Error('採購原始回執需要核對')
    return false
   }
-  if(request?.supplierContext){needed.add(request.kind==='purchase-create'?request.purchase?.id:request.purchaseId)}
+  if(request?.supplierContext){needed.add(isPurchaseCreate(request.kind)?request.purchase?.id:request.purchaseId)}
   return request?.kind!=='stocktake'
  })
  return buildSupplierPurchaseTimelines({...data,inventoryAudits,supplierEntries:entries},needed)
@@ -203,7 +203,7 @@ function inventoryBuckets(entries,data,scope){
  for(const row of scope.operations){
   const timeline=scope.timelines.get(row.purchaseId);if(!timeline)continue
   const registered=registrations.get(row.purchaseId)
-  if(row.context&&row.request.kind==='purchase-create'&&(!registered||registered.action!=='purchase-register'||registered.id!==row.request.id||registered.revision!==row.seenRevision+1))throw Error('新採購缺少同一操作的原核准登記')
+  if(row.context&&isPurchaseCreate(row.request.kind)&&(!registered||registered.action!=='purchase-register'||registered.id!==row.request.id||registered.revision!==row.seenRevision+1))throw Error('新採購缺少同一操作的原核准登記')
   if(registered&&row.receipt.purchaseVersion>registered.originRevision&&(!row.context||row.seenRevision<registered.revision))throw Error('已納入核准的採購缺少當時供應商帳版本')
   if(!buckets.has(row.seenRevision))buckets.set(row.seenRevision,[])
   buckets.get(row.seenRevision).push(row)

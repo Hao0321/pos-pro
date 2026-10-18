@@ -1,3 +1,5 @@
+import {isPurchaseCreate} from '../../electron/procurementRules.mjs'
+import {finalizePurchaseDraft} from '../utils/purchaseDraftReceipt.mjs'
 import { settledOrders, netSale, orderCost } from '../utils/orderLedger'
 import {finalizeReceiptLotDraft} from '../utils/receiptLotDraftReceipt.mjs'
 import { executeFinancial, FINANCIAL_PENDING,readPendingFinancial } from '../utils/financialCommand'
@@ -361,7 +363,7 @@ export function useStore(session){
   }, [dataError,openShift])
 
   function applyInventoryResult(result){
-    result=finalizeReceiptLotDraft(result,sessionRef.current)
+    result=finalizePurchaseDraft(finalizeReceiptLotDraft(result,sessionRef.current),sessionRef.current)
     if(result.supplierLedger){const current=supplierRef.current;const next={...current,supplierLedger:result.supplierLedger,legacyReadOnly:true,purchases:result.purchase?[result.purchase,...(current?.purchases||[]).filter(po=>po.id!==result.purchase.id)]:current?.purchases||[]};supplierRef.current=next;setSupplierState(next)}
     setProducts(previous=>[...previous.map(p=>result.products.find(n=>n.id===p.id)||p),...result.products.filter(p=>!previous.some(old=>old.id===p.id))])
     if(result.purchase)setPurchases(previous=>[result.purchase,...previous.filter(p=>p.id!==result.purchase.id)])
@@ -371,7 +373,7 @@ export function useStore(session){
   }
   async function commitInventory(kind,input,identity=null,prepare=null){
     if(dataError)throw Error(dataError)
-    const state=kind==='purchase-create'&&identity?await refreshSuppliers():supplierRef.current,original=['receive','receive-lots'].includes(kind)?purchases.find(po=>po.id===input.purchaseId):null
+    const state=isPurchaseCreate(kind)&&identity?await refreshSuppliers():supplierRef.current,original=['receive','receive-lots'].includes(kind)?purchases.find(po=>po.id===input.purchaseId):null
     const controlled=kind!=='stocktake'&&!(['receive','receive-lots'].includes(kind)&&!original?.procurement&&!state?.legacyReadOnly)
     if(controlled&&!state)throw Error('請先載入供應商與採購資料，再保存原草稿')
     const command=supplierInventoryCommand(kind,input,identity,state,{controlled})

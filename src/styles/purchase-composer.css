@@ -1,0 +1,24 @@
+.purchase-composer{max-width:780px;width:100%;height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding-bottom:24px;min-width:0}
+.purchase-composer label{display:flex;flex-direction:column;gap:7px;font-size:15px;line-height:1.5;min-width:0}
+.purchase-composer input.field,.purchase-composer select.field,.purchase-composer textarea.field{min-height:56px;font-size:18px;min-width:0;width:100%}
+.purchase-composer .btn,.purchase-review .btn{min-height:56px!important;font-size:16px;white-space:normal}
+.purchase-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.purchase-picker,.purchase-item{background:var(--bg-raised);border:1px solid var(--border-mid);border-radius:var(--r3);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.purchase-item header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.purchase-item h3{font-size:18px;line-height:1.4;margin:0;overflow-wrap:anywhere}
+.purchase-item .purchase-check{display:flex;flex-direction:row;align-items:center;gap:12px;min-height:56px}
+.purchase-check input{width:24px;height:24px;flex-shrink:0}
+.purchase-inline{display:flex;gap:10px;flex-wrap:wrap}
+.purchase-inline>*{flex:1;min-width:120px}
+.purchase-result{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px;border-radius:var(--r2);background:var(--accent-dim);font-size:17px}
+.purchase-result strong,.purchase-total{font-size:24px;font-weight:700;overflow-wrap:anywhere}
+.purchase-hint,.purchase-composer small{color:var(--text-secondary);line-height:1.5}
+.purchase-composer fieldset{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:16px}
+.purchase-composer details>summary{min-height:48px;display:list-item;padding:12px 0;cursor:pointer;font-size:15px}
+.purchase-composer details>label,.purchase-composer details>.btn{margin-top:10px}
+.purchase-composer textarea{min-height:100px}
+.purchase-composer .purchase-total{margin:0}
+.purchase-review article{padding:12px 0;border-top:1px solid var(--border-dim);overflow-wrap:anywhere}
+.purchase-review .btn{width:100%;margin-top:10px}
+.purchase-composer :focus-visible,.purchase-review :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:420px){.purchase-fields{gap:10px}.purchase-picker,.purchase-item{padding:12px}.purchase-composer{gap:12px}.purchase-review{padding:16px}}

@@ -3,6 +3,7 @@ import {readExchangeTextSetting,EXCHANGE_ACTION} from './businessExchange.mjs'
 import {INVENTORY_ACTION} from './inventoryOperations.mjs'
 import {validateStockCostBook} from './stockBackup.mjs'
 import {retainStockCostCompatibility} from './stockCompatibility.mjs'
+import {PURCHASE_UNITS_SETTING,retainPurchaseUnitFeature} from './purchaseUnitPricing.mjs'
 
 export const RECOVERY_PROTOCOL='pos-recovery-v1'
 const materialAudit=new Set([INVENTORY_ACTION,EXCHANGE_ACTION,'SCENARIO_TEMPLATE_APPLY'])
@@ -57,7 +58,8 @@ export function protectedRestoreBook(current,source){
   for(const row of current.auditLog.filter(row=>!isMaterialAudit(row)))audit.set(row.id,row)
   next.auditLog=[...audit.values()]
   for(const rows of Object.values(next))rows.sort((a,b)=>String(a.id??a.key).localeCompare(String(b.id??b.key)))
-  return retainStockCostCompatibility(current,next)
+  const compatible=retainStockCostCompatibility(current,next)
+  return current.settings.some(row=>row.key===PURCHASE_UNITS_SETTING)?retainPurchaseUnitFeature(compatible):compatible
 }
 
 export function recoverySummary(book){

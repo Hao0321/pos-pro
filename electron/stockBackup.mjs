@@ -1,3 +1,4 @@
+import {assertPurchaseUnitFeature} from './purchaseUnitPricing.mjs'
 import {replayStockLedger} from './stockLedgerModel.mjs'
 import {assertStockCustodyMatchesBook,stockLedgerError} from './stockOpeningPlan.mjs'
 import {canonicalSignature} from './operationRules.mjs'
@@ -17,6 +18,7 @@ const immutableOrder=row=>Object.fromEntries(orderFields.map(key=>[key,row[key]?
 
 export function validateStockCostBook(book,validatedState=null){
  try{
+  assertPurchaseUnitFeature(book)
   const physicalAudits=physicalStocktakeAudits(book.auditLog||[])
   if((book.settings||[]).some(row=>row.key===STOCK_COMPAT_SETTING&&row.value!=='1'))throw stockLedgerError('HISTORY')
   const hasEntries=Object.hasOwn(book,'stockCostEntries'),hasOperations=Object.hasOwn(book,'stockCostOperations')

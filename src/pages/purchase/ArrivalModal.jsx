@@ -13,7 +13,7 @@ export default function ArrivalModal(props){
  const [state,setState]=useState(null),[error,setError]=useState('')
  useEffect(()=>{let alive=true;loadLotState(props.session).then(value=>{if(alive)setState(value)}).catch(cause=>{if(alive)setError(cause.message)});return()=>{alive=false}},[props.po.id,props.session.userId])
  if(!state)return <div className="arrival-overlay"><section className="arrival-modal" role="dialog" aria-modal="true" aria-label={tr('確認到貨')}><p role={error?'alert':'status'}>{trMessage(error||'正在核對庫存…')}</p><button className="btn" onClick={props.onClose}>{tr('關閉')}</button></section></div>
- return state.active?<ReceiptForm {...props} state={state} setState={setState}/>:<ReceiveModal po={props.po} products={props.store.products} saving={props.saving} error={props.error} onConfirm={props.onLegacy} onClose={props.onClose}/>
+ return state.active?<ReceiptForm {...props} state={state} setState={setState}/>:<ReceiveModal po={props.po} products={props.store.products} suppliers={props.suppliers} saving={props.saving} error={props.error} onConfirm={props.onLegacy} onClose={props.onClose}/>
 }
 
 function ReceiptForm({po,state,setState,store,session,suppliers,onClose,onSaved,onSourceUpdated}){

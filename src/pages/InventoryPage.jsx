@@ -707,7 +707,7 @@ export default function InventoryPage({ store,session }) {
                               </div>
                               <div style={{fontSize:10, color:'var(--text-tertiary)', marginTop:2, fontFamily:'var(--font-mono)'}}>
                                 {new Date(h.time).toLocaleString(getLocale(),{ month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit' })}
-                                {h.unitPrice ? ` · @$${h.unitPrice}` : ''}
+                                {h.unitPrice ? ` · @${h.unitPriceApproximate?'≈':''}$${h.unitPrice}` : ''}
                               </div>
                             </div>
                             <span style={{

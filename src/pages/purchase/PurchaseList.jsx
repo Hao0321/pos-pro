@@ -3,6 +3,8 @@ import { useState } from "react"
 import { X, Truck, Package, ChevronLeft, CheckCircle } from "lucide-react"
 import useIsMobile from "../../hooks/useIsMobile"
 import { STATUS, poItemKey, ps } from "./controls.jsx"
+import {purchaseLineCents} from '../../../electron/purchaseUnitPricing.mjs'
+import {decimalUnits} from '../../../electron/decimalUnits.mjs'
 
 export function PurchaseList({ purchases, selected, onSelect, onReceive,renderProcurement,canReceive=()=>true }) {
   const isMobile = useIsMobile()
@@ -67,11 +69,11 @@ export function PurchaseList({ purchases, selected, onSelect, onReceive,renderPr
             </div>
             {selected.items.map((item,i) => (
               <div key={i} style={{display:'grid',minWidth:420, gridTemplateColumns:'1fr 70px 70px 70px 70px', gap:8, padding:'10px 14px', borderTop:'1px solid var(--border-dim)', fontSize:13, alignItems:'center'}}>
-                <span style={{fontWeight:500}}>{item.name}</span>
-                <span style={{textAlign:'right', fontFamily:'var(--font-mono)'}}>{item.qty}</span>
-                <span style={{textAlign:'right', fontFamily:'var(--font-mono)', color:'var(--text-secondary)'}}>{item.unitCost}</span>
-                <span style={{textAlign:'right', fontFamily:'var(--font-mono)', color: item.received===item.qty?'var(--green)':item.received>0?'var(--amber)':'var(--text-tertiary)'}}>{item.received ?? '—'}</span>
-                <span style={{textAlign:'right', fontFamily:'var(--font-mono)', fontWeight:500}}>{(item.qty*item.unitCost).toLocaleString()}</span>
+                <span style={{fontWeight:500}}>{item.name}{item.costBasis&&<small style={{display:'block',color:'var(--text-secondary)'}}>{tr('換成 {0} {1}',{0:item.qty,1:item.unit})}</small>}</span>
+                <span style={{textAlign:'right', fontFamily:'var(--font-mono)'}}>{item.costBasis?item.costBasis.purchasedQuantity+' '+item.costBasis.purchasedUnit:item.qty}</span>
+                <span style={{textAlign:'right', fontFamily:'var(--font-mono)', color:'var(--text-secondary)'}}>{item.costBasis?item.costBasis.purchasedUnitPrice+' / '+item.costBasis.purchasedUnit:item.unitCost}</span>
+                <span style={{textAlign:'right', fontFamily:'var(--font-mono)', color: item.received===item.qty?'var(--green)':item.received>0?'var(--amber)':'var(--text-tertiary)'}}>{item.received ?? '—'}{item.costBasis?' '+item.unit:''}</span>
+                <span style={{textAlign:'right', fontFamily:'var(--font-mono)', fontWeight:500}}>{(item.costBasis?purchaseLineCents(item)/100:item.qty*item.unitCost).toLocaleString(undefined,item.costBasis?{minimumFractionDigits:2,maximumFractionDigits:2}:undefined)}</span>
               </div>
             ))}
             <div style={{display:'flex', justifyContent:'space-between', padding:'12px 14px', borderTop:'1px solid var(--border-mid)', fontWeight:600}}>
@@ -92,21 +94,24 @@ export function PurchaseList({ purchases, selected, onSelect, onReceive,renderPr
   )
 }
 
-export function ReceiveModal({ po, products, onConfirm, onClose, saving, error }) {
+export function ReceiveModal({ po, products, suppliers=[], onConfirm, onClose, saving, error }) {
   // v2.6: key 改用 poItemKey — 貨源目錄品項沒有 productId，避免全部撞在 null 上
   // 預填「尚未到貨的差額」：部分到貨補收時不會把已收的量再收一次
   const remaining = (i) => Math.max(0, i.qty - (i.received || 0))
   const [qtys, setQtys] = useState(() => {
     const m = {}
-    po.items.forEach((i, idx) => { m[poItemKey(i, idx)] = remaining(i) })
+    po.items.forEach((i, idx) => { m[poItemKey(i, idx)] = po.procurement?.version===2?String(Math.round(remaining(i)*1000)/1000):remaining(i) })
     return m
   })
   const hasUnfiled = po.items.some(i => !i.productId)
+  const unitsMode=po.procurement?.version===2,[prices,setPrices]=useState({}),[localError,setLocalError]=useState('')
+  function needsPrice(item){const linked=suppliers.find(row=>row.id===po.supplierId)?.catalog?.find(row=>row.id===item.catalogId)?.productId;return !products.some(row=>row.id===(item.productId||linked))}
+  function confirm(){try{setLocalError('');if(!unitsMode){onConfirm(qtys);return}const quantities={},newItems=[];po.items.forEach((item,index)=>{const key=poItemKey(item,index),quantity=decimalUnits(qtys[key]??'',3,1e12,'請填寫實際到貨數量')/1000;quantities[key]=quantity;if(quantity&&needsPrice(item))newItems.push({lineIndex:index,priceCents:decimalUnits(prices[index]??'',2,1e11,'請確認新商品的售價')})});onConfirm(quantities,{newItems})}catch(cause){setLocalError(cause.message)}}
 
   // v2.6: 一鍵把每項到貨量填成「未到數量」
   function fillAll() {
     const m = {}
-    po.items.forEach((i, idx) => { m[poItemKey(i, idx)] = remaining(i) })
+    po.items.forEach((i, idx) => { m[poItemKey(i, idx)] = unitsMode?String(Math.round(remaining(i)*1000)/1000):remaining(i) })
     setQtys(m)
   }
 
@@ -128,7 +133,7 @@ export function ReceiveModal({ po, products, onConfirm, onClose, saving, error }
           const key = poItemKey(item, idx)
           const current = products.find(p=>p.id===item.productId)?.stock || 0
           return (
-            <div key={key} style={{display:'grid', gridTemplateColumns:'1fr 70px 80px', gap:12, padding:'10px 0', borderBottom:'1px solid var(--border-dim)', alignItems:'center'}}>
+            <div key={key} style={{display:'grid', gridTemplateColumns:'minmax(0,1fr) 70px 80px', gap:12, padding:'10px 0', borderBottom:'1px solid var(--border-dim)', alignItems:'center'}}>
               <div>
                 <div style={{fontSize:13, fontWeight:500}}>
                   {item.name}
@@ -138,23 +143,24 @@ export function ReceiveModal({ po, products, onConfirm, onClose, saving, error }
                   {item.productId ? tr("現有庫存：{0}", {0: current}) : tr("未建檔品項到貨後會自動建檔")}
                 </div>
               </div>
-              <div style={{textAlign:'right', fontSize:12, color:'var(--text-secondary)'}}>{tr("叫貨 ")}{item.qty}{(item.received||0) > 0 && <div style={{fontSize:10, color:'var(--amber)'}}>{tr("已收 ")}{item.received}</div>}
+              <div style={{textAlign:'right', fontSize:12, color:'var(--text-secondary)'}}>{tr("叫貨 ")}{item.qty} {unitsMode?item.unit:''}{(item.received||0) > 0 && <div style={{fontSize:10, color:'var(--amber)'}}>{tr("已收 ")}{item.received}</div>}
               </div>
               <input
-                aria-label={tr("本次到貨量 {0} {1}", {0: item.name, 1: idx+1})} type="number" min={0} max={remaining(item)} step="0.001" disabled={saving}
+                aria-label={tr("本次到貨量 {0} {1}", {0: item.name, 1: idx+1})} type={unitsMode?'text':'number'} inputMode="decimal" min={0} max={remaining(item)} step="0.001" disabled={saving}
                 className="field"
                 value={qtys[key] ?? item.qty}
-                onChange={e=>setQtys(q=>({...q,[key]:Number(e.target.value)||0}))}
+                onChange={e=>setQtys(q=>({...q,[key]:unitsMode?e.target.value:Number(e.target.value)||0}))}
                 style={{textAlign:'right', fontFamily:'var(--font-mono)', padding:'8px 10px',fontSize:16,minHeight:44}}
               />
+              {unitsMode&&needsPrice(item)&&<label style={{gridColumn:'1/-1',fontSize:15}}>{tr('新商品售價')} · {item.unit}<input className="field" inputMode="decimal" aria-label={tr('新商品售價 {0}',{0:item.name})} value={prices[idx]??''} disabled={saving} onChange={event=>setPrices(old=>({...old,[idx]:event.target.value}))} style={{fontSize:18,minHeight:56}}/><small>{tr('只設定這個新商品；現有商品售價不會變動。')}</small></label>}
             </div>
           )
         })}
         <div style={{marginTop:16, padding:'10px 12px', background:'var(--green-dim)', borderRadius:8, fontSize:12, color:'var(--green)'}}>{tr("✓ 確認後庫存將自動增加，並記錄稽核日誌")}{hasUnfiled ? tr("；未建檔品項會自動建立商品資料") : ''}
         </div>
-        {error&&<p role="alert" style={{color:'var(--red)'}}>{trMessage(error)}</p>}
+        {(error||localError)&&<p role="alert" style={{color:'var(--red)'}}>{trMessage(error||localError)}</p>}
         <div style={{display:'flex', gap:10, marginTop:16}}>
-          <button disabled={saving} className="btn btn-primary" style={{flex:1, padding:12}} onClick={()=>onConfirm(qtys)}>
+          <button disabled={saving} className="btn btn-primary" style={{flex:1, padding:12}} onClick={confirm}>
             <CheckCircle size={15}/>{saving?tr("保存中…"):tr("確認到貨")}
           </button>
           <button className="btn btn-ghost" style={{flex:1}} onClick={onClose}>{tr("取消")}</button>

@@ -4,6 +4,7 @@
 
 import { settledOrders, netSale, orderCost } from './orderLedger'
 import {reportLineRevenue} from './businessReports'
+import {purchaseReferenceCost} from '../../electron/purchaseUnitPricing.mjs'
 const DAY_MS = 86400000
 const now = () => Date.now()
 
@@ -270,7 +271,8 @@ export function getProductHistory(productId, { orders = [], wasteLog = [], purch
       delta: Math.abs(it.received),
       note: `進貨 · ${po.supplierName || ''}`,
       refId: po.id,
-      unitPrice: it.unitCost,
+      unitPrice: it.costBasis?purchaseReferenceCost(it).amount:it.unitCost,
+      ...(it.costBasis?{unitPriceApproximate:purchaseReferenceCost(it).approximate}:{}),
     })
   }
 

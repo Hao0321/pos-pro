@@ -1,6 +1,6 @@
 import { browserStorage } from './browserStorage'
 import {assertStoredBrowserCostReceipt} from './browserStockBusiness'
-import {PROCUREMENT_KINDS,isProcurement,procurementEvent,validateProcurement} from '../../electron/procurementRules.mjs'
+import {PROCUREMENT_KINDS,isPurchaseCreate,isProcurement,procurementEvent,validateProcurement} from '../../electron/procurementRules.mjs'
 import {operationHeader} from '../../electron/operationRules.mjs'
 import {assertExchangeReceipt} from '../../electron/businessExchange.mjs'
 import {assertSalesResult} from '../../electron/salesPlan.mjs'
@@ -72,9 +72,9 @@ export function assertReceipt(kind,request,result){
     }
     if(PROCUREMENT_KINDS.includes(kind)||row.document){
       const po=result.purchase
-      if(!isProcurement(po)||po.id!==(kind==='purchase-create'?request.purchase.id:request.purchaseId)||row.purchaseId!==po.id||!Number.isSafeInteger(row.purchaseVersion)||po.procurement.revision<row.purchaseVersion)throw Error('採購回覆缺少原進貨單或保存版本')
+      if(!isProcurement(po)||po.id!==(isPurchaseCreate(kind)?request.purchase.id:request.purchaseId)||row.purchaseId!==po.id||!Number.isSafeInteger(row.purchaseVersion)||po.procurement.revision<row.purchaseVersion)throw Error('採購回覆缺少原進貨單或保存版本')
       validateProcurement(po)
-      if(kind==='purchase-create'&&JSON.stringify(canonical(po.procurement.sourceQuote??null))!==JSON.stringify(canonical(request.sourceQuote??null)))throw Error('採購回覆缺少正確的報價來源')
+      if(isPurchaseCreate(kind)&&JSON.stringify(canonical(po.procurement.sourceQuote??null))!==JSON.stringify(canonical(request.sourceQuote??null)))throw Error('採購回覆缺少正確的報價來源')
       if(JSON.stringify(canonical(procurementEvent(po,request)))!==JSON.stringify(canonical(row.document)))throw Error('採購回覆缺少正確的保存文件')
       if(['purchase-return','purchase-return-lots'].includes(kind)){
         const expected=[...new Set(po.items.filter((_,i)=>request.quantities?.[i]>0).map(item=>item.productId))]

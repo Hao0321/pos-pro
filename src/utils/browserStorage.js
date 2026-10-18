@@ -1,4 +1,6 @@
 import {appendBrowserWarehouse} from '../../electron/browserWarehouse.mjs'
+import {appendBrowserPurchaseUnits} from '../../electron/browserPurchaseUnits.mjs'
+import {PURCHASE_UNITS_KIND,PURCHASE_UNITS_SETTING} from '../../electron/purchaseUnitPricing.mjs'
 import {appendBrowserLots} from '../../electron/browserLots.mjs'
 import {appendBrowserStockSetup} from '../../electron/browserStockSetup.mjs'
 import {stockSetupBrowserEnabled} from './stockSetupAvailability.mjs'
@@ -110,7 +112,8 @@ export function assertOriginalOperationAvailable(method,id,record=readRecords(),
   const error=new Error('原編號曾經保存，目前帳本無法確認這筆內容。請使用復原引導核對。')
   error.historyUncertain=true;throw error
 }
-export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false,recoveryCommand=null,transfer=null,physicalStocktake=null,stockBusiness=null,stockSetup=null,kitchenPrint=null,warehouse=null,lots=null}={}) {
+export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false,recoveryCommand=null,transfer=null,physicalStocktake=null,stockBusiness=null,stockSetup=null,kitchenPrint=null,warehouse=null,lots=null,purchaseUnits=null}={}) {
+  if(purchaseUnits&&(restore||physicalStocktake||stockBusiness||stockSetup||kitchenPrint||warehouse||lots))throw Error('請一次保存一個原操作')
   if(lots&&(restore||kitchenPrint||stockSetup||stockBusiness||physicalStocktake||warehouse||Object.keys(updates).length))throw Error('請一次保存一個原操作')
   if(warehouse&&(restore||kitchenPrint||stockSetup||stockBusiness||physicalStocktake||Object.keys(updates).length))throw Error('請一次保存一個原操作')
   if(restore&&stockSetup||kitchenPrint&&(restore||stockSetup||stockBusiness||physicalStocktake||Object.keys(updates).length))throw Error('請一次保存一個原操作')
@@ -132,6 +135,7 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
     if(canonicalSignature(before.settings.find(row=>row.key==='stockLotCountVersionFence')||null)!==canonicalSignature(after.settings.find(row=>row.key==='stockLotCountVersionFence')||null))throw Error('成本資料的版本保護由完整備份流程管理')
     if(canonicalSignature(before.settings.find(row=>row.key==='stockSupplierLotReturnsVersionFence')||null)!==canonicalSignature(after.settings.find(row=>row.key==='stockSupplierLotReturnsVersionFence')||null))throw Error('成本資料的版本保護由完整備份流程管理')
     if(canonicalSignature(before.settings.find(row=>row.key==='stockReceiptLotsVersionFence')||null)!==canonicalSignature(after.settings.find(row=>row.key==='stockReceiptLotsVersionFence')||null))throw Error('成本資料的版本保護由完整備份流程管理')
+    if(canonicalSignature(before.settings.find(row=>row.key===PURCHASE_UNITS_SETTING)||null)!==canonicalSignature(after.settings.find(row=>row.key===PURCHASE_UNITS_SETTING)||null)&&!(purchaseUnits||stockBusiness?.request?.kind===PURCHASE_UNITS_KIND))throw Error('包裝採購的版本保護由正式採購與完整備份流程管理')
     if(canonicalSignature(before.settings.find(row=>row.key===STOCK_BOOK_HEAD)||null)!==canonicalSignature(after.settings.find(row=>row.key===STOCK_BOOK_HEAD)||null))throw Error('成本帳的最後紀錄由正式交易或完整備份流程管理')
     const state=validateStockCostBook(before)
     if([physicalStocktake,stockBusiness,stockSetup].filter(Boolean).length>1)throw Error('請一次保存一個原操作')
@@ -139,6 +143,7 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
     else if(warehouse)next.data=bookToBrowser(appendBrowserWarehouse(before,after,state,warehouse,{epoch:current.salesEpoch}))
     else if(stockSetup)next.data=bookToBrowser(appendBrowserStockSetup(before,after,state,stockSetup,{epoch:current.salesEpoch,stockSetupEnabled:stockSetupBrowserEnabled()}))
     else if(stockBusiness)next.data=bookToBrowser(appendBrowserStockBusiness(before,after,state,stockBusiness,{epoch:current.salesEpoch,supplierFence:current.supplierFence}))
+    else if(purchaseUnits)next.data=bookToBrowser(appendBrowserPurchaseUnits(before,after,state,purchaseUnits,{epoch:current.salesEpoch,supplierFence:current.supplierFence}))
     else if(physicalStocktake)next.data=bookToBrowser(appendPhysicalStocktakeBook(before,after,state,physicalStocktake,{storeId:readExchangeTextSetting(before.settings,'sharedStoreId'),epoch:current.salesEpoch,costMode:state.projection?'active':'reference',restaurantEntries:before.restaurantOrders}))
     else guardUnintegratedStockWrite(before,after,state)
   }

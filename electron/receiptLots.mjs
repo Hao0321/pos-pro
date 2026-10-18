@@ -4,6 +4,12 @@ import {lotDate,lotError,lotRegistry} from './lotRules.mjs'
 export const RECEIPT_LOT_KIND='receive-lots',RECEIPT_LOT_PROTOCOL='pos-receipt-lots/v1'
 export const RECEIPT_LOT_FEATURE='stock-receipt-lots-v1',RECEIPT_LOT_SETTING='stockReceiptLotsVersionFence'
 const units=value=>{if(typeof value!=='number'||!Number.isFinite(value)||value<0||value>1e9||Math.abs(value-Math.round(value*1000)/1000)>1e-7)throw lotError('QUANTITY');return Math.round(value*1000)}
+export function receiptNewItemPrices(raw,totals){
+ if(!Array.isArray(raw)||raw.length>totals.length)throw lotError('INPUT')
+ const seen=new Set()
+ for(const row of raw){warehouseRecord(row,['lineIndex','priceCents']);if(!Number.isSafeInteger(row.lineIndex)||row.lineIndex<0||row.lineIndex>=totals.length||!totals[row.lineIndex]||seen.has(row.lineIndex)||!Number.isSafeInteger(row.priceCents)||row.priceCents<0||row.priceCents>1e11)throw lotError('INPUT');seen.add(row.lineIndex)}
+ return structuredClone(raw)
+}
 
 // RL1–RL4: an explicit new command cannot degrade to quantity-only receiving.
 export function receiptLots(request){
@@ -13,7 +19,7 @@ export function receiptLots(request){
  if(request.kind!==RECEIPT_LOT_KIND||raw.protocol!==RECEIPT_LOT_PROTOCOL||!/^sha256:[a-f0-9]{64}$/.test(raw.expectedStateDigest))throw lotError('INPUT')
  for(const key of ['storeId','epoch'])warehouseText(raw[key])
  if(!Array.isArray(request.quantities)||!request.quantities.length||request.quantities.length>10000||!Array.isArray(raw.allocations)||!raw.allocations.length||raw.allocations.length>10000||!Array.isArray(raw.newItems)||raw.newItems.length>request.quantities.length)throw lotError('INPUT')
- const totals=request.quantities.map(()=>0),prices=new Set()
+ const totals=request.quantities.map(()=>0)
  for(const row of raw.allocations){
   warehouseRecord(row,['lineIndex','quantityUnits','locationId','code','expiryMode','expiryDate'])
   if(!Number.isSafeInteger(row.lineIndex)||row.lineIndex<0||row.lineIndex>=totals.length||!Number.isSafeInteger(row.quantityUnits)||row.quantityUnits<1||row.quantityUnits>1e12)throw lotError('QUANTITY')
@@ -23,7 +29,7 @@ export function receiptLots(request){
   totals[row.lineIndex]+=row.quantityUnits;if(!Number.isSafeInteger(totals[row.lineIndex])||totals[row.lineIndex]>1e12)throw lotError('QUANTITY')
  }
  if(request.quantities.some((value,index)=>units(value)!==totals[index])||!totals.some(Boolean))throw lotError('QUANTITY')
- for(const row of raw.newItems){warehouseRecord(row,['lineIndex','priceCents']);if(!Number.isSafeInteger(row.lineIndex)||row.lineIndex<0||row.lineIndex>=totals.length||!totals[row.lineIndex]||prices.has(row.lineIndex)||!Number.isSafeInteger(row.priceCents)||row.priceCents<0||row.priceCents>1e11)throw lotError('INPUT');prices.add(row.lineIndex)}
+ receiptNewItemPrices(raw.newItems,totals)
  return structuredClone(raw)
 }
 

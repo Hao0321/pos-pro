@@ -1,5 +1,9 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--purchase-units-shared':['native-purchase-units-shared.cjs','POS_PURCHASE_UNITS_TRANSPORT_PASS',true],
+  '--purchase-units-browser-ui':['native-purchase-units-browser-ui.cjs','POS_PURCHASE_UNITS_BROWSER_PASS',true],
+  '--purchase-units-ui':['native-purchase-units-ui.cjs','POS_PURCHASE_UNITS_UI_PASS',true],
+  '--purchase-units':['native-purchase-units.cjs','POS_PURCHASE_UNITS_NATIVE_PASS',false],
   '--supplier-lot-returns':['native-supplier-lot-returns.cjs','POS_SUPPLIER_LOT_RETURNS_NATIVE_PASS',false],
   '--supplier-lot-returns-ui':['native-supplier-lot-returns-ui.cjs','POS_SUPPLIER_LOT_RETURNS_UI_PASS',true],
   '--supplier-lot-returns-browser-ui':['native-supplier-lot-returns-browser-ui.cjs','POS_SUPPLIER_LOT_RETURNS_BROWSER_PASS',true],

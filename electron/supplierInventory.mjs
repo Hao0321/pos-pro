@@ -1,6 +1,6 @@
 import {canonicalSignature} from './operationRules.mjs'
 import {businessInstant} from './businessExchange.mjs'
-import {PROCUREMENT_KINDS} from './procurementRules.mjs'
+import {PROCUREMENT_KINDS,isPurchaseCreate} from './procurementRules.mjs'
 import {planInventory,inventoryReceipt} from './inventoryOperations.mjs'
 import {supplierInventoryContext} from './procurementHistory.mjs'
 import {supplierActor,assertProcurementApproval} from './supplierControl.mjs'
@@ -26,14 +26,14 @@ export function planSupplierInventory(request,data,actor){
  validateSupplierLedgerRecords(data.supplierEntries||[],data.supplierOperations||[],data)
  assertProcurementApproval(request,data,supplierControlFromEntries(data.supplierEntries))
  const plan=planInventory(request,{...data,supplierCredits:data.supplierEntries||[]},actor)
- if(request.kind==='purchase-create')plan.supplierRegistration=planSupplierRegistration(request,plan.purchase,data,actor)
+ if(isPurchaseCreate(request.kind))plan.supplierRegistration=planSupplierRegistration(request,plan.purchase,data,actor)
  return plan
 }
 export function supplierInventoryReceipt(request,receipt,data){
  const result=inventoryReceipt(request,receipt,data)
  if(!procurement(request)||!supplierInventoryContext(request))return result
  const supplierLedger=validateSupplierLedgerRecords(data.supplierEntries||[],data.supplierOperations||[],data)
- if(request.kind==='purchase-create'){
+ if(isPurchaseCreate(request.kind)){
   const registration=data.supplierEntries.find(event=>event.id===request.id)
   if(!registration||registration.action!=='purchase-register'||registration.purchaseId!==receipt.purchaseId||canonicalSignature(registration.input)!==canonicalSignature(request))throw Error('原採購回覆缺少同一操作的核准登記')
   result.supplierRegistration=registration
@@ -44,7 +44,7 @@ export function assertSupplierInventoryResult(request,result){
  const context=supplierInventoryContext(request)
  if(!procurement(request)||!context)return result
  assertSupplierLedgerView(result.supplierLedger,result.supplierEvidence,context.storeId)
- if(request.kind==='purchase-create'){
+ if(isPurchaseCreate(request.kind)){
   const event=result.supplierLedger.entries.find(row=>row.id===request.id)
   if(!event||event.action!=='purchase-register'||event.revision!==context.revision+1||event.purchaseId!==request.purchase?.id||canonicalSignature(event.input)!==canonicalSignature(request)||canonicalSignature(event)!==canonicalSignature(result.supplierRegistration))throw Error('採購保存結果尚未確認：原核准登記不符')
  }

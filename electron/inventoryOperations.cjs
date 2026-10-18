@@ -1,3 +1,4 @@
+const {PURCHASE_UNITS_KIND,PURCHASE_UNITS_SETTING}=require('./purchaseUnitPricing.mjs')
 const {INVENTORY_ACTION,INVENTORY_PREFIX}=require('./inventoryOperations.mjs')
 const {planSupplierInventory,supplierInventoryReceipt}=require('./supplierInventory.mjs')
 const {parsePurchase,purchaseParams}=require('./procurementRules.mjs')
@@ -11,6 +12,7 @@ module.exports=function(db,stmts,supplierParams){
   return {getStocktakeState(actor){verified(actor);return db.transaction(()=>{if(!stmts.getSetting.get('sharedStoreId')?.value)stmts.setSetting.run('sharedStoreId',randomUUID());return physicalStocktakeState({...current(),...countData()})})()},applyInventoryOperation(request,actor){
     if(!actor||!['owner','staff'].includes(actor.role)||request.kind!=='stocktake'&&actor.role!=='owner')throw Error('權限不足')
     if(request.protocol===PHYSICAL_STOCKTAKE)verified(actor)
+    if(request.kind===PURCHASE_UNITS_KIND||stmts.getSetting.get(PURCHASE_UNITS_SETTING)?.value==='1')verified(actor)
     let replay=false,historyChecked=false
     try{return db.transaction(()=>{
       const key=INVENTORY_PREFIX+request.id,old=db.prepare('SELECT * FROM audit_log WHERE id=?').get(key)
@@ -20,6 +22,7 @@ module.exports=function(db,stmts,supplierParams){
       const plan=planSupplierInventory(request,data,actor)
       if(request.draftContext){fence.installPrivateQuickFence(db);stmts.setSetting.run('stockCostVersionFence','1')}
       if(plan.supplierRegistration)fence.installSupplierFence(db)
+      if(request.kind===PURCHASE_UNITS_KIND){fence.installPurchaseUnitsFence(db);stmts.setSetting.run(PURCHASE_UNITS_SETTING,'1')}
       for(const p of plan.products){
         if(plan.created.includes(p.id))stmts.insertProduct.run({...p,noBarcode:p.noBarcode?1:0})
         else stmts.updateProductStock.run({id:p.id,delta:p.stock-data.products.find(old=>old.id===p.id).stock})

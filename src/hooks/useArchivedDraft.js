@@ -10,7 +10,7 @@ export default function useArchivedDraft(key,options){
  function keepAndReset(next){
   const old=draft.current();if(!old.ready||old.form.attempted||readPendingFinancial())throw Error('請先核對上一筆操作')
   draft.save();const raw=localStorage.getItem(key)
-  try{keepReceiptArchive(localStorage,key,raw,old.form,options.valid);draft.setForm(next);try{draft.save()}catch(error){draft.setForm(old.form);throw error}}finally{refresh()}
+  try{keepReceiptArchive(localStorage,key,raw,old.form,options.valid,options.maxLength);draft.setForm(next);try{draft.save()}catch(error){draft.setForm(old.form);throw error}}finally{refresh()}
  }
  function downloadArchive(archiveKey){
   if(!receiptArchives(localStorage,key).includes(archiveKey))throw Error('舊稿無法保留，請先下載原輸入')

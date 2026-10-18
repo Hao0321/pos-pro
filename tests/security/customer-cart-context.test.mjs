@@ -13,7 +13,12 @@ beforeEach(async()=>{
  const seed=restaurantMenuFixture();products=seed.products;config={enabled:true,dailyCapacity:100,slotCapacity:100,recipes:seed.config.recipes};epoch='actual-test-epoch';settings=new Map([['sharedStoreId','test-store']]);orders=new Map();commits=0
  let transaction=0
  db={getProducts:()=>products,getRestaurantState:()=>({config,entries:[]}),getSetting:key=>settings.get(key),setSetting:(key,value)=>settings.set(key,value),getOrder:id=>orders.get(id),addOrder:order=>{expect(transaction).toBeGreaterThan(0);orders.set(order.id,structuredClone(order));commits++;return {success:true}},withCustomerOrderTransaction:fn=>{transaction++;try{return fn()}finally{transaction--}},withCustomerCartContext:fn=>fn({epoch})}
- server=start(0,db,()=>null,{host:'127.0.0.1',disableTunnel:true});await server.ready;base='http://127.0.0.1:'+server.getActualPort()
+ // The OS can assign a port forbidden by Fetch. Pick another isolated port;
+ // retain the real Fetch client and never bypass its browser safety rules.
+ for(let attempt=0;attempt<4;attempt++){
+  server=start(0,db,()=>null,{host:'127.0.0.1',disableTunnel:true});await server.ready;base='http://127.0.0.1:'+server.getActualPort()
+  try{await fetch(base+'/api/menu');break}catch(error){await server.close();if(error.cause?.message!=='bad port'||attempt===3)throw error}
+ }
 })
 afterEach(async()=>{await server.close()})
 

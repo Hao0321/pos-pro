@@ -9,6 +9,7 @@ import {browserToBook} from '../../electron/recoveryRules.mjs'
 import {validateStockCostBook} from '../../electron/stockBackup.mjs'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
 import {hasBrowserStockCost,commitBrowserStockBusiness} from './browserStockBusiness'
+import {PURCHASE_UNITS_KIND,PURCHASE_UNITS_SETTING,retainPurchaseUnitFeature} from '../../electron/purchaseUnitPricing.mjs'
 const countData=record=>({storeId:readExchangeTextSetting(record.data.pos_business_settings,'sharedStoreId'),epoch:record.salesEpoch,costMode:record.data.pos_stock_cost_entries.length?'active':'reference',restaurantEntries:record.data.pos_restaurant_orders})
 const verify=(actor,record)=>{if(!actor||!['owner','staff'].includes(actor.role)||!record.data.pos_users.some(row=>row.id===actor.userId&&row.username===actor.username&&row.role===actor.role))throw Error('權限不足')}
 export function getBrowserStocktakeState(actor){return withSalesLock(()=>{let record=readRecords();verify(actor,record);const storeId=countData(record).storeId;if(!storeId||!record.salesEpoch)record=writeRecords(!storeId?{pos_business_settings:[...record.data.pos_business_settings,{key:'sharedStoreId',value:JSON.stringify(crypto.randomUUID())}]}:{},record.revision,{ensureSalesEpoch:true});return physicalStocktakeState({products:record.data.pos2_products,...countData(record)})})}
@@ -27,6 +28,7 @@ export function commitBrowserInventory(request,actor){
     let replay=false,historyChecked=false,writing=false,beforeRaw=null
     try{
       const saved=readRecords(),r=saved.data,key=INVENTORY_PREFIX+request.id
+      if(request.kind===PURCHASE_UNITS_KIND||r.pos_business_settings.some(row=>row.key===PURCHASE_UNITS_SETTING))verify(actor,saved)
       if(assertPrivateDraftCaller(request,actor))verify(actor,saved)
       if(request.protocol!==PHYSICAL_STOCKTAKE&&hasBrowserStockCost(saved))return commitBrowserStockBusiness('applyInventoryOperation',request,actor,saved)
       if(request.kind==='receive-lots')return {success:false,committed:false,error:'請先核對庫存成本與批次，再使用分批收貨'}
@@ -40,12 +42,12 @@ export function commitBrowserInventory(request,actor){
       const plan=planSupplierInventory(request,data,actor)
       const products=[...r.pos2_products.map(p=>plan.products.find(n=>n.id===p.id)||p),...plan.products.filter(p=>plan.created.includes(p.id))]
       const purchases=plan.createPurchase?[plan.purchase,...r.pos_purchases]:r.pos_purchases.map(p=>p.id===plan.purchase?.id?plan.purchase:p),suppliers=r.pos_suppliers.map(s=>s.id===plan.supplier?.id?plan.supplier:s),cashLogs=plan.cashLog?[plan.cashLog,...r.pos2_cash_log]:r.pos2_cash_log
-      const registration=plan.supplierRegistration
+      const registration=plan.supplierRegistration,timestamp=new Date().toISOString(),purchaseUnits=request.kind===PURCHASE_UNITS_KIND?{request,actor,timestamp}:null
       beforeRaw=localStorage.getItem(RECORD_KEY);writing=true
-      const next=writeRecords({pos2_products:products,pos_purchases:purchases,pos_suppliers:suppliers,pos2_cash_log:cashLogs,pos_audit_log:[{id:key,action:INVENTORY_ACTION,detail:plan.receipt,timestamp:new Date().toISOString(),userId:actor.userId||'',username:actor.username||'',role:actor.role},...r.pos_audit_log],...(registration?{pos_supplier_entries:[...data.supplierEntries,registration.event],pos_supplier_operations:[...data.supplierOperations,registration.receipt]}:{})},saved.revision,request.protocol===PHYSICAL_STOCKTAKE?{physicalStocktake:{request,actor}}:{})
+      const next=writeRecords({pos2_products:products,pos_purchases:purchases,pos_suppliers:suppliers,pos2_cash_log:cashLogs,pos_audit_log:[{id:key,action:INVENTORY_ACTION,detail:plan.receipt,timestamp,userId:actor.userId||'',username:actor.username||'',role:actor.role},...r.pos_audit_log],...(purchaseUnits?{pos_business_settings:retainPurchaseUnitFeature({settings:r.pos_business_settings}).settings}:{}),...(registration?{pos_supplier_entries:[...data.supplierEntries,registration.event],pos_supplier_operations:[...data.supplierOperations,registration.receipt]}:{})},saved.revision,purchaseUnits?{purchaseUnits}:request.protocol===PHYSICAL_STOCKTAKE?{physicalStocktake:{request,actor}}:{})
       return physicalResult(request,supplierInventoryReceipt(request,plan.receipt,request.supplierContext||next.supplierFence?readBrowserSupplier(next):{products,purchases,suppliers,cashLogs}),next,actor)
     }catch(error){
-      if(writing&&request.protocol===PHYSICAL_STOCKTAKE)try{if(localStorage.getItem(RECORD_KEY)!==beforeRaw){const record=readRecords(),data=record.data,old=data.pos_audit_log.find(row=>row.id===INVENTORY_PREFIX+request.id);if(old)return physicalResult(request,supplierInventoryReceipt(request,typeof old.detail==='string'?JSON.parse(old.detail):old.detail,{products:data.pos2_products,purchases:data.pos_purchases,suppliers:data.pos_suppliers,cashLogs:data.pos2_cash_log}),record,actor);return {success:false,committed:null,error:error.message}}}catch{return {success:false,committed:null,error:error.message}}
+      if(writing)try{if(localStorage.getItem(RECORD_KEY)!==beforeRaw){const record=readRecords(),data=record.data,old=data.pos_audit_log.find(row=>row.id===INVENTORY_PREFIX+request.id),scope=request.supplierContext||record.supplierFence?readBrowserSupplier(record):{products:data.pos2_products,purchases:data.pos_purchases,suppliers:data.pos_suppliers,cashLogs:data.pos2_cash_log};if(old)return physicalResult(request,supplierInventoryReceipt(request,typeof old.detail==='string'?JSON.parse(old.detail):old.detail,scope),record,actor);return {success:false,committed:null,error:error.message}}}catch{return {success:false,committed:null,error:error.message}}
       return {success:false,committed:error.historyUncertain?null:error.operationConflict===true||historyChecked&&!replay?false:null,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}
     }
   })

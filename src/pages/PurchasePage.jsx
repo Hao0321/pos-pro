@@ -7,13 +7,13 @@ import { canonicalSignature } from "../../electron/operationRules.mjs"
 import { localDate } from "../utils/checkoutSafety.mjs"
 import { poItemKey, ps } from "./purchase/controls.jsx"
 import { PurchaseList } from "./purchase/PurchaseList.jsx"
-import { NewPurchase } from "./purchase/NewPurchase.jsx"
 import { SupplierList } from "./purchase/SupplierList.jsx"
 import { PayableTab } from "./purchase/PayableTab.jsx"
 import {ProcurementPanel} from './purchase/ProcurementPanel.jsx'
 import {isProcurement,procurementSummary} from '../../electron/procurementRules.mjs'
 import SupplierPurchaseStatus,{purchaseApprovalBlocked} from './suppliers/SupplierPurchaseStatus'
 const ArrivalModal=lazy(()=>import('./purchase/ArrivalModal.jsx'))
+const NewPurchase=lazy(()=>import('./purchase/NewPurchase.jsx').then(module=>({default:module.NewPurchase})))
 
 export default function PurchasePage({ store, session }) {
   const { products, commitInventory, orders = [] } = store
@@ -55,13 +55,13 @@ export default function PurchasePage({ store, session }) {
     } catch (e) { setSaveError(e.message);throw e }
   }
 
-  async function handleReceive(po, receivedQtys) {
+  async function handleReceive(po, receivedQtys,extra={}) {
     if (receivingBusy.current) return
     receivingBusy.current=true;setSaving(true);setSaveError('')
     try {
       const result=await commitInventory('receive',{
         purchaseId:po.id,expectedPurchase:canonicalSignature(po),
-        quantities:po.items.map((item,index)=>Number(receivedQtys[poItemKey(item,index)]||0)),
+        quantities:po.items.map((item,index)=>Number(receivedQtys[poItemKey(item,index)]||0)),...extra,
       })
       setPurchases(p=>p.map(row=>row.id===po.id?result.purchase:row))
       if(result.supplier)setSuppliers(p=>p.map(row=>row.id===result.supplier.id?result.supplier:row))
@@ -95,7 +95,7 @@ export default function PurchasePage({ store, session }) {
 
       {tab === 'list'      && <PurchaseList purchases={purchases} selected={selected} onSelect={setSelected} onReceive={canEdit&&!receiving?setReceiving:null} canReceive={po=>!purchaseApprovalBlocked(po,store.supplierState)} renderProcurement={po=><><SupplierPurchaseStatus po={po} state={store.supplierState} onOpen={store.openSupplierLedger}/><ProcurementPanel key={po.id} po={po} store={store} session={session} onCommand={commitInventory} openShift={store.openShift} readOnly={!canEdit} approvalBlocked={purchaseApprovalBlocked(po,store.supplierState)} supplierCredits={supplierCredits} onSupplierLedger={()=>store.openSupplierLedger(po.supplierId)}/></>}/>}
       {saveError&&!receiving&&<p role="alert" style={{color:'var(--red)'}}>{trMessage(saveError)}</p>}
-      {tab === 'new'       && <NewPurchase  products={products} suppliers={suppliers} purchases={purchases} orders={orders} onSave={async po=>{creatingId.current=po.id;const r=await commitInventory('purchase-create',{purchase:po});setSelected(r.purchase);setTab('list')}}/>}
+      {tab === 'new'       && <Suspense fallback={<p role="status">{tr('正在核對採購資料…')}</p>}><NewPurchase products={products} suppliers={suppliers} purchases={purchases} orders={orders} store={store} session={session} onSave={async(po,command)=>{creatingId.current=po.id;const r=await commitInventory(command.kind,command.input,command.identity,command.prepare);setSelected(r.purchase);setTab('list');return r}}/></Suspense>}
       {tab === 'suppliers' && <SupplierList suppliers={suppliers} products={products} purchases={purchases} onSave={saveSuppliers} onGoInventory={()=>store.setView?.('inventory')}/>}
       {tab === 'payable'   && <PayableTab purchases={purchases} suppliers={suppliers} supplierCredits={supplierCredits} readOnly={!canEdit||store.supplierState?.legacyReadOnly} onOpen={po=>{setSelected(po);setTab('list')}} onMarkPaid={async(id)=>{
         if(!canEdit)return
@@ -109,7 +109,7 @@ export default function PurchasePage({ store, session }) {
       }}/>}
 
       {receiving && (
-        <Suspense fallback={<p role="status">{tr('正在核對庫存…')}</p>}><ArrivalModal po={receiving} store={store} session={session} suppliers={suppliers} onSourceUpdated={(current,{close=false}={})=>{setPurchases(previous=>previous.map(row=>row.id===current.id?current:row));setSelected(current);setReceiving(close?null:current)}} saving={saving} error={saveError} onLegacy={q=>handleReceive(receiving,q)} onSaved={result=>{setSelected(result.purchase);setReceiving(null);setSaveError('')}} onClose={()=>{if(!saving){setReceiving(null);setSaveError('')}}}/></Suspense>
+        <Suspense fallback={<p role="status">{tr('正在核對庫存…')}</p>}><ArrivalModal po={receiving} store={store} session={session} suppliers={suppliers} onSourceUpdated={(current,{close=false}={})=>{setPurchases(previous=>previous.map(row=>row.id===current.id?current:row));setSelected(current);setReceiving(close?null:current)}} saving={saving} error={saveError} onLegacy={(q,extra)=>handleReceive(receiving,q,extra)} onSaved={result=>{setSelected(result.purchase);setReceiving(null);setSaveError('')}} onClose={()=>{if(!saving){setReceiving(null);setSaveError('')}}}/></Suspense>
       )}
     </div>
   )

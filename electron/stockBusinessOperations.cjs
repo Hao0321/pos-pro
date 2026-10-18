@@ -1,3 +1,4 @@
+const {isProcurement}=require('./procurementRules.mjs')
 const {canonicalSignature,operationHeader}=require('./operationRules.mjs')
 const {signature:checkoutSignature}=require('./checkoutSignature.mjs')
 const {refundSignature}=require('./refundSafety.cjs')
@@ -55,7 +56,7 @@ module.exports=function installStockBusinessOperations(db,api,store){
   }else if(method==='applyInventoryOperation'){
    if(input.kind==='stocktake'){include(input.counts);if(result.receipt?.stocktake)output.stocktake=structuredClone(result.receipt.stocktake)}
    else{
-    const purchase=api.getPurchases().find(row=>row.id===input.purchaseId),modern=purchase?.procurement?.version===1
+    const purchase=api.getPurchases().find(row=>row.id===input.purchaseId),modern=isProcurement(purchase)
     if(!purchase||!facts.purchase)throw stockLedgerError('HISTORY')
     const event=modern?purchase.procurement[['receive','receive-lots'].includes(input.kind)?'receipts':'returns'].find(row=>row.id===input.id):null
     output.inventory={kind:input.kind,purchaseId:purchase.id,modern,items:purchase.items,beforeReceived:facts.purchase.items.map(row=>row.received||0),event,creditCents:['purchase-return','purchase-return-lots'].includes(input.kind)?Math.round(event?.amount*100):0}

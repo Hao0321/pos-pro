@@ -1,3 +1,4 @@
+import {purchaseLineCents,hasPurchaseUnitBasis} from './purchaseUnitPricing.mjs'
 import {stockLedgerError} from './stockOpeningPlan.mjs'
 import {PHYSICAL_STOCKTAKE,PHYSICAL_MEANING,assertPhysicalStocktakeReceipt} from './physicalStocktake.mjs'
 import {planFundedRestaurantStock} from './restaurantFundsStock.mjs'
@@ -32,7 +33,7 @@ export function planOperationalStock(c,method){
   inventory.items.forEach((item,index)=>{
    const count=units(input.quantities[index]);if(!count)return
    const product=c.product(item.productId);if(item.unit&&item.unit!==product.unit)throw stockLedgerError('HISTORY')
-   const before=units(inventory.beforeReceived[index]),rate=Math.round(item.unitCost*100),cost=value(before+count,rate)-value(before,rate)
+   const before=units(inventory.beforeReceived[index]),rate=Math.round((item.unitCost||0)*100),cost=hasPurchaseUnitBasis(item)?purchaseLineCents(item,(before+count)/1000)-purchaseLineCents(item,before/1000):value(before+count,rate)-value(before,rate)
    total+=cost;c.acquire(item.productId,count,inventory.modern||rate>0?cost:null,inventory.modern?'2102':'2291',inventory.modern?'recorded-purchase-receipt':'legacy-receiving-pending-financial-source',index)
   })
   if(inventory.modern){if(Math.round(inventory.event.amount*100)!==total)throw stockLedgerError('HISTORY');c.replace('JP-'+input.id)}
