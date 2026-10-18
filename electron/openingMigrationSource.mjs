@@ -24,11 +24,18 @@ function columns(table){const map={};table.columns.forEach((label,index)=>{const
 export function projectOpeningMigrationSource(sourceText,cutoffDate,currency=''){
  openingDate(cutoffDate);const projected=openingTablesFromSource(sourceText,currency)
  if(!projected)bad('請先核對期初欄位與原始資料，原檔仍保留。')
+ return projectOpeningStockTables(projected,cutoffDate)
+}
+// The combined planner uses the already decoded, bounded original source.
+// Keep v1's strict vocabulary and nonempty-stock requirement unchanged.
+export function projectOpeningStockTables(projected,cutoffDate,{combined=false}={}){
+ openingDate(cutoffDate)
  const {source,origins}=projected
  const opening=[],seen=new Set(),products=new Set(),masters=[],rowsByProduct=new Map()
  for(let tableIndex=0;tableIndex<source.tables.length;tableIndex++){
   const table=source.tables[tableIndex]
   if(['products','suppliers','customers'].includes(table.entity)){masters.push(structuredClone(table));continue}
+  if(combined&&['opening-receivables','opening-payables'].includes(table.entity))continue
   if(table.entity!=='opening-stock')bad('這份資料還有帳款或歷史，請先另行對帳，整批尚未保存。')
   const map=columns(table)
   table.rows.forEach((row,rowIndex)=>{
@@ -44,7 +51,7 @@ export function projectOpeningMigrationSource(sourceText,cutoffDate,currency='')
    const fact={table:tableIndex,row:rowIndex,externalId,productExternalId,unit,currency,quantityUnits,valueCents,sourceName:Object.hasOwn(map,'name')?row.values[map.name]:'',...(origins.has(tableIndex+':'+rowIndex)?{origin:origins.get(tableIndex+':'+rowIndex)}:{})};opening.push(fact);rowsByProduct.set(productExternalId,fact)
   })
  }
- if(!opening.length)bad('請提供要搬入的期初庫存資料。')
+ if(!opening.length&&!combined)bad('請提供要搬入的期初庫存資料。')
  // A source quantity is removed from the child MASTER projection only when the
  // explicitly represented opening row proves the same quantity. The parent
  // retains the complete original text and both roles; no zero is substituted.

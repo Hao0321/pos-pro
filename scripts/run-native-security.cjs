@@ -1,5 +1,6 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--opening-whole-source':['native-opening-whole-source.cjs','POS_OPENING_WHOLE_SOURCE_PASS',false],
   '--browser-ports':['native-browser-ports.cjs','POS_BROWSER_PORTS_NATIVE_PASS',true],
   '--opening-balances-core':['native-opening-balances-core.cjs','POS_OPENING_BALANCES_CORE_PASS',false],
   '--opening-migration':['native-opening-migration.cjs','POS_OPENING_MIGRATION_NATIVE_PASS',false],

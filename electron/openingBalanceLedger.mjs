@@ -54,6 +54,13 @@ function compileContext(context,storeId){
  }
  return compiled
 }
+// Permanent source-party links are reconstructed from the same validated proof
+// as settlement. Callers cannot supply an unverified mapping dictionary.
+export function openingBalanceMappings(context,storeId){
+ const mappings=new Map()
+ for(const {batch} of compileContext(context,storeId))for(const row of batch.partyMappings)mappings.set(row.key,structuredClone(row))
+ return [...mappings.values()]
+}
 // Pure proof construction for an owner-authorized import transaction. Calling
 // this helper alone has no persistence or authority. Every source fact is
 // reconstructed from original text when a ledger accepts the context. OB3/OB4.

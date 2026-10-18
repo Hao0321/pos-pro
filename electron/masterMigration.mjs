@@ -79,14 +79,18 @@ export function readMasterMigrationInput(input){
   if(opening){if(!['','TWD'].includes(input.currency))fail();const projected=projectOpeningMigrationSource(input.sourceText,input.cutoffDate,input.currency);if(input.parentId!==openingMigrationId(projected.source,input.scope)||!projected.masterSource)fail();source=projected.masterSource}
   else source=readMigrationDraft(input.sourceText)
   if(input.id!==masterMigrationId(source,input.scope))fail()
+  assertMasterMigrationChoices(source,input.choices)
+  return {input:structuredClone(input),source}
+}
+function assertMasterMigrationChoices(source,choices){
+  if(!Array.isArray(choices)||choices.length>5000)fail()
   const seen=new Set()
-  for(const choice of input.choices){
+  for(const choice of choices){
     draftObject(choice,['table','row','targetId','resolution'],['table','row','targetId'])
     const table=source.tables[choice.table],row=table?.rows[choice.row],key=choice.table+':'+choice.row
     if(!Number.isSafeInteger(choice.table)||!Number.isSafeInteger(choice.row)||!row||typeof choice.targetId!=='string'||choice.targetId.length>128||choice.resolution!==undefined&&!['keep','source'].includes(choice.resolution)||seen.has(key))fail()
     seen.add(key)
   }
-  return {input:structuredClone(input),source}
 }
 export function makeMasterMigrationInput(sourceText,scope,choices=[]){
   const source=readMigrationDraft(sourceText)
@@ -98,7 +102,7 @@ function columnsFor(table,canonical=false){
     return indices.length?[[field,indices]]:[]
   }))
 }
-function sourceRows(source){return source.tables.flatMap((table,ti)=>table.rows.map((row,ri)=>({table:ti,row:ri,entity:table.entity,externalId:row.externalId,key:masterSourceKey(source.source,table.entity,row.externalId),sourceDigest:digest([table.columns,row]),columns:columnsFor(table,[TABULAR_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_PROTOCOL,OPENING_MASTER_SOURCE].includes(source.protocol)),sourceRow:row,headers:table.columns})))}
+function sourceRows(source){return source.tables.flatMap((table,ti)=>table.rows.map((row,ri)=>({table:ti,row:ri,entity:table.entity,externalId:row.externalId,key:masterSourceKey(source.source,table.entity,row.externalId),sourceDigest:digest([table.columns,row]),columns:columnsFor(table,[TABULAR_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_PROTOCOL,OPENING_MASTER_SOURCE,'pos-opening-master-projection/v2'].includes(source.protocol)),sourceRow:row,headers:table.columns})))}
 function extractRow(row){
   const values={},issues=[],unused=[]
   const used=new Set()
@@ -170,7 +174,15 @@ export function previewMasterMigration(input,book,scope,actor){
   const history=readMasterMigrationHistory(book),prior=history.byId.get(input.id)
   if(prior){if(prior.signature!==canonicalSignature(input)&&prior.signature!==canonicalSignature({...input,review:JSON.parse(prior.signature).review}))fail('同一搬家編號的內容不同，請保留原資料核對。');return {protocol:'pos-master-migration-preview/v1',id:input.id,saved:prior,ready:false,rows:[],counts:prior.counts,source:source.source}}
   if(input.protocol!==OPENING_MASTER_PROTOCOL)assertNoUnhandledOpeningValue(input.sourceText)
-  const rows=sourceRows(source).map(row=>chooseRow(book,row,history,input.choices.find(item=>item.table===row.table&&item.row===row.row),source,scope)),seen=new Set(),targets=new Set(),barcodes=new Set()
+  const {rows,counts}=projectMasterMigrationRows(source,book,scope,input.choices,history)
+  const review={protocol:'pos-master-migration-review/v1',createdAt:Date.now(),scope:structuredClone(scope),dataDigest:digest(book),inputDigest:digest({...input,review:undefined}),rowsDigest:digest(rows),counts}
+  return {protocol:'pos-master-migration-preview/v1',id:input.id,source:source.source,rows,counts,ready:counts.blocked===0,review}
+}
+// Shared pure projection, not a public request or a write authority. The outer
+// opening transaction must still validate its original input, owner and review.
+export function projectMasterMigrationRows(source,book,scope,choices=[],history=readMasterMigrationHistory(book)){
+  assertMasterMigrationChoices(source,choices)
+  const rows=sourceRows(source).map(row=>chooseRow(book,row,history,choices.find(item=>item.table===row.table&&item.row===row.row),source,scope)),seen=new Set(),targets=new Set(),barcodes=new Set()
   for(const row of rows){
     if(seen.has(row.key))row.issues.push('duplicate-source-id');seen.add(row.key)
     const key=row.entity+':'+row.targetId;if(row.targetId&&targets.has(key))row.issues.push('duplicate-target');targets.add(key)
@@ -189,8 +201,7 @@ export function previewMasterMigration(input,book,scope,actor){
     row.issues=[...new Set(row.issues)];row.action=row.issues.length?'blocked':row.action
   }
   const counts=emptyCounts();for(const row of rows)counts[row.action]++
-  const review={protocol:'pos-master-migration-review/v1',createdAt:Date.now(),scope:structuredClone(scope),dataDigest:digest(book),inputDigest:digest({...input,review:undefined}),rowsDigest:digest(rows),counts}
-  return {protocol:'pos-master-migration-preview/v1',id:input.id,source:source.source,rows,counts,ready:counts.blocked===0,review}
+  return {rows,counts}
 }
 export function verifyMasterMigration(input,book,scope,actor){
   const preview=previewMasterMigration(input,book,scope,actor)

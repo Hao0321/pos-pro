@@ -54,6 +54,12 @@ export function projectOpeningBalanceSource(sourceText,cutoffDate){
  // The existing raw-table v1 vocabulary is deliberately unchanged. A later
  // raw financial adapter must retain its own original-file/column evidence.
  if(source.protocol!=='pos-migration-draft/v1')fail('這份原單需要帳款欄位核對，請保留原檔。')
+ return projectOpeningBalanceTables({source,origins:new Map()},cutoffDate)
+}
+// Shared with whole-source planning; no JSON round trip of an expanded XLSX.
+// This does not relax the canonical v1 reader or the v1 context custody rules.
+export function projectOpeningBalanceTables({source,origins},cutoffDate,{allowEmpty=false}={}){
+ openingDate(cutoffDate)
  const facts=[],seen=new Set(),economic=new Set(),parties=new Map(),names={receivable:masterPartyNames(source,'receivable'),payable:masterPartyNames(source,'payable')}
  source.tables.forEach((table,tableIndex)=>{
   const side=table.entity==='opening-receivables'?'receivable':table.entity==='opening-payables'?'payable':null
@@ -77,10 +83,10 @@ export function projectOpeningBalanceSource(sourceText,cutoffDate){
    if(existing?.name&&partyName&&existing.name!==partyName)fail('同一往來原編號有不同名稱，請核對來源。')
    parties.set(partyKey,{key:partyKey,side,externalId:partyExternalId,name:partyName||existing?.name||''})
    const economicKey=canonicalSignature([side,partyExternalId,type,number,date,'TWD']);if(economic.has(economicKey))fail('同一對象的原單重複，請先核對，不能用另一個原編號再加一次。');economic.add(economicKey)
-   facts.push({side,table:tableIndex,row:rowIndex,externalId,key,partyKey,partyExternalId,partyName,number,type,date,dueDate,currency:'TWD',cutoffDate,outstandingCents,originalCents,paidCents,note:Object.hasOwn(map,'note')?row.values[map.note]:'',origin:{kind:'agent',table:tableIndex,row:rowIndex}})
+   facts.push({side,table:tableIndex,row:rowIndex,externalId,key,partyKey,partyExternalId,partyName,number,type,date,dueDate,currency:'TWD',cutoffDate,outstandingCents,originalCents,paidCents,note:Object.hasOwn(map,'note')?row.values[map.note]:'',origin:origins.get(tableIndex+':'+rowIndex)||{kind:'agent',table:tableIndex,row:rowIndex}})
   })
  })
- if(!facts.length)fail('請提供原單的未收、未付或貸項資料。')
+ if(!facts.length&&!allowEmpty)fail('請提供原單的未收、未付或貸項資料。')
  const totals={receivable:{invoices:0,credits:0,invoiceCents:0,creditCents:0,netCents:0},payable:{invoices:0,credits:0,invoiceCents:0,creditCents:0,netCents:0}}
  for(const fact of facts){const total=totals[fact.side];if(fact.outstandingCents){total[fact.type==='invoice'?'invoices':'credits']++;total[fact.type==='invoice'?'invoiceCents':'creditCents']+=fact.outstandingCents}total.netCents=total.invoiceCents-total.creditCents;if(![total.invoiceCents,total.creditCents,total.netCents].every(Number.isSafeInteger))fail('原單合計超過可核對範圍。')}
  const referenceFields=new Set(['name','partyname','customername','suppliername','客戶名稱','供應商名稱','名稱','contact','聯絡人','phone','電話','email','address','地址','note','備註','payterms','付款條件']),partyReferenceIssues=[]

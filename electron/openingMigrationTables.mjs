@@ -97,18 +97,19 @@ function effectiveTable(part,r){
 }
 export function openingTablesFromSource(sourceText,currency=''){
  const raw=rawOpeningTables(sourceText);if(!raw)return null
- if(raw.kind==='agent')return {source:raw.root,origins:new Map()}
- const tables=[],origins=new Map(),globalCurrency=raw.root.currency||currency
+ if(raw.kind==='agent')return {source:raw.root,origins:new Map(),masterOrigins:new Map()}
+ const tables=[],origins=new Map(),masterOrigins=new Map(),globalCurrency=raw.root.currency||currency
+ const retainMasterOrigin=(table,part,externalIdColumn)=>part.table.rows.forEach((_,row)=>masterOrigins.set(table+':'+row,{...part.origin,physicalRow:part.table.physicalRows[row],externalIdColumn}))
  for(const part of raw.parts){
   const r=roles(part),opening=part.entity==='products'&&r.quantity>=0&&(r.value>=0||r.rate>=0)
-  if(!opening){tables.push(projectMappedMigrationTable(part.table,part.plan));continue}
+  if(!opening){retainMasterOrigin(tables.length,part,part.plan.externalId);tables.push(projectMappedMigrationTable(part.table,part.plan));continue}
   for(const [index,header]of part.table.headers.entries())if(custodyHeaders.includes(norm(header))&&part.table.rows.some(row=>row[index].trim()))bad('來源還有批號、倉庫或庫位，請先核對，整批尚未保存。')
   for(const index of [r.value,r.rate].filter(i=>i>=0))if(part.plan.mapping[index]&&!['cost'].includes(part.plan.mapping[index]))bad('庫存價值欄位不能當成售價，請核對欄位用途。')
   const {mapped,effective}=effectiveTable(part,r),removed=new Set([r.value,r.rate].filter(i=>i>=0)),master={...mapped,columns:mapped.columns.filter((_,i)=>!removed.has(i)),rows:mapped.rows.map(row=>({...row,values:row.values.filter((_,i)=>!removed.has(i))}))}
   for(const [index,field]of part.plan.mapping.entries())if(['balance','points','totalSpent'].includes(field))for(const row of effective){let zero=false;try{zero=decimalUnits(row[index],2,Number.MAX_SAFE_INTEGER,'invalid')===0}catch{}if(!zero)bad('這份資料還有帳款或歷史，請先另行對帳，整批尚未保存。')}
   // A valuation export often has no selling price. It can use an existing
   // permanent product mapping; it cannot manufacture a zero-priced product.
-  if(part.plan.mapping.includes('price'))tables.push(master)
+  if(part.plan.mapping.includes('price')){retainMasterOrigin(tables.length,part,part.plan.externalId-[...removed].filter(index=>index<part.plan.externalId).length);tables.push(master)}
   const tableIndex=tables.length,columns=['productExternalId','quantity','value','unit','currency',...(r.rate>=0?['unitCost']:[]),...(r.date>=0?['cutoffDate']:[])],unitColumn=part.plan.mapping.indexOf('unit')
   const rows=mapped.rows.map((row,index)=>{
    const original=effective[index],value=r.value>=0?original[r.value]:'',rate=r.rate>=0&&!value?original[r.rate]:'',unit=unitColumn>=0?row.values[unitColumn]:part.plan.unit,originalCurrency=r.currency>=0?original[r.currency]:'',code=originalCurrency.trim()?originalCurrency.trim().toUpperCase():globalCurrency
@@ -119,5 +120,5 @@ export function openingTablesFromSource(sourceText,currency=''){
   })
   tables.push({entity:'opening-stock',columns,rows})
  }
- return {source:{protocol:'pos-migration-draft/v1',id:raw.root.id,source:structuredClone(raw.root.source),tables},origins}
+ return {source:{protocol:'pos-migration-draft/v1',id:raw.root.id,source:structuredClone(raw.root.source),tables},origins,masterOrigins}
 }

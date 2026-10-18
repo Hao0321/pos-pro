@@ -31,9 +31,23 @@ export function previewOpeningMigration(input,book,scope,actor,now=Date.now()){
  const history=readOpeningMigrationHistory(book),prior=history.byId.get(input.id)
  if(prior){const original=JSON.parse(prior.signature),facts=value=>({...value,review:undefined,declaredValue:undefined});if(!same(facts(original),facts(input)))bad('同一期初搬家編號的內容不同，請保留原資料核對。');return {protocol:'pos-opening-migration-preview/v1',id:input.id,saved:prior,ready:false,rows:[],opening:[],source:parsed.source.source}}
  if(input.cutoffDate>salesDate(new Date(now)))bad('切換日尚未到，請保留草稿並核對日期。')
- let childInput=null,masterPreview=null;const mappings=new Map(readMasterMigrationHistory(book).mappings)
- if(parsed.masterSource){childInput=openingMasterRequest(input,parsed.masterSource);masterPreview=previewMasterMigration(childInput,book,scope,actor);if(masterPreview.saved)bad('主檔子批次已存在，請核對原始期初批次。');for(const row of masterPreview.rows)if(row.targetId)mappings.set(row.key,{targetId:row.targetId,unit:row.values.unit||row.before?.unit,name:row.values.name||row.before?.name})}
+ let childInput=null,masterPreview=null
+ if(parsed.masterSource){childInput=openingMasterRequest(input,parsed.masterSource);masterPreview=previewMasterMigration(childInput,book,scope,actor);if(masterPreview.saved)bad('主檔子批次已存在，請核對原始期初批次。')}
  else if(input.choices.length)bad('這份期初資料沒有主檔選擇，請保留原輸入核對。')
+ const {opening,rows}=projectOpeningStockRows(parsed,book,masterPreview?.rows||[],input.cutoffDate,history)
+ const blocked=rows.some(r=>r.issues.length)||masterPreview&&!masterPreview.ready,summary={currency:'TWD',rows:rows.length,totalValueCents:parsed.totalValueCents,clearingAccount:OPENING_CLEARING_ACCOUNT,independentTotalChecked:input.declaredValue!=='',quantityByUnit:Object.fromEntries([...new Set(parsed.opening.map(r=>r.unit))].map(unit=>[unit,parsed.opening.filter(r=>r.unit===unit).reduce((n,r)=>n+r.quantityUnits,0)]))}
+ const review={protocol:'pos-opening-migration-review/v1',createdAt:now,scope:structuredClone(scope),dataDigest:privateDraftDigest(book),inputDigest:privateDraftDigest({...input,review:undefined}),rowsDigest:privateDraftDigest([masterPreview?.rows||[],rows]),summaryDigest:privateDraftDigest(summary)}
+ const preview={protocol:'pos-opening-migration-preview/v1',id:input.id,ready:!blocked,source:parsed.source.source,cutoffDate:input.cutoffDate,masterRows:masterPreview?.rows||[],rows,opening,totalValueCents:parsed.totalValueCents,summary,review}
+ // Exercise the very same master and custody projections before offering the
+ // owner confirmation. This is a trial postimage, not a business write.
+ if(preview.ready){try{const trial=projectOpeningMigrationBook({...input,review},preview,book,scope,actor,new Date(now).toISOString(),childInput,masterPreview);preview.trial={status:'projected-not-posted',valuation:costCustodySummary(trial.projection.custody),inventoryDeltaCents:parsed.totalValueCents,journalLines:trial.projection.journals.at(-1).lines}}catch(error){preview.ready=false;preview.trial={status:'blocked',error:error.message}}}
+ return preview
+}
+// Stock identity and custody checks shared by the whole-source planner. This
+// does not append a cost event, bootstrap a book or authorize a save.
+export function projectOpeningStockRows(parsed,book,masterRows,cutoffDate,history=readOpeningMigrationHistory(book)){
+ const mappings=new Map(readMasterMigrationHistory(book).mappings)
+ for(const row of masterRows)if(row.targetId)mappings.set(row.key,{targetId:row.targetId,unit:row.values.unit||row.before?.unit,name:row.values.name||row.before?.name})
  const state=validateStockCostBook(book),opening=[],rows=[]
  for(const fact of parsed.opening){
   const sourceProductKey=openingSourceProductKey(parsed.source.source,fact.productExternalId),sourceRowKey=openingSourceRowKey(parsed.source.source,fact.externalId),mapped=mappings.get(sourceProductKey),product=mapped&&book.products.find(p=>p.id===mapped.targetId),unit=mapped?.unit||product?.unit,issues=[]
@@ -43,14 +57,8 @@ export function previewOpeningMigration(input,book,scope,actor,now=Date.now()){
   if(state.projection?.lots?.products.some(p=>p.productId===mapped?.targetId&&p.required))issues.push('lot-details-required')
   const row={fact,productId:mapped?.targetId||'',sourceProductKey,sourceRowKey};opening.push(row);rows.push({...row,name:mapped?.name||product?.name||fact.sourceName||fact.productExternalId,beforeUnits:product?Math.round(product.stock*1000):0,afterUnits:fact.quantityUnits,issues})
  }
- if(state.projection?.journals.some(j=>j.date>input.cutoffDate))bad('本店已有切換日之後的成本異動，請先核對開帳日期。')
- const blocked=rows.some(r=>r.issues.length)||masterPreview&&!masterPreview.ready,summary={currency:'TWD',rows:rows.length,totalValueCents:parsed.totalValueCents,clearingAccount:OPENING_CLEARING_ACCOUNT,independentTotalChecked:input.declaredValue!=='',quantityByUnit:Object.fromEntries([...new Set(parsed.opening.map(r=>r.unit))].map(unit=>[unit,parsed.opening.filter(r=>r.unit===unit).reduce((n,r)=>n+r.quantityUnits,0)]))}
- const review={protocol:'pos-opening-migration-review/v1',createdAt:now,scope:structuredClone(scope),dataDigest:privateDraftDigest(book),inputDigest:privateDraftDigest({...input,review:undefined}),rowsDigest:privateDraftDigest([masterPreview?.rows||[],rows]),summaryDigest:privateDraftDigest(summary)}
- const preview={protocol:'pos-opening-migration-preview/v1',id:input.id,ready:!blocked,source:parsed.source.source,cutoffDate:input.cutoffDate,masterRows:masterPreview?.rows||[],rows,opening,totalValueCents:parsed.totalValueCents,summary,review}
- // Exercise the very same master and custody projections before offering the
- // owner confirmation. This is a trial postimage, not a business write.
- if(preview.ready){try{const trial=projectOpeningMigrationBook({...input,review},preview,book,scope,actor,new Date(now).toISOString(),childInput,masterPreview);preview.trial={status:'projected-not-posted',valuation:costCustodySummary(trial.projection.custody),inventoryDeltaCents:parsed.totalValueCents,journalLines:trial.projection.journals.at(-1).lines}}catch(error){preview.ready=false;preview.trial={status:'blocked',error:error.message}}}
- return preview
+ if(parsed.opening.length&&state.projection?.journals.some(j=>j.date>cutoffDate))bad('本店已有切換日之後的成本異動，請先核對開帳日期。')
+ return {opening,rows}
 }
 export function verifyOpeningMigration(input,book,scope,actor,now=Date.now()){
  const preview=previewOpeningMigration(input,book,scope,actor,now);if(preview.saved){if(preview.saved.signature!==canonicalSignature(input))bad('請使用原期初請求核對已保存的批次。');return {preview,receipt:preview.saved}}
