@@ -66,7 +66,7 @@ function eventHeader(request,data,actor,state,history){
  if(request.storeId!==data.storeId)throw Object.assign(Error('這筆供應商操作屬於另一間店'),{historyUncertain:true})
  if(!history&&request.epoch!==data.epoch)throw Object.assign(Error('資料已還原或更換，請以原編號核對供應商款項'),{historyUncertain:true})
  if(request.expectedRevision!==state.entries.length)throw Error('供應商帳已更新，請重新核對')
- assertOpeningBalanceRequest(request,state.opening,SUPPLIER_MONEY_ACTIONS.includes(request.action))
+ assertOpeningBalanceRequest(request,state.opening,SUPPLIER_MONEY_ACTIONS.includes(request.action),{history})
  const now=data.now??Date.now()
  if(!history&&(Math.abs(now-Date.parse(request.time))>300000||request.date>salesDate(new Date(now))))throw Error('供應商操作日期或時間已過期，請重新核對')
  return {version:1,id:request.id,storeId:data.storeId,revision:state.entries.length+1,time:request.time,date:request.date,action:request.action,actor:supplierActor(actor),input:structuredClone(request)}

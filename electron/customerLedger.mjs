@@ -83,7 +83,7 @@ function derive(request,data,actor,state,{history=false}={}){
   if(request.storeId!==data.storeId)throw Object.assign(Error('客戶款項屬於另一間店'),{historyUncertain:true})
   if(!history&&request.epoch!==data.epoch)throw Object.assign(Error('資料已還原或更換，請以原編號核對客戶款項'),{historyUncertain:true})
   if(request.expectedRevision!==state.entries.length)throw Error('客戶款項已更新，請重新核對')
-  assertOpeningBalanceRequest(request,state.opening,!['customer-create','customer-update'].includes(request.action))
+  assertOpeningBalanceRequest(request,state.opening,!['customer-create','customer-update'].includes(request.action),{history})
   if(!history&&(Math.abs(Date.now()-Date.parse(request.time))>300000||request.date>salesDate(new Date())))throw Error('客戶款項日期或操作時間已過期，請重新核對')
   const customerId=request.action==='customer-create'?request.customer?.id:request.customerId
   businessId(customerId)

@@ -1,5 +1,6 @@
 import {beforeEach,afterEach,it,expect,vi} from 'vitest'
 import fixture from '../fixtures/opening-balances-source-v1.json'
+import legacyNull from '../fixtures/opening-null-digest-v1.json'
 import {projectOpeningBalanceSource,openingBalancesToJournalEntries} from '../../electron/openingBalanceSource.mjs'
 import {appendOpeningBalanceContext,openingBalanceTimeline} from '../../electron/openingBalanceLedger.mjs'
 import {planCustomerLedger,customerLedgerView,validateCustomerLedgerRecords,customerLedgerReceipt,assertCustomerLedgerResult} from '../../electron/customerLedger.mjs'
@@ -144,4 +145,24 @@ it('rejects an opening context hidden in a public money request instead of accep
  cutover();const context=data.openingBalanceContext;delete data.openingBalanceContext
  const request=header('receivable','receive',{customerId:'customer',amount:1,method:'bank',confirmed:true,openingBalanceContext:context});expect(()=>customer('receive',{}, {request})).toThrow('不支援')
  const ap=header('payable','pay',{...party(),amount:1,method:'bank',confirmed:true,openingBalanceContext:context});expect(()=>supplier('pay',{}, {request:ap})).toThrow('不支援')
+})
+it.each([
+ ['receivable','receive',{customerId:'customer',amount:1,method:'bank',confirmed:true}],
+ ['receivable','customer-create',{customer:{id:'another',name:'另一個客戶'}}],
+ ['receivable','customer-update',{customerId:'customer',customer:{id:'customer',name:'原客戶'}}],
+ ['payable','pay',{supplierId:'supplier',expectedSupplierName:'原供應商',amount:1,method:'bank',confirmed:true}],
+ ['payable','policy-set',{mode:'simple',reason:'Owner reviewed',reviewed:true}],
+])('does not persist an unavailable null source digest on a new %s %s command', (side,action,fields)=>{
+ const request=header(side,action,{...fields,expectedOpeningDigest:null}),before=clone(data)
+ expect(()=>(side==='receivable'?customer:supplier)(action,{}, {request})).toThrow('原單帳款已更新');expect(data).toEqual(before)
+})
+it.each(['receivable','payable'])('preserves the exact genuine preceding nullable %s requests and original receipts during historical readback',side=>{
+ expect(legacyNull.provenance.generatedByActualNativeApi).toBe(true);expect(legacyNull.provenance.producerHead).toBe('4cd440092ba155a1af75e96850f00891f2a029c1')
+ const ar=side==='receivable',d=clone(legacyNull.data),view=(ar?validateCustomerLedgerRecords:validateSupplierLedgerRecords)(d[ar?'customerEntries':'supplierEntries'],d[ar?'customerOperations':'supplierOperations'],d),request=legacyNull.requests[ar?'receive':'pay'],receipt=d[ar?'customerOperations':'supplierOperations'].find(row=>row.id===request.id),result=(ar?customerLedgerReceipt:supplierLedgerReceipt)(request,receipt,d)
+ expect((ar?view.receipts:view.payments)[0].available).toBe(ar?5:7);expect(result.event.input).toEqual(request);expect(result.event.input.expectedOpeningDigest).toBe(null);expect((ar?assertCustomerLedgerResult:assertSupplierLedgerResult)(request,result)).toEqual(result)
+})
+it.each(['receivable','payable'])('does not treat a historical null digest as permission to backdate an active %s source',side=>{
+ const d=clone(legacyNull.data),parsed=projectOpeningBalanceSource(JSON.stringify(fixture),date)
+ d.openingBalanceContext=appendOpeningBalanceContext(undefined,{storeId:d.storeId,sourceText:JSON.stringify(fixture),cutoffDate:date,partyMappings:parsed.parties.map(p=>({key:p.key,side:p.side,externalId:p.externalId,targetId:p.side==='receivable'?'customer':'supplier',targetName:p.side==='receivable'?'Synthetic Customer':'Synthetic Supplier'})),customerRevision:1,supplierRevision:0,actor:legacyNull.owner,time})
+ expect(()=>(side==='receivable'?validateCustomerLedgerRecords:validateSupplierLedgerRecords)(d[side==='receivable'?'customerEntries':'supplierEntries'],d[side==='receivable'?'customerOperations':'supplierOperations'],d)).toThrow('原單帳款已更新')
 })

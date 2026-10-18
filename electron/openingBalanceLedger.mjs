@@ -81,8 +81,12 @@ export function assertOpeningBalanceOrdinaryIds(active,documents=[]){
  const ids=new Set(documents.map(row=>row.id));if(active.claims.some(row=>ids.has(row.documentId)))bad()
 }
 export function assertOpeningBalanceParties(active,ids){if(active.claims.some(row=>!ids.has(row[partyField(active.side)])))bad()}
-export function assertOpeningBalanceRequest(request,active,required){
- if(Object.hasOwn(request,'expectedOpeningDigest')&&request.expectedOpeningDigest!==active.digest||required&&active.digest&&!Object.hasOwn(request,'expectedOpeningDigest'))throw Error('原單帳款已更新，請重新核對。')
+export function assertOpeningBalanceRequest(request,active,required,{history=false}={}){
+ const present=Object.hasOwn(request,'expectedOpeningDigest'),legacyNull=history&&active.digest===null&&request.expectedOpeningDigest===null
+ // A field explicitly set to null is still a new field to an older reader.
+ // Never persist it without an active source. Preserve the exact requests
+ // already accepted by the preceding draft when replaying their old history.
+ if(present&&(!active.digest||request.expectedOpeningDigest!==active.digest)&&!legacyNull||required&&active.digest&&!present)throw Error('原單帳款已更新，請重新核對。')
 }
 export function syncOpeningBalanceProjection(state,active){
  if(state.opening===active)return
