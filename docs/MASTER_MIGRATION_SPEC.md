@@ -24,4 +24,6 @@
 
 直接表格來源另保留原文字、欄位用途及逐格修正，使用額外的 `agent-tabular-migration-v1` 功能保護與復原版本 11；只有已使用或需保留此保護的資料升級，既有 Agent JSON 資料維持其原版本。見 [表格搬家規格](TABULAR_MIGRATION_SPEC.md)。
 
+XLSX 原始 ZIP、所選工作表、標題列及修正另受 `agent-workbook-migration-v1` 與復原版本 12 保護，沿用前面的主檔及表格保護層。同檔多工作表仍是一個確認、一個原子回執，先處理供應商再接商品關聯。見 [Excel 搬家規格](WORKBOOK_MIGRATION_SPEC.md)。
+
 驗收含新資料、更新、同名不同人、同條碼、跨公司同編號、前導零、缺父列、非零期初、原單重送及改內容、假店主／員工、過期核對、晚期 SQL／quota 失敗、回覆遺失、冷重開、完整備份與真實前版拒絕。以 native SQLite、瀏覽器及配對 HTTPS 的實際寫入驗證；真人首次操作、外部 Agent 與真實廠牌匯出另列未量測。

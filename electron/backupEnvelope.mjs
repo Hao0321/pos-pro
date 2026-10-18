@@ -11,6 +11,7 @@ export function createCompleteBackup(book,protection,storage,{features=[],digest
  if(all.includes('restaurant-menu-v1')&&protection.version<7)throw recoveryDataError()
  if(all.includes('restaurant-public-menu-v1')&&protection.version<8)throw recoveryDataError()
  if(all.includes('agent-master-migration-v1')&&protection.version<10)throw recoveryDataError()
+ if(all.includes('agent-workbook-migration-v1')&&protection.version<12)throw recoveryDataError()
  if(all.includes('agent-tabular-migration-v1')&&protection.version<11)throw recoveryDataError()
  if(all.includes('private-quick-drafts-v1')&&protection.version<9)throw recoveryDataError()
  const body={format:FULL_BACKUP_FORMAT,storage,storeId:current.storeId,features:all,book:structuredClone(book),protection:structuredClone(protection)}
@@ -29,6 +30,7 @@ export function readCompleteBackup(input,storage,{digest=stockLedgerDigest}={}){
  if(input.features.includes('restaurant-menu-v1')&&input.protection.version<7)throw recoveryDataError()
  if(input.features.includes('restaurant-public-menu-v1')&&input.protection.version<8)throw recoveryDataError()
  if(input.features.includes('agent-master-migration-v1')&&input.protection.version<10)throw recoveryDataError()
+ if(input.features.includes('agent-workbook-migration-v1')&&input.protection.version<12)throw recoveryDataError()
  if(input.features.includes('agent-tabular-migration-v1')&&input.protection.version<11)throw recoveryDataError()
  if(input.features.includes('private-quick-drafts-v1')&&input.protection.version<9)throw recoveryDataError()
  if(input.storeId!==current.storeId||[...current.features,...graph.features].some(value=>!input.features.includes(value)))throw recoveryDataError()

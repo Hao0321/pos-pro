@@ -3,6 +3,7 @@ import {draftObject,privateDraftDigest,assertPrivateDraftContext} from './privat
 import {canonicalSignature} from './operationRules.mjs'
 import {decimalUnits} from './decimalUnits.mjs'
 import {migrationAliases as aliases,migrationColumnAliases} from './migrationColumns.mjs'
+import {WORKBOOK_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_FENCE} from './workbookMigration.mjs'
 import {TABULAR_MIGRATION_PROTOCOL,TABULAR_MIGRATION_FENCE} from './tabularMigration.mjs'
 
 export const MASTER_MIGRATION_METHOD='applyMasterMigration'
@@ -15,6 +16,14 @@ const fail=(message='搬家紀錄需要核對，原資料仍保留。')=>{throw 
 const digest=privateDraftDigest
 const collection={products:'products',suppliers:'suppliers',customers:'members'}
 const fields={products:['name','barcode','unit','price','cost','category','supplierId'],suppliers:['name','contact','phone','payTerms','note'],customers:['name','phone','birthday','note']}
+export function masterMappedValueIssue(entity,field,raw){
+ if(['price','cost'].includes(field)&&entity==='products'){try{decimalUnits(raw,2,1e11,'invalid')}catch{return 'invalid-'+field}}
+ if(fields[entity]?.includes(field)||field==='supplier'&&entity==='products'){
+  if(typeof raw!=='string'||raw.length>(field==='note'?2048:256)||raw.includes('\u0000'))return 'invalid-text'
+  if(field==='birthday'&&raw){const date=new Date(raw+'T00:00:00Z');if(!/^\d{4}-\d{2}-\d{2}$/.test(raw)||!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==raw)return 'invalid-birthday'}
+ }
+ return null
+}
 const emptyCounts=()=>({create:0,update:0,keep:0,unchanged:0,blocked:0})
 export const masterSourceKey=(source,entity,externalId)=>canonicalSignature([source.system,source.company,entity,externalId])
 export const masterMigrationId=(source,scope)=>'migration-'+digest([scope.storeId,source.source.system,source.source.company,source.id]).slice(0,48)
@@ -26,7 +35,7 @@ export function assertMasterOwner(book,actor,scope=null){
 function setting(book,key){return (book.settings||[]).find(row=>row.key===key)?.value??null}
 export function readMasterMigrationHistory(book){try{return inspectMasterMigrationHistory(book)}catch{fail()}}
 function inspectMasterMigrationHistory(book){
-  let tabular=false
+  let tabular=false,workbook=false
   const audits=(book.auditLog||[]).filter(row=>row.action===MASTER_MIGRATION_ACTION||String(row.id).startsWith('master-migration:'))
   const receipts=audits.map(audit=>{
     const receipt=typeof audit.detail==='string'?JSON.parse(audit.detail):audit.detail
@@ -34,7 +43,8 @@ function inspectMasterMigrationHistory(book){
     const {hash,...body}=receipt
     if(hash!==digest(body)||body.protocol!=='pos-master-migration-receipt/v1'||body.success!==true||!Number.isSafeInteger(body.sequence)||body.sequence<1||!Array.isArray(body.rows)||!Number.isFinite(Date.parse(body.time)))fail()
     const request=JSON.parse(body.signature),source=readMasterMigrationInput(request).source
-    if(source.protocol===TABULAR_MIGRATION_PROTOCOL)tabular=true
+    if([TABULAR_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_PROTOCOL].includes(source.protocol))tabular=true
+    if(source.protocol===WORKBOOK_MIGRATION_PROTOCOL)workbook=true
     if(body.signature!==canonicalSignature(request)||request.id!==body.id||request.scope.userId!==body.actor.userId||!same(body.source,source.source)||body.rows.length!==source.tables.reduce((n,t)=>n+t.rows.length,0))fail()
     let position=0;const counts=emptyCounts(),keys=new Set()
     for(const [ti,table]of source.tables.entries())for(const [ri,row]of table.rows.entries()){
@@ -54,7 +64,8 @@ function inspectMasterMigrationHistory(book){
   const rawHead=setting(book,MASTER_MIGRATION_HEAD),savedHead=rawHead===null?null:JSON.parse(rawHead)
   if(savedHead!==null&&(typeof savedHead!=='string'||!/^[a-f0-9]{64}$/.test(savedHead))||head!==savedHead||receipts.length&&setting(book,MASTER_MIGRATION_FENCE)!=='1')fail()
   if(tabular&&setting(book,TABULAR_MIGRATION_FENCE)!=='1')fail()
-  return {receipts,byId,mappings,head,tabular}
+  if(workbook&&setting(book,WORKBOOK_MIGRATION_FENCE)!=='1')fail()
+  return {receipts,byId,mappings,head,tabular,workbook}
 }
 export function readMasterMigrationInput(input){
   draftObject(input,['protocol','id','sourceText','choices','scope','review'],['protocol','id','sourceText','choices','scope'])
@@ -81,7 +92,7 @@ function columnsFor(table,canonical=false){
     return indices.length?[[field,indices]]:[]
   }))
 }
-function sourceRows(source){return source.tables.flatMap((table,ti)=>table.rows.map((row,ri)=>({table:ti,row:ri,entity:table.entity,externalId:row.externalId,key:masterSourceKey(source.source,table.entity,row.externalId),sourceDigest:digest([table.columns,row]),columns:columnsFor(table,source.protocol===TABULAR_MIGRATION_PROTOCOL),sourceRow:row,headers:table.columns})))}
+function sourceRows(source){return source.tables.flatMap((table,ti)=>table.rows.map((row,ri)=>({table:ti,row:ri,entity:table.entity,externalId:row.externalId,key:masterSourceKey(source.source,table.entity,row.externalId),sourceDigest:digest([table.columns,row]),columns:columnsFor(table,[TABULAR_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_PROTOCOL].includes(source.protocol)),sourceRow:row,headers:table.columns})))}
 function extractRow(row){
   const values={},issues=[],unused=[]
   const used=new Set()
@@ -89,17 +100,17 @@ function extractRow(row){
     indices.forEach(i=>used.add(i))
     if(indices.length!==1){issues.push('ambiguous-column');continue}
     const raw=row.sourceRow.values[indices[0]]
+    const factIssue=masterMappedValueIssue(row.entity,field,raw);if(factIssue){issues.push(factIssue);continue}
     if(['stock','balance','points','totalSpent'].includes(field)){
       try{if(decimalUnits(raw,field==='stock'?3:2,1e12,'invalid')!==0)issues.push('needs-ledger-mapping')}catch{issues.push('needs-ledger-mapping')}
     }else if(field==='currency'){
       // Current operational prices are TWD. A currency label never supplies an exchange rate.
       if(raw!=='TWD')issues.push('needs-currency')
     }else if(['price','cost'].includes(field)){
-      if(row.entity==='products')try{values[field]=decimalUnits(raw,2,1e11,'invalid')/100}catch{issues.push('invalid-'+field)}
+      if(row.entity==='products')values[field]=decimalUnits(raw,2,1e11,'invalid')/100
       else if(raw.trim())issues.push('needs-ledger-mapping')
     }else if(fields[row.entity]?.includes(field)||field==='supplier'&&row.entity==='products'){
-      if(raw.length>(field==='note'?2048:256)||raw.includes('\u0000'))issues.push('invalid-text')
-      else values[field]=raw
+      values[field]=raw
     }else if(raw.trim())unused.push(row.headers[indices[0]])
   }
   row.headers.forEach((name,i)=>{if(!used.has(i))unused.push(name)})
@@ -108,7 +119,6 @@ function extractRow(row){
     if(!values.unit?.trim())issues.push('missing-unit')
     if(values.price===undefined)issues.push('missing-price')
   }
-  if(values.birthday){const date=new Date(values.birthday+'T00:00:00Z');if(!/^\d{4}-\d{2}-\d{2}$/.test(values.birthday)||!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==values.birthday)issues.push('invalid-birthday')}
   return {values,issues:[...new Set(issues)],unused}
 }
 function targetFields(entity,target,keys=fields[entity]){return Object.fromEntries(keys.filter(key=>Object.hasOwn(target,key)).map(key=>[key,target[key]]))}

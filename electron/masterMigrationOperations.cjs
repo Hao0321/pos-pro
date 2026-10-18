@@ -18,7 +18,8 @@ module.exports=function installMasterMigration(db,api,stmts){
       }
       const saved=masterMigrationReceipt(input,preview,history,actor,new Date().toISOString(),api.exportData())
       require('./databaseFeatureFence.cjs').installMasterMigrationFence(db)
-      if(parsed.source.protocol==='pos-tabular-migration/v1'){require('./databaseFeatureFence.cjs').installTabularMigrationFence(db);stmts.setSetting.run('agentTabularMigrationVersionFence','1')}
+      if(['pos-tabular-migration/v1','pos-workbook-migration/v1'].includes(parsed.source.protocol)){require('./databaseFeatureFence.cjs').installTabularMigrationFence(db);stmts.setSetting.run('agentTabularMigrationVersionFence','1')}
+      if(parsed.source.protocol==='pos-workbook-migration/v1'){require('./databaseFeatureFence.cjs').installWorkbookMigrationFence(db);stmts.setSetting.run('agentWorkbookMigrationVersionFence','1')}
       stmts.insertAuditLog.run(masterMigrationAudit(saved))
       stmts.setSetting.run(MASTER_MIGRATION_FENCE,'1');stmts.setSetting.run(MASTER_MIGRATION_HEAD,JSON.stringify(saved.hash))
       readMasterMigrationHistory(api.exportData())

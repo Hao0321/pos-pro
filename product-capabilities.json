@@ -259,7 +259,7 @@
       "name": "Agent 一鍵搬家、來源對照、試搬、核對與可追溯切換",
       "status": "planned",
       "implementation": "partial",
-      "nextExperiment": "依官方 know-how 建立來源原編號、欄位對照、重複提示、原文字草稿、期初與開放單據核對；逐類型接上原子搬家與回執。任意 ERP／CRM 與真實外部 Agent 的完整搬家仍未驗收。"
+      "nextExperiment": "商品、供應商、客戶主檔已接通原子搬入、原編號及回執；CSV／TSV 與有界 XLSX 可保留原檔、欄位及修正，XLSX 可一次核對多工作表。接續完成舊式 XLS、真實廠牌檔、期初與開放單據對帳、試搬及撤回、跨裝置草稿交接與外部 Agent／真人驗收。完整 ERP／CRM 切換仍未完成。"
     },
     {
       "id": "operations.scale",

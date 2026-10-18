@@ -9,16 +9,19 @@ function offlineShell() {
   const hash=bytes=>createHash('sha256').update(bytes).digest('hex')
   return {name:'pos-offline-shell',apply:'build',closeBundle(){
     const root=process.cwd(),output=path.join(root,'dist')
-    // JsBarcode publishes MIT-LICENSE.txt, which Vite's standard name lookup misses.
+    // Preserve original notices when a package uses a nonstandard name or omits
+    // its license from the npm archive. The saxes copy is pinned to its release.
     const noticesFile=path.join(output,'THIRD_PARTY_LICENSES.txt')
     let notices=fs.readFileSync(noticesFile,'utf8')
-    const barcodeLicense=fs.readFileSync(path.join(root,'node_modules/jsbarcode/MIT-LICENSE.txt'),'utf8').trim()
-    if(/^## jsbarcode - /m.test(notices)&&!notices.includes(barcodeLicense)){
-      const empty=/^(## jsbarcode - [^\r\n]+\r?\n)(?:\r?\n)*(?=## |$)/m
-      if(!empty.test(notices))throw Error('JsBarcode license text differs; review bundled notices')
-      notices=notices.replace(empty,(_section,heading)=>heading+'\n'+barcodeLicense+'\n\n')
-      fs.writeFileSync(noticesFile,notices)
+    for(const [name,file]of [['jsbarcode','node_modules/jsbarcode/MIT-LICENSE.txt'],['saxes','docs/third-party/saxes-6.0.0-LICENSE.txt']]){
+      const license=fs.readFileSync(path.join(root,file),'utf8').trim(),heading=new RegExp('^## '+name+' - ','m')
+      if(heading.test(notices)&&!notices.includes(license)){
+        const empty=new RegExp('^(## '+name+' - [^\\r\\n]+\\r?\\n)(?:\\r?\\n)*(?=## |$)','m')
+        if(!empty.test(notices))throw Error(name+' license text differs; review bundled notices')
+        notices=notices.replace(empty,(_section,title)=>title+'\n'+license+'\n\n')
+      }
     }
+    fs.writeFileSync(noticesFile,notices)
     if(notices.split(/^## /m).slice(1).some(section=>!section.slice(section.indexOf('\n')+1).trim()))
       throw Error('Bundled dependency license text is missing')
 

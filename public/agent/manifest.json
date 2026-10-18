@@ -95,6 +95,26 @@
       "opening-payables",
       "history-reference"
     ],
-    "confirmation": "Authenticated owner previews counts, source-ID mappings, source/local field differences and unresolved issues. A single displayed confirmation atomically commits supported masters; Agent cannot approve or execute."
+    "confirmation": "Authenticated owner previews counts, source-ID mappings, source/local field differences and unresolved issues. A single displayed confirmation atomically commits supported masters; Agent cannot approve or execute.",
+    "directFiles": {
+      "extensions": [
+        "csv",
+        "tsv",
+        "xlsx"
+      ],
+      "maxBytes": {
+        "csv": 80000,
+        "tsv": 80000,
+        "xlsx": 120000
+      },
+      "workbook": {
+        "multipleWorksheets": true,
+        "originalFilePreserved": true,
+        "formulaExecution": false,
+        "ownerReviewRequired": true
+      },
+      "legacyXls": false,
+      "externalAiUpload": false
+    }
   }
 }

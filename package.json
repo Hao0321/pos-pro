@@ -48,7 +48,10 @@
     "build:icons": "node scripts/generate-icon.js",
     "test:master-migration": "node scripts/run-native-security.cjs --master-migration",
     "test:tabular-migration": "node scripts/run-native-security.cjs --tabular-migration",
-    "test:tabular-migration-ui": "npm run build && node scripts/run-native-security.cjs --tabular-migration-ui"
+    "test:tabular-migration-ui": "npm run build && node scripts/run-native-security.cjs --tabular-migration-ui",
+    "test:workbook-migration": "node scripts/run-native-security.cjs --workbook-migration",
+    "test:workbook-migration-ui": "npm run build && node scripts/run-native-security.cjs --workbook-migration-ui",
+    "test:workbook-migration-browser-ui": "npm run build && node scripts/run-native-security.cjs --workbook-migration-browser-ui"
   },
   "dependencies": {
     "@noble/hashes": "2.4.0",
@@ -56,6 +59,8 @@
     "cloudflared": "^0.7.1",
     "electron-store": "^10.0.0",
     "express": "5.2.1",
+    "fflate": "0.8.3",
+    "saxes": "6.0.0",
     "ws": "8.22.0"
   },
   "devDependencies": {

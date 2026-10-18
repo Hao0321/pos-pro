@@ -39,7 +39,10 @@ export function detectTableDelimiter(text){
  return candidates.length===1?candidates[0]:''
 }
 export function suggestTabularPlan(text,delimiter,entity='products'){
- const {headers}=readDelimitedTable(text,delimiter),fields=headers.map(header=>migrationColumnField(header,entity)),allowed=[...(tabularEntityFields[entity]||[]),...protectedTabularFields]
+ return suggestTabularTablePlan(readDelimitedTable(text,delimiter),entity)
+}
+export function suggestTabularTablePlan({headers},entity='products'){
+ const fields=headers.map(header=>migrationColumnField(header,entity)),allowed=[...(tabularEntityFields[entity]||[]),...protectedTabularFields]
  return {entity,externalId:fields.filter(field=>field==='externalId').length===1?fields.indexOf('externalId'):-1,mapping:fields.map(field=>allowed.includes(field)&&fields.filter(value=>value===field).length===1?field:''),unit:'',repairs:[]}
 }
 export function makeTabularDraft(source,file,plan){
@@ -51,7 +54,12 @@ export function projectTabularDraft(input){
  if(input.protocol!==TABULAR_MIGRATION_PROTOCOL||input.id!==makeTabularDraft(input.source,input.file,input.plan).id)fail('表格核對內容已變更，請重新看結果。')
  if([input.source.system,input.source.company].some(value=>!plain(value)||!value.trim()||value.length>128))fail('請填入原系統與公司，才能保留正確的來源對照。')
  if(!plain(input.file.name)||!input.file.name.trim()||input.file.name.length>256)fail('表格檔名需要核對。')
- const {headers,rows}=readDelimitedTable(input.file.text,input.file.delimiter),p=input.plan,fields=tabularEntityFields[p.entity]
+ return {...structuredClone(input),tables:[projectMappedMigrationTable(readDelimitedTable(input.file.text,input.file.delimiter),input.plan)]}
+}
+export function projectMappedMigrationTable({headers,rows},p){
+ draftObject(p,['entity','externalId','mapping','unit','repairs'])
+ if(!Array.isArray(headers)||!headers.length||headers.length>100||headers.some(h=>!plain(h)||h.length>128)||!Array.isArray(rows)||!rows.length||rows.length>5000||rows.some(row=>!Array.isArray(row)||row.length!==headers.length||row.some(v=>!plain(v)||v.length>2048)))fail('表格讀不到，請保留原檔並核對分隔符號。')
+ const fields=tabularEntityFields[p.entity]
  if(!fields||!Number.isInteger(p.externalId)||p.externalId<0||p.externalId>=headers.length)fail('請選擇原系統編號欄，不能用列號代替。')
  if(!Array.isArray(p.mapping)||p.mapping.length!==headers.length||p.mapping.some(field=>typeof field!=='string'||field&&!fields.includes(field)&&!protectedTabularFields.includes(field))||new Set(p.mapping.filter(Boolean)).size!==p.mapping.filter(Boolean).length||p.mapping[p.externalId])fail('欄位用途重複或不完整，請核對對照。')
  if(!plain(p.unit)||p.unit.length>128||p.unit&&p.entity!=='products'||p.unit&&p.mapping.includes('unit'))fail('共同單位與來源單位重複，請選擇其中一種。')
@@ -66,5 +74,5 @@ export function projectTabularDraft(input){
  }
  if(effective.some(values=>values[p.externalId].length>128))fail('原系統編號太長，請核對來源欄位。')
  const columns=headers.map((header,index)=>p.mapping[index]||('來源欄 '+(index+1)+' · '+header).slice(0,128));if(p.unit)columns.push('unit')
- return {...structuredClone(input),tables:[{entity:p.entity,columns,rows:effective.map(values=>({externalId:values[p.externalId],values:p.unit?[...values,p.unit]:values}))}]}
+ return {entity:p.entity,columns,rows:effective.map(values=>({externalId:values[p.externalId],values:p.unit?[...values,p.unit]:values}))}
 }
