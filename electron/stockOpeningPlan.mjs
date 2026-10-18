@@ -99,7 +99,7 @@ export function assertStockCustodyMatchesBook(custody,products,reservations,ware
  const key=(owner,productId,unit)=>canonicalSignature([owner,productId,unit])
  const locations=new Set(warehousing?.locations?.map(row=>row.id)||['main'])
  for(const node of custody.positions){
-  if(!locations.has(node.owner.locationId)||node.owner.stage!=='available'&&node.owner.locationId!=='main'&&!(custody.version===2&&['quarantined','wasted'].includes(node.owner.stage)))throw stockLedgerError('HISTORY')
+  if(!locations.has(node.owner.locationId)||node.owner.stage!=='available'&&node.owner.locationId!=='main'&&!(custody.version===2&&['quarantined','wasted','supplierReturned'].includes(node.owner.stage)))throw stockLedgerError('HISTORY')
   if(node.owner.stage==='available'&&node.owner.locationId!=='main')continue
   if(['available','reserved'].includes(node.owner.stage))for(const segment of node.segments){const source=sources.get(segment.sourceId),id=key(node.owner,source.productId,source.unit);totals.set(id,(totals.get(id)||0)+segment.quantityUnits)}
  }

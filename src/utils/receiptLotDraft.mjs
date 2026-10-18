@@ -1,6 +1,7 @@
 import {canonicalSignature} from '../../electron/operationRules.mjs'
 import {receiptLots,RECEIPT_LOT_PROTOCOL} from '../../electron/receiptLots.mjs'
 import {stockLedgerDigest} from '../../electron/stockLedgerModel.mjs'
+import {readBaseUnits} from './rawQuantity.mjs'
 export const newReceiptBatch=()=>({quantity:'',locationId:'main',code:'',expiryMode:'unknown',expiryDate:''})
 export const emptyReceiptDraft=()=>({purchaseSignature:'',epoch:'',rows:[],agentText:'',command:null,attempted:false})
 export function validReceiptDraft(form){
@@ -11,7 +12,7 @@ export function validReceiptDraft(form){
  return !form.attempted||form.command!==null
 }
 export function beginReceiptDraft(po,context){return {...emptyReceiptDraft(),purchaseSignature:canonicalSignature(po),epoch:context.epoch,rows:po.items.map(item=>({price:'',batches:[{...newReceiptBatch(),quantity:Math.round((item.qty-(item.received||0))*1000)<=0?'0':''}]}))}}
-const quantity=raw=>{const text=raw.trim();if(!/^(?:\d+(?:\.\d{0,3})?|\.\d{1,3})$/.test(text)||text.length>32)throw Error('請核對本次到貨量');const [whole,fraction='']=text.split('.'),value=BigInt((whole||'0')+fraction.padEnd(3,'0'));if(value>1000000000000n)throw Error('請核對本次到貨量');return Number(value)}
+const quantity=raw=>readBaseUnits(raw,'請核對本次到貨量')
 export function receiptDraftCommand(form,po,state,suppliers,supplierState){
  if(!validReceiptDraft(form)||!state.active||form.purchaseSignature!==canonicalSignature(po)||form.epoch!==state.context.epoch||form.rows.length!==po.items.length)throw Error('原進貨單或店面已變更，請先核對原收貨')
  const allocations=[],newItems=[],quantities=[],review=[]

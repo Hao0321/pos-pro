@@ -48,12 +48,13 @@ export function lotCountGroups(projection){
  for(const row of links){warehouseRecord(row,['lotId','parentLotId']);const child=items.get(row.lotId),parent=items.get(row.parentLotId);if(!child||!parent||children.has(row.parentLotId)||child.id===parent.id||sources.get(child.sourceId).productId!==sources.get(parent.sourceId).productId||child.code!==parent.code||child.expiryDate!==parent.expiryDate)throw lotError('HISTORY');groups.set(child.id,parent.id)}
  return groups
 }
-export function lotCountFacts(projection,products,reservations=projection.lotCountReservations||[]){
+export function lotCountFacts(projection,products,reservations=projection.lotCountReservations||[],{includeReserved=true}={}){
  const groups=lotCountGroups(projection),registry=projection.lots,sources=new Map(projection.custody.sources.map(row=>[row.id,row])),byProduct=new Map(products.map(row=>[row.id,row])),rows=new Map()
- const reserved=new Map(assertLotCountReservations(projection.custody,reservations).map(row=>[row.id,row]))
- if(projection.lotCountVersion===1&&canonicalSignature(reservations)!==canonicalSignature(projection.lotCountReservations))throw lotError('HISTORY')
+ const reserved=includeReserved?new Map(assertLotCountReservations(projection.custody,reservations).map(row=>[row.id,row])):null
+ if(includeReserved&&projection.lotCountVersion===1&&canonicalSignature(reservations)!==canonicalSignature(projection.lotCountReservations))throw lotError('HISTORY')
  for(const position of projection.custody.positions){
   if(!['available','reserved','quarantined'].includes(position.owner.stage))continue
+  if(!includeReserved&&position.owner.stage==='reserved')continue
   if(position.owner.stage==='reserved'&&position.segments.length&&reserved.get(position.owner.referenceId).startedAt)continue
   for(const part of splitLotSegments(projection.custody,registry,position.segments)){
    const source=sources.get(part.segment.sourceId),product=byProduct.get(source.productId);if(!product)continue

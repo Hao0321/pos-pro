@@ -30,6 +30,8 @@ export function validateStockCostBook(book,validatedState=null){
   const lotFlag=(book.settings||[]).find(row=>row.key===LOT_SETTING)
   if(lotFlag&&lotFlag.value!=='1'||state.projection?.lots&&!lotFlag||state.projection?.custody.version===2&&!state.projection.lots)throw stockLedgerError('HISTORY')
   const countFlag=(book.settings||[]).find(row=>row.key===LOT_COUNT_SETTING)
+  const returnFlag=(book.settings||[]).find(row=>row.key==='stockSupplierLotReturnsVersionFence')
+  if(returnFlag&&returnFlag.value!=='1'||state.projection?.supplierLotReturnsVersion===1&&!returnFlag)throw stockLedgerError('HISTORY')
   const receiptFlag=(book.settings||[]).find(row=>row.key==='stockReceiptLotsVersionFence')
   if(receiptFlag&&receiptFlag.value!=='1'||state.projection?.receiptLotsVersion===1&&!receiptFlag)throw stockLedgerError('HISTORY')
   if(countFlag&&countFlag.value!=='1'||state.projection?.lotCountVersion===1&&!countFlag)throw stockLedgerError('HISTORY')

@@ -36,7 +36,7 @@ export function assertStockBusinessCoverage(book,state){
     if(audit.action!=='INVENTORY_OPERATION'||!audit.id.startsWith('stock-operation:'))continue
     if(legacy.applyInventoryOperation.includes(audit.id.slice('stock-operation:'.length)))continue
     const detail=typeof audit.detail==='string'?JSON.parse(audit.detail):audit.detail,input=JSON.parse(detail.signature)
-    if(['receive','receive-lots','purchase-return','stocktake'].includes(input.kind)&&!original('applyInventoryOperation',input.id))throw stockLedgerError('HISTORY')
+    if(['receive','receive-lots','purchase-return','purchase-return-lots','stocktake'].includes(input.kind)&&!original('applyInventoryOperation',input.id))throw stockLedgerError('HISTORY')
   }
   for(const receipt of book.restaurantOperations||[])if(receipt.action!=='configure'&&!original('applyRestaurantOperation',receipt.id))throw stockLedgerError('HISTORY')
   for(const receipt of book.salesOperations||[])if(['deliver','return'].includes(receipt.action)&&!original('applySalesOperation',receipt.id))throw stockLedgerError('HISTORY')

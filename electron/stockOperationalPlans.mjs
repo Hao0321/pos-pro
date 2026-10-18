@@ -26,7 +26,7 @@ export function planOperationalStock(c,method){
   }return
  }
  const inventory=evidence.inventory
- if(!inventory||!['receive','receive-lots','purchase-return'].includes(input.kind)||inventory.kind!==input.kind||inventory.purchaseId!==input.purchaseId||!Array.isArray(inventory.items))throw stockLedgerError('HISTORY')
+ if(!inventory||!['receive','receive-lots','purchase-return','purchase-return-lots'].includes(input.kind)||inventory.kind!==input.kind||inventory.purchaseId!==input.purchaseId||!Array.isArray(inventory.items))throw stockLedgerError('HISTORY')
  if(['receive','receive-lots'].includes(input.kind)){
   let total=0
   inventory.items.forEach((item,index)=>{
@@ -40,9 +40,10 @@ export function planOperationalStock(c,method){
  }else{
   const event=inventory.event;if(!event||event.id!==input.id||!Number.isSafeInteger(inventory.creditCents)||inventory.creditCents<0)throw stockLedgerError('HISTORY')
   const destination=owner('supplierReturned','purchase-return',input.id)
-  inventory.items.forEach((item,index)=>{const count=units(input.quantities[index]);if(count)c.move(owner('available'),destination,item.productId,count)})
+  if(c.supplierReturn)c.selected(c.supplierReturn.steps)
+  else inventory.items.forEach((item,index)=>{const count=units(input.quantities[index]);if(count)c.move(owner('available'),destination,item.productId,count)})
   c.line(event.invoiceId?'2101':'2102',inventory.creditCents,0);c.line('2291',0,inventory.creditCents)
-  c.note({kind:'supplier-return-clearing',owner:destination,creditCents:inventory.creditCents,cleared:false});c.replace('JP-'+input.id)
+  c.note({...(c.supplierReturn?{kind:'supplier-lot-return-clearing',owners:c.supplierReturn.owners}:{kind:'supplier-return-clearing',owner:destination}),creditCents:inventory.creditCents,cleared:false});c.replace('JP-'+input.id)
  }
 }
 

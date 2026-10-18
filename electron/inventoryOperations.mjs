@@ -84,7 +84,7 @@ export function inventoryReceipt(request,row,data){
   if(products.some(p=>!p))throw Error('原異動商品已不存在，請先核對')
   if(row.purchaseId&&!data.purchases.some(p=>p.id===row.purchaseId)||row.supplierId&&!data.suppliers.some(s=>s.id===row.supplierId))throw Error('原異動進貨單或供應商已不存在，請先核對')
   const purchase=row.purchaseId?data.purchases.find(p=>p.id===row.purchaseId):null
-  if(request.kind==='purchase-return'){
+  if(['purchase-return','purchase-return-lots'].includes(request.kind)){
     const expected=[...new Set(purchase?.items.filter((_,i)=>request.quantities?.[i]>0).map(item=>item.productId))]
     if(!expected.length||expected.length!==row.productIds.length||expected.some(id=>!id||!row.productIds.includes(id)))throw Error('原退貨庫存回執不完整，請保留原編號核對')
   }

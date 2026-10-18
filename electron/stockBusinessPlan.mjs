@@ -8,6 +8,7 @@ import {planOperationalStock} from './stockOperationalPlans.mjs'
 import {assertLotBusinessReady,planLotBusinessMove,lotAcquireTarget} from './lotBusinessPolicy.mjs'
 import {receiptLots,placeReceiptLots,RECEIPT_LOT_KIND} from './receiptLots.mjs'
 import {lotRegistry,lotError} from './lotRules.mjs'
+import {planSupplierLotReturn,SUPPLIER_LOT_RETURN} from './supplierLotReturn.mjs'
 
 export const STOCK_BUSINESS_METHODS=['checkout','refundOrder','applyInventoryOperation','applyRestaurantOperation','applySalesOperation','addWaste','addProduct']
 export const stockOwner=(stage,domain='',id='')=>({stage,locationId:'main',referenceId:stage==='available'?'':domain==='reservation'?id:canonicalSignature([domain,id])})
@@ -27,10 +28,11 @@ export function planStockBusiness(previous,body){
  const arrival=method==='applyInventoryOperation'&&input.kind===RECEIPT_LOT_KIND?receiptLots(input):null
  if(arrival&&(!previous.lots||body.actor?.role!=='owner'||arrival.expectedStateDigest!==body.beforeDigest))throw lotError('STALE')
  const arrivalItems=[]
+ const supplierReturn=method==='applyInventoryOperation'&&input.kind===SUPPLIER_LOT_RETURN?planSupplierLotReturn(previous,body):null
  const pairs=new Map(),steps=[],sourceEvidence=[],replaced=new Set(),extraLines=[],notes=[]
  for(const pair of evidence.products){if(!pair||pairs.has(pair.id)||typeof pair.id!=='string'||typeof pair.unit!=='string')throw stockLedgerError('HISTORY');safe(pair.beforeUnits);safe(pair.afterUnits);if(available(previous.custody,pair.id,pair.unit)!==pair.beforeUnits)throw stockLedgerError('HISTORY');pairs.set(pair.id,pair)}
  let ordinal=0,virtual=previous.custody;const blocked=new Map(),append=next=>{steps.push(...next);if(previous.lots&&next.length)virtual=planCostCustody(virtual,{expectedSequence:virtual.sequence,steps:next}).state}
- const context={previous,input,evidence,stockOwner,stockUnits,stockLineValue,stockLegacyInterval,
+ const context={previous,input,evidence,stockOwner,stockUnits,stockLineValue,stockLegacyInterval,supplierReturn,selected:append,
   product:id=>{const row=pairs.get(id);if(!row)throw stockLedgerError('HISTORY');return row},
   move:(from,to,productId,quantityUnits,unused=false)=>{safe(quantityUnits,1);const product=context.product(productId);if(previous.lots){const plan=planLotBusinessMove(virtual,previous.lots,from,to,productId,product.unit,quantityUnits,unused);append(plan.steps);blocked.set(productId,(blocked.get(productId)||0)+plan.blockedUnits)}else append([{kind:unused?'release-unused':'move',from,to,productId,unit:product.unit,quantityUnits}])},
   acquire:(productId,quantityUnits,valueCents,creditAccount,basis,key,to=stockOwner('available'))=>{safe(quantityUnits,1);if(valueCents!==null)safe(valueCents);if(!['3901','4191','5101','2102','2291'].includes(creditAccount))throw stockLedgerError('HISTORY');const product=context.product(productId),sourceId='business:'+eventId+':'+ordinal++,target=previous.lots&&!arrival?lotAcquireTarget(previous.lots,to,productId,sourceId):to;const source={id:sourceId,productId,unit:product.unit,currency:'TWD',quantityUnits,valueCents};if(to.stage==='available'&&to.locationId==='main'&&target.stage==='quarantined')blocked.set(productId,(blocked.get(productId)||0)+quantityUnits);append([{kind:target.stage==='wasted'?'acquire-disposed':target.stage==='quarantined'?'acquire-quarantined':'acquire',to:target,sources:[source]}]);sourceEvidence.push({sourceId,key:canonicalSignature([method,input.id,key]),basis,creditAccount});if(arrival){const placed=placeReceiptLots(previous,body,source,productId,key,virtual.positions.flatMap(row=>row.segments).find(row=>row.sourceId===sourceId).queueOrder);append(placed.steps);arrivalItems.push(...placed.items);blocked.set(productId,(blocked.get(productId)||0)+placed.blockedUnits)}},
@@ -62,6 +64,7 @@ export function planStockBusiness(previous,body){
  const business={method,id:input.id,eventId,effects:plan.effects,journalId:journal.id,replacedJournalIds:[...replaced],notes}
  let next={...previous,custody:plan.state,sourceEvidence:[...previous.sourceEvidence,...sourceEvidence],journals:[...previous.journals,journal],business:[...(previous.business||[]),business]}
  if(arrival)next={...next,receiptLotsVersion:1,lots:lotRegistry({...previous.lots,items:[...previous.lots.items,...arrivalItems]},plan.state)}
+ if(supplierReturn)next={...next,supplierLotReturnsVersion:1}
  if(previous.lotCountVersion===1)next={...next,lotCountReservations:updateLotCountReservations(previous,next.custody,method==='applyRestaurantOperation'?evidence.entry:null)}
  next=clearStockReturnSuspense(next,date,input.id)
  return next
@@ -73,9 +76,9 @@ export function clearStockReturnSuspense(projection,date,operationId){
  let changed=false;const journals=[]
  const business=(projection.business||[]).map(row=>{
   const notes=row.notes.map(note=>{
-   if(note.kind!=='supplier-return-clearing'||note.cleared)return note
-   const node=projection.custody.positions.find(position=>canonicalSignature(position.owner)===canonicalSignature(note.owner))
-   if(!node||!stockCostSummary(projection.custody.sources,node.segments).complete)return note
+   if(!['supplier-return-clearing','supplier-lot-return-clearing'].includes(note.kind)||note.cleared)return note
+   const owners=note.kind==='supplier-lot-return-clearing'?note.owners:[note.owner]
+   if(!owners.length||owners.some(owner=>{const node=projection.custody.positions.find(position=>canonicalSignature(position.owner)===canonicalSignature(owner));return !node||!stockCostSummary(projection.custody.sources,node.segments).complete}))return note
    const amount=note.creditCents
    journals.push({id:'stock-clear:'+row.eventId+':'+operationId,date,type:'stock-cost',amountUnit:'cents',description:'供應商退貨成本差額',costComplete:true,lines:amount?[{account:'2291',debitCents:amount,creditCents:0},{account:'5204',debitCents:0,creditCents:amount}]:[]})
    changed=true;return {...note,cleared:true}

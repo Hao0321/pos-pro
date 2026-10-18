@@ -3,9 +3,10 @@ import {cents,units,amount,amountUnits,procurementLineCents} from './procurement
 import {beginProcurementValuation,appendValuation,valuationState,allocationFor} from './procurementValuation.mjs'
 import {validateQuote,validateQuotedPurchase} from './businessExchange.mjs'
 import {supplierAppliedCents} from './supplierCredit.mjs'
+import {supplierLotReturn,supplierLotReturnDeltas,SUPPLIER_LOT_RETURN} from './supplierLotReturn.mjs'
 export {procurementLineCents} from './procurementAmounts.mjs'
 
-export const PROCUREMENT_KINDS=['purchase-create','purchase-bill','purchase-pay','purchase-reverse','purchase-cancel','purchase-return','purchase-refund','purchase-refund-reverse']
+export const PROCUREMENT_KINDS=['purchase-create','purchase-bill','purchase-pay','purchase-reverse','purchase-cancel','purchase-return',SUPPLIER_LOT_RETURN,'purchase-refund','purchase-refund-reverse']
 export const isProcurement=po=>po?.procurement?.version===1
 export const parsePurchase=row=>({...row,items:typeof row.items==='string'?JSON.parse(row.items||'[]'):row.items,procurement:typeof row.procurement==='string'?JSON.parse(row.procurement):row.procurement??null})
 export const purchaseParams=po=>({...po,items:JSON.stringify(po.items),procurement:po.procurement?JSON.stringify(po.procurement):null})
@@ -99,15 +100,16 @@ export function planProcurement(request,data,actor){
     if(!payment||p.reversals.some(v=>v.paymentId===payment.id))throw Error('付款不存在或已沖銷')
     const reversal={...doc(request),paymentId:payment.id,amount:payment.amount,method:payment.method,reason:text(request.reason,'沖銷理由',500),shiftId:'',cashLogId:''}
     cashLog=cashMovement(request,data,actor,reversal,'in');p.reversals.push(reversal)
-  }else if(request.kind==='purchase-return'){
+  }else if(['purchase-return',SUPPLIER_LOT_RETURN].includes(request.kind)){
+    const lots=request.kind===SUPPLIER_LOT_RETURN?supplierLotReturn(request):null
     const reason=text(request.reason,'退貨理由',500),invoiceId=request.invoiceId||''
     if(typeof invoiceId!=='string')throw Error('退貨請款單不正確')
     beginProcurementValuation(po)
     const state=valuationState(po),bucket=invoiceId?state.bills.get(invoiceId):state.unbilled
     if(!bucket)throw Error('退貨缺少原請款單')
     const value=amount(allocationFor(bucket,request.quantities).reduce((n,v)=>n+v,0))
-    p.returns.push({...doc(request),invoiceId,reason,quantities:[...request.quantities],amount:value});appendValuation(po,request.id)
-    stockDeltas=po.items.flatMap((item,i)=>request.quantities[i]>0?[{productId:item.productId,qty:-request.quantities[i]}]:[])
+    p.returns.push({...doc(request),invoiceId,reason,quantities:[...request.quantities],amount:value,...(lots?{kind:SUPPLIER_LOT_RETURN,lots}:{})});appendValuation(po,request.id)
+    stockDeltas=lots?supplierLotReturnDeltas(request,po.items):po.items.flatMap((item,i)=>request.quantities[i]>0?[{productId:item.productId,qty:-request.quantities[i]}]:[])
   }else if(request.kind==='purchase-refund'){
     const bill=procurementSummary(po).bills.find(b=>b.id===request.invoiceId)
     if(!bill)throw Error('請款單不存在')
@@ -137,7 +139,7 @@ function cashMovement(request,data,actor,entry,type){
   return {id:entry.cashLogId,shiftId:shift.id,time:request.time,type,amount:entry.amount,reason:label+' '+request.purchaseId,cashier:actor?.username||actor?.userId||''}
 }
 export function procurementEvent(po,request){
-  const collection={receive:'receipts','receive-lots':'receipts','purchase-bill':'bills','purchase-pay':'payments','purchase-reverse':'reversals','purchase-return':'returns','purchase-refund':'refunds','purchase-refund-reverse':'refundReversals'}[request.kind]
+  const collection={receive:'receipts','receive-lots':'receipts','purchase-bill':'bills','purchase-pay':'payments','purchase-reverse':'reversals','purchase-return':'returns','purchase-return-lots':'returns','purchase-refund':'refunds','purchase-refund-reverse':'refundReversals'}[request.kind]
   const event=collection?po.procurement[collection].find(r=>r.id===request.id):request.kind==='purchase-cancel'?po.procurement.cancel:{id:po.procurement.createdOperationId,time:po.procurement.createdAt}
   if(!event)throw Error('採購操作缺少保存文件')
   return {collection:collection||request.kind,id:event.id,signature:canonicalSignature(event)}
@@ -165,7 +167,10 @@ export function validateProcurement(po){
     for(const b of p.bills){availableQuantities(po,b.quantities,received,billed);if(cents(b.amount)!==cents(lineAmount(po,billed,b.quantities)))throw Error('請款金額不符');billed=billed.map((q,i)=>amountUnits(units(q)+units(b.quantities[i])))}
   }
   for(const b of p.bills){text(b.reference,'請款單號',100);date(b.dueDate,'到期日')}
-  for(const r of p.returns||[])text(r.reason,'退貨理由',500)
+  for(const r of p.returns||[]){
+    text(r.reason,'退貨理由',500)
+    if(r.kind!==undefined||r.lots!==undefined){if(r.kind!==SUPPLIER_LOT_RETURN)throw Error('採購退貨版本不支援');supplierLotReturn({kind:r.kind,purchaseId:po.id,expectedPurchase:canonicalSignature(po),invoiceId:r.invoiceId,reason:r.reason,quantities:r.quantities,lots:r.lots,id:r.id,time:r.time})}
+  }
   if(received.some((q,i)=>units(q)!==units(po.items[i].received)))throw Error('採購收貨紀錄與庫存文件不符')
   for(const entry of [...p.payments,...p.reversals,...p.refunds||[],...p.refundReversals||[]]){if(!['cash','bank'].includes(entry.method)||entry.amount<=0||entry.method==='cash'&&(!entry.shiftId||!entry.cashLogId))throw Error('採購付款紀錄損壞')}
   const reversed=new Set()

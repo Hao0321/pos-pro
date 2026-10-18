@@ -5,7 +5,7 @@ import {procurementApprovalMaterial,purchaseMatchesApproval,supplierActor} from 
 import {only,businessId} from './businessExchange.mjs'
 import {assertPrivateQuickPurchase} from './privateDrafts.mjs'
 const groups=['receipts','bills','payments','reversals','returns','refunds','refundReversals']
-const collection={receive:'receipts','receive-lots':'receipts','purchase-bill':'bills','purchase-pay':'payments','purchase-reverse':'reversals','purchase-return':'returns','purchase-refund':'refunds','purchase-refund-reverse':'refundReversals'}
+const collection={receive:'receipts','receive-lots':'receipts','purchase-bill':'bills','purchase-pay':'payments','purchase-reverse':'reversals','purchase-return':'returns','purchase-return-lots':'returns','purchase-refund':'refunds','purchase-refund-reverse':'refundReversals'}
 export function supplierInventoryContext(request){
   const context=request.supplierContext
   if(context===undefined)return null

@@ -66,7 +66,7 @@ export function assertReceipt(kind,request,result){
     if(kind==='stocktake'&&(row.productIds.length!==request.counts.length||request.counts.some(c=>!row.productIds.includes(c.id))))throw Error('盤點回覆缺少原品項')
     if(kind==='stocktake'&&request.protocol===PHYSICAL_STOCKTAKE)assertPhysicalStocktakeResult(request,result)
     if(['receive','receive-lots'].includes(kind)&&(row.purchaseId!==request.purchaseId||result.purchase?.id!==request.purchaseId))throw Error('到貨回覆缺少原進貨單')
-    if(kind==='receive-lots'){
+    if(['receive-lots','purchase-return-lots'].includes(kind)){
       const cost=result.costReceipt
       if(cost?.protocol!=='pos-stock-cost/v1'||cost.success!==true||cost.id!==request.id||cost.sourceMethod!=='applyInventoryOperation'||!Number.isSafeInteger(cost.sequence)||cost.sequence<2||typeof cost.eventId!=='string'||!cost.eventId||['eventHash','stateDigest'].some(key=>!/^sha256:[a-f0-9]{64}$/.test(cost[key])))throw Error('批次與成本來源需要核對，請保留原資料')
     }
@@ -76,7 +76,7 @@ export function assertReceipt(kind,request,result){
       validateProcurement(po)
       if(kind==='purchase-create'&&JSON.stringify(canonical(po.procurement.sourceQuote??null))!==JSON.stringify(canonical(request.sourceQuote??null)))throw Error('採購回覆缺少正確的報價來源')
       if(JSON.stringify(canonical(procurementEvent(po,request)))!==JSON.stringify(canonical(row.document)))throw Error('採購回覆缺少正確的保存文件')
-      if(kind==='purchase-return'){
+      if(['purchase-return','purchase-return-lots'].includes(kind)){
         const expected=[...new Set(po.items.filter((_,i)=>request.quantities?.[i]>0).map(item=>item.productId))]
         if(!expected.length||expected.length!==row.productIds.length||expected.some(id=>!id||!row.productIds.includes(id))||result.products.some(p=>!Number.isFinite(p.stock)||p.stock<0))throw Error('退貨回覆缺少完整的庫存結果，請保留原編號核對')
       }
