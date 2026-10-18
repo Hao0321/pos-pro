@@ -1,3 +1,4 @@
+import {updateLotCountReservations} from './lotCount.mjs'
 import {canonicalSignature} from './operationRules.mjs'
 import {planCostCustody} from './stockCustody.mjs'
 import {costSegmentValue,stockCostSummary} from './stockCost.mjs'
@@ -55,6 +56,7 @@ export function planStockBusiness(previous,body){
  const journal={id:'stock-business:'+method+':'+input.id,date,type:'stock-cost',amountUnit:'cents',description:'庫存成本異動',costComplete:complete,lines}
  const business={method,id:input.id,eventId,effects:plan.effects,journalId:journal.id,replacedJournalIds:[...replaced],notes}
  let next={...previous,custody:plan.state,sourceEvidence:[...previous.sourceEvidence,...sourceEvidence],journals:[...previous.journals,journal],business:[...(previous.business||[]),business]}
+ if(previous.lotCountVersion===1)next={...next,lotCountReservations:updateLotCountReservations(previous,next.custody,method==='applyRestaurantOperation'?evidence.entry:null)}
  next=clearStockReturnSuspense(next,date,input.id)
  return next
 }

@@ -9,7 +9,7 @@ import './StockHistoryPage.css'
 const stages={available:'可賣',reserved:'已預留',quarantined:'暫停販售',consumed:'已售／耗用',wasted:'已損耗',supplierReturned:'已退供應商'}
 const kinds={open:'核對期初',price:'補確認成本',checkout:'售出',refundOrder:'原單退回',addWaste:'損耗',addProduct:'新增庫存',receive:'進貨',stocktake:'盤點','purchase-return':'退供應商','applyRestaurantOperation:create':'預留','applyRestaurantOperation:advance':'出餐狀態更新','applyRestaurantOperation:pay':'預訂收款','applyRestaurantOperation:cancel':'取消預訂','applySalesOperation:deliver':'交付客戶','applySalesOperation:return':'客戶退回'}
 const quantity=units=>historyQuantity(units,getLocale())
-Object.assign(kinds,{'applyLotOperation:activate':'開始管理效期','applyLotOperation:label':'批次已記錄','applyLotOperation:correct':'批次已更新','applyLotOperation:track':'效期規則已保存','applyLotOperation:expire':'暫停販售','applyLotOperation:release':'已恢復販售','applyLotOperation:dispose':'報廢已記錄'})
+Object.assign(kinds,{'applyLotOperation:activate':'開始管理效期','applyLotOperation:label':'批次已記錄','applyLotOperation:correct':'批次已更新','applyLotOperation:track':'效期規則已保存','applyLotOperation:expire':'暫停販售','applyLotOperation:release':'已恢復販售','applyLotOperation:dispose':'報廢已記錄','applyLotOperation:count':'盤點已保存'})
 const money=cents=>historyMoney(cents,getLocale())
 const cost=row=>row.complete?money(row.valueCents):tr('成本待確認')
 const time=value=>Number.isFinite(Date.parse(value))?new Date(value).toLocaleString(getLocale()):tr('時間待核對')

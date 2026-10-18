@@ -13,18 +13,19 @@ module.exports=function installLots(db,api,store){
  function current(){const state=store.read();if(state.projection){if(!store.matchesEpoch(state)||state.entries[0].input.storeId!==context().storeId)throw lotError('HISTORY');assertStockCustodyMatchesBook(state.projection.custody,rawProducts(),api.getRestaurantState().entries,state.projection.warehousing)}return state}
  const result=(input,receipt)=>({success:true,command:structuredClone(input),receipt:structuredClone(receipt)})
  function save(raw,actor,system=false){let checked=false,existing=false;try{return db.transaction(()=>{
-  const input=lotCommand(raw),verified=system?LOT_SYSTEM_ACTOR:who(actor,input.action!=='dispose');if(!system&&input.action==='expire'||system&&input.action!=='expire')throw lotError('AUTHORITY');checked=true
+  const input=lotCommand(raw),verified=system?LOT_SYSTEM_ACTOR:who(actor,!['dispose','count'].includes(input.action));if(!system&&input.action==='expire'||system&&input.action!=='expire')throw lotError('AUTHORITY');checked=true
   const saved=store.lookup(input,verified,LOT_METHOD);existing=!!saved;if(saved)return result(input,saved)
   const state=current(),scope=context();if(!state.projection||input.storeId!==scope.storeId||input.epoch!==scope.epoch||input.expectedStateDigest!==state.stateDigest||Math.abs(Date.now()-Date.parse(input.time))>300000)throw lotError('STALE')
-  const evidence=lotEvidence(state.projection,rawProducts(),input,verified),time=new Date().toISOString(),date=salesDate(new Date(time))
+  const evidence=lotEvidence(state.projection,rawProducts(),input,verified,db.prepare('SELECT data FROM restaurant_orders ORDER BY id').all().map(row=>JSON.parse(row.data))),time=new Date().toISOString(),date=salesDate(new Date(time))
   return store.scope(()=>{const receipt=store.append(input,verified,{time,date},LOT_METHOD,evidence,projection=>{
    require('./databaseFeatureFence.cjs').installLotFence(db)
+   if(input.action==='count'){require('./databaseFeatureFence.cjs').installLotCountFence(db);db.prepare('INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('stockLotCountVersionFence','1')}
    db.prepare('INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(LOT_SETTING,'1')
    for(const product of evidence.products)db.prepare('UPDATE products SET stock=? WHERE id=?').run(warehouseLocationUnits(projection.custody,'main',product.id,product.unit)/1000,product.id)
    if(evidence.waste){const row=evidence.waste;db.prepare('INSERT INTO waste_log (id,productId,productName,qty,reason,cost,time,cashier) VALUES (@id,@productId,@productName,@qty,@reason,@cost,@time,@cashier)').run(row)}
   });current();return result(input,receipt)})
  })()}catch(error){return {success:false,committed:!checked||existing||['STOCK_LOT_HISTORY','STOCK_LEDGER_HISTORY'].includes(error.code)?null:false,error:error.message,errorCode:error.code||null}}}
- api.getLotState=actor=>db.transaction(()=>{const user=who(actor);return makeLotState(current(),rawProducts(),context(),{showCosts:user.role==='owner',wasteLog:api.getWasteLog()})})()
+ api.getLotState=actor=>db.transaction(()=>{const user=who(actor);return makeLotState(current(),rawProducts(),context(),{showCosts:user.role==='owner',wasteLog:api.getWasteLog(),restaurantEntries:db.prepare('SELECT data FROM restaurant_orders ORDER BY id').all().map(row=>JSON.parse(row.data))})})()
  api.applyLotOperation=(raw,actor)=>save(raw,actor)
  // Only native closures call this; there is no preload, IPC or RPC route.
  api.applySystemLotExpiry=()=>{const state=current(),scope=context();if(!state.projection?.lots)return {success:false,notRequired:true};const day=lotEffectiveDay(state.projection.lots,scope.now),input={protocol:'pos-stock-lots/v1',id:'lot-expire-'+day+'-'+state.stateDigest.slice(7,31),time:scope.now,storeId:scope.storeId,epoch:scope.epoch,expectedStateDigest:state.stateDigest,action:'expire',day};return save(input,LOT_SYSTEM_ACTOR,true)}
@@ -37,7 +38,7 @@ module.exports=function installLots(db,api,store){
  function installGuards(){for(const name of ['getProducts','getStoreSnapshot','exportData','exportFullBackup',...Object.keys(actorAt)]){
   const original=api[name];if(typeof original!=='function')continue
   api[name]=function(...args){
-   if(!depth&&!db.inTransaction){let permitted=true;const requireOwner=ownerOnly.has(name)||name==='applyLotOperation'&&args[0]?.action!=='dispose'||name==='applyWarehouseOperation'&&args[0]?.action!=='transfer'||name==='applyInventoryOperation'&&args[0]?.kind!=='stocktake'||name==='applyRestaurantOperation'&&args[0]?.action==='configure';if(Object.hasOwn(actorAt,name))try{who(args[actorAt[name]],requireOwner)}catch{permitted=false}
+   if(!depth&&!db.inTransaction){let permitted=true;const requireOwner=ownerOnly.has(name)||name==='applyLotOperation'&&!['dispose','count'].includes(args[0]?.action)||name==='applyWarehouseOperation'&&args[0]?.action!=='transfer'||name==='applyInventoryOperation'&&args[0]?.kind!=='stocktake'||name==='applyRestaurantOperation'&&args[0]?.action==='configure';if(Object.hasOwn(actorAt,name))try{who(args[actorAt[name]],requireOwner)}catch{permitted=false}
     let existing=false;const request=name==='refundOrder'?args[1]:args[0],method=({applyStockSetupOperation:'applyStockCostOperation'})[name]||name
     if(/^(?:apply|checkout|refundOrder|addProduct|addWaste)/.test(name)&&typeof request?.id==='string')existing=!!db.prepare('SELECT 1 FROM stock_cost_operations WHERE id=?').get(canonicalSignature([method,request.id]))||!!db.prepare('SELECT 1 FROM recovery_original_ids WHERE method=? AND operation_id=? LIMIT 1').get(method,request.id)
     if(permitted&&!existing)expire()

@@ -129,6 +129,7 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
     if(canonicalSignature(oldFlag)!==canonicalSignature(newFlag))throw Error('成本資料的版本保護由完整備份流程管理')
     if(canonicalSignature(before.settings.find(row=>row.key==='warehouseVersionFence')||null)!==canonicalSignature(after.settings.find(row=>row.key==='warehouseVersionFence')||null))throw Error('成本資料的版本保護由完整備份流程管理')
     if(canonicalSignature(before.settings.find(row=>row.key==='stockLotVersionFence')||null)!==canonicalSignature(after.settings.find(row=>row.key==='stockLotVersionFence')||null))throw Error('成本資料的版本保護由完整備份流程管理')
+    if(canonicalSignature(before.settings.find(row=>row.key==='stockLotCountVersionFence')||null)!==canonicalSignature(after.settings.find(row=>row.key==='stockLotCountVersionFence')||null))throw Error('成本資料的版本保護由完整備份流程管理')
     if(canonicalSignature(before.settings.find(row=>row.key===STOCK_BOOK_HEAD)||null)!==canonicalSignature(after.settings.find(row=>row.key===STOCK_BOOK_HEAD)||null))throw Error('成本帳的最後紀錄由正式交易或完整備份流程管理')
     const state=validateStockCostBook(before)
     if([physicalStocktake,stockBusiness,stockSetup].filter(Boolean).length>1)throw Error('請一次保存一個原操作')

@@ -2,7 +2,7 @@
 // guessed business type. Original archived settings remain byte-for-byte.
 export const SQLITE_TEXT_ENCODING='sqlite-text/v1'
 export const BROWSER_JSON_ENCODING='browser-json/v1'
-const internal=new Set(['stockCostVersionFence','stockCostBookHead','warehouseVersionFence','stockLotVersionFence'])
+const internal=new Set(['stockCostVersionFence','stockCostBookHead','warehouseVersionFence','stockLotVersionFence','stockLotCountVersionFence'])
 const invalid=()=>Error('備份設定格式需要核對，請保留原檔')
 export function validateSettingRows(rows,storage){
  if(!Array.isArray(rows)||!['sqlite','browser'].includes(storage))throw invalid()

@@ -10,6 +10,7 @@ import {validateFundedRestaurantRecords,fundedRestaurantSnapshot} from './restau
 import {WAREHOUSE_METHOD,WAREHOUSE_SETTING,warehouseDirectory} from './warehouseRules.mjs'
 import {LOT_METHOD,LOT_SETTING,lotRegistry} from './lotRules.mjs'
 
+import {LOT_COUNT_SETTING,lotCountGroups,lotCountReservations} from './lotCount.mjs'
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 const orderFields=['id','subtotal','discount','manualDiscount','balanceUsed','total','payMethod','paid','change','payments','memberId','pointsUsed','pointsEarned','time','source','items','taxId','shiftId','refundOf','cashier','fullRefund','trackingTokenHash','requestSignature','itemCosts','tableNum','note']
 const immutableOrder=row=>Object.fromEntries(orderFields.map(key=>[key,row[key]??null]))
@@ -28,6 +29,10 @@ export function validateStockCostBook(book,validatedState=null){
   if(warehouseFlag&&warehouseFlag.value!=='1'||state.projection?.warehousing&&!warehouseFlag)throw stockLedgerError('HISTORY')
   const lotFlag=(book.settings||[]).find(row=>row.key===LOT_SETTING)
   if(lotFlag&&lotFlag.value!=='1'||state.projection?.lots&&!lotFlag||state.projection?.custody.version===2&&!state.projection.lots)throw stockLedgerError('HISTORY')
+  const countFlag=(book.settings||[]).find(row=>row.key===LOT_COUNT_SETTING)
+  if(countFlag&&countFlag.value!=='1'||state.projection?.lotCountVersion===1&&!countFlag)throw stockLedgerError('HISTORY')
+  if(state.projection?.lots)lotCountGroups(state.projection)
+  if(state.projection?.lotCountVersion===1&&!same(state.projection.lotCountReservations,lotCountReservations(state.projection.custody,book.restaurantOrders||[])))throw stockLedgerError('HISTORY')
   if(!state.projection){if(physicalAudits.some(row=>row.request.context.costMode==='active'))throw stockLedgerError('HISTORY');return state}
   validateFundedRestaurantRecords(book.restaurantOrders||[],book.restaurantOperations||[],book.orders||[],book.products||[],{cashLogs:book.cashLog,waste:book.wasteLog,storeId:readExchangeTextSetting(book.settings||[],'sharedStoreId'),menuReceiptKey:readExchangeTextSetting(book.settings||[],'orderReceiptSecret')})
   for(const row of physicalAudits.filter(row=>row.request.context.costMode==='active')){const event=state.entries.find(event=>event.method==='applyInventoryOperation'&&event.input.id===row.request.id);if(!event||!same(event.input,row.request)||!same(event.evidence?.stocktake,row.receipt))throw stockLedgerError('HISTORY')}

@@ -141,14 +141,14 @@
       "name": "多倉、調撥、批次、效期及 FEFO",
       "status": "planned",
       "implementation": "partial",
-      "nextExperiment": "開發分支接通調撥、包裝換算，以及原來源區間的批號／效期、FEFO、過期隔離與原單退回；接續每批盤點、到貨批次引導、隔離品退供應商、在途及完整多地點營業驗收，公開完成狀態仍未量測。"
+      "nextExperiment": "開發分支接通調撥、包裝換算、原來源批次／效期、FEFO、隔離及按地點逐批實盤；接續到貨批次引導、隔離品退供應商、在途及完整多地點營業驗收，公開完成狀態仍未量測。"
     },
     {
       "id": "inventory.units-counting",
       "name": "單位換算、盤點差異與追溯",
       "status": "planned",
       "implementation": "partial",
-      "nextExperiment": "明確商品換算比例、盤點核准及差異流水，不從品名猜測"
+      "nextExperiment": "明確商品換算比例、逐批實盤與成本差異已有開發流程；接續完整單位、盤點核准及長時間營業驗收，不從品名猜測。"
     },
     {
       "id": "accounting.ledger",

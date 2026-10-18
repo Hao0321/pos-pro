@@ -29,7 +29,7 @@ for(const channel of ['db:getPrivateDraftContext','db:lookupPrivateDraftOriginal
 function authorizeActor(db,s,channel,args=[]){
   if(!s||!['owner','staff'].includes(s.role))throw Error('請先登入，或重新驗證身份')
   if(s.role!=='owner'&&!staffChannels.has(channel))throw Error('權限不足')
-  if(s.role!=='owner'&&channel==='db:applyLotOperation'&&args[0]?.action!=='dispose')throw Error('權限不足')
+  if(s.role!=='owner'&&channel==='db:applyLotOperation'&&!['dispose','count'].includes(args[0]?.action))throw Error('權限不足')
   if(s.role!=='owner'&&channel==='settings:get'&&!['pointsEarnRate','pointsRedeemRate','birthdayBonus','dailySalesGoal'].includes(args[0]))throw Error('權限不足')
   if(s.role!=='owner'&&['db:addMember','db:updateMember'].includes(channel)){
     const input=channel==='db:addMember'?args[0]:args[1],old=channel==='db:updateMember'?db.getMembers().find(m=>m.id===args[0]):null

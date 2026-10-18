@@ -73,6 +73,18 @@ const rows={
  '預留的這批已過期或效期未確認，請先核對原單':['Reserved stock is expired or undated. Check the original order.','引当済み在庫が期限切れ、または期限未確認です。元の注文を確認してください。','预留的这批已过期或效期未确认，请先核对原单'],
  '店面日期需要核對，請保留原資料':['Check the store date. Keep the original data.','店舗の日付を確認し、元データを保管してください。','店面日期需要核对，请保留原资料'],
  '這個商品有批次，請先核對各批實際數量':['This product has lots. Check each lot’s physical quantity.','ロット管理の商品です。各ロットの実数を確認してください。','这个商品有批次，请先核对各批实际数量'],
- '這個商品有批次，請從批次清單選要報廢的貨':['Choose the lot to discard from the lot list.','ロット一覧から廃棄する在庫を選んでください。','这个商品有批次，请从批次清单选要报废的货']
+ '這個商品有批次，請從批次清單選要報廢的貨':['Choose the lot to discard from the lot list.','ロット一覧から廃棄する在庫を選んでください。','这个商品有批次，请从批次清单选要报废的货'],
+ '架上':['On the shelf','棚上','架上'],
+ '未填批次':['No batch assigned','ロット未登録','未填批次'],
+ '多出的數量先記成本待確認。':['Extra stock starts with cost unconfirmed.','余剰分の原価は未確認として記録します。','多出的数量先记成本待确认。'],
+ '數還在架上的貨，已開始製作的不算。':['Count what is still on the shelf. Exclude stock already used in production.','棚にある在庫を数えます。調理・製造に投入済みの分は含めません。','数还在架上的货，已开始制作的不算。'],
+ '暫停販售的貨另外數，盤點不會恢復販售。':['Count held stock separately. Counting does not release it for sale.','販売保留中の在庫は別に数えます。棚卸だけで販売は再開しません。','暂停销售的货另外数，盘点不会恢复销售。'],
+ '搜尋批號':['Find a batch','ロット番号を検索','搜索批号'],
+ '找其他批次':['Find other batches','ほかのロットを探す','找其他批次'],
+ '只看有庫存的批次':['Show batches with stock','在庫があるロットのみ','只看有库存的批次'],
+ '盤點資料已更新，原數量已保留，請重新核對':['Stock changed. Your counts are kept. Count again to check.','在庫情報が更新されました。入力値は保管されています。再度実数を確認してください。','盘点资料已更新，原数量已保留，请重新核对'],
+ '2 填實際數量':['2 Enter actual counts','2 実際の数量を入力','2 填实际数量'],
+ '請先核對上一筆操作':['Check the previous operation first.','先に前回の操作を確認してください。','请先核对上一笔操作'],
+ '這個批次已變更，請核對原草稿':['This batch changed. Check your saved draft.','ロット情報が変わりました。保存済みの下書きを確認してください。','这个批次已变更，请核对原草稿']
 }
 export default Object.fromEntries(Object.entries(rows).map(([key,row],index)=>[key,[...row,27000+index]]))

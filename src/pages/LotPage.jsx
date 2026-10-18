@@ -7,7 +7,7 @@ import {lotDate} from '../../electron/lotRules.mjs'
 import useLotDraft from '../hooks/useLotDraft'
 import '../styles/warehouse.css'
 import '../styles/lots.css'
-const actions={activate:'開始管理效期',label:'批次已記錄',correct:'批次已更新',track:'效期規則已保存',release:'已恢復販售',dispose:'報廢已記錄'}
+const actions={activate:'開始管理效期',label:'批次已記錄',correct:'批次已更新',track:'效期規則已保存',release:'已恢復販售',dispose:'報廢已記錄',count:'盤點已保存'}
 const zones={'Asia/Taipei':'台灣時間','Asia/Tokyo':'日本時間',UTC:'世界標準時間','America/Los_Angeles':'美西時間','America/New_York':'美東時間','Europe/London':'英國時間'}
 const date=value=>value?new Intl.DateTimeFormat(getLocale(),{timeZone:'UTC',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value+'T00:00:00Z')):tr('效期未確認')
 export default function LotPage({store,session}){

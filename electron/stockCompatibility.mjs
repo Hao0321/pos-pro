@@ -6,5 +6,6 @@ export function retainStockCostCompatibility(current,next){
  settings.set(STOCK_COMPAT_SETTING,{key:STOCK_COMPAT_SETTING,value:'1'})
  if([current,next].some(book=>book.stockCostEntries?.some(row=>row.method==='applyWarehouseOperation')||book.settings?.some(row=>row.key==='warehouseVersionFence'&&row.value==='1')))settings.set('warehouseVersionFence',{key:'warehouseVersionFence',value:'1'})
  if([current,next].some(book=>book.stockCostEntries?.some(row=>row.method==='applyLotOperation')||book.settings?.some(row=>row.key==='stockLotVersionFence'&&row.value==='1')))settings.set('stockLotVersionFence',{key:'stockLotVersionFence',value:'1'})
+ if([current,next].some(book=>book.stockCostEntries?.some(row=>row.method==='applyLotOperation'&&row.input?.action==='count')||book.settings?.some(row=>row.key==='stockLotCountVersionFence'&&row.value==='1')))settings.set('stockLotCountVersionFence',{key:'stockLotCountVersionFence',value:'1'})
  return {...next,settings:[...settings.values()]}
 }

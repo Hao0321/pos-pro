@@ -19,7 +19,8 @@ const StockHistoryPage=lazy(()=>import('./pages/StockHistoryPage'))
 const ReportsPage=lazy(()=>import('./pages/ReportsPage'))
 import AccountingPage from './pages/AccountingPage'
 import PurchasePage from './pages/PurchasePage'
-import StocktakePage from './pages/StocktakePage'
+import StocktakePage from './pages/StocktakeRouter'
+import {readPendingFinancial} from './utils/financialCommand'
 import PromotionsPage from './pages/PromotionsPage'
 import SettingsPage from './pages/SettingsPage'
 import ScenarioTemplatesPage from './pages/ScenarioTemplatesPage'
@@ -61,7 +62,7 @@ export default function App() {
   useEffect(()=>{setWorkspaceArea('all')},[session?.userId,session?.role])
   const store = useStore(session)
   const { view, setView, lowStockCount, todayRevenue, todayOrders } = store
-  useEffect(()=>{if(store.financialState.kind==='lots'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'lots')},[store.financialState.kind,store.financialState.phase,setView])
+  useEffect(()=>{if(store.financialState.kind==='lots'&&store.financialState.phase==='uncertain')setView(current=>{if(current==='recovery')return current;try{return readPendingFinancial()?.request.action==='count'?'stocktake':'lots'}catch{return'lots'}})},[store.financialState.kind,store.financialState.phase,setView])
   useEffect(()=>{if(store.financialState.kind==='warehouse'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'warehouse')},[store.financialState.kind,store.financialState.phase,setView])
   useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='stock-cost'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'stocksetup')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
   useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='refund'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'refunds')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
