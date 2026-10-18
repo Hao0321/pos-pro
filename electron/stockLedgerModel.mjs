@@ -45,6 +45,7 @@ export function replayStockLedger(rawEntries=[],rawOperations=[],digest=stockLed
   for(let index=0;index<entries.length;index++){
    const {hash,...body}=entries[index],method=body.method||STOCK_COST_METHOD
    const system=method===LOT_METHOD&&body.input?.action==='expire'&&canonicalSignature(body.actor)===canonicalSignature(LOT_SYSTEM_ACTOR)
+   if(method==='applyInventoryOperation'&&body.input?.kind==='receive-lots'&&body.input.lots?.storeId!==entries[0].input.storeId)throw stockLedgerError('HISTORY')
    if(typeof body.id!=='string'||!body.id||method!==STOCK_COST_METHOD&&method!==WAREHOUSE_METHOD&&method!==LOT_METHOD&&!STOCK_BUSINESS_METHODS.includes(method)||body.sequence!==index+1||body.previousHash!==previousHash||hash!==digest(body)||body.beforeDigest!==digest(projection)||!system&&!['owner',...(method===STOCK_COST_METHOD?[]:['staff'])].includes(body.actor?.role)||typeof body.actor.userId!=='string'||!body.actor.userId)throw stockLedgerError('HISTORY')
    const next=projectStockLedger(projection,body,digest)
    if(body.afterDigest!==digest(next))throw stockLedgerError('HISTORY')

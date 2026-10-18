@@ -29,6 +29,7 @@ export function commitBrowserInventory(request,actor){
       const saved=readRecords(),r=saved.data,key=INVENTORY_PREFIX+request.id
       if(assertPrivateDraftCaller(request,actor))verify(actor,saved)
       if(request.protocol!==PHYSICAL_STOCKTAKE&&hasBrowserStockCost(saved))return commitBrowserStockBusiness('applyInventoryOperation',request,actor,saved)
+      if(request.kind==='receive-lots')return {success:false,committed:false,error:'請先核對庫存成本與批次，再使用分批收貨'}
       if(request.protocol===PHYSICAL_STOCKTAKE)verify(actor,saved)
       assertOriginalOperationAvailable('applyInventoryOperation',request.id,saved,request)
       const base=request.supplierContext||saved.supplierFence?readBrowserSupplier(saved):{products:r.pos2_products,purchases:r.pos_purchases,suppliers:r.pos_suppliers,openShift:r.pos2_shifts.find(s=>s.status==='open'),cashLogs:r.pos2_cash_log,storeId:readExchangeTextSetting(r.pos_business_settings,'sharedStoreId')},data=request.kind==='stocktake'?{...base,...countData(saved)}:base

@@ -26,8 +26,8 @@ export function planOperationalStock(c,method){
   }return
  }
  const inventory=evidence.inventory
- if(!inventory||!['receive','purchase-return'].includes(input.kind)||inventory.kind!==input.kind||inventory.purchaseId!==input.purchaseId||!Array.isArray(inventory.items))throw stockLedgerError('HISTORY')
- if(input.kind==='receive'){
+ if(!inventory||!['receive','receive-lots','purchase-return'].includes(input.kind)||inventory.kind!==input.kind||inventory.purchaseId!==input.purchaseId||!Array.isArray(inventory.items))throw stockLedgerError('HISTORY')
+ if(['receive','receive-lots'].includes(input.kind)){
   let total=0
   inventory.items.forEach((item,index)=>{
    const count=units(input.quantities[index]);if(!count)return

@@ -43,7 +43,7 @@ export function deriveSupplierControl(action,request,data,actor,control,base,{hi
   }
   if(action==='purchase-enroll'||action==='purchase-register'){
     const internal=action==='purchase-register'
-    if(internal&&(!registerPurchase||!['receive',...PROCUREMENT_KINDS].includes(request.kind)))throw Error('採購核准登記缺少原庫存操作')
+    if(internal&&(!registerPurchase||!['receive','receive-lots',...PROCUREMENT_KINDS].includes(request.kind)))throw Error('採購核准登記缺少原庫存操作')
     if(!internal)requireReview(request)
     const po=internal?registerPurchase:findPurchase(request,data)
     validateProcurement(po)
@@ -113,10 +113,10 @@ export function projectSupplierControl(control,event){
 }
 export function supplierControlView(control){return {policy:control.policy,purchaseApprovals:[...control.purchases.values()],paymentApprovals:[...control.proposals.values()]}}
 export function assertProcurementApproval(request,data,control){
-  if(!['receive',...PROCUREMENT_KINDS].includes(request.kind)||request.kind==='purchase-create')return
+  if(!['receive','receive-lots',...PROCUREMENT_KINDS].includes(request.kind)||request.kind==='purchase-create')return
   const po=data.purchases.find(row=>row.id===request.purchaseId),approval=control.purchases.get(request.purchaseId)
   if(approval&&po&&!purchaseMatchesApproval(po,approval.material))throw Error('採購條件與原核准不同，請保留原單核對')
-  if(!['receive','purchase-bill','purchase-pay'].includes(request.kind))return
+  if(!['receive','receive-lots','purchase-bill','purchase-pay'].includes(request.kind))return
   if(!approval){if(control.policy.mode==='dual-owner')throw Error('這張舊採購請先納入核准，不能直接收貨或付款');return}
   if(approval.status!=='approved')throw Error('這張採購還未核准或已退回，請先完成另一帳號核對')
 }

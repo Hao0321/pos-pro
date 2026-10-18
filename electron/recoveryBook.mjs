@@ -18,7 +18,7 @@ import {usesRestaurantPublicMenu,RESTAURANT_PUBLIC_MENU_FEATURE} from './restaur
 import {usesPrivateQuickDrafts,PRIVATE_QUICK_FEATURE} from './privateDrafts.mjs'
 import {WAREHOUSE_FEATURE,WAREHOUSE_SETTING} from './warehouseRules.mjs'
 
-export const RECOVERY_FEATURES=['stock-lot-count-v1','stock-lots-v1',WAREHOUSE_FEATURE,PRIVATE_QUICK_FEATURE,RESTAURANT_PUBLIC_MENU_FEATURE,RESTAURANT_MENU_FEATURE,RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
+export const RECOVERY_FEATURES=['stock-receipt-lots-v1','stock-lot-count-v1','stock-lots-v1',WAREHOUSE_FEATURE,PRIVATE_QUICK_FEATURE,RESTAURANT_PUBLIC_MENU_FEATURE,RESTAURANT_MENU_FEATURE,RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
 export const recoveryDataError=()=>Error('備份保護紀錄不完整或內容不同，請保留原檔核對')
 export function recoveryFeatureFloor(features=[],minimum=1){
  if(![1,2,3,4,5,6,7,8,9].includes(minimum)||!Array.isArray(features)||features.some(feature=>!RECOVERY_FEATURES.includes(feature)))throw recoveryDataError()
@@ -27,6 +27,7 @@ export function recoveryFeatureFloor(features=[],minimum=1){
 export function retainRecoveryFeatures(book,features){
  const settings=new Map(book.settings.map(row=>[row.key,row]))
  if(features.includes('stock-cost-v1'))settings.set(STOCK_COMPAT_SETTING,{key:STOCK_COMPAT_SETTING,value:'1'})
+ if(features.includes('stock-receipt-lots-v1'))settings.set('stockReceiptLotsVersionFence',{key:'stockReceiptLotsVersionFence',value:'1'})
  if(features.includes('stock-lot-count-v1'))settings.set('stockLotCountVersionFence',{key:'stockLotCountVersionFence',value:'1'})
  if(features.includes('stock-lots-v1'))settings.set('stockLotVersionFence',{key:'stockLotVersionFence',value:'1'})
  if(features.includes(WAREHOUSE_FEATURE))settings.set(WAREHOUSE_SETTING,{key:WAREHOUSE_SETTING,value:'1'})
@@ -71,6 +72,7 @@ export function recoveryBook(data,storage,{complete=false,digest=stockLedgerDige
  if(book.customerEntries.length)features.push('customer-ledger-v1')
  if(state.projection||settings.some(row=>row.key===STOCK_COMPAT_SETTING&&row.value==='1'))features.push('stock-cost-v1')
  if(state.projection?.warehousing||settings.some(row=>row.key===WAREHOUSE_SETTING&&row.value==='1'))features.push(WAREHOUSE_FEATURE)
+ if(state.projection?.receiptLotsVersion===1||settings.some(row=>row.key==='stockReceiptLotsVersionFence'&&row.value==='1'))features.push('stock-receipt-lots-v1')
  if(state.projection?.lotCountVersion===1||settings.some(row=>row.key==='stockLotCountVersionFence'&&row.value==='1'))features.push('stock-lot-count-v1')
  if(state.projection?.lots||settings.some(row=>row.key==='stockLotVersionFence'&&row.value==='1'))features.push('stock-lots-v1')
  if(book.supplierEntries.length)features.push('supplier-ledger-v1')

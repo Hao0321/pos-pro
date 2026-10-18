@@ -34,8 +34,8 @@ module.exports=function stockLedgerStorage(db){
   for(const action of ['insert','update','delete']){
    const row=action==='delete'?'OLD':'NEW'
    const name=`pos_stock_identity_${action}`,old=db.prepare("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?").get(name)
-   if(old&&(!old.sql.includes('stock_cost_entries')||!old.sql.includes(STOCK_BOOK_HEAD)||!old.sql.includes('warehouseVersionFence')||!old.sql.includes('stockLotVersionFence')||!old.sql.includes('stockLotCountVersionFence')))db.exec('DROP TRIGGER '+name)
-   db.exec(`CREATE TRIGGER IF NOT EXISTS ${name} BEFORE ${action.toUpperCase()} ON settings WHEN ${row}.key IN ('sharedStoreId','restaurantConfig','stockCostBookHead','warehouseVersionFence','stockLotVersionFence','stockLotCountVersionFence') AND EXISTS (SELECT 1 FROM stock_cost_entries) BEGIN SELECT pos_stock_write_allowed(); END;`)
+   if(old&&(!old.sql.includes('stock_cost_entries')||!old.sql.includes(STOCK_BOOK_HEAD)||!old.sql.includes('warehouseVersionFence')||!old.sql.includes('stockLotVersionFence')||!old.sql.includes('stockLotCountVersionFence')||!old.sql.includes('stockReceiptLotsVersionFence')))db.exec('DROP TRIGGER '+name)
+   db.exec(`CREATE TRIGGER IF NOT EXISTS ${name} BEFORE ${action.toUpperCase()} ON settings WHEN ${row}.key IN ('sharedStoreId','restaurantConfig','stockCostBookHead','warehouseVersionFence','stockLotVersionFence','stockLotCountVersionFence','stockReceiptLotsVersionFence') AND EXISTS (SELECT 1 FROM stock_cost_entries) BEGIN SELECT pos_stock_write_allowed(); END;`)
   }
   for(const table of ['stock_cost_entries','stock_cost_operations'])for(const action of ['update','delete']){
    const name=`pos_stock_immutable_${table}_${action}`,old=db.prepare("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?").get(name)

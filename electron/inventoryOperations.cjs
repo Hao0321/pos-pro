@@ -31,7 +31,7 @@ module.exports=function(db,stmts,supplierParams){
         db.prepare('INSERT INTO supplier_entries (id,data) VALUES (?,?)').run(plan.supplierRegistration.event.id,JSON.stringify(plan.supplierRegistration.event))
         db.prepare('INSERT INTO supplier_operations (id,data) VALUES (?,?)').run(plan.supplierRegistration.receipt.id,JSON.stringify(plan.supplierRegistration.receipt))
       }
-      stmts.insertAuditLog.run({id:key,timestamp:new Date().toISOString(),action:INVENTORY_ACTION,level:'info',label:request.kind==='receive'?'進貨到貨':'庫存盤點',userId:actor.userId||'',username:actor.username||'',role:actor.role,detail:JSON.stringify(plan.receipt)})
+      stmts.insertAuditLog.run({id:key,timestamp:new Date().toISOString(),action:INVENTORY_ACTION,level:'info',label:['receive','receive-lots'].includes(request.kind)?'進貨到貨':'庫存盤點',userId:actor.userId||'',username:actor.username||'',role:actor.role,detail:JSON.stringify(plan.receipt)})
       return supplierInventoryReceipt(request,plan.receipt,read())
     })()}catch(error){return {success:false,committed:error.historyUncertain?null:error.operationConflict===true||historyChecked&&!replay?false:null,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
   }}

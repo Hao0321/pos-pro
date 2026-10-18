@@ -27,7 +27,7 @@ export function normalizeStockBusinessInput(method,request){
   if(method==='refundOrder')return {id:request.id,time:request.time,...JSON.parse(refundSignature(request))}
   return structuredClone(request)
 }
-export const browserBusinessNeedsCost=(method,input)=>method==='applyInventoryOperation'?['receive','purchase-return','stocktake'].includes(input.kind):method==='applySalesOperation'?['deliver','return'].includes(input.action):method==='applyRestaurantOperation'?input.action!=='configure':['checkout','refundOrder','addProduct','addWaste'].includes(method)
+export const browserBusinessNeedsCost=(method,input)=>method==='applyInventoryOperation'?['receive','receive-lots','purchase-return','stocktake'].includes(input.kind):method==='applySalesOperation'?['deliver','return'].includes(input.action):method==='applyRestaurantOperation'?input.action!=='configure':['checkout','refundOrder','addProduct','addWaste'].includes(method)
 export function browserBusinessSource(book,method,input){
   const [rows,id]=method==='checkout'||method==='refundOrder'?[book.orders,input.id]:method==='addProduct'?[book.products,input.id]:method==='addWaste'?[book.wasteLog,input.id]:method==='applyInventoryOperation'?[book.auditLog,'stock-operation:'+input.id]:method==='applyRestaurantOperation'?[book.restaurantOperations,input.id]:method==='applySalesOperation'?[book.salesOperations,input.id]:[[],null]
   return rows.find(row=>row.id===id)||null
@@ -92,6 +92,7 @@ export function planBrowserStockBusiness(book,runtime,method,request,actor){
     if(request.action==='configure')next.settings=updateBrowserSettings(book.settings,{restaurantConfig:JSON.stringify(JSON.stringify(plan.config)),...(plan.config.menu?{[RESTAURANT_MENU_CONFIG_KEY]:JSON.stringify(request.id)}:{})})
     result.plan=plan
   }else if(method==='applyInventoryOperation'){
+    if(request.kind==='receive-lots'&&(!runtime.state?.projection?.lots||request.lots?.storeId!==readExchangeTextSetting(book.settings,'sharedStoreId')||request.lots?.epoch!==runtime.epoch))throw Error('收貨資料所屬店面、批次或還原世代需要核對')
     const plan=planSupplierInventory(request,browserStockContexts(book,runtime),actor)
     next.products=[...book.products.map(row=>plan.products.find(p=>p.id===row.id)||row),...plan.products.filter(row=>plan.created.includes(row.id))]
     next.purchases=plan.createPurchase?[plan.purchase,...book.purchases]:book.purchases.map(row=>row.id===plan.purchase?.id?plan.purchase:row)
@@ -161,7 +162,7 @@ export function browserStockEvidence(before,after,method,input,result){
     else{
       const purchase=after.purchases.find(row=>row.id===input.purchaseId),old=before.purchases.find(row=>row.id===input.purchaseId),modern=purchase?.procurement?.version===1
       if(!purchase||!old)throw Error('採購來源需要核對')
-      const event=modern?purchase.procurement[input.kind==='receive'?'receipts':'returns'].find(row=>row.id===input.id):null
+      const event=modern?purchase.procurement[['receive','receive-lots'].includes(input.kind)?'receipts':'returns'].find(row=>row.id===input.id):null
       evidence.inventory={kind:input.kind,purchaseId:purchase.id,modern,items:purchase.items,beforeReceived:old.items.map(row=>row.received||0),event,creditCents:input.kind==='purchase-return'?Math.round(event?.amount*100):0}
       include(purchase.items.filter((_,index)=>input.quantities[index]>0))
     }

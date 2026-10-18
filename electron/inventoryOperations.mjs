@@ -1,12 +1,14 @@
 import {canonicalSignature,operationHeader,quantityValue,moneyValue} from './operationRules.mjs'
 import {PROCUREMENT_KINDS,isProcurement,planProcurement,recordProcurementReceipt,procurementEvent,validateProcurement,procurementDate} from './procurementRules.mjs'
 import {PHYSICAL_STOCKTAKE,PHYSICAL_MEANING,planPhysicalStocktake,assertPhysicalStocktakeReceipt} from './physicalStocktake.mjs'
+import {receiptLots,RECEIPT_LOT_KIND} from './receiptLots.mjs'
 export const INVENTORY_ACTION='INVENTORY_OPERATION'
 export const INVENTORY_PREFIX='stock-operation:'
 export function planInventory(request,data,actor){
   operationHeader(request)
   const products=new Map(data.products.map(p=>[p.id,{...p}])),changed=new Set(),created=new Set()
   let purchase=null,supplier=null,cashLog=null,stocktake=null
+  const arrival=request.kind===RECEIPT_LOT_KIND?receiptLots(request):null,acceptedPrices=new Set()
   if(request.kind==='stocktake'){
     if(request.protocol!==undefined&&request.protocol!==PHYSICAL_STOCKTAKE)throw Error('盤點版本不支援，請保留原草稿核對')
     if(request.protocol===PHYSICAL_STOCKTAKE||request.quantityMeaning===PHYSICAL_MEANING)stocktake=planPhysicalStocktake(request,data)
@@ -19,7 +21,7 @@ export function planInventory(request,data,actor){
       else{quantityValue(count.stock,'實盤數量');quantityValue(count.expectedStock,'盤點時庫存');if(p.stock!==count.expectedStock)throw Error('盤點期間庫存已變更，請重新核對 '+p.name);p.stock=count.stock}
       changed.add(p.id)
     }
-  }else if(request.kind==='receive'){
+  }else if(['receive',RECEIPT_LOT_KIND].includes(request.kind)){
     const original=data.purchases.find(p=>p.id===request.purchaseId)
     if(!original||!['ordered','partial'].includes(original.status))throw Error('進貨單已到貨或不存在')
     if(request.expectedPurchase!==canonicalSignature(original))throw Error('進貨單已變更，請重新核對')
@@ -40,7 +42,10 @@ export function planInventory(request,data,actor){
             id=linked;const p=products.get(id);p.stock=Math.round((quantityValue(p.stock,'商品庫存')+qty)*1000)/1000;quantityValue(p.stock,'到貨後庫存');changed.add(id)
           }else{
             id='p-'+request.id+'-'+index;if(products.has(id))throw Error('新商品編號衝突，請核對')
-            const p={id,name:item.name,category:item.category||'未分類',price:Math.round(item.unitCost*1.3),cost:item.unitCost,stock:qty,unit:item.unit||'個',supplierId:original.supplierId||'',noBarcode:true,barcode:'',imageUrl:'',expiryDate:'',reorderLevel:0}
+            const price=arrival?.newItems.find(row=>row.lineIndex===index)
+            if(arrival&&!price)throw Error('請確認新商品的售價')
+            if(price)acceptedPrices.add(index)
+            const p={id,name:item.name,category:item.category||'未分類',price:price?price.priceCents/100:Math.round(item.unitCost*1.3),cost:item.unitCost,stock:qty,unit:item.unit||'個',supplierId:original.supplierId||'',noBarcode:true,barcode:'',imageUrl:'',expiryDate:'',reorderLevel:0}
             if(typeof p.name!=='string'||!p.name.trim())throw Error('進貨品項缺少名稱')
             products.set(id,p);changed.add(id);created.add(id)
           }
@@ -49,6 +54,7 @@ export function planInventory(request,data,actor){
       }
       return {...item,productId:id,received:Math.round(((item.received||0)+qty)*1000)/1000}
     })
+    if(arrival&&arrival.newItems.some(row=>!acceptedPrices.has(row.lineIndex)))throw Error('既有商品不能在收貨時改價，請重新核對品項')
     if(supplier&&links.length)supplier.catalog=(supplier.catalog||[]).map(c=>({...c,...(links.find(l=>l.catalogId===c.id)?{productId:links.find(l=>l.catalogId===c.id).productId}:{})}))
     else supplier=null
     const full=items.every(i=>i.received>=i.qty)

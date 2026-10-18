@@ -6,6 +6,8 @@ import {stockLedgerError} from './stockOpeningPlan.mjs'
 import {planTradeStock} from './stockTradePlans.mjs'
 import {planOperationalStock} from './stockOperationalPlans.mjs'
 import {assertLotBusinessReady,planLotBusinessMove,lotAcquireTarget} from './lotBusinessPolicy.mjs'
+import {receiptLots,placeReceiptLots,RECEIPT_LOT_KIND} from './receiptLots.mjs'
+import {lotRegistry,lotError} from './lotRules.mjs'
 
 export const STOCK_BUSINESS_METHODS=['checkout','refundOrder','applyInventoryOperation','applyRestaurantOperation','applySalesOperation','addWaste','addProduct']
 export const stockOwner=(stage,domain='',id='')=>({stage,locationId:'main',referenceId:stage==='available'?'':domain==='reservation'?id:canonicalSignature([domain,id])})
@@ -22,13 +24,16 @@ export function planStockBusiness(previous,body){
  if(!previous||!STOCK_BUSINESS_METHODS.includes(method)||!input||typeof input.id!=='string'||!input.id||!evidence||!Array.isArray(evidence.products))throw stockLedgerError('INPUT')
  if(date<previous.journals[0].date)throw stockLedgerError('STALE')
  assertLotBusinessReady(previous,body)
+ const arrival=method==='applyInventoryOperation'&&input.kind===RECEIPT_LOT_KIND?receiptLots(input):null
+ if(arrival&&(!previous.lots||body.actor?.role!=='owner'||arrival.expectedStateDigest!==body.beforeDigest))throw lotError('STALE')
+ const arrivalItems=[]
  const pairs=new Map(),steps=[],sourceEvidence=[],replaced=new Set(),extraLines=[],notes=[]
  for(const pair of evidence.products){if(!pair||pairs.has(pair.id)||typeof pair.id!=='string'||typeof pair.unit!=='string')throw stockLedgerError('HISTORY');safe(pair.beforeUnits);safe(pair.afterUnits);if(available(previous.custody,pair.id,pair.unit)!==pair.beforeUnits)throw stockLedgerError('HISTORY');pairs.set(pair.id,pair)}
  let ordinal=0,virtual=previous.custody;const blocked=new Map(),append=next=>{steps.push(...next);if(previous.lots&&next.length)virtual=planCostCustody(virtual,{expectedSequence:virtual.sequence,steps:next}).state}
  const context={previous,input,evidence,stockOwner,stockUnits,stockLineValue,stockLegacyInterval,
   product:id=>{const row=pairs.get(id);if(!row)throw stockLedgerError('HISTORY');return row},
   move:(from,to,productId,quantityUnits,unused=false)=>{safe(quantityUnits,1);const product=context.product(productId);if(previous.lots){const plan=planLotBusinessMove(virtual,previous.lots,from,to,productId,product.unit,quantityUnits,unused);append(plan.steps);blocked.set(productId,(blocked.get(productId)||0)+plan.blockedUnits)}else append([{kind:unused?'release-unused':'move',from,to,productId,unit:product.unit,quantityUnits}])},
-  acquire:(productId,quantityUnits,valueCents,creditAccount,basis,key,to=stockOwner('available'))=>{safe(quantityUnits,1);if(valueCents!==null)safe(valueCents);if(!['3901','4191','5101','2102','2291'].includes(creditAccount))throw stockLedgerError('HISTORY');const product=context.product(productId),sourceId='business:'+eventId+':'+ordinal++,target=previous.lots?lotAcquireTarget(previous.lots,to,productId,sourceId):to;if(to.stage==='available'&&to.locationId==='main'&&target.stage==='quarantined')blocked.set(productId,(blocked.get(productId)||0)+quantityUnits);append([{kind:target.stage==='wasted'?'acquire-disposed':target.stage==='quarantined'?'acquire-quarantined':'acquire',to:target,sources:[{id:sourceId,productId,unit:product.unit,currency:'TWD',quantityUnits,valueCents}]}]);sourceEvidence.push({sourceId,key:canonicalSignature([method,input.id,key]),basis,creditAccount})},
+  acquire:(productId,quantityUnits,valueCents,creditAccount,basis,key,to=stockOwner('available'))=>{safe(quantityUnits,1);if(valueCents!==null)safe(valueCents);if(!['3901','4191','5101','2102','2291'].includes(creditAccount))throw stockLedgerError('HISTORY');const product=context.product(productId),sourceId='business:'+eventId+':'+ordinal++,target=previous.lots&&!arrival?lotAcquireTarget(previous.lots,to,productId,sourceId):to;const source={id:sourceId,productId,unit:product.unit,currency:'TWD',quantityUnits,valueCents};if(to.stage==='available'&&to.locationId==='main'&&target.stage==='quarantined')blocked.set(productId,(blocked.get(productId)||0)+quantityUnits);append([{kind:target.stage==='wasted'?'acquire-disposed':target.stage==='quarantined'?'acquire-quarantined':'acquire',to:target,sources:[source]}]);sourceEvidence.push({sourceId,key:canonicalSignature([method,input.id,key]),basis,creditAccount});if(arrival){const placed=placeReceiptLots(previous,body,source,productId,key,virtual.positions.flatMap(row=>row.segments).find(row=>row.sourceId===sourceId).queueOrder);append(placed.steps);arrivalItems.push(...placed.items);blocked.set(productId,(blocked.get(productId)||0)+placed.blockedUnits)}},
   hasOrigin:(owner,productId)=>{const sources=new Map(previous.custody.sources.map(row=>[row.id,row]));return previous.custody.positions.some(row=>canonicalSignature(row.owner)===canonicalSignature(owner)&&row.segments.some(segment=>sources.get(segment.sourceId).productId===productId))},
   replace:id=>replaced.add(id),
   line:(account,debitCents,creditCents)=>extraLines.push({account,debitCents:safe(debitCents),creditCents:safe(creditCents)}),
@@ -56,6 +61,7 @@ export function planStockBusiness(previous,body){
  const journal={id:'stock-business:'+method+':'+input.id,date,type:'stock-cost',amountUnit:'cents',description:'庫存成本異動',costComplete:complete,lines}
  const business={method,id:input.id,eventId,effects:plan.effects,journalId:journal.id,replacedJournalIds:[...replaced],notes}
  let next={...previous,custody:plan.state,sourceEvidence:[...previous.sourceEvidence,...sourceEvidence],journals:[...previous.journals,journal],business:[...(previous.business||[]),business]}
+ if(arrival)next={...next,receiptLotsVersion:1,lots:lotRegistry({...previous.lots,items:[...previous.lots.items,...arrivalItems]},plan.state)}
  if(previous.lotCountVersion===1)next={...next,lotCountReservations:updateLotCountReservations(previous,next.custody,method==='applyRestaurantOperation'?evidence.entry:null)}
  next=clearStockReturnSuspense(next,date,input.id)
  return next

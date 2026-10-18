@@ -1,5 +1,9 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--receipt-lots':['native-receipt-lots.cjs','POS_RECEIPT_LOTS_NATIVE_PASS',false],
+  '--receipt-lots-ui':['native-receipt-lots-ui.cjs','POS_RECEIPT_LOTS_UI_PASS',true],
+  '--receipt-lots-browser-ui':['native-receipt-lots-browser-ui.cjs','POS_RECEIPT_LOTS_BROWSER_PASS',true],
+  '--receipt-lots-stale-ui':['native-receipt-lots-stale-ui.cjs','POS_RECEIPT_STALE_FIXED_PASS',true],
   '--lot-count':['native-lot-count.cjs','POS_LOT_COUNT_NATIVE_PASS',false],
   '--lot-count-ui':['native-lot-count-ui.cjs','POS_LOT_COUNT_UI_PASS',true],
   '--lot-count-browser-ui':['native-lot-count-browser-ui.cjs','POS_LOT_COUNT_BROWSER_PASS',true],

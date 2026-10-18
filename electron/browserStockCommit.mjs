@@ -22,5 +22,5 @@ export function appendBrowserStockBusiness(before,after,state,command,runtime){
   const hash=stockLedgerDigest(body),receipt=stockLedgerAcknowledgement(body,hash,projection)
   const operation={id:canonicalSignature([method,input.id]),method,operationId:input.id,actorId:actor.userId,signature:canonicalSignature(input),receipt}
   if(before.stockCostOperations.some(row=>row.id===operation.id))throw Error('成本原編號已存在')
-  return withStockBookHead({...planned.book,products:materializeLotProducts(planned.book.products,projection,body.evidence.products),stockCostEntries:[...before.stockCostEntries,{...body,hash}],stockCostOperations:[...before.stockCostOperations,operation]},hash)
+  return withStockBookHead({...planned.book,...(input.kind==='receive-lots'?{settings:[...planned.book.settings.filter(row=>row.key!=='stockReceiptLotsVersionFence'),{key:'stockReceiptLotsVersionFence',value:'1'}]}:{}),products:materializeLotProducts(planned.book.products,projection,body.evidence.products),stockCostEntries:[...before.stockCostEntries,{...body,hash}],stockCostOperations:[...before.stockCostOperations,operation]},hash)
 }

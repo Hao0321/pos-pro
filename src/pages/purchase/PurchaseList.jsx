@@ -20,7 +20,7 @@ export function PurchaseList({ purchases, selected, onSelect, onReceive,renderPr
         {purchases.map(po => {
           const st = STATUS[po.status]||STATUS.draft
           return (
-            <button key={po.id} onClick={()=>onSelect(po)} style={{
+            <button key={po.id} data-purchase-id={po.id} onClick={()=>onSelect(po)} style={{
               ...ps.poCard,
               border: `1px solid ${selected?.id===po.id?'var(--border-mid)':'var(--border-dim)'}`,
               background: selected?.id===po.id?'var(--bg-active)':'var(--bg-raised)',
@@ -56,7 +56,7 @@ export function PurchaseList({ purchases, selected, onSelect, onReceive,renderPr
               </div>
             </div>
             {onReceive&&canReceive(selected)&&(selected.status === 'ordered' || selected.status === 'partial') && (
-              <button className="btn btn-primary btn-sm" onClick={()=>onReceive(selected)}>
+              <button className="btn btn-primary btn-sm" data-purchase-receive onClick={()=>onReceive(selected)}>
                 <Truck size={14}/>{selected.status === 'partial' ? tr("補收到貨") : tr("確認到貨")}
               </button>
             )}

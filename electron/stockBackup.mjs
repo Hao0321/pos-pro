@@ -30,6 +30,8 @@ export function validateStockCostBook(book,validatedState=null){
   const lotFlag=(book.settings||[]).find(row=>row.key===LOT_SETTING)
   if(lotFlag&&lotFlag.value!=='1'||state.projection?.lots&&!lotFlag||state.projection?.custody.version===2&&!state.projection.lots)throw stockLedgerError('HISTORY')
   const countFlag=(book.settings||[]).find(row=>row.key===LOT_COUNT_SETTING)
+  const receiptFlag=(book.settings||[]).find(row=>row.key==='stockReceiptLotsVersionFence')
+  if(receiptFlag&&receiptFlag.value!=='1'||state.projection?.receiptLotsVersion===1&&!receiptFlag)throw stockLedgerError('HISTORY')
   if(countFlag&&countFlag.value!=='1'||state.projection?.lotCountVersion===1&&!countFlag)throw stockLedgerError('HISTORY')
   if(state.projection?.lots)lotCountGroups(state.projection)
   if(state.projection?.lotCountVersion===1&&!same(state.projection.lotCountReservations,lotCountReservations(state.projection.custody,book.restaurantOrders||[])))throw stockLedgerError('HISTORY')
@@ -66,7 +68,7 @@ export function validateStockCostBook(book,validatedState=null){
     const audit=(book.auditLog||[]).find(row=>row.id==='stock-operation:'+input.id),saved=audit&&(typeof audit.detail==='string'?JSON.parse(audit.detail):audit.detail)
     if(!saved||saved.signature!==canonicalSignature(input))throw stockLedgerError('HISTORY')
     if(input.protocol===PHYSICAL_STOCKTAKE&&!same(saved.stocktake,evidence.stocktake))throw stockLedgerError('HISTORY')
-    if(evidence.inventory?.modern){const purchase=(book.purchases||[]).find(row=>row.id===input.purchaseId),event=purchase?.procurement?.[input.kind==='receive'?'receipts':'returns']?.find(row=>row.id===input.id);if(!same(event,evidence.inventory.event))throw stockLedgerError('HISTORY')}
+    if(evidence.inventory?.modern){const purchase=(book.purchases||[]).find(row=>row.id===input.purchaseId),event=purchase?.procurement?.[['receive','receive-lots'].includes(input.kind)?'receipts':'returns']?.find(row=>row.id===input.id);if(!same(event,evidence.inventory.event))throw stockLedgerError('HISTORY')}
    }else if(method==='addWaste'){
     if(!same((book.wasteLog||[]).find(row=>row.id===input.id),evidence.waste))throw stockLedgerError('HISTORY')
    }else if(method==='addProduct'){
