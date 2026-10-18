@@ -8,6 +8,7 @@ import {salesReceipt} from '../../electron/salesPlan.mjs'
 import {supplierInventoryReceipt} from '../../electron/supplierInventory.mjs'
 import {assertProductPricingUnchanged} from '../../electron/costPricing.mjs'
 import {refundSignature} from './refundSafety.mjs'
+import {expireBrowserLotsLocked} from './browserLots'
 
 export const hasBrowserStockCost=record=>record.data.pos_stock_cost_entries.length>0
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
@@ -55,12 +56,13 @@ export function assertStoredBrowserCostReceipt(method,request,result){
 export function commitBrowserStockBusiness(method,request,actor,record){
   let checked=false,existing=false,writing=false,beforeRaw=null
   try{
-    const before=browserToBook(record.data),state=validateStockCostBook(before)
+    let before=browserToBook(record.data),state=validateStockCostBook(before)
     browserStockActor(before,actor,method,request)
     const input=normalizeStockBusinessInput(method,request)
     assertOriginalOperationAvailable(method,input.id,record,request)
     existing=!!browserBusinessSource(before,method,input);checked=true
     if(existing)return browserStockBusinessResult(method,request,record,actor)
+    record=expireBrowserLotsLocked(record);before=browserToBook(record.data);state=validateStockCostBook(before)
     if(browserBusinessNeedsCost(method,input)&&method!=='addProduct'){operationHeader(input);if(Math.abs(Date.now()-Date.parse(input.time))>300000)throw Error('操作時間已過期，請重新核對')}
     const timestamp=new Date().toISOString(),planned=planBrowserStockBusiness(before,{...runtime(record),state,timestamp},method,request,actor)
     beforeRaw=localStorage.getItem(RECORD_KEY);writing=true

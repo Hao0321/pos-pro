@@ -740,6 +740,7 @@ module.exports = function initDatabase(dbPath) {
   require('./refundReviewOperations.cjs')(db,api,stockStore)
   require('./stockBusinessOperations.cjs')(db,api,stockStore)
   require('./warehouseOperations.cjs')(db,api,stockStore)
+  const lotRuntime=require('./lotOperations.cjs')(db,api,stockStore)
   require('./recoveryOperations.cjs')(db,api,replaceAllTx,recordShapes)
   recordShapes.attachFinancial(api)
   require('./tableOrderingOperations.cjs')(db,api)
@@ -748,5 +749,6 @@ module.exports = function initDatabase(dbPath) {
   api.applyRestaurantOperation=function(request,actor){if(require('./privateDrafts.mjs').assertPrivateDraftCaller(request,actor))this.getPrivateDraftContext(actor);return restaurantWithStock.call(this,request,actor)}
   const inventoryWithStock=api.applyInventoryOperation
   api.applyInventoryOperation=function(request,actor){if(require('./privateDrafts.mjs').assertPrivateDraftCaller(request,actor))this.getPrivateDraftContext(actor);return inventoryWithStock.call(this,request,actor)}
+  lotRuntime.installGuards()
   return api
 }

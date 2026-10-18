@@ -114,7 +114,7 @@ module.exports=function installStockBusinessOperations(db,api,store){
     if(result?.success!==true){current();return result}
     if(!cost){current();return result}
     const proof=evidence(method,input,facts,result),now=new Date(),date=method==='applySalesOperation'?input.date:salesDate(new Date(input.time||now))
-    const receipt=store.append(input,verified,{time:now.toISOString(),date},method,proof)
+    const receipt=store.append(input,verified,{time:now.toISOString(),date},method,proof,projection=>{if(projection.lots)for(const product of proof.products)db.prepare('UPDATE products SET stock=? WHERE id=?').run(require('./warehousePlan.mjs').warehouseLocationUnits(projection.custody,'main',product.id,product.unit)/1000,product.id)})
     current()
     const products=new Map(api.getProducts().map(row=>[row.id,row]))
     return {...result,...(Array.isArray(result.products)?{products:result.products.map(row=>products.get(row.id))}:{}),...(result.product?{product:products.get(result.product.id)}:{}),costReceipt:receipt}

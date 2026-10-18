@@ -1,7 +1,7 @@
 import {canonicalSignature} from './operationRules.mjs'
 import {stockOpeningKey,planStockOpening,planOpeningCostPrice,STOCK_LEDGER_PROTOCOL} from './stockOpeningPlan.mjs'
 import {costCustodySummary} from './stockCustody.mjs'
-import {STOCK_SETUP_REVIEW,stockSetupSummary,assertStockSetupReview,stockSetupJournalLines} from './stockSetupReview.mjs'
+import {STOCK_SETUP_REVIEW,STOCK_SETUP_REVIEW_V2,stockSetupSummary,assertStockSetupReview,stockSetupJournalLines} from './stockSetupReview.mjs'
 import {clearStockReturnSuspense} from './stockBusinessPlan.mjs'
 export const STOCK_SETUP_STATE='pos-stock-setup-state/v1',STOCK_SETUP_PREVIEW='pos-stock-setup-preview/v1'
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b),exact=(v,keys)=>{if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).length!==keys.length||keys.some(key=>!Object.hasOwn(v,key)))throw Error('請核對成本選項與原始金額')}
@@ -56,7 +56,7 @@ export function previewStockSetup(raw,data){
     const projection=clearStockReturnSuspense({...previous,custody:plan.state,journals:[...previous.journals,plan.journal]},now.slice(0,10),input.id);journalLines=stockSetupJournalLines(projection,previous)
   }
   const target=current.mode==='pricing'?rows.get(raw.entries[0].key):null,subject=target?{sourceId:target.sourceId,productId:target.productId,name:target.name,unit:target.unit,quantityUnits:target.quantityUnits}:null
-  const review={protocol:STOCK_SETUP_REVIEW,sourceDigest:context.reviewId,issuedAt:now,summary:stockSetupSummary(plan.valuation),journalLines,selection:{entries:structuredClone(raw.entries),useReferences:raw.useReferences},subject};assertStockSetupReview(review)
+  const review={protocol:Object.hasOwn(plan.valuation.categories,'quarantined')?STOCK_SETUP_REVIEW_V2:STOCK_SETUP_REVIEW,sourceDigest:context.reviewId,issuedAt:now,summary:stockSetupSummary(plan.valuation),journalLines,selection:{entries:structuredClone(raw.entries),useReferences:raw.useReferences},subject};assertStockSetupReview(review)
   delete input.id;delete input.time
   return {protocol:STOCK_SETUP_PREVIEW,success:true,input:{...input,review},summary:review.summary}
 }

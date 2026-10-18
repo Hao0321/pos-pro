@@ -44,12 +44,13 @@ export function stockLegacySalesReferences(projection,data){
 export function stockAccountingTimeline(state,data){
  const first=state.entries[0],opening=planStockOpening(JSON.parse(first.openingMaterial).preview,first.input,first.date),sources=opening.custody.sources.map(row=>({sourceId:row.id,productId:row.productId,createdDate:first.date,unknownAtBirth:row.valueCents===null})),moves=[],confirmations=[]
  for(const node of opening.custody.positions)for(const segment of node.segments)moves.push({sourceId:segment.sourceId,date:first.date,from:null,to:node.owner.stage,quantityUnits:segment.quantityUnits})
- const byEvent=new Map((state.projection.business||[]).map(row=>[row.eventId,row]))
+ const byEvent=new Map([...(state.projection.lotEvents||[]),...(state.projection.business||[])].map(row=>[row.eventId,row]))
  for(const event of state.entries.slice(1)){
   if((!event.method||event.method==='applyStockCostOperation')&&event.input.action==='price'){confirmations.push({sourceId:event.input.sourceId,date:event.date});continue}
+  if(event.method==='applyWarehouseOperation')continue
   const business=byEvent.get(event.id);if(!business)throw Error('庫存成本報表需要核對')
   for(const effect of business.effects)for(const segment of effect.segments||[]){
-   if(['acquire','acquire-disposed'].includes(effect.kind)){
+   if(['acquire','acquire-disposed','acquire-quarantined'].includes(effect.kind)){
     const source=state.projection.custody.sources.find(row=>row.id===segment.sourceId)
     sources.push({sourceId:source.id,productId:source.productId,createdDate:event.date,unknownAtBirth:!effect.cost.complete})
    }
@@ -62,7 +63,7 @@ export function stockAccountingTimeline(state,data){
 
 export function stockPeriodDisclosure(report,from,to){
  if(report?.status!=='active')return {profitComplete:true,assetsComplete:true,unknownProfitSources:0,unknownOwnedSources:0,legacyReferenceOrders:0,chronologyReview:false}
- const {sources,moves,confirmations,legacyReferences}=report.timeline,unknownOwned=new Set(),unknownProfit=new Set(),owned=stage=>['available','reserved'].includes(stage)
+ const {sources,moves,confirmations,legacyReferences}=report.timeline,unknownOwned=new Set(),unknownProfit=new Set(),owned=stage=>['available','reserved','quarantined'].includes(stage)
  let chronologyReview=false
  for(const source of sources){
   const relevant=moves.filter(row=>row.sourceId===source.sourceId&&row.date<=to)

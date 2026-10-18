@@ -16,6 +16,8 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:getStockAccountingState',()=>db.getStockAccountingState(ipcSecurity.current()))
   handle('db:getStockSalesState',()=>db.getStockSalesState(ipcSecurity.current()))
   handle('db:getStockHistory',(_e,input)=>db.getStockHistory(input,ipcSecurity.current()))
+  handle('db:getLotState',()=>db.getLotState(ipcSecurity.current()))
+  handle('db:applyLotOperation',(_e,input)=>db.applyLotOperation(input,ipcSecurity.current()))
   handle('db:getWarehouseState',()=>db.getWarehouseState(ipcSecurity.current()))
   handle('db:applyWarehouseOperation',(_e,input)=>db.applyWarehouseOperation(input,ipcSecurity.current()))
   handle('db:getStockSetupAccess',()=>({enabled:stockSetupEnabled===true}))

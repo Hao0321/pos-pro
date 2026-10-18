@@ -14,8 +14,10 @@ import {assertStoredBrowserStockSetupResult} from './browserStockSetup'
 import {needsRestaurantFundsResult,assertRestaurantFundsResult} from '../../electron/restaurantFundsResult.mjs'
 import {assertWarehouseResult} from '../../electron/browserWarehouse.mjs'
 import {assertStoredBrowserWarehouse} from './browserWarehouse'
+import {assertLotResult} from '../../electron/browserLots.mjs'
+import {assertStoredBrowserLot} from './browserLots'
 export const FINANCIAL_PENDING='pos_pending_financial_v1'
-const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt','stock-cost':'receipt',warehouse:'receipt'}
+const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt','stock-cost':'receipt',warehouse:'receipt',lots:'receipt'}
 for(const kind of PROCUREMENT_KINDS)fields[kind]='receipt'
 let running=false
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value
@@ -36,6 +38,7 @@ export function assertReceipt(kind,request,result){
   if(kind==='sales')assertSalesResult(request,result)
   if(kind==='customer-ledger')assertCustomerLedgerResult(request,result)
   if(kind==='supplier-ledger')assertSupplierLedgerResult(request,result)
+  if(kind==='lots'){assertLotResult(request,result);if(!globalThis.window?.electronAPI)assertStoredBrowserLot(request,result)}
   if(kind==='warehouse'){assertWarehouseResult(request,result);if(!globalThis.window?.electronAPI)assertStoredBrowserWarehouse(request,result)}
   if(kind==='topup'&&(['memberId','amount','bonus','payMethod','shiftId'].some(k=>(row[k]??'')!==(request[k]??''))||result.member?.id!==request.memberId))throw Error('儲值保存結果尚未確認：回覆內容不符')
   if(kind==='refund'&&(row.refundOf!==request.refundOf||result.original?.id!==request.refundOf))throw Error('退款保存結果尚未確認：原單不符')

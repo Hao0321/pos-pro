@@ -34,6 +34,8 @@ if(sharedStoreMode&&!window.electronAPI){
   db.exportFullBackup=()=>rpc('db:exportFullBackup')
   db.getProtectedBackups=()=>rpc('db:getProtectedBackups')
   db.getStocktakeState=()=>rpc('db:getStocktakeState')
+  db.getLotState=()=>rpc('db:getLotState')
+  db.applyLotOperation=input=>rpc('db:applyLotOperation',input)
   db.getWarehouseState=()=>rpc('db:getWarehouseState')
   db.applyWarehouseOperation=input=>rpc('db:applyWarehouseOperation',input)
   db.getStockSetupAccess=()=>rpc('db:getStockSetupAccess')

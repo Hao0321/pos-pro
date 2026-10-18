@@ -2,6 +2,8 @@ import {warehouseCommand,warehouseDirectory,warehouseError,warehouseQuantity,war
 import {planCostCustody,costCustodySummary} from './stockCustody.mjs'
 import {stockCostSummary} from './stockCost.mjs'
 import {canonicalSignature} from './operationRules.mjs'
+import {lotDay,lotError} from './lotRules.mjs'
+import {lotPositionParts,selectLotQuantity,lotEligibility} from './lotSelection.mjs'
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 export function warehouseLocationUnits(custody,locationId,productId,unit,stage='available'){
  const sources=new Map(custody.sources.map(row=>[row.id,row]));let total=0
@@ -40,7 +42,9 @@ export function planWarehouse(previous,body){
    const quantityUnits=warehouseQuantity(input.quantity,factor)
    if(warehouseLocationUnits(custody,input.fromLocationId,product.id,product.unit)<quantityUnits)throw warehouseError('STOCK')
    const owner=locationId=>({stage:'available',locationId,referenceId:''}),before=costCustodySummary(custody)
-   custody=planCostCustody(custody,{expectedSequence:custody.sequence,steps:[{kind:'relocate',from:owner(input.fromLocationId),to:owner(input.toLocationId),productId:product.id,unit:product.unit,quantityUnits}]}).state
+   if(previous.lots&&lotDay(input.time,previous.lots.timeZone)>previous.lots.observedDay)throw lotError('STALE')
+   const step=previous.lots?{kind:'move-selected',from:owner(input.fromLocationId),to:owner(input.toLocationId),productId:product.id,unit:product.unit,allocations:selectLotQuantity(lotPositionParts(custody,previous.lots,owner(input.fromLocationId),product.id),quantityUnits,{fefo:true,eligible:row=>lotEligibility(previous.lots,product.id,row.lot,previous.lots.observedDay)==='eligible'}).map(row=>row.segment),restoreMode:'preserve'}:{kind:'relocate',from:owner(input.fromLocationId),to:owner(input.toLocationId),productId:product.id,unit:product.unit,quantityUnits}
+   custody=planCostCustody(custody,{expectedSequence:custody.sequence,steps:[step]}).state
    if(!same(before,costCustodySummary(custody)))throw warehouseError('HISTORY')
   }
  }

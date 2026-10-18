@@ -24,6 +24,7 @@ export function assertStockBusinessCoverage(book,state){
   }
   for(const waste of book.wasteLog||[]){
     if(original('addWaste',waste.id))continue
+    if(state.entries.some(row=>row.method==='applyLotOperation'&&row.input.action==='dispose'&&canonicalSignature(row.evidence.waste)===canonicalSignature(waste)))continue
     if(restaurants.some(row=>row.evidence.entry.funds&&row.evidence.entry.funds.events.filter(event=>event.id===row.input.id).flatMap(restaurantFundsWaste).some(expected=>canonicalSignature(expected)===canonicalSignature(waste))))continue
     const cancellation=restaurants.find(row=>row.input.action==='cancel'&&row.evidence.beforeEntry?.startedAt&&row.evidence.beforeEntry.allocations.some((allocation,index)=>{
       const expected={id:'rw-'+row.input.id+'-'+index,productId:allocation.id,productName:allocation.name,qty:allocation.qty,reason:'預訂取消：'+row.input.reason.trim(),cost:allocation.unitCost,time:row.input.time,cashier:row.actor.username||''}

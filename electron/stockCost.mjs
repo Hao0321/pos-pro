@@ -16,6 +16,8 @@ export const STOCK_COST_ERRORS=Object.freeze({
   QUANTITY:'庫存成本數量超過可核對範圍',
 })
 export const STOCK_COST_STATES=Object.freeze(['available','reserved','consumed','wasted','supplierReturned'])
+export const STOCK_COST_STATES_V2=Object.freeze([...STOCK_COST_STATES,'quarantined'])
+export function stockCostStates(version=1){if(version!==1&&version!==2)fail('STATES');return version===2?STOCK_COST_STATES_V2:STOCK_COST_STATES}
 const MAX_UNITS=1_000_000_000_000,MAX=BigInt(Number.MAX_SAFE_INTEGER)
 function fail(code){throw Object.assign(Error(STOCK_COST_ERRORS[code]),{code:'STOCK_COST_'+code})}
 function shape(value,keys,code){
@@ -110,6 +112,24 @@ export function takeFifoSegments(sources,available,request){
   return {allocations,remaining,cost:summary(allocations,catalog)}
 }
 
+// Exact issued intervals are selected by the lot/domain planner. This checks
+// their actual custody, including FIFO age, rather than trusting a caller's ID.
+export function takeSelectedCostSegments(sources,available,selected,request){
+  shape(request,['productId','unit'],'SCOPE');text(request.productId,256,'SCOPE');text(request.unit,30,'SCOPE')
+  const catalog=sourcesById(sources),remaining=queue(segments(available,catalog)),allocations=queue(segments(selected,catalog))
+  if(!allocations.length)fail('SEGMENT')
+  for(const row of [...remaining,...allocations]){const source=catalog.get(row.sourceId);if(source.productId!==request.productId||source.unit!==request.unit)fail('SCOPE')}
+  for(const part of allocations){
+    const index=remaining.findIndex(row=>row.sourceId===part.sourceId&&row.queueOrder===part.queueOrder&&row.offsetUnits<=part.offsetUnits&&row.offsetUnits+row.quantityUnits>=part.offsetUnits+part.quantityUnits)
+    if(index<0)fail('INSUFFICIENT')
+    const original=remaining[index],before=part.offsetUnits-original.offsetUnits,after=original.offsetUnits+original.quantityUnits-part.offsetUnits-part.quantityUnits,replacements=[]
+    if(before)replacements.push({...original,quantityUnits:before})
+    if(after)replacements.push({...original,offsetUnits:part.offsetUnits+part.quantityUnits,quantityUnits:after})
+    remaining.splice(index,1,...replacements)
+  }
+  return {allocations,remaining:queue(remaining),cost:summary(allocations,catalog)}
+}
+
 export function restoreCostSegments(sources,available,returning,options){
   const hasOrder=Object.hasOwn(options??{},'queueOrder')
   shape(options,hasOrder?['kind','queueOrder']:['kind'],'QUEUE')
@@ -132,10 +152,11 @@ export function priceUnvaluedCostSource(input,valueCents){
   integer(valueCents,0,Number.MAX_SAFE_INTEGER,'AMOUNT');return {...source,valueCents}
 }
 
-export function assertCostPartition(sources,positions){
-  shape(positions,STOCK_COST_STATES,'STATES')
+export function assertCostPartition(sources,positions,version=1){
+  const states=stockCostStates(version)
+  shape(positions,states,'STATES')
   const catalog=sourcesById(sources),all=[],categories={}
-  for(const state of STOCK_COST_STATES){const rows=segments(positions[state],catalog);all.push(...rows);categories[state]=summary(rows,catalog)}
+  for(const state of states){const rows=segments(positions[state],catalog);all.push(...rows);categories[state]=summary(rows,catalog)}
   const groups=noOverlap(all)
   for(const source of catalog.values()){
     const rows=(groups.get(source.id)||[]).slice().sort((a,b)=>a.offsetUnits-b.offsetUnits);let offset=0
@@ -144,6 +165,6 @@ export function assertCostPartition(sources,positions){
   }
   const knownSourceValueCents=sum([...catalog.values()].flatMap(source=>source.valueCents===null?[]:[source.valueCents]))
   if(sum(Object.values(categories).map(row=>row.knownValueCents))!==knownSourceValueCents)fail('PARTITION')
-  const complete=Object.values(categories).every(row=>row.complete),ownedKnownValueCents=sum([categories.available.knownValueCents,categories.reserved.knownValueCents])
-  return {complete,categories,knownSourceValueCents,totalSourceValueCents:complete?knownSourceValueCents:null,ownedKnownValueCents,ownedValueCents:categories.available.complete&&categories.reserved.complete?ownedKnownValueCents:null}
+  const owned=['available','reserved',...(version===2?['quarantined']:[])],complete=Object.values(categories).every(row=>row.complete),ownedKnownValueCents=sum(owned.map(stage=>categories[stage].knownValueCents))
+  return {complete,categories,knownSourceValueCents,totalSourceValueCents:complete?knownSourceValueCents:null,ownedKnownValueCents,ownedValueCents:owned.every(stage=>categories[stage].complete)?ownedKnownValueCents:null}
 }

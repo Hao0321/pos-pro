@@ -1,22 +1,24 @@
 import {canonicalSignature} from './operationRules.mjs'
-import {STOCK_COST_STATES} from './stockCost.mjs'
+import {stockCostStates} from './stockCost.mjs'
 export const STOCK_SETUP_REVIEW='pos-stock-setup-review/v1'
+export const STOCK_SETUP_REVIEW_V2='pos-stock-setup-review/v2'
 const error=()=>Error('庫存成本預覽需要重新核對')
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 const exact=(value,keys)=>{if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length!==keys.length||keys.some(key=>!Object.hasOwn(value,key)))throw error()}
 const amount=value=>Number.isSafeInteger(value)&&value>=0
 export function stockSetupSummary(valuation){
+  const states=stockCostStates(Object.hasOwn(valuation.categories,'quarantined')?2:1)
   return {complete:valuation.complete,ownedKnownValueCents:valuation.ownedKnownValueCents,ownedValueCents:valuation.ownedValueCents,
-    categories:Object.fromEntries(STOCK_COST_STATES.map(stage=>{const row=valuation.categories[stage];return [stage,{knownValueCents:row.knownValueCents,valueCents:row.valueCents,unknownSources:row.unvalued.length}]}))}
+    categories:Object.fromEntries(states.map(stage=>{const row=valuation.categories[stage];return [stage,{knownValueCents:row.knownValueCents,valueCents:row.valueCents,unknownSources:row.unvalued.length}]}))}
 }
 export function assertStockSetupReview(review){
   exact(review,['protocol','sourceDigest','issuedAt','summary','journalLines','selection','subject'])
-  if(review.protocol!==STOCK_SETUP_REVIEW||!/^sha256:[a-f0-9]{64}$/.test(review.sourceDigest)||typeof review.issuedAt!=='string'||!Number.isFinite(Date.parse(review.issuedAt))||new Date(review.issuedAt).toISOString()!==review.issuedAt)throw error()
-  const s=review.summary;exact(s,['complete','ownedKnownValueCents','ownedValueCents','categories']);exact(s.categories,STOCK_COST_STATES)
+  if(![STOCK_SETUP_REVIEW,STOCK_SETUP_REVIEW_V2].includes(review.protocol)||!/^sha256:[a-f0-9]{64}$/.test(review.sourceDigest)||typeof review.issuedAt!=='string'||!Number.isFinite(Date.parse(review.issuedAt))||new Date(review.issuedAt).toISOString()!==review.issuedAt)throw error()
+  const states=stockCostStates(review.protocol===STOCK_SETUP_REVIEW_V2?2:1),s=review.summary;exact(s,['complete','ownedKnownValueCents','ownedValueCents','categories']);exact(s.categories,states)
   if(typeof s.complete!=='boolean'||!amount(s.ownedKnownValueCents)||s.ownedValueCents!==null&&!amount(s.ownedValueCents))throw error()
-  for(const stage of STOCK_COST_STATES){const row=s.categories[stage];exact(row,['knownValueCents','valueCents','unknownSources']);if(!amount(row.knownValueCents)||!amount(row.unknownSources)||row.valueCents!==(row.unknownSources?null:row.knownValueCents))throw error()}
-  const owned=s.categories.available.knownValueCents+s.categories.reserved.knownValueCents,unknown=s.categories.available.unknownSources+s.categories.reserved.unknownSources
-  if(s.ownedKnownValueCents!==owned||s.ownedValueCents!==(unknown?null:owned)||s.complete!==STOCK_COST_STATES.every(stage=>s.categories[stage].unknownSources===0))throw error()
+  for(const stage of states){const row=s.categories[stage];exact(row,['knownValueCents','valueCents','unknownSources']);if(!amount(row.knownValueCents)||!amount(row.unknownSources)||row.valueCents!==(row.unknownSources?null:row.knownValueCents))throw error()}
+  const ownedStates=['available','reserved',...(states.includes('quarantined')?['quarantined']:[])],owned=ownedStates.reduce((sum,stage)=>sum+s.categories[stage].knownValueCents,0),unknown=ownedStates.reduce((sum,stage)=>sum+s.categories[stage].unknownSources,0)
+  if(s.ownedKnownValueCents!==owned||s.ownedValueCents!==(unknown?null:owned)||s.complete!==states.every(stage=>s.categories[stage].unknownSources===0))throw error()
   if(!Array.isArray(review.journalLines)||review.journalLines.length>20000)throw error()
   for(const line of review.journalLines){exact(line,['account','debitCents','creditCents']);if(!['1211','3901','5101','5208','5204','4191','2102','2291'].includes(line.account)||!amount(line.debitCents)||!amount(line.creditCents))throw error()}
   exact(review.selection,['entries','useReferences'])

@@ -184,6 +184,7 @@ module.exports=function installRecovery(db,api,replaceAllTx,recordShapes){
   // Index all original formal IDs at the same boundary as every supported
   // restore. A missing historical receipt is uncertain, never a new payment.
   const descriptors={
+    applyLotOperation:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM stock_cost_operations WHERE id=?').get(canonicalSignature(['applyLotOperation',id]))},
     applyWarehouseOperation:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM stock_cost_operations WHERE id=?').get(canonicalSignature(['applyWarehouseOperation',id]))},
     applyStockCostOperation:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM stock_cost_operations WHERE id=?').get(canonicalSignature(['applyStockCostOperation',id]))},
     addProduct:{id:a=>a[0]?.id,active:id=>db.prepare('SELECT 1 FROM products WHERE id=?').get(id)},
@@ -213,7 +214,7 @@ module.exports=function installRecovery(db,api,replaceAllTx,recordShapes){
         if(typeof id!=='string')return original.apply(api,args)
         const known=typeof id==='string'&&db.prepare('SELECT 1 FROM recovery_original_ids WHERE method=? AND operation_id=? LIMIT 1').get(method,id)
         let available=!!descriptor.active(id,args)
-        if(known&&available&&['applyWarehouseOperation','applyStockCostOperation','addProduct','checkout','refundOrder','addTopup','addCashLog','addWaste','applyInventoryOperation','applyExchangeOperation','applyRestaurantOperation','applySalesOperation','applyCustomerLedgerOperation','applySupplierLedgerOperation'].includes(method)){
+        if(known&&available&&['applyLotOperation','applyWarehouseOperation','applyStockCostOperation','addProduct','checkout','refundOrder','addTopup','addCashLog','addWaste','applyInventoryOperation','applyExchangeOperation','applyRestaurantOperation','applySalesOperation','applyCustomerLedgerOperation','applySupplierLedgerOperation'].includes(method)){
           const active=operationRecords(api.exportData()).find(row=>row.method===method&&row.id===id)
           const request=method==='refundOrder'?{...args[1],refundOf:args[0]}:args[0]
           available=!!active&&originalMatches(active,{method,id,request},proof)

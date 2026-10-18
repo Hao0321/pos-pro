@@ -1,9 +1,10 @@
 import {planStockOpening,planOpeningCostPrice,stockOpeningKey} from './stockOpeningPlan.mjs'
-import {planStockBusiness,clearStockReturnSuspense} from './stockBusinessPlan.mjs'
+import {clearStockReturnSuspense} from './stockBusinessPlan.mjs'
 import {costSegmentValue} from './stockCost.mjs'
 import {aggregateJournal,journalLineCents} from './journalAmounts.mjs'
 import {restaurantCostShares,splitReportCents} from './stockReportBasis.mjs'
 import {stockLegacySalesReferences} from './stockAccounting.mjs'
+import {projectStockLedger} from './stockLedgerModel.mjs'
 
 const netCost=journal=>journal.lines.filter(row=>row.account==='5101').reduce((sum,line)=>sum+journalLineCents(journal,line,'debit')-journalLineCents(journal,line,'credit'),0n)
 const amountCents=value=>journalLineCents({}, {debit:value},'debit')
@@ -79,9 +80,9 @@ export function stockReportCostPostings(state,data){
    projection=clearStockReturnSuspense({...projection,custody:plan.state,journals:[...projection.journals,plan.journal]},event.date,event.input.id)
    continue
   }
-  const next=planStockBusiness(projection,event),business=next.business.at(-1)
-  for(const effect of business.effects){
-   const acquired=['acquire','acquire-disposed'].includes(effect.kind),credit=acquired&&next.sourceEvidence.find(row=>row.sourceId===effect.segments[0].sourceId)?.creditAccount==='5101'
+  const next=projectStockLedger(projection,event),business=next.business?.find(row=>row.eventId===event.id)||next.lotEvents?.find(row=>row.eventId===event.id)
+  for(const effect of business?.effects||[]){
+   const acquired=['acquire','acquire-disposed','acquire-quarantined'].includes(effect.kind),credit=acquired&&next.sourceEvidence.find(row=>row.sourceId===effect.segments[0].sourceId)?.creditAccount==='5101'
    const sign=(effect.to.stage==='consumed'?1:0)-(effect.from?.stage==='consumed'?1:0)-(credit?1:0)
    if(!sign)continue
    for(const segment of effect.segments){

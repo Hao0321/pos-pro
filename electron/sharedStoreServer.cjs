@@ -74,6 +74,8 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(method==='db:exportFullBackup')return db.exportFullBackup(actor)
     if(method==='db:getProtectedBackups')return db.getProtectedBackups(actor)
     if(method==='db:getStocktakeState')return db.getStocktakeState(actor)
+    if(method==='db:getLotState')return db.getLotState(actor)
+    if(method==='db:applyLotOperation')return db.applyLotOperation(args[0],actor)
     if(method==='db:getWarehouseState')return db.getWarehouseState(actor)
     if(method==='db:applyWarehouseOperation')return db.applyWarehouseOperation(args[0],actor)
     if(method==='db:getStockSetupAccess')return {enabled:stockSetupEnabled===true}

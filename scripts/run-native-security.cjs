@@ -1,5 +1,8 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--lots':['native-lots.cjs','POS_LOTS_NATIVE_PASS',false],
+  '--lots-ui':['native-lots-ui.cjs','POS_LOTS_UI_PASS',true],
+  '--lots-browser-ui':['native-lots-browser-ui.cjs','POS_LOTS_BROWSER_PASS',true],
   '--warehouse':['native-warehouse.cjs','POS_WAREHOUSE_NATIVE_PASS',false],
   '--warehouse-ui':['native-warehouse-ui.cjs','POS_WAREHOUSE_UI_PASS',true],
   '--warehouse-browser-ui':['native-warehouse-browser-ui.cjs','POS_WAREHOUSE_BROWSER_PASS',true],

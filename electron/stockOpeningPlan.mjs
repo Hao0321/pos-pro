@@ -86,7 +86,7 @@ export function planOpeningCostPrice(projection,input,date){
  const request=stockCostCommand(input)
  if(request.action!=='price'||!projection.sourceEvidence.some(row=>row.sourceId===request.sourceId))throw stockLedgerError('INPUT')
  const plan=planCostCustody(projection.custody,{expectedSequence:request.expectedSequence,steps:[{kind:'price',sourceId:request.sourceId,valueCents:request.valueCents}]})
- const effect=plan.effects[0],asset=effect.byState.available.confirmedValueCents+effect.byState.reserved.confirmedValueCents
+ const effect=plan.effects[0],asset=effect.byState.available.confirmedValueCents+effect.byState.reserved.confirmedValueCents+(effect.byState.quarantined?.confirmedValueCents||0)
  const values=[['1211',asset],['5101',effect.byState.consumed.confirmedValueCents],['5208',effect.byState.wasted.confirmedValueCents],['5204',effect.byState.supplierReturned.confirmedValueCents]]
  const lines=values.filter(([,value])=>value>0).map(([account,value])=>({account,debitCents:value,creditCents:0})),creditAccount=projection.sourceEvidence.find(row=>row.sourceId===request.sourceId).creditAccount||'3901'
  if(!['3901','4191','5101','2102','2291'].includes(creditAccount))throw stockLedgerError('HISTORY')
@@ -99,7 +99,7 @@ export function assertStockCustodyMatchesBook(custody,products,reservations,ware
  const key=(owner,productId,unit)=>canonicalSignature([owner,productId,unit])
  const locations=new Set(warehousing?.locations?.map(row=>row.id)||['main'])
  for(const node of custody.positions){
-  if(!locations.has(node.owner.locationId)||node.owner.stage!=='available'&&node.owner.locationId!=='main')throw stockLedgerError('HISTORY')
+  if(!locations.has(node.owner.locationId)||node.owner.stage!=='available'&&node.owner.locationId!=='main'&&!(custody.version===2&&['quarantined','wasted'].includes(node.owner.stage)))throw stockLedgerError('HISTORY')
   if(node.owner.stage==='available'&&node.owner.locationId!=='main')continue
   if(['available','reserved'].includes(node.owner.stage))for(const segment of node.segments){const source=sources.get(segment.sourceId),id=key(node.owner,source.productId,source.unit);totals.set(id,(totals.get(id)||0)+segment.quantityUnits)}
  }

@@ -34,8 +34,8 @@ module.exports=function stockLedgerStorage(db){
   for(const action of ['insert','update','delete']){
    const row=action==='delete'?'OLD':'NEW'
    const name=`pos_stock_identity_${action}`,old=db.prepare("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?").get(name)
-   if(old&&(!old.sql.includes('stock_cost_entries')||!old.sql.includes(STOCK_BOOK_HEAD)||!old.sql.includes('warehouseVersionFence')))db.exec('DROP TRIGGER '+name)
-   db.exec(`CREATE TRIGGER IF NOT EXISTS ${name} BEFORE ${action.toUpperCase()} ON settings WHEN ${row}.key IN ('sharedStoreId','restaurantConfig','stockCostBookHead','warehouseVersionFence') AND EXISTS (SELECT 1 FROM stock_cost_entries) BEGIN SELECT pos_stock_write_allowed(); END;`)
+   if(old&&(!old.sql.includes('stock_cost_entries')||!old.sql.includes(STOCK_BOOK_HEAD)||!old.sql.includes('warehouseVersionFence')||!old.sql.includes('stockLotVersionFence')))db.exec('DROP TRIGGER '+name)
+   db.exec(`CREATE TRIGGER IF NOT EXISTS ${name} BEFORE ${action.toUpperCase()} ON settings WHEN ${row}.key IN ('sharedStoreId','restaurantConfig','stockCostBookHead','warehouseVersionFence','stockLotVersionFence') AND EXISTS (SELECT 1 FROM stock_cost_entries) BEGIN SELECT pos_stock_write_allowed(); END;`)
   }
   for(const table of ['stock_cost_entries','stock_cost_operations'])for(const action of ['update','delete']){
    const name=`pos_stock_immutable_${table}_${action}`,old=db.prepare("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?").get(name)
@@ -76,11 +76,12 @@ module.exports=function stockLedgerStorage(db){
   if(!row||row.actorId!==actor.userId&&actor.role!=='owner'||row.signature!==canonicalSignature(input))throw stockLedgerError('HISTORY')
   return structuredClone(row.receipt)
  }
- function append(input,actor,{openingMaterial=null,time,date},method=METHOD,evidence=null){
+ function append(input,actor,{openingMaterial=null,time,date},method=METHOD,evidence=null,reconcile=null){
   if(!db.inTransaction)throw stockLedgerError('HISTORY')
   const before=read(),body={id:'stock-'+randomUUID(),sequence:before.entries.length+1,previousHash:before.head,beforeDigest:before.stateDigest,input,actor:{userId:actor.userId,username:actor.username,role:actor.role},time,date,openingMaterial}
   if(method!==METHOD){body.method=method;body.evidence=evidence}
   const projection=project(before.projection,body);body.afterDigest=digest(projection)
+  if(reconcile)reconcile(projection)
   const hash=digest(body),receipt=acknowledgement(body,hash,projection)
   const operation={id:canonicalSignature([method,input.id]),method,operationId:input.id,actorId:actor.userId,signature:canonicalSignature(input),receipt}
   scope(()=>{

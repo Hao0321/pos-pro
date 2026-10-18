@@ -100,6 +100,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     exportFullBackup: () => ipcRenderer.invoke('db:exportFullBackup'),
     getProtectedBackups: () => ipcRenderer.invoke('db:getProtectedBackups'),
     getStocktakeState: () => ipcRenderer.invoke('db:getStocktakeState'),
+    getLotState: () => ipcRenderer.invoke('db:getLotState'),
+    applyLotOperation: input => ipcRenderer.invoke('db:applyLotOperation',input),
     getWarehouseState: () => ipcRenderer.invoke('db:getWarehouseState'),
     applyWarehouseOperation: input => ipcRenderer.invoke('db:applyWarehouseOperation',input),
     getStockSetupAccess: () => ipcRenderer.invoke('db:getStockSetupAccess'),

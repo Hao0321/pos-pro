@@ -18,6 +18,9 @@ import {stockSetupBrowserEnabled} from './stockSetupAvailability.mjs'
 import {hasBrowserStockCost,commitBrowserStockBusiness,commitBrowserProduct,assertStoredBrowserCostReceipt} from './browserStockBusiness'
 // 資料存取抽象層 — 自動判斷 Electron (SQLite) 或 瀏覽器 (localStorage)
 export const isElectron = !!(typeof window !== 'undefined' && window.electronAPI)
+export async function loadLotState(actor){return isElectron?window.electronAPI.db.getLotState():(await import('./browserLots')).getBrowserLotState(actor)}
+export async function applyLotOperation(input,actor){return isElectron?window.electronAPI.db.applyLotOperation(input):(await import('./browserLots')).commitBrowserLot(input,actor)}
+export async function loadWasteCostState(actor){if(isElectron)return window.electronAPI.db.getLotState();const record=readRecords();if(!record.data.pos_stock_cost_entries.length){const {stockWasteCosts}=await import('../../electron/stockWasteCosts.mjs');return {costActive:false,wasteCosts:actor?.role==='staff'?null:stockWasteCosts(null,record.data.pos2_waste)}}return (await import('./browserLots')).getBrowserLotState(actor)}
 export async function loadWarehouseState(actor){return isElectron?window.electronAPI.db.getWarehouseState():(await import('./browserWarehouse')).getBrowserWarehouseState(actor)}
 export async function applyWarehouseOperation(input,actor){return isElectron?window.electronAPI.db.applyWarehouseOperation(input):(await import('./browserWarehouse')).commitBrowserWarehouse(input,actor)}
 export async function loadPrivateDraftContext(actor){return isElectron?window.electronAPI.db.getPrivateDraftContext():getBrowserPrivateDraftContext(actor)}
@@ -30,8 +33,8 @@ export async function loadStockSetupAccess(){return isElectron?window.electronAP
 export async function loadStockSetupState(actor){return isElectron?window.electronAPI.db.getStockSetupState():(await import('./browserStockSetup')).getBrowserStockSetupState(actor)}
 export async function previewStockSetup(input,actor){return isElectron?window.electronAPI.db.previewStockSetup(input):(await import('./browserStockSetup')).previewBrowserStockSetup(input,actor)}
 export async function applyStockSetupOperation(input,actor){return isElectron?window.electronAPI.db.applyStockSetupOperation(input):(await import('./browserStockSetup')).commitBrowserStockSetup(input,actor)}
-export async function loadStockAccountingState(actor){return isElectron?window.electronAPI.db.getStockAccountingState():(await import('./browserStockReports')).getBrowserStockAccountingState(actor)}
-export async function loadStockSalesState(actor){return isElectron?window.electronAPI.db.getStockSalesState():(await import('./browserStockReports')).getBrowserStockSalesState(actor)}
+export async function loadStockAccountingState(actor){if(isElectron)return window.electronAPI.db.getStockAccountingState();const {prepareBrowserLotRead}=await import('./browserLots');await prepareBrowserLotRead(actor,true);return (await import('./browserStockReports')).getBrowserStockAccountingState(actor)}
+export async function loadStockSalesState(actor){if(isElectron)return window.electronAPI.db.getStockSalesState();const {prepareBrowserLotRead}=await import('./browserLots');await prepareBrowserLotRead(actor);return (await import('./browserStockReports')).getBrowserStockSalesState(actor)}
 export async function loadStockHistory(input,actor){return isElectron?window.electronAPI.db.getStockHistory(input):(await import('./browserStockHistory')).getBrowserStockHistory(input,actor)}
 export async function applyInventoryOperation(request,actor){return isElectron?window.electronAPI.db.applyInventoryOperation(request):commitBrowserInventory(request,actor)}
 export async function loadStocktakeState(actor){return isElectron?window.electronAPI.db.getStocktakeState():getBrowserStocktakeState(actor)}
@@ -67,7 +70,9 @@ function saveLS(key, value) { browserStorage.setItem(key, JSON.stringify(value))
 // ===== Products =====
 export async function loadProducts(fallback) {
   if (isElectron) return window.electronAPI.db.getProducts()
-  return loadLS('pos2_products', fallback)
+  const {expireBrowserLotsLocked,hasBrowserLots}=await import('./browserLots')
+  if(!hasBrowserLots(readRecords()))return loadLS('pos2_products',fallback)
+  return withSalesLock(()=>{expireBrowserLotsLocked();return loadLS('pos2_products', fallback)})
 }
 export async function saveProducts(products) {
   if (!isElectron) saveLS('pos2_products', products)

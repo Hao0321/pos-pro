@@ -1,4 +1,5 @@
 import {appendBrowserWarehouse} from '../../electron/browserWarehouse.mjs'
+import {appendBrowserLots} from '../../electron/browserLots.mjs'
 import {appendBrowserStockSetup} from '../../electron/browserStockSetup.mjs'
 import {stockSetupBrowserEnabled} from './stockSetupAvailability.mjs'
 // One atomic record replaces coordinated writes to separate localStorage keys.
@@ -109,7 +110,8 @@ export function assertOriginalOperationAvailable(method,id,record=readRecords(),
   const error=new Error('原編號曾經保存，目前帳本無法確認這筆內容。請使用復原引導核對。')
   error.historyUncertain=true;throw error
 }
-export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false,recoveryCommand=null,transfer=null,physicalStocktake=null,stockBusiness=null,stockSetup=null,kitchenPrint=null,warehouse=null}={}) {
+export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false,recoveryCommand=null,transfer=null,physicalStocktake=null,stockBusiness=null,stockSetup=null,kitchenPrint=null,warehouse=null,lots=null}={}) {
+  if(lots&&(restore||kitchenPrint||stockSetup||stockBusiness||physicalStocktake||warehouse||Object.keys(updates).length))throw Error('請一次保存一個原操作')
   if(warehouse&&(restore||kitchenPrint||stockSetup||stockBusiness||physicalStocktake||Object.keys(updates).length))throw Error('請一次保存一個原操作')
   if(restore&&stockSetup||kitchenPrint&&(restore||stockSetup||stockBusiness||physicalStocktake||Object.keys(updates).length))throw Error('請一次保存一個原操作')
   const current = readRecords()
@@ -126,10 +128,12 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
     const before=browserToBook(current.data),after=browserToBook(next.data),oldFlag=before.settings.find(row=>row.key===STOCK_COMPAT_SETTING)||null,newFlag=after.settings.find(row=>row.key===STOCK_COMPAT_SETTING)||null
     if(canonicalSignature(oldFlag)!==canonicalSignature(newFlag))throw Error('成本資料的版本保護由完整備份流程管理')
     if(canonicalSignature(before.settings.find(row=>row.key==='warehouseVersionFence')||null)!==canonicalSignature(after.settings.find(row=>row.key==='warehouseVersionFence')||null))throw Error('成本資料的版本保護由完整備份流程管理')
+    if(canonicalSignature(before.settings.find(row=>row.key==='stockLotVersionFence')||null)!==canonicalSignature(after.settings.find(row=>row.key==='stockLotVersionFence')||null))throw Error('成本資料的版本保護由完整備份流程管理')
     if(canonicalSignature(before.settings.find(row=>row.key===STOCK_BOOK_HEAD)||null)!==canonicalSignature(after.settings.find(row=>row.key===STOCK_BOOK_HEAD)||null))throw Error('成本帳的最後紀錄由正式交易或完整備份流程管理')
     const state=validateStockCostBook(before)
     if([physicalStocktake,stockBusiness,stockSetup].filter(Boolean).length>1)throw Error('請一次保存一個原操作')
-    if(warehouse)next.data=bookToBrowser(appendBrowserWarehouse(before,after,state,warehouse,{epoch:current.salesEpoch}))
+    if(lots)next.data=bookToBrowser(appendBrowserLots(before,after,state,lots,{epoch:current.salesEpoch}))
+    else if(warehouse)next.data=bookToBrowser(appendBrowserWarehouse(before,after,state,warehouse,{epoch:current.salesEpoch}))
     else if(stockSetup)next.data=bookToBrowser(appendBrowserStockSetup(before,after,state,stockSetup,{epoch:current.salesEpoch,stockSetupEnabled:stockSetupBrowserEnabled()}))
     else if(stockBusiness)next.data=bookToBrowser(appendBrowserStockBusiness(before,after,state,stockBusiness,{epoch:current.salesEpoch,supplierFence:current.supplierFence}))
     else if(physicalStocktake)next.data=bookToBrowser(appendPhysicalStocktakeBook(before,after,state,physicalStocktake,{storeId:readExchangeTextSetting(before.settings,'sharedStoreId'),epoch:current.salesEpoch,costMode:state.projection?'active':'reference',restaurantEntries:before.restaurantOrders}))

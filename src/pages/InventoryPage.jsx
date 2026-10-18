@@ -359,6 +359,7 @@ export default function InventoryPage({ store,session }) {
       <div style={iv.header}>
         <div>
           <h2 className="page-title" style={iv.title}>{tr("庫存管理")}</h2>
+          <button className="btn btn-ghost" onClick={()=>store.setView('lots')}>{tr('批次與效期')} →</button>
           <button className="btn btn-ghost" onClick={()=>store.setView('warehouse')}>{tr('搬貨、存放地點')} →</button>
           {session?.role==='owner'&&<button className="btn btn-ghost" onClick={()=>store.setView('stockhistory')}>{tr('庫存去哪了')} →</button>}
           <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>

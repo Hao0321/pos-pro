@@ -141,7 +141,7 @@
       "name": "多倉、調撥、批次、效期及 FEFO",
       "status": "planned",
       "implementation": "partial",
-      "nextExperiment": "開發分支接通兩地點原子調撥、原來源成本與商品包裝換算；接續原批號／效期、FEFO、到期隔離、原單退貨及在途，多倉批次與公開驗收仍未完成。"
+      "nextExperiment": "開發分支接通調撥、包裝換算，以及原來源區間的批號／效期、FEFO、過期隔離與原單退回；接續每批盤點、到貨批次引導、隔離品退供應商、在途及完整多地點營業驗收，公開完成狀態仍未量測。"
     },
     {
       "id": "inventory.units-counting",

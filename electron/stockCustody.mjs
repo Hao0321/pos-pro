@@ -1,4 +1,4 @@
-import {STOCK_COST_ERRORS,STOCK_COST_STATES,costSource,normalizeCostSegments,takeFifoSegments,restoreCostSegments,stockCostSummary,priceUnvaluedCostSource,assertCostPartition} from './stockCost.mjs'
+import {STOCK_COST_ERRORS,stockCostStates,costSource,normalizeCostSegments,takeFifoSegments,takeSelectedCostSegments,restoreCostSegments,stockCostSummary,priceUnvaluedCostSource,assertCostPartition} from './stockCost.mjs'
 
 // Pure custody projection only. A domain adapter must validate the original
 // documents and actor, look up original receipts before planning, and commit
@@ -14,65 +14,66 @@ function counter(value,min=0){if(!Number.isSafeInteger(value)||value<min)fail('Q
 function increment(value){return counter(value+1,1)}
 const ordinal=(a,b)=>a<b?-1:a>b?1:0
 
-export function costOwner(input){
+export function costOwner(input,version=1){
   record(input,['stage','locationId','referenceId'])
-  if(!STOCK_COST_STATES.includes(input.stage))fail('STATES')
+  if(!stockCostStates(version).includes(input.stage))fail('STATES')
   text(input.locationId,128);text(input.referenceId,512,input.stage==='available')
   if(input.stage==='available'&&input.referenceId!=='')fail('STATES')
   return {...input}
 }
 const key=owner=>JSON.stringify([owner.stage,owner.locationId,owner.referenceId])
-function normalizedPositions(sources,positions){
+function normalizedPositions(sources,positions,version=1){
   if(!Array.isArray(positions))fail('STATES')
   const seen=new Set(),rows=[]
   for(const input of positions){
-    record(input,['owner','segments']);const owner=costOwner(input.owner),id=key(owner)
+    record(input,['owner','segments']);const owner=costOwner(input.owner,version),id=key(owner)
     if(seen.has(id))fail('STATES');seen.add(id)
     const segments=normalizeCostSegments(sources,input.segments)
     if(segments.length)rows.push({owner,segments})
   }
   return rows.sort((a,b)=>ordinal(key(a.owner),key(b.owner)))
 }
-function grouped(positions){
-  const groups=Object.fromEntries(STOCK_COST_STATES.map(stage=>[stage,[]]))
+function grouped(positions,version=1){
+  const groups=Object.fromEntries(stockCostStates(version).map(stage=>[stage,[]]))
   for(const position of positions)groups[position.owner.stage].push(...position.segments)
   return groups
 }
 function greatestQueue(positions){let value=0;for(const node of positions)for(const segment of node.segments)value=Math.max(value,segment.queueOrder);return value}
 function state(input){
   record(input,['version','sequence','nextQueueOrder','sources','positions'])
-  if(input.version!==1||!Array.isArray(input.sources))fail('STATES')
+  if(![1,2].includes(input.version)||!Array.isArray(input.sources))fail('STATES')
   counter(input.sequence);counter(input.nextQueueOrder,1)
-  const sources=input.sources.map(costSource),positions=normalizedPositions(sources,input.positions)
-  assertCostPartition(sources,grouped(positions))
+  const sources=input.sources.map(costSource),positions=normalizedPositions(sources,input.positions,input.version)
+  assertCostPartition(sources,grouped(positions,input.version),input.version)
   if(greatestQueue(positions)>=input.nextQueueOrder)fail('QUEUE')
-  return {version:1,sequence:input.sequence,nextQueueOrder:input.nextQueueOrder,sources,positions}
+  return {version:input.version,sequence:input.sequence,nextQueueOrder:input.nextQueueOrder,sources,positions}
 }
 export function createCostCustody(sources,positions){
   if(!Array.isArray(sources))fail('SOURCE')
   const copied=sources.map(costSource),nodes=normalizedPositions(copied,positions)
   return state({version:1,sequence:0,nextQueueOrder:increment(greatestQueue(nodes)),sources:copied,positions:nodes})
 }
-export function costCustodySummary(input){const current=state(input);return assertCostPartition(current.sources,grouped(current.positions))}
+export function enableLotCustody(input){const current=state(input);if(current.version!==1)fail('STATES');return state({...current,version:2,sequence:increment(current.sequence)})}
+export function costCustodySummary(input){const current=state(input);return assertCostPartition(current.sources,grouped(current.positions,current.version),current.version)}
 function node(current,owner,create=false){
   const id=key(owner),found=current.positions.find(row=>key(row.owner)===id)
   if(found||!create)return found
   const made={owner:{...owner},segments:[]};current.positions.push(made);return made
 }
 function costForSource(current,sourceId){
-  return Object.fromEntries(STOCK_COST_STATES.map(stage=>[stage,stockCostSummary(current.sources,current.positions.filter(row=>row.owner.stage===stage).flatMap(row=>row.segments.filter(segment=>segment.sourceId===sourceId)))]))
+  return Object.fromEntries(stockCostStates(current.version).map(stage=>[stage,stockCostSummary(current.sources,current.positions.filter(row=>row.owner.stage===stage).flatMap(row=>row.segments.filter(segment=>segment.sourceId===sourceId)))]))
 }
-function acquire(current,step,discarded=false){
-  record(step,['kind','sources','to']);const to=costOwner(step.to)
-  if(to.stage!==(discarded?'wasted':'available')||!Array.isArray(step.sources)||!step.sources.length)fail('STATES')
+function acquire(current,step,discarded=false,quarantined=false){
+  record(step,['kind','sources','to']);const to=costOwner(step.to,current.version)
+  if(quarantined&&current.version!==2||to.stage!==(quarantined?'quarantined':discarded?'wasted':'available')||!Array.isArray(step.sources)||!step.sources.length)fail('STATES')
   const existing=new Set(current.sources.map(row=>row.id)),added=[]
   for(const input of step.sources){const source=costSource(input);if(existing.has(source.id))fail('SOURCE_ID');existing.add(source.id);current.sources.push(source);added.push({sourceId:source.id,offsetUnits:0,quantityUnits:source.quantityUnits,queueOrder:current.nextQueueOrder});current.nextQueueOrder=increment(current.nextQueueOrder)}
   const destination=node(current,to,true);destination.segments=normalizeCostSegments(current.sources,[...destination.segments,...added])
-  return {kind:discarded?'acquire-disposed':'acquire',to,segments:added,cost:stockCostSummary(current.sources,added)}
+  return {kind:quarantined?'acquire-quarantined':discarded?'acquire-disposed':'acquire',to,segments:added,cost:stockCostSummary(current.sources,added)}
 }
 const EDGES=new Set(['available:reserved','available:consumed','available:wasted','available:supplierReturned','reserved:available','reserved:consumed','reserved:wasted','consumed:available','consumed:wasted','wasted:available','supplierReturned:available'])
 function move(current,step,unused=false,relocate=false){
-  record(step,['kind','from','to','productId','unit','quantityUnits']);const from=costOwner(step.from),to=costOwner(step.to),transfer=from.stage==='available'&&to.stage==='available'&&from.locationId!==to.locationId
+  record(step,['kind','from','to','productId','unit','quantityUnits']);const from=costOwner(step.from,current.version),to=costOwner(step.to,current.version),transfer=from.stage==='available'&&to.stage==='available'&&from.locationId!==to.locationId
   if(key(from)===key(to)||!transfer&&!EDGES.has(from.stage+':'+to.stage))fail('STATES')
   if(relocate&&!transfer)fail('STATES')
   if(unused&&(from.stage!=='consumed'||to.stage!=='available'||from.locationId!==to.locationId))fail('STATES')
@@ -92,7 +93,22 @@ function price(current,step){
   record(step,['kind','sourceId','valueCents']);const index=current.sources.findIndex(source=>source.id===step.sourceId)
   if(index<0)fail('SOURCE_ID')
   const before=costForSource(current,step.sourceId);current.sources[index]=priceUnvaluedCostSource(current.sources[index],step.valueCents);const after=costForSource(current,step.sourceId)
-  return {kind:'price',sourceId:step.sourceId,confirmedValueCents:step.valueCents,byState:Object.fromEntries(STOCK_COST_STATES.map(stage=>[stage,{previousValueCents:before[stage].valueCents,confirmedValueCents:after[stage].valueCents}]))}
+  return {kind:'price',sourceId:step.sourceId,confirmedValueCents:step.valueCents,byState:Object.fromEntries(stockCostStates(current.version).map(stage=>[stage,{previousValueCents:before[stage].valueCents,confirmedValueCents:after[stage].valueCents}]))}
+}
+function moveSelected(current,step){
+  if(current.version!==2)fail('STATES')
+  record(step,['kind','from','to','productId','unit','allocations','restoreMode']);const from=costOwner(step.from,2),to=costOwner(step.to,2),transfer=from.stage==='available'&&to.stage==='available'&&from.locationId!==to.locationId
+  const extra=new Set(['available:quarantined','reserved:quarantined','consumed:quarantined','wasted:quarantined','supplierReturned:quarantined','quarantined:available','quarantined:quarantined','quarantined:wasted','quarantined:supplierReturned'])
+  if(key(from)===key(to)||!transfer&&!EDGES.has(from.stage+':'+to.stage)&&!extra.has(from.stage+':'+to.stage)||!['preserve','return'].includes(step.restoreMode))fail('STATES')
+  if(from.locationId!==to.locationId&&!transfer)fail('STATES')
+  const returning=step.restoreMode==='return'
+  if(returning&&(!['consumed','wasted','supplierReturned'].includes(from.stage)||!['available','quarantined'].includes(to.stage)))fail('STATES')
+  const origin=node(current,from);if(!origin)fail('INSUFFICIENT')
+  const sources=new Map(current.sources.map(row=>[row.id,row])),selected=origin.segments.filter(row=>sources.get(row.sourceId).productId===step.productId),other=origin.segments.filter(row=>sources.get(row.sourceId).productId!==step.productId),taken=takeSelectedCostSegments(current.sources,selected,step.allocations,{productId:step.productId,unit:step.unit})
+  origin.segments=normalizeCostSegments(current.sources,[...other,...taken.remaining]);const destination=node(current,to,true)
+  destination.segments=restoreCostSegments(current.sources,destination.segments,taken.allocations,returning?{kind:'customer-return',queueOrder:current.nextQueueOrder}:{kind:'release-reservation'})
+  if(returning)current.nextQueueOrder=increment(greatestQueue(current.positions))
+  return {kind:'move-selected',from,to,productId:step.productId,unit:step.unit,quantityUnits:taken.allocations.reduce((sum,row)=>sum+row.quantityUnits,0),segments:taken.allocations,cost:taken.cost}
 }
 export function planCostCustody(input,command){
   const current=state(input);record(command,['expectedSequence','steps'])
@@ -104,9 +120,11 @@ export function planCostCustody(input,command){
     if(!descriptor||!Object.hasOwn(descriptor,'value'))fail('STATES')
     if(step.kind==='acquire')effects.push(acquire(current,step))
     else if(step.kind==='acquire-disposed')effects.push(acquire(current,step,true))
+    else if(step.kind==='acquire-quarantined')effects.push(acquire(current,step,false,true))
     else if(step.kind==='move')effects.push(move(current,step))
     else if(step.kind==='release-unused')effects.push(move(current,step,true))
     else if(step.kind==='relocate')effects.push(move(current,step,false,true))
+    else if(step.kind==='move-selected')effects.push(moveSelected(current,step))
     else if(step.kind==='price')effects.push(price(current,step))
     else fail('STATES')
   }

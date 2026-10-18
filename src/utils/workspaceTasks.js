@@ -12,6 +12,7 @@ export const WORKSPACE_TASKS=[
   {id:'shifts',title:'開始營業、收攤',detail:'確認零用金與這班實際現金。',view:'shifts',perm:'pos.use',words:'開班 交班 日結 關店'},
   {id:'inventory',title:'商品、庫存',detail:'新增商品，查看剩多少。',view:'inventory',perm:'inventory.view',words:'品項 售價 成本 缺貨'},
   {id:'warehouse',title:'搬貨、存放地點',detail:'選地點與數量，系統自動換算。',view:'warehouse',perm:'inventory.view',words:'倉庫 調撥 移貨 備貨 包裝 箱 單位 transfer warehouse'},
+  {id:'lots',title:'批次與效期',detail:'快到期的先用，過期的先停賣。',view:'lots',perm:'inventory.view',words:'批號 到期 過期 暫停 報廢 lot expiry FEFO'},
   {id:'stockhistory',title:'庫存去哪了',detail:'看剩多少、用在哪裡，找到原單。',view:'stockhistory',perm:'inventory.cost',words:'進出 入庫 出庫 來源 歷史 追蹤 FIFO cost history'},
   {id:'readiness',title:'營業前檢查、備份',detail:'確認資料保存與手機連線。',view:'readiness',perm:'pos.use',words:'下載 安全 還原 離線'},
   {id:'devices',title:'手機和電腦一起用',detail:'配對手機，共用同一間店資料。',view:'devices',perm:'settings.edit',words:'同步 共用 連線 QR'},
@@ -32,7 +33,7 @@ export const WORKSPACE_TASKS=[
 ]
 export const WORKSPACE_AREAS=[
   {id:'crm',title:'顧客與點餐',code:'CRM',intro:'幫你照顧客人',detail:'會員、點數、儲值、點餐與預訂。',description:'會員、點數、儲值、點餐和預訂，讓接單與經營回頭客更方便。',taskIds:['customers','sales','members','orders','restaurant','exchange','quick','sale','refunds','promotions','reports']},
-  {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['customers','sales','sale','refunds','quick','exchange','inventory','purchase','suppliers','shifts','stocktake','stocksetup','stockhistory','warehouse','waste','accounting','reports','readiness','devices','settings','recovery','scenarios']},
+  {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['customers','sales','sale','refunds','quick','exchange','inventory','purchase','suppliers','shifts','stocktake','stocksetup','stockhistory','warehouse','lots','waste','accounting','reports','readiness','devices','settings','recovery','scenarios']},
 ]
 export function workspaceTasks(session,query='',area='all',options={}){
   const terms=query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)

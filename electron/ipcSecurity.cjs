@@ -18,7 +18,7 @@ function verifyPassword(password, stored) {
     return timingSafeEqual(pbkdf2Sync(password,Buffer.from(p.salt),p.iter,32,'sha256'),Buffer.from(p.hash))
   } catch { return false }
 }
-const staffChannels = new Set(['db:getWarehouseState','db:applyWarehouseOperation','db:getRestaurantAgentPreview','db:getRestaurantMenuQuote','db:getKitchenPrintState','db:applyKitchenPrintOperation','db:getCustomerIntakeContext','db:getStocktakeState','db:getStockSalesState','db:getAgentContext','db:getRestaurantState','db:applyRestaurantOperation','db:getStoreSnapshot','db:getProducts','db:addProduct','db:updateProduct','db:findByBarcode','db:applyInventoryOperation',
+const staffChannels = new Set(['db:getLotState','db:applyLotOperation','db:getWarehouseState','db:applyWarehouseOperation','db:getRestaurantAgentPreview','db:getRestaurantMenuQuote','db:getKitchenPrintState','db:applyKitchenPrintOperation','db:getCustomerIntakeContext','db:getStocktakeState','db:getStockSalesState','db:getAgentContext','db:getRestaurantState','db:applyRestaurantOperation','db:getStoreSnapshot','db:getProducts','db:addProduct','db:updateProduct','db:findByBarcode','db:applyInventoryOperation',
   'db:getMembers','db:addMember','db:updateMember','db:getOrders','db:getOrderItems','db:checkout','db:checkoutReceipt',
   'db:getCustomerOrders','db:updateOrderStatus','db:getSuppliers','db:getPurchases','db:getPromotions',
   'db:getHeldOrders','db:addHeldOrder','db:deleteHeldOrder','db:getShifts','db:getOpenShift','db:openShift','db:closeShift',
@@ -29,6 +29,7 @@ for(const channel of ['db:getPrivateDraftContext','db:lookupPrivateDraftOriginal
 function authorizeActor(db,s,channel,args=[]){
   if(!s||!['owner','staff'].includes(s.role))throw Error('請先登入，或重新驗證身份')
   if(s.role!=='owner'&&!staffChannels.has(channel))throw Error('權限不足')
+  if(s.role!=='owner'&&channel==='db:applyLotOperation'&&args[0]?.action!=='dispose')throw Error('權限不足')
   if(s.role!=='owner'&&channel==='settings:get'&&!['pointsEarnRate','pointsRedeemRate','birthdayBonus','dailySalesGoal'].includes(args[0]))throw Error('權限不足')
   if(s.role!=='owner'&&['db:addMember','db:updateMember'].includes(channel)){
     const input=channel==='db:addMember'?args[0]:args[1],old=channel==='db:updateMember'?db.getMembers().find(m=>m.id===args[0]):null
