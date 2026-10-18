@@ -16,23 +16,23 @@ export function isTabularDraftSetup(value){
   return value.protocol===TABULAR_MIGRATION_PROTOCOL&&typeof value.id==='string'&&/^table-[a-f0-9]{48}$/.test(value.id)&&[value.source.system,value.source.company].every(v=>plain(v)&&v.length<=128)&&plain(value.file.name)&&value.file.name.length<=256&&plain(value.file.text)&&value.file.text.length<=250000&&['',',','\t',';'].includes(value.file.delimiter)&&!!fields&&Number.isInteger(p.externalId)&&p.externalId>=-1&&p.externalId<100&&Array.isArray(p.mapping)&&p.mapping.length<=100&&p.mapping.every(field=>typeof field==='string'&&(field===''||fields.includes(field)||protectedTabularFields.includes(field)))&&plain(p.unit)&&p.unit.length<=128&&Array.isArray(p.repairs)&&p.repairs.length<=1000&&p.repairs.every(item=>{draftObject(item,['row','column','value']);return Number.isInteger(item.row)&&item.row>=0&&item.row<5000&&Number.isInteger(item.column)&&item.column>=0&&item.column<100&&plain(item.value)&&item.value.length<=2048})
  }catch{return false}
 }
-export function readDelimitedTable(text,delimiter){
+export function readDelimitedTable(text,delimiter,{physicalRows:includePhysicalRows=false}={}){
  if(!plain(text)||bytes(text)>250000||!text.length||![',','\t',';'].includes(delimiter))fail('表格讀不到，請保留原檔並核對分隔符號。')
- const input=text.startsWith('\uFEFF')?text.slice(1):text,rows=[];let row=[],cell='',quoted=false,closed=false,started=false,syntax=false
+ const input=text.startsWith('\uFEFF')?text.slice(1):text,rows=[],positions=[];let row=[],cell='',quoted=false,closed=false,started=false,syntax=false,line=1,rowStart=1
  const endCell=()=>{if(cell.length>2048)fail('表格太大，請拆成較小的檔案。');row.push(cell);if(row.length>100)fail('表格太大，請拆成較小的檔案。');cell='';closed=false;started=false}
- const endRow=()=>{endCell();if(syntax||row.length!==1||row[0]!=='')rows.push(row);row=[];syntax=false;if(rows.length>5001)fail('表格太大，請拆成較小的檔案。')}
+ const endRow=()=>{endCell();if(syntax||row.length!==1||row[0]!==''){rows.push(row);positions.push(rowStart)}row=[];syntax=false;if(rows.length>5001)fail('表格太大，請拆成較小的檔案。')}
  for(let i=0;i<input.length;i++){
   const ch=input[i]
-  if(quoted){if(ch==='"'){if(input[i+1]==='"'){cell+='"';i++}else{quoted=false;closed=true}}else cell+=ch;continue}
+  if(quoted){if(ch==='"'){if(input[i+1]==='"'){cell+='"';i++}else{quoted=false;closed=true}}else{cell+=ch;if(ch==='\r'){line++;if(input[i+1]==='\n'){cell+='\n';i++}}else if(ch==='\n')line++}continue}
   if(ch===delimiter){syntax=true;endCell();continue}
-  if(ch==='\r'||ch==='\n'){endRow();if(ch==='\r'&&input[i+1]==='\n')i++;continue}
+  if(ch==='\r'||ch==='\n'){endRow();line++;rowStart=line;if(ch==='\r'&&input[i+1]==='\n')i++;continue}
   if(closed||ch==='"'&&started)fail('表格引號不完整，請保留原檔並重新匯出。')
   if(ch==='"'){quoted=true;syntax=true;started=true}else{cell+=ch;started=true}
  }
  if(quoted)fail('表格引號不完整，請保留原檔並重新匯出。')
  if(started||closed||cell||row.length)endRow()
  if(rows.length<2||rows[0].some(value=>value.length>128)||rows.slice(1).some(value=>value.length!==rows[0].length))fail('表格每列的欄位數不同，請核對原檔。')
- return {headers:rows[0],rows:rows.slice(1)}
+ return {headers:rows[0],rows:rows.slice(1),...(includePhysicalRows?{physicalRows:positions.slice(1),headerRow:positions[0]}:{})}
 }
 export function detectTableDelimiter(text){
  const candidates=[',','\t',';'].filter(delimiter=>{try{return readDelimitedTable(text,delimiter).headers.length>1}catch{return false}})

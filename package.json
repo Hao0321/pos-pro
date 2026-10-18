@@ -7,6 +7,9 @@
   "license": "MIT",
   "main": "electron/main.js",
   "scripts": {
+    "test:opening-migration": "node scripts/run-native-security.cjs --opening-migration",
+    "test:opening-migration-ui": "npm run build && node scripts/run-native-security.cjs --opening-migration-ui",
+    "test:opening-migration-browser-ui": "npm run build && node scripts/run-native-security.cjs --opening-migration-browser-ui",
     "test:receipt-review": "node scripts/run-native-security.cjs --receipt-review",
     "test:agent-migration-ui": "npm run build && node scripts/run-native-security.cjs --agent-migration-ui",
     "test:customers": "node scripts/run-native-security.cjs --customers",

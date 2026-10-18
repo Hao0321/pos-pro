@@ -1,10 +1,11 @@
 import {withSalesLock,readRecords,writeRecords,RECORD_KEY,assertOriginalOperationAvailable} from './browserStorage'
 import {getBrowserPrivateDraftContext} from './browserPrivateDrafts'
 import {browserToBook,bookToBrowser} from '../../electron/recoveryRules.mjs'
-import {previewMasterMigration,assertMasterMigrationResult,verifyMasterMigration,readMasterMigrationHistory} from '../../electron/masterMigration.mjs'
+import {previewMasterMigration,assertMasterMigrationResult,verifyMasterMigration,readMasterMigrationHistory,assertPublicMasterMigration} from '../../electron/masterMigration.mjs'
 import {appendBrowserMasterMigration} from '../../electron/browserMasterMigration.mjs'
 
 export async function previewBrowserMasterMigration(input,actor){
+  assertPublicMasterMigration(input)
   const scope=await getBrowserPrivateDraftContext(actor)
   return withSalesLock(()=>previewMasterMigration(input,browserToBook(readRecords().data),scope,actor))
 }
@@ -13,6 +14,7 @@ export async function commitBrowserMasterMigration(input,actor){
   return withSalesLock(()=>{
     let writing=false,before=null,checked=false,existing=false
     try{
+      assertPublicMasterMigration(input)
       const record=readRecords(),book=browserToBook(record.data);existing=readMasterMigrationHistory(book).byId.has(input.id);checked=true
       const prior=verifyMasterMigration(input,book,scope,actor)
       if(prior.receipt)return assertMasterMigrationResult(input,{success:true,receipt:prior.receipt})

@@ -4,7 +4,7 @@ export function retainAuditLogs(logs,limit){
   let ordinary=0
   return logs.filter(row=>{
     const id=String(row?.id||'')
-    const receipt=id.startsWith('master-migration:')||row?.action==='AGENT_MASTER_MIGRATION'||id.startsWith('stock-operation:')||row?.action==='INVENTORY_OPERATION'||id.startsWith('scenario-template:')||row?.action==='SCENARIO_TEMPLATE_APPLY'||id.startsWith('exchange:')||row?.action==='business-quote'
+    const receipt=id.startsWith('opening-migration:')||row?.action==='AGENT_OPENING_MIGRATION'||id.startsWith('master-migration:')||row?.action==='AGENT_MASTER_MIGRATION'||id.startsWith('stock-operation:')||row?.action==='INVENTORY_OPERATION'||id.startsWith('scenario-template:')||row?.action==='SCENARIO_TEMPLATE_APPLY'||id.startsWith('exchange:')||row?.action==='business-quote'
     return receipt||ordinary++<limit
   })
 }

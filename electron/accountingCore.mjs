@@ -28,6 +28,7 @@ export const ACCOUNTS = {
   // 業主權益 Equity (3xxx)
   '3101': { name: '業主資本',     type: 'equity',   normal: 'credit', group: '業主權益' },
   '3901': { name: '保留盈餘',     type: 'equity',   normal: 'credit', group: '業主權益' },
+  '3902': { name: '開帳待對帳',   type: 'equity',   normal: 'credit', group: '業主權益' },
   // 收入 Revenue (4xxx)
   '4101': { name: '銷售收入',     type: 'revenue',  normal: 'credit', group: '營業收入' },
   '4191': { name: '其他收入',     type: 'revenue',  normal: 'credit', group: '其他收入' },

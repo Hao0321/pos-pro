@@ -1,0 +1,17 @@
+{
+  "protocol": "pos-migration-draft/v1",
+  "id": "example-owner-export-001",
+  "source": {"system": "Example original system", "company": "Example shop"},
+  "tables": [
+    {
+      "entity": "products",
+      "columns": ["name", "unit", "price", "cost"],
+      "rows": [{"externalId": "00001", "values": ["Example product", "piece", "120.00", "20.00"]}]
+    },
+    {
+      "entity": "opening-stock",
+      "columns": ["productExternalId", "quantity", "value", "unit", "currency"],
+      "rows": [{"externalId": "OPEN-00001", "values": ["00001", "12.500", "250.01", "piece", "TWD"]}]
+    }
+  ]
+}

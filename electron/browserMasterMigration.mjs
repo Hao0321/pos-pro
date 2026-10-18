@@ -1,13 +1,15 @@
-import {readMasterMigrationHistory,verifyMasterMigration,masterMigrationReceipt,masterMigrationAudit,MASTER_MIGRATION_HEAD,MASTER_MIGRATION_FENCE} from './masterMigration.mjs'
+import {readMasterMigrationHistory,readMasterMigrationInput,verifyMasterMigration,masterMigrationReceipt,masterMigrationAudit,MASTER_MIGRATION_HEAD,MASTER_MIGRATION_FENCE,assertPublicMasterMigration} from './masterMigration.mjs'
 import {planBrowserStockBusiness} from './browserStockPlan.mjs'
 import {appendBrowserStockBusiness} from './browserStockCommit.mjs'
 import {validateStockCostBook} from './stockBackup.mjs'
 import {privateDraftDigest} from './privateDrafts.mjs'
 import {WORKBOOK_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_FENCE} from './workbookMigration.mjs'
 import {TABULAR_MIGRATION_PROTOCOL,TABULAR_MIGRATION_FENCE} from './tabularMigration.mjs'
-import {readMigrationDraft} from './migrationSource.mjs'
+import {OPENING_MASTER_PROTOCOL} from './openingMigrationSource.mjs'
 
-export function appendBrowserMasterMigration(book,input,scope,actor,time){
+export function appendBrowserMasterMigration(book,input,scope,actor,time,{deferOpeningReceipt=false}={}){
+  if(deferOpeningReceipt){if(input?.protocol!==OPENING_MASTER_PROTOCOL)throw Error('期初主檔只能與原期初批次一起保存。')}
+  else assertPublicMasterMigration(input)
   const {preview,receipt}=verifyMasterMigration(input,book,scope,actor)
   if(receipt)return {book,receipt}
   const history=readMasterMigrationHistory(book);let next=structuredClone(book)
@@ -29,10 +31,14 @@ export function appendBrowserMasterMigration(book,input,scope,actor,time){
     }
   }
   const saved=masterMigrationReceipt(input,preview,history,actor,time,next)
+  return {book:deferOpeningReceipt?next:finishBrowserMasterMigration(next,input,saved),receipt:saved}
+}
+export function finishBrowserMasterMigration(book,input,saved){
+  const next={...book,auditLog:[...book.auditLog]},source=readMasterMigrationInput(input).source
   next.auditLog.push(masterMigrationAudit(saved))
   next.settings=[...next.settings.filter(row=>![MASTER_MIGRATION_FENCE,MASTER_MIGRATION_HEAD].includes(row.key)),{key:MASTER_MIGRATION_FENCE,value:'1'},{key:MASTER_MIGRATION_HEAD,value:JSON.stringify(saved.hash)}]
-  if([TABULAR_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_PROTOCOL].includes(readMigrationDraft(input.sourceText).protocol))next.settings=[...next.settings.filter(row=>row.key!==TABULAR_MIGRATION_FENCE),{key:TABULAR_MIGRATION_FENCE,value:'1'}]
-  if(readMigrationDraft(input.sourceText).protocol===WORKBOOK_MIGRATION_PROTOCOL)next.settings=[...next.settings.filter(row=>row.key!==WORKBOOK_MIGRATION_FENCE),{key:WORKBOOK_MIGRATION_FENCE,value:'1'}]
+  if([TABULAR_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_PROTOCOL].includes(source.protocol))next.settings=[...next.settings.filter(row=>row.key!==TABULAR_MIGRATION_FENCE),{key:TABULAR_MIGRATION_FENCE,value:'1'}]
+  if(source.protocol===WORKBOOK_MIGRATION_PROTOCOL)next.settings=[...next.settings.filter(row=>row.key!==WORKBOOK_MIGRATION_FENCE),{key:WORKBOOK_MIGRATION_FENCE,value:'1'}]
   readMasterMigrationHistory(next)
-  return {book:next,receipt:saved}
+  return next
 }

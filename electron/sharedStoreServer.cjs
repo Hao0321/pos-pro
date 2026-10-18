@@ -63,6 +63,8 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(method==='db:lookupPrivateDraftOriginal')return db.lookupPrivateDraftOriginal(args[0],actor)
     if(method==='db:previewMasterMigration')return db.previewMasterMigration(args[0],actor)
     if(method==='db:applyMasterMigration')return db.applyMasterMigration(args[0],actor)
+    if(method==='db:previewOpeningMigration')return db.previewOpeningMigration(args[0],actor)
+    if(method==='db:applyOpeningMigration')return db.applyOpeningMigration(args[0],actor)
     if(method==='db:getExchangeContext')return db.getExchangeContext(actor)
     if(method==='db:applyExchangeOperation')return db.applyExchangeOperation(args[0],actor)
     if(method==='db:getSalesState')return db.getSalesState(actor)

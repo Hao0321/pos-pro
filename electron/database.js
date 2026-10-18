@@ -476,7 +476,7 @@ module.exports = function initDatabase(dbPath) {
       return db.prepare(sql).all(...params)
     },
     writeAuditLog(entry) {
-      if(String(entry?.id||'').startsWith('master-migration:')||entry?.action==='AGENT_MASTER_MIGRATION')throw Error('搬家回執只能由正式搬入流程建立')
+      if(String(entry?.id||'').startsWith('opening-migration:')||entry?.action==='AGENT_OPENING_MIGRATION'||String(entry?.id||'').startsWith('master-migration:')||entry?.action==='AGENT_MASTER_MIGRATION')throw Error('搬家回執只能由正式搬入流程建立')
       if(String(entry?.id||'').startsWith('exchange:')||entry?.action==='business-quote')throw Error('報價回執只能由正式報價流程建立')
       if(String(entry?.id||'').startsWith('scenario-template:')||entry?.action==='SCENARIO_TEMPLATE_APPLY'||String(entry?.id||'').startsWith('stock-operation:')||entry?.action==='INVENTORY_OPERATION')throw Error('情境模板或庫存回執只能由正式異動流程建立')
       stmts.insertAuditLog.run({
@@ -591,12 +591,12 @@ module.exports = function initDatabase(dbPath) {
       return row ? row.value : null
     },
     setSetting(key, value) {
-      if(['agentWorkbookMigrationVersionFence','agentTabularMigrationVersionFence','agentMasterMigrationVersionFence','agentMasterMigrationHead'].includes(key))throw Error('搬家保護紀錄由正式搬入與完整備份流程管理');if(key==='stockCostVersionFence')throw Error('成本資料的版本保護由完整備份流程管理')
+      if(['stockOpeningMigrationVersionFence','stockOpeningMigrationHead','agentWorkbookMigrationVersionFence','agentTabularMigrationVersionFence','agentMasterMigrationVersionFence','agentMasterMigrationHead'].includes(key))throw Error('搬家保護紀錄由正式搬入與完整備份流程管理');if(key==='stockCostVersionFence')throw Error('成本資料的版本保護由完整備份流程管理')
       if(key==='businessExchangeV1')throw Error('報價歷史只能由正式報價或還原流程保存')
       stmts.setSetting.run(key, value)
       return { success: true }
     },
-    setSettings(values){if(['agentWorkbookMigrationVersionFence','agentTabularMigrationVersionFence','agentMasterMigrationVersionFence','agentMasterMigrationHead'].some(key=>Object.hasOwn(values,key)))throw Error('搬家保護紀錄由正式搬入與完整備份流程管理');if(Object.hasOwn(values,'stockCostVersionFence'))throw Error('成本資料的版本保護由完整備份流程管理');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');db.transaction(()=>{for(const [key,value]of Object.entries(values))stmts.setSetting.run(key,value)})();return {success:true}},
+    setSettings(values){if(['stockOpeningMigrationVersionFence','stockOpeningMigrationHead','agentWorkbookMigrationVersionFence','agentTabularMigrationVersionFence','agentMasterMigrationVersionFence','agentMasterMigrationHead'].some(key=>Object.hasOwn(values,key)))throw Error('搬家保護紀錄由正式搬入與完整備份流程管理');if(Object.hasOwn(values,'stockCostVersionFence'))throw Error('成本資料的版本保護由完整備份流程管理');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');db.transaction(()=>{for(const [key,value]of Object.entries(values))stmts.setSetting.run(key,value)})();return {success:true}},
     getAllSettings() {
       const rows = stmts.getAllSettings.all()
       const result = {}
@@ -744,7 +744,8 @@ module.exports = function initDatabase(dbPath) {
   require('./warehouseOperations.cjs')(db,api,stockStore)
   const lotRuntime=require('./lotOperations.cjs')(db,api,stockStore)
   require('./recoveryOperations.cjs')(db,api,replaceAllTx,recordShapes)
-  require('./masterMigrationOperations.cjs')(db,api,stmts)
+  const openingMasters=require('./masterMigrationOperations.cjs')(db,api,stmts)
+  require('./openingMigrationOperations.cjs')(db,api,stmts,stockStore,openingMasters)
   recordShapes.attachFinancial(api)
   require('./tableOrderingOperations.cjs')(db,api)
   require('./kitchenPrintOperations.cjs')(db,api,kitchenStore)

@@ -10,8 +10,9 @@ import {receiptLots,placeReceiptLots} from './receiptLots.mjs'
 import {hasReceiptLots} from './receiptReview.mjs'
 import {lotRegistry,lotError} from './lotRules.mjs'
 import {planSupplierLotReturn,SUPPLIER_LOT_RETURN} from './supplierLotReturn.mjs'
+import {planOpeningMigrationStock} from './openingMigrationStock.mjs'
 
-export const STOCK_BUSINESS_METHODS=['checkout','refundOrder','applyInventoryOperation','applyRestaurantOperation','applySalesOperation','addWaste','addProduct']
+export const STOCK_BUSINESS_METHODS=['checkout','refundOrder','applyInventoryOperation','applyRestaurantOperation','applySalesOperation','addWaste','addProduct','applyOpeningMigration']
 export const stockOwner=(stage,domain='',id='')=>({stage,locationId:'main',referenceId:stage==='available'?'':domain==='reservation'?id:canonicalSignature([domain,id])})
 const owned=stage=>['available','reserved','quarantined'].includes(stage)
 const expense=stage=>({consumed:'5101',wasted:'5208',supplierReturned:'5204'})[stage]
@@ -24,6 +25,7 @@ function available(custody,id,unit){const sources=new Map(custody.sources.map(ro
 export function planStockBusiness(previous,body){
  const {method,input,evidence,date,id:eventId}=body
  if(!previous||!STOCK_BUSINESS_METHODS.includes(method)||!input||typeof input.id!=='string'||!input.id||!evidence||!Array.isArray(evidence.products))throw stockLedgerError('INPUT')
+ if(method==='applyOpeningMigration'&&body.actor?.role!=='owner')throw stockLedgerError('HISTORY')
  if(date<previous.journals[0].date)throw stockLedgerError('STALE')
  assertLotBusinessReady(previous,body)
  const arrival=method==='applyInventoryOperation'&&hasReceiptLots(input)?receiptLots(input):null
@@ -33,16 +35,17 @@ export function planStockBusiness(previous,body){
  const pairs=new Map(),steps=[],sourceEvidence=[],replaced=new Set(),extraLines=[],notes=[]
  for(const pair of evidence.products){if(!pair||pairs.has(pair.id)||typeof pair.id!=='string'||typeof pair.unit!=='string')throw stockLedgerError('HISTORY');safe(pair.beforeUnits);safe(pair.afterUnits);if(available(previous.custody,pair.id,pair.unit)!==pair.beforeUnits)throw stockLedgerError('HISTORY');pairs.set(pair.id,pair)}
  let ordinal=0,virtual=previous.custody;const blocked=new Map(),append=next=>{steps.push(...next);if(previous.lots&&next.length)virtual=planCostCustody(virtual,{expectedSequence:virtual.sequence,steps:next}).state}
- const context={previous,input,evidence,stockOwner,stockUnits,stockLineValue,stockLegacyInterval,supplierReturn,selected:append,
+ const context={previous,input,evidence,postingDate:date,stockOwner,stockUnits,stockLineValue,stockLegacyInterval,supplierReturn,selected:append,
   product:id=>{const row=pairs.get(id);if(!row)throw stockLedgerError('HISTORY');return row},
   move:(from,to,productId,quantityUnits,unused=false)=>{safe(quantityUnits,1);const product=context.product(productId);if(previous.lots){const plan=planLotBusinessMove(virtual,previous.lots,from,to,productId,product.unit,quantityUnits,unused);append(plan.steps);blocked.set(productId,(blocked.get(productId)||0)+plan.blockedUnits)}else append([{kind:unused?'release-unused':'move',from,to,productId,unit:product.unit,quantityUnits}])},
-  acquire:(productId,quantityUnits,valueCents,creditAccount,basis,key,to=stockOwner('available'))=>{safe(quantityUnits,1);if(valueCents!==null)safe(valueCents);if(!['3901','4191','5101','2102','2291'].includes(creditAccount))throw stockLedgerError('HISTORY');const product=context.product(productId),sourceId='business:'+eventId+':'+ordinal++,target=previous.lots&&!arrival?lotAcquireTarget(previous.lots,to,productId,sourceId):to;const source={id:sourceId,productId,unit:product.unit,currency:'TWD',quantityUnits,valueCents};if(to.stage==='available'&&to.locationId==='main'&&target.stage==='quarantined')blocked.set(productId,(blocked.get(productId)||0)+quantityUnits);append([{kind:target.stage==='wasted'?'acquire-disposed':target.stage==='quarantined'?'acquire-quarantined':'acquire',to:target,sources:[source]}]);sourceEvidence.push({sourceId,key:canonicalSignature([method,input.id,key]),basis,creditAccount});if(arrival){const placed=placeReceiptLots(previous,body,source,productId,key,virtual.positions.flatMap(row=>row.segments).find(row=>row.sourceId===sourceId).queueOrder);append(placed.steps);arrivalItems.push(...placed.items);blocked.set(productId,(blocked.get(productId)||0)+placed.blockedUnits)}},
+  acquire:(productId,quantityUnits,valueCents,creditAccount,basis,key,to=stockOwner('available'))=>{safe(quantityUnits,1);if(valueCents!==null)safe(valueCents);if(!['3901','4191','5101','2102','2291',...(method==='applyOpeningMigration'?['3902']:[])].includes(creditAccount))throw stockLedgerError('HISTORY');const product=context.product(productId),sourceId='business:'+eventId+':'+ordinal++,target=previous.lots&&!arrival?lotAcquireTarget(previous.lots,to,productId,sourceId):to;const source={id:sourceId,productId,unit:product.unit,currency:'TWD',quantityUnits,valueCents};if(to.stage==='available'&&to.locationId==='main'&&target.stage==='quarantined')blocked.set(productId,(blocked.get(productId)||0)+quantityUnits);append([{kind:target.stage==='wasted'?'acquire-disposed':target.stage==='quarantined'?'acquire-quarantined':'acquire',to:target,sources:[source]}]);sourceEvidence.push({sourceId,key:canonicalSignature([method,input.id,key]),basis,creditAccount});if(arrival){const placed=placeReceiptLots(previous,body,source,productId,key,virtual.positions.flatMap(row=>row.segments).find(row=>row.sourceId===sourceId).queueOrder);append(placed.steps);arrivalItems.push(...placed.items);blocked.set(productId,(blocked.get(productId)||0)+placed.blockedUnits)}},
   hasOrigin:(owner,productId)=>{const sources=new Map(previous.custody.sources.map(row=>[row.id,row]));return previous.custody.positions.some(row=>canonicalSignature(row.owner)===canonicalSignature(owner)&&row.segments.some(segment=>sources.get(segment.sourceId).productId===productId))},
   replace:id=>replaced.add(id),
   line:(account,debitCents,creditCents)=>extraLines.push({account,debitCents:safe(debitCents),creditCents:safe(creditCents)}),
   note:row=>notes.push(row),
  }
- if(['checkout','refundOrder','applySalesOperation'].includes(method))planTradeStock(context,method)
+ if(method==='applyOpeningMigration')planOpeningMigrationStock(context)
+ else if(['checkout','refundOrder','applySalesOperation'].includes(method))planTradeStock(context,method)
  else planOperationalStock(context,method)
  const plan=planCostCustody(previous.custody,{expectedSequence:previous.custody.sequence,steps}),lines=[...extraLines]
  for(const effect of plan.effects){
@@ -61,9 +64,10 @@ export function planStockBusiness(previous,body){
  if(previous.lots)notes.push({kind:'lot-stock-result',products:[...pairs.values()].map(pair=>({id:pair.id,originalAfterUnits:pair.afterUnits,availableAfterUnits:available(plan.state,pair.id,pair.unit)}))})
  const total=lines.reduce((sum,row)=>sum+BigInt(row.debitCents)-BigInt(row.creditCents),0n);if(total!==0n)throw stockLedgerError('BALANCE')
  const complete=plan.effects.every(effect=>effect.cost?.complete!==false)
- const journal={id:'stock-business:'+method+':'+input.id,date,type:'stock-cost',amountUnit:'cents',description:'庫存成本異動',costComplete:complete,lines}
+ const journal={id:'stock-business:'+method+':'+input.id,date,type:'stock-cost',amountUnit:'cents',description:method==='applyOpeningMigration'?'搬家期初庫存':'庫存成本異動',costComplete:complete,lines}
  const business={method,id:input.id,eventId,effects:plan.effects,journalId:journal.id,replacedJournalIds:[...replaced],notes}
  let next={...previous,custody:plan.state,sourceEvidence:[...previous.sourceEvidence,...sourceEvidence],journals:[...previous.journals,journal],business:[...(previous.business||[]),business]}
+ if(method==='applyOpeningMigration')next={...next,openingMigrationVersion:1}
  if(arrival)next={...next,receiptLotsVersion:1,lots:lotRegistry({...previous.lots,items:[...previous.lots.items,...arrivalItems]},plan.state)}
  if(supplierReturn)next={...next,supplierLotReturnsVersion:1}
  if(previous.lotCountVersion===1)next={...next,lotCountReservations:updateLotCountReservations(previous,next.custody,method==='applyRestaurantOperation'?evidence.entry:null)}

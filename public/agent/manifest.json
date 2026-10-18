@@ -79,7 +79,7 @@
     "protocol": "pos-migration-draft/v1",
     "schema": "/agent/migration-draft-v1.schema.json",
     "guide": "/agent/guides/migration.txt",
-    "status": "owner-master-review",
+    "status": "owner-master-and-stock-review",
     "businessCommit": false,
     "humanReviewRequired": true,
     "moneyMovement": false,
@@ -90,12 +90,27 @@
     ],
     "identity": "Exact source system + company + entity + externalId. No name-only merge.",
     "unsupportedCommit": [
-      "opening-stock",
       "opening-receivables",
       "opening-payables",
       "history-reference"
     ],
-    "confirmation": "Authenticated owner previews counts, source-ID mappings, source/local field differences and unresolved issues. A single displayed confirmation atomically commits supported masters; Agent cannot approve or execute.",
+    "confirmation": "Authenticated owner previews counts, source-ID mappings, source/local field differences and unresolved issues. Original stock facts continue into a separate stock/cost trial in the same entry. A displayed confirmation atomically commits the reviewed batch; Agent cannot approve or execute.",
+    "openingStock": {
+      "tableEntity": "opening-stock",
+      "sourceProtocol": "pos-migration-draft/v1",
+      "guide": "/agent/guides/opening-stock.txt",
+      "example": "/agent/examples/opening-stock-v1.json",
+      "humanReviewRequired": true,
+      "currency": "TWD",
+      "quantityDecimalPlaces": 3,
+      "valueDecimalPlaces": 2,
+      "valuationRateDecimalPlaces": 12,
+      "clearingAccount": "3902",
+      "ordinarySaleOrPurchase": false,
+      "externalAgentWriteApi": false,
+      "fullMigrationComplete": false,
+      "installerUpdated": false
+    },
     "directFiles": {
       "extensions": [
         "csv",

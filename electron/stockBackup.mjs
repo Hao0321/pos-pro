@@ -11,6 +11,7 @@ import {assertStockBookHead} from './stockBookAnchor.mjs'
 import {validateFundedRestaurantRecords,fundedRestaurantSnapshot} from './restaurantFundedRecords.mjs'
 import {WAREHOUSE_METHOD,WAREHOUSE_SETTING,warehouseDirectory} from './warehouseRules.mjs'
 import {LOT_METHOD,LOT_SETTING,lotRegistry} from './lotRules.mjs'
+import {readOpeningMigrationHistory} from './openingMigrationHistory.mjs'
 
 import {LOT_COUNT_SETTING,lotCountGroups,lotCountReservations} from './lotCount.mjs'
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
@@ -28,6 +29,7 @@ export function validateStockCostBook(book,validatedState=null){
   if(!hasEntries&&(book.settings||[]).some(row=>row.key===STOCK_COMPAT_SETTING&&row.value==='1'))throw stockLedgerError('HISTORY')
   if(hasEntries&&(!Array.isArray(book.stockCostEntries)||!Array.isArray(book.stockCostOperations)))throw stockLedgerError('HISTORY')
   const state=validatedState||replayStockLedger(book.stockCostEntries||[],book.stockCostOperations||[])
+  readOpeningMigrationHistory(book)
   assertStockBookHead(book,state)
   const warehouseFlag=(book.settings||[]).find(row=>row.key===WAREHOUSE_SETTING)
   if(warehouseFlag&&warehouseFlag.value!=='1'||state.projection?.warehousing&&!warehouseFlag)throw stockLedgerError('HISTORY')

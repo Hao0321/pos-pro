@@ -1,5 +1,8 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--opening-migration':['native-opening-migration.cjs','POS_OPENING_MIGRATION_NATIVE_PASS',false],
+  '--opening-migration-ui':['native-opening-migration-ui.cjs','POS_OPENING_MIGRATION_UI_PASS',true],
+  '--opening-migration-browser-ui':['native-opening-migration-browser-ui.cjs','POS_OPENING_MIGRATION_BROWSER_PASS',true],
   '--workbook-migration':['native-workbook-migration.cjs','POS_WORKBOOK_MIGRATION_NATIVE_PASS',false],
   '--workbook-migration-ui':['native-workbook-migration-ui.cjs','POS_WORKBOOK_MIGRATION_UI_PASS',true],
   '--workbook-migration-browser-ui':['native-workbook-migration-browser-ui.cjs','POS_WORKBOOK_MIGRATION_BROWSER_PASS',true],

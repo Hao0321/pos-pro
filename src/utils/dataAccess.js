@@ -25,6 +25,8 @@ export async function loadWarehouseState(actor){return isElectron?window.electro
 export async function applyWarehouseOperation(input,actor){return isElectron?window.electronAPI.db.applyWarehouseOperation(input):(await import('./browserWarehouse')).commitBrowserWarehouse(input,actor)}
 export async function previewMasterMigration(input,actor){return isElectron?window.electronAPI.db.previewMasterMigration(input):(await import('./browserMasterMigration')).previewBrowserMasterMigration(input,actor)}
 export async function applyMasterMigration(input,actor){return isElectron?window.electronAPI.db.applyMasterMigration(input):(await import('./browserMasterMigration')).commitBrowserMasterMigration(input,actor)}
+export async function previewOpeningMigration(input,actor){return isElectron?window.electronAPI.db.previewOpeningMigration(input):(await import('./browserOpeningMigration')).previewBrowserOpeningMigration(input,actor)}
+export async function applyOpeningMigration(input,actor){return isElectron?window.electronAPI.db.applyOpeningMigration(input):(await import('./browserOpeningMigration')).commitBrowserOpeningMigration(input,actor)}
 export async function loadPrivateDraftContext(actor){return isElectron?window.electronAPI.db.getPrivateDraftContext():getBrowserPrivateDraftContext(actor)}
 export async function lookupPrivateDraftOriginal(input,actor){return isElectron?window.electronAPI.db.lookupPrivateDraftOriginal(input):lookupBrowserPrivateDraftOriginal(input,actor)}
 export const isSharedStore = !!(typeof window !== 'undefined' && window.electronAPI?.sharedStore)

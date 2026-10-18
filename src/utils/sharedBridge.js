@@ -25,6 +25,8 @@ if(sharedStoreMode&&!window.electronAPI){
   const db=Object.fromEntries(dbMethods.map(method=>[method,(...args)=>rpc('db:'+method,...args)]))
   db.previewMasterMigration=input=>rpc('db:previewMasterMigration',input)
   db.applyMasterMigration=input=>rpc('db:applyMasterMigration',input)
+  db.previewOpeningMigration=input=>rpc('db:previewOpeningMigration',input)
+  db.applyOpeningMigration=input=>rpc('db:applyOpeningMigration',input)
   db.getPrivateDraftContext=()=>rpc('db:getPrivateDraftContext')
   db.lookupPrivateDraftOriginal=input=>rpc('db:lookupPrivateDraftOriginal',input)
   db.getExchangeContext=()=>rpc('db:getExchangeContext')

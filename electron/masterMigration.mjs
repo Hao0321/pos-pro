@@ -5,12 +5,15 @@ import {decimalUnits} from './decimalUnits.mjs'
 import {migrationAliases as aliases,migrationColumnAliases} from './migrationColumns.mjs'
 import {WORKBOOK_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_FENCE} from './workbookMigration.mjs'
 import {TABULAR_MIGRATION_PROTOCOL,TABULAR_MIGRATION_FENCE} from './tabularMigration.mjs'
+import {OPENING_MASTER_PROTOCOL,OPENING_MASTER_SOURCE,projectOpeningMigrationSource,openingMigrationId} from './openingMigrationSource.mjs'
+import {assertNoUnhandledOpeningValue} from './openingMigrationTables.mjs'
 
 export const MASTER_MIGRATION_METHOD='applyMasterMigration'
 export const MASTER_MIGRATION_ACTION='AGENT_MASTER_MIGRATION'
 export const MASTER_MIGRATION_FEATURE='agent-master-migration-v1'
 export const MASTER_MIGRATION_FENCE='agentMasterMigrationVersionFence'
 export const MASTER_MIGRATION_HEAD='agentMasterMigrationHead'
+export function assertPublicMasterMigration(input){if(input?.protocol!=='pos-master-migration/v1')throw Error('期初主檔只能與原期初批次一起保存。')}
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 const fail=(message='搬家紀錄需要核對，原資料仍保留。')=>{throw Error(message)}
 const digest=privateDraftDigest
@@ -68,10 +71,13 @@ function inspectMasterMigrationHistory(book){
   return {receipts,byId,mappings,head,tabular,workbook}
 }
 export function readMasterMigrationInput(input){
-  draftObject(input,['protocol','id','sourceText','choices','scope','review'],['protocol','id','sourceText','choices','scope'])
-  if(input.protocol!=='pos-master-migration/v1'||typeof input.sourceText!=='string'||!Array.isArray(input.choices)||input.choices.length>5000)fail()
+  const opening=input?.protocol===OPENING_MASTER_PROTOCOL
+  draftObject(input,opening?['protocol','id','sourceText','choices','scope','review','parentId','cutoffDate','currency']:['protocol','id','sourceText','choices','scope','review'],opening?['protocol','id','sourceText','choices','scope','parentId','cutoffDate','currency']:['protocol','id','sourceText','choices','scope'])
+  if(!opening&&input.protocol!=='pos-master-migration/v1'||typeof input.sourceText!=='string'||!Array.isArray(input.choices)||input.choices.length>5000)fail()
   assertPrivateDraftContext(input.scope)
-  const source=readMigrationDraft(input.sourceText)
+  let source
+  if(opening){if(!['','TWD'].includes(input.currency))fail();const projected=projectOpeningMigrationSource(input.sourceText,input.cutoffDate,input.currency);if(input.parentId!==openingMigrationId(projected.source,input.scope)||!projected.masterSource)fail();source=projected.masterSource}
+  else source=readMigrationDraft(input.sourceText)
   if(input.id!==masterMigrationId(source,input.scope))fail()
   const seen=new Set()
   for(const choice of input.choices){
@@ -92,7 +98,7 @@ function columnsFor(table,canonical=false){
     return indices.length?[[field,indices]]:[]
   }))
 }
-function sourceRows(source){return source.tables.flatMap((table,ti)=>table.rows.map((row,ri)=>({table:ti,row:ri,entity:table.entity,externalId:row.externalId,key:masterSourceKey(source.source,table.entity,row.externalId),sourceDigest:digest([table.columns,row]),columns:columnsFor(table,[TABULAR_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_PROTOCOL].includes(source.protocol)),sourceRow:row,headers:table.columns})))}
+function sourceRows(source){return source.tables.flatMap((table,ti)=>table.rows.map((row,ri)=>({table:ti,row:ri,entity:table.entity,externalId:row.externalId,key:masterSourceKey(source.source,table.entity,row.externalId),sourceDigest:digest([table.columns,row]),columns:columnsFor(table,[TABULAR_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_PROTOCOL,OPENING_MASTER_SOURCE].includes(source.protocol)),sourceRow:row,headers:table.columns})))}
 function extractRow(row){
   const values={},issues=[],unused=[]
   const used=new Set()
@@ -163,6 +169,7 @@ export function previewMasterMigration(input,book,scope,actor){
   if(!same(input.scope,scope))fail('店面或帳號已變更，請保留原輸入核對。')
   const history=readMasterMigrationHistory(book),prior=history.byId.get(input.id)
   if(prior){if(prior.signature!==canonicalSignature(input)&&prior.signature!==canonicalSignature({...input,review:JSON.parse(prior.signature).review}))fail('同一搬家編號的內容不同，請保留原資料核對。');return {protocol:'pos-master-migration-preview/v1',id:input.id,saved:prior,ready:false,rows:[],counts:prior.counts,source:source.source}}
+  if(input.protocol!==OPENING_MASTER_PROTOCOL)assertNoUnhandledOpeningValue(input.sourceText)
   const rows=sourceRows(source).map(row=>chooseRow(book,row,history,input.choices.find(item=>item.table===row.table&&item.row===row.row),source,scope)),seen=new Set(),targets=new Set(),barcodes=new Set()
   for(const row of rows){
     if(seen.has(row.key))row.issues.push('duplicate-source-id');seen.add(row.key)

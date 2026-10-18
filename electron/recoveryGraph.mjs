@@ -14,7 +14,7 @@ export function validateRecoveryGraph(graph,storage,options={}){
 function inspectRecoveryGraph(graph,storage,{digest=stockLedgerDigest}={}){
  if(!['sqlite','browser'].includes(storage))throw recoveryDataError()
  object(graph,['version','books','snapshots','originalIds','events'])
- if(![1,2,3,4,5,6,7,8,9,10,11,12].includes(graph.version)||['books','snapshots','originalIds','events'].some(key=>!Array.isArray(graph[key])))throw recoveryDataError()
+ if(![1,2,3,4,5,6,7,8,9,10,11,12,13].includes(graph.version)||['books','snapshots','originalIds','events'].some(key=>!Array.isArray(graph[key])))throw recoveryDataError()
  const books=new Map(),snapshots=new Map(),features=new Set(),used=new Set()
  if(graph.version>=2)features.add('cross-storage-v1')
  if(graph.version>=3)features.add('record-shapes-v1')
@@ -26,6 +26,7 @@ function inspectRecoveryGraph(graph,storage,{digest=stockLedgerDigest}={}){
  if(graph.version>=9)features.add('private-quick-drafts-v1')
  if(graph.version>=10)features.add('agent-master-migration-v1')
  if(graph.version>=11)features.add('agent-tabular-migration-v1')
+ if(graph.version>=13)features.add('stock-opening-migration-v1')
  if(graph.version>=12)features.add('agent-workbook-migration-v1')
  for(const row of graph.books){
   object(row,graph.version>=2?['id','data','contentSignature','storage']:['id','data','contentSignature']);text(row.data);text(row.contentSignature)
@@ -69,7 +70,7 @@ function inspectRecoveryGraph(graph,storage,{digest=stockLedgerDigest}={}){
 export function packRecoveryGraph({snapshots=[],originalIds=[],events=[]},storage,{digest=stockLedgerDigest,version}={}){
  const bySource=new Map();for(const event of events){const id=JSON.parse(event.receipt).sourceId;if(bySource.has(id))throw recoveryDataError();bySource.set(id,event.id)}
  const graphVersion=Math.max(version??1,snapshots.some(row=>row.storage&&row.storage!==storage)?2:1)
- if(version!==undefined&&![1,2,3,4,5,6,7,8,9,10,11,12].includes(version))throw recoveryDataError()
+ if(version!==undefined&&![1,2,3,4,5,6,7,8,9,10,11,12,13].includes(version))throw recoveryDataError()
  const books=new Map(),rows=snapshots.map(row=>{const {data,contentSignature,storage:origin=storage,...metadata}=row,id=digest({storage:origin,data,contentSignature}),book={id,data,contentSignature,...(graphVersion>=2?{storage:origin}:{})};const existing=books.get(id);if(existing&&!same(existing,book))throw recoveryDataError();books.set(id,book);return {...metadata,operationId:metadata.operationId??bySource.get(metadata.id)??null,bookId:id}})
  const graph={version:graphVersion,books:sorted([...books.values()]),snapshots:sorted(rows),originalIds:sorted(originalIds),events:sorted(events)};validateRecoveryGraph(graph,storage,{digest});return graph
 }
@@ -77,7 +78,7 @@ export function unpackRecoveryGraph(graph,storage,options){
  const checked=validateRecoveryGraph(graph,storage,options)
  return {snapshots:graph.snapshots.map(({bookId,...row})=>({...row,data:checked.books.get(bookId).data,contentSignature:checked.books.get(bookId).contentSignature,...(graph.version>=2?{storage:checked.books.get(bookId).storage}:{})})),originalIds:structuredClone(graph.originalIds),events:structuredClone(graph.events)}
 }
-export function portableRecoveryGraph(graph,storage,options){validateRecoveryGraph(graph,storage,options);const version=Math.max(2,graph.version,options?.version??2);if(![2,3,4,5,6,7,8,9,10,11,12].includes(version))throw recoveryDataError();return {...structuredClone(graph),version,books:graph.books.map(row=>({...row,storage:row.storage??storage}))}}
+export function portableRecoveryGraph(graph,storage,options){validateRecoveryGraph(graph,storage,options);const version=Math.max(2,graph.version,options?.version??2);if(![2,3,4,5,6,7,8,9,10,11,12,13].includes(version))throw recoveryDataError();return {...structuredClone(graph),version,books:graph.books.map(row=>({...row,storage:row.storage??storage}))}}
 export function mergeRecoveryGraphs(current,incoming,storage,options){
  validateRecoveryGraph(current,storage,options);validateRecoveryGraph(incoming,storage,options)
  const version=Math.max(current.version,incoming.version)
