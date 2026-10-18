@@ -24,7 +24,7 @@ export function planSupplierInventory(request,data,actor){
  if(!context)return planInventory(request,data,actor)
  supplierActor(actor)
  validateSupplierLedgerRecords(data.supplierEntries||[],data.supplierOperations||[],data)
- assertProcurementApproval(request,data,supplierControlFromEntries(data.supplierEntries))
+ assertProcurementApproval(request,data,supplierControlFromEntries(data.supplierEntries,data.openingBalanceContext,data.storeId))
  const plan=planInventory(request,{...data,supplierCredits:data.supplierEntries||[]},actor)
  if(isPurchaseCreate(request.kind))plan.supplierRegistration=planSupplierRegistration(request,plan.purchase,data,actor)
  return plan

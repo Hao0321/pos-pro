@@ -1,4 +1,6 @@
 const express = require('express')
+const http = require('node:http')
+const {assertRequestedBrowserPort,listenForBrowser}=require('./browserServerPort.cjs')
 const path = require('node:path')
 const {randomBytes,randomUUID,createHash,createHmac,timingSafeEqual} = require('node:crypto')
 const {readRestaurantConfig}=require('./restaurantRules.mjs')
@@ -33,6 +35,7 @@ function prepareCustomerOrder(body,products) {
     tableNum,note:(customerName?customerName+': ':'')+note}
 }
 module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
+  assertRequestedBrowserPort(port,{allowDynamic:true})
   const app=express(),limits=new Map(),menuQuoteKey=randomBytes(32)
   let closing=false,closeTask=null
   app.disable('x-powered-by')
@@ -146,11 +149,7 @@ module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
   app.get('/api/info',(_req,res)=>res.json({storeId:storeIdentity(),storeName:db.getSetting('storeName')||'商店',version:require('../package.json').version}))
   app.use((err,_req,res,_next)=>res.status(err.type==='entity.too.large'?413:400).json({success:false,error:'請求格式或大小不符'}))
   let server,stopServer,tunnelUrl=null,tunnelStop=null
-  const ready=new Promise((resolve,reject)=>{
-    server=app.listen(port,options.host||'0.0.0.0',error=>error?reject(error):resolve(server))
-    stopServer=require('./serverShutdown.cjs')(server)
-    server.on('error',reject);server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=50
-  })
+  const ready=listenForBrowser(()=>{const candidate=http.createServer(app);candidate.requestTimeout=15000;candidate.headersTimeout=10000;candidate.maxHeadersCount=50;return candidate},port,options.host||'0.0.0.0').then(listening=>{server=listening.server;stopServer=listening.stop;return server})
   ready.then(()=>{
     if (closing || db.getSetting('publicOrderingEnabled')!=='true' || options.disableTunnel) return
     try {
@@ -168,10 +167,10 @@ module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
       child.on('error',()=>{tunnelUrl=null});child.on('exit',()=>{tunnelUrl=null})
     } catch {tunnelUrl=null}
   }).catch(()=>{})
-  return {app,ready,isRunning:()=>!closing&&server.listening,getActualPort:()=>!closing?server.address()?.port||null:null,getTunnelUrl:()=>!closing?tunnelUrl:null,
+  return {app,ready,isRunning:()=>!closing&&server?.listening===true,getActualPort:()=>!closing?server?.address()?.port||null:null,getTunnelUrl:()=>!closing?tunnelUrl:null,
     close(){
       closing=true
-      if(!closeTask)closeTask=(async()=>{await ready.catch(()=>{});await Promise.all([stopServer(),tunnelStop?.()]);tunnelUrl=null})().catch(error=>{closeTask=null;throw error})
+      if(!closeTask)closeTask=(async()=>{await ready.catch(()=>{});await Promise.all([stopServer?.(),tunnelStop?.()]);tunnelUrl=null})().catch(error=>{closeTask=null;throw error})
       return closeTask
     }}
 }

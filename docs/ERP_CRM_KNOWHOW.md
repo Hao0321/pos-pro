@@ -23,6 +23,10 @@
 
 帳款搬移參考 [ERPNext 期初未付單據](https://docs.frappe.io/erpnext/opening-invoice-creation-tool)：搬移切換日尚欠的逐張單據，保留到期日、幣別與來源，核對筆數、客戶／供應商小計及總額。設計上必須防止期初總帳與未付明細重複計入；這是待實作與驗證要求，不表示目前已能匯入任意會計帳。
 
+M17m 的原單帳款核心開始把這項規則接入既有客戶／供應商款項帳：搬剩下的餘額，保留原總額與以前已付作為參考；原單貸項是可抵付來源，不能偽造成一筆銀行收款或預付款。來源在確切帳本版本生效，後來的貸項不能拿去重播更早的抵付。核心試算已可處理原單與新單共同分配、解除與實際退款；正式帳款搬入、完整組合流程與裝置驗收尚未完成，現有公開搬家入口仍會阻擋帳款。
+
+控制科目與期初待核對科目參考 [ERPNext 期初餘額](https://docs.frappe.io/erpnext/opening-balance)，採用的工程規則是原單、庫存與其他期初帳分開核對，防止控制科目重複入帳；差異保留待查，不能自動塞進盈餘。各項判準與尚待完成項目見 [原單帳款規格](OPENING_BALANCE_MIGRATION_SPEC.md)。
+
 CRM 參考 [Microsoft 匯入對照與替代鍵](https://learn.microsoft.com/en-us/power-apps/user/import-data)、[重複客戶檢視與合併](https://learn.microsoft.com/en-us/power-apps/user/merge-duplicate-records)、[客戶聯絡同意](https://learn.microsoft.com/en-us/dynamics365/customer-insights/data/consent-management) 及 [同意紀錄搬移](https://learn.microsoft.com/en-us/dynamics365/customer-insights/journeys/real-time-marketing-migrate-consent)。我們採取「提示可能重複、店主決定保留欄位、拒絕優先保留、未知不補成同意」的產品政策。這些官方文件不是各地法律認定。
 
 商機追蹤參考 [Odoo 未成交原因](https://www.odoo.com/documentation/19.0/applications/sales/crm/pipeline/lost_opportunities.html)：未成交也需要留下原因與可追回的紀錄。完整商機／服務流程仍在 CRM 義務內，不能用會員列表宣稱完成。

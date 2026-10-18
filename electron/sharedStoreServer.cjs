@@ -2,6 +2,7 @@ const https=require('node:https'),fs=require('node:fs'),path=require('node:path'
 const {randomBytes,randomUUID,timingSafeEqual}=require('node:crypto')
 const {verifyPassword,authorizeActor}=require('./ipcSecurity.cjs')
 const snapshot=require('./storeSnapshot.cjs')
+const {assertRequestedBrowserPort,listenForBrowser}=require('./browserServerPort.cjs')
 const businessKeys=new Set(['pointsEarnRate','pointsRedeemRate','birthdayBonus','dailySalesGoal','storeName','storePhone','storeAddress','receiptFooter'])
 const readMethods=['getKitchenPrintState','getProducts','findByBarcode','getMembers','getOrders','getOrderItems','checkoutReceipt','getCustomerOrders','getSuppliers','getPurchases','getPromotions','getManualJournal','getAuditLogs','getHeldOrders','getShifts','getOpenShift','getCashLog','getWasteLog','getTopups','getBackups','exportData','getScenarioTemplateReceipt']
 const writeMethods=['applyKitchenPrintOperation','addProduct','updateProduct','deleteProduct','addMember','updateMember','deleteMember','checkout','refundOrder','updateOrderStatus','addSupplier','updateSupplier','deleteSupplier','addPurchase','updatePurchase','deletePurchase','addPromotion','updatePromotion','deletePromotion','addManualEntry','deleteManualEntry','writeAuditLog','addHeldOrder','deleteHeldOrder','openShift','closeShift','addCashLog','addWaste','addTopup','createBackup']
@@ -186,14 +187,10 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
       const selected=input.host
       if(!(allowLoopback&&selected==='127.0.0.1')&&!addresses().includes(selected))throw Error('請選擇這台電腦目前的私人網路位址')
       const requested=input.port??3443
-      if(!Number.isInteger(requested)||requested< (allowLoopback?0:1024)||requested>65535)throw Error('連接埠需介於 1024 到 65535')
+      assertRequestedBrowserPort(requested,{minimum:allowLoopback?1:1024,allowDynamic:allowLoopback})
       cert=require('./sharedCertificate.cjs')(path.join(certificateRoot,selected),selected);host=selected
-      const candidate=https.createServer({pfx:cert.pfx,passphrase:cert.passphrase,minVersion:'TLSv1.2'},handle)
-      const stopCandidate=require('./serverShutdown.cjs')(candidate)
-      candidate.requestTimeout=20000;candidate.headersTimeout=10000;candidate.keepAliveTimeout=5000
-      try{await new Promise((resolve,reject)=>{candidate.once('error',reject);candidate.listen(requested,host,resolve)})}
-      catch(error){await stopCandidate();throw error}
-      server=candidate;stopServer=stopCandidate;port=server.address().port
+      const listening=await listenForBrowser(()=>{const candidate=https.createServer({pfx:cert.pfx,passphrase:cert.passphrase,minVersion:'TLSv1.2'},handle);candidate.requestTimeout=20000;candidate.headersTimeout=10000;candidate.keepAliveTimeout=5000;return candidate},requested,host)
+      server=listening.server;stopServer=listening.stop;port=listening.port
       if(stopping)throw Error('共用店面已取消啟動')
       return status()
       })().finally(()=>{startTask=null})
