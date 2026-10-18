@@ -5,6 +5,7 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
     encoding.validateSettingRows(rawSettings,'sqlite')
     require('./masterMigration.mjs').readMasterMigrationHistory(data)
     if(rawSettings.some(row=>row.key==='agentMasterMigrationVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installMasterMigrationFence(db)
+    if(rawSettings.some(row=>row.key==='agentTabularMigrationVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installTabularMigrationFence(db)
     data={...data,settings:encoding.settingsForValidation(rawSettings,'sqlite')}
     require('./stockBackup.mjs').validateStockCostBook(data)
     if(!costRestore&&(data.stockCostEntries?.length||data.stockCostOperations?.length))throw require('./stockOpeningPlan.mjs').stockLedgerError('FLOW')

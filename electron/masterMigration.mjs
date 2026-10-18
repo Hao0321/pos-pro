@@ -2,6 +2,8 @@ import {readMigrationDraft} from './migrationSource.mjs'
 import {draftObject,privateDraftDigest,assertPrivateDraftContext} from './privateDrafts.mjs'
 import {canonicalSignature} from './operationRules.mjs'
 import {decimalUnits} from './decimalUnits.mjs'
+import {migrationAliases as aliases,migrationColumnAliases} from './migrationColumns.mjs'
+import {TABULAR_MIGRATION_PROTOCOL,TABULAR_MIGRATION_FENCE} from './tabularMigration.mjs'
 
 export const MASTER_MIGRATION_METHOD='applyMasterMigration'
 export const MASTER_MIGRATION_ACTION='AGENT_MASTER_MIGRATION'
@@ -12,17 +14,6 @@ const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 const fail=(message='搬家紀錄需要核對，原資料仍保留。')=>{throw Error(message)}
 const digest=privateDraftDigest
 const collection={products:'products',suppliers:'suppliers',customers:'members'}
-const aliases={
-  name:['name','商品名稱','品名','item name','item_name','supplier name','供應商名稱','供應商','customer name','客戶名稱','姓名','客戶'],
-  barcode:['barcode','條碼','ean'],unit:['unit','單位','uom','stock uom','基本單位'],
-  price:['price','售價','selling price','standard price'],cost:['cost','成本','valuation rate','參考成本'],
-  stock:['stock','庫存','quantity','qty','opening stock','期初庫存'],
-  category:['category','分類'],supplier:['supplier id','supplier_id','供應商編號'],
-  phone:['phone','電話','手機','mobile'],contact:['contact','聯絡人'],payTerms:['payment terms','payterms','付款條件'],
-  note:['note','notes','備註'],birthday:['birthday','生日'],
-  balance:['balance','儲值','儲值餘額','credit','outstanding','欠款','未收款','未付款'],
-  points:['points','點數'],totalSpent:['totalspent','total spent','累計消費'],currency:['currency','幣別','currency code','貨幣']
-}
 const fields={products:['name','barcode','unit','price','cost','category','supplierId'],suppliers:['name','contact','phone','payTerms','note'],customers:['name','phone','birthday','note']}
 const emptyCounts=()=>({create:0,update:0,keep:0,unchanged:0,blocked:0})
 export const masterSourceKey=(source,entity,externalId)=>canonicalSignature([source.system,source.company,entity,externalId])
@@ -35,6 +26,7 @@ export function assertMasterOwner(book,actor,scope=null){
 function setting(book,key){return (book.settings||[]).find(row=>row.key===key)?.value??null}
 export function readMasterMigrationHistory(book){try{return inspectMasterMigrationHistory(book)}catch{fail()}}
 function inspectMasterMigrationHistory(book){
+  let tabular=false
   const audits=(book.auditLog||[]).filter(row=>row.action===MASTER_MIGRATION_ACTION||String(row.id).startsWith('master-migration:'))
   const receipts=audits.map(audit=>{
     const receipt=typeof audit.detail==='string'?JSON.parse(audit.detail):audit.detail
@@ -42,6 +34,7 @@ function inspectMasterMigrationHistory(book){
     const {hash,...body}=receipt
     if(hash!==digest(body)||body.protocol!=='pos-master-migration-receipt/v1'||body.success!==true||!Number.isSafeInteger(body.sequence)||body.sequence<1||!Array.isArray(body.rows)||!Number.isFinite(Date.parse(body.time)))fail()
     const request=JSON.parse(body.signature),source=readMasterMigrationInput(request).source
+    if(source.protocol===TABULAR_MIGRATION_PROTOCOL)tabular=true
     if(body.signature!==canonicalSignature(request)||request.id!==body.id||request.scope.userId!==body.actor.userId||!same(body.source,source.source)||body.rows.length!==source.tables.reduce((n,t)=>n+t.rows.length,0))fail()
     let position=0;const counts=emptyCounts(),keys=new Set()
     for(const [ti,table]of source.tables.entries())for(const [ri,row]of table.rows.entries()){
@@ -60,7 +53,8 @@ function inspectMasterMigrationHistory(book){
   }
   const rawHead=setting(book,MASTER_MIGRATION_HEAD),savedHead=rawHead===null?null:JSON.parse(rawHead)
   if(savedHead!==null&&(typeof savedHead!=='string'||!/^[a-f0-9]{64}$/.test(savedHead))||head!==savedHead||receipts.length&&setting(book,MASTER_MIGRATION_FENCE)!=='1')fail()
-  return {receipts,byId,mappings,head}
+  if(tabular&&setting(book,TABULAR_MIGRATION_FENCE)!=='1')fail()
+  return {receipts,byId,mappings,head,tabular}
 }
 export function readMasterMigrationInput(input){
   draftObject(input,['protocol','id','sourceText','choices','scope','review'],['protocol','id','sourceText','choices','scope'])
@@ -81,13 +75,13 @@ export function makeMasterMigrationInput(sourceText,scope,choices=[]){
   const source=readMigrationDraft(sourceText)
   return {protocol:'pos-master-migration/v1',id:masterMigrationId(source,scope),sourceText,choices:structuredClone(choices),scope:structuredClone(scope)}
 }
-function columnsFor(table){
+function columnsFor(table,canonical=false){
   return Object.fromEntries(Object.entries(aliases).flatMap(([field,names])=>{
-    const indices=table.columns.flatMap((name,index)=>names.includes(name.trim().toLowerCase())?[index]:[])
+    const accepted=migrationColumnAliases(field,table.entity),indices=table.columns.flatMap((name,index)=>(canonical&&name===field||accepted.includes(name.trim().toLowerCase()))?[index]:[])
     return indices.length?[[field,indices]]:[]
   }))
 }
-function sourceRows(source){return source.tables.flatMap((table,ti)=>table.rows.map((row,ri)=>({table:ti,row:ri,entity:table.entity,externalId:row.externalId,key:masterSourceKey(source.source,table.entity,row.externalId),sourceDigest:digest([table.columns,row]),columns:columnsFor(table),sourceRow:row,headers:table.columns})))}
+function sourceRows(source){return source.tables.flatMap((table,ti)=>table.rows.map((row,ri)=>({table:ti,row:ri,entity:table.entity,externalId:row.externalId,key:masterSourceKey(source.source,table.entity,row.externalId),sourceDigest:digest([table.columns,row]),columns:columnsFor(table,source.protocol===TABULAR_MIGRATION_PROTOCOL),sourceRow:row,headers:table.columns})))}
 function extractRow(row){
   const values={},issues=[],unused=[]
   const used=new Set()
@@ -139,7 +133,9 @@ function chooseRow(book,row,history,choice,source,scope){
 function mergeSourceValues(row){
   row.sourceValues=structuredClone(row.values)
   if(!row.before)return
-  if(row.prior?.sourceDigest===row.sourceDigest){row.action='unchanged';row.values={};return}
+  // Equal raw bytes can decode to additional fields after a compatible reader
+  // repair. Only skip when every currently decoded source value is unchanged.
+  if(row.prior?.sourceDigest===row.sourceDigest&&Object.entries(row.sourceValues).every(([key,value])=>Object.hasOwn(row.prior.sourceValues,key)&&same(value,row.prior.sourceValues[key]))){row.action='unchanged';row.values={};return}
   if(row.resolution==='keep'){row.action='keep';row.values={};return}
   if(!row.prior&&row.resolution!=='source'){row.issues.push('local-change');return}
   if(row.prior&&row.resolution!=='source')for(const [key,value]of Object.entries(row.sourceValues)){

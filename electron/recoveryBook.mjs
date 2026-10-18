@@ -21,14 +21,15 @@ import {usesRestaurantPublicMenu,RESTAURANT_PUBLIC_MENU_FEATURE} from './restaur
 import {usesPrivateQuickDrafts,PRIVATE_QUICK_FEATURE} from './privateDrafts.mjs'
 import {WAREHOUSE_FEATURE,WAREHOUSE_SETTING} from './warehouseRules.mjs'
 
-export const RECOVERY_FEATURES=['agent-master-migration-v1',RECEIPT_REVIEW_FEATURE,PURCHASE_UNITS_FEATURE,'stock-supplier-lot-returns-v1','stock-receipt-lots-v1','stock-lot-count-v1','stock-lots-v1',WAREHOUSE_FEATURE,PRIVATE_QUICK_FEATURE,RESTAURANT_PUBLIC_MENU_FEATURE,RESTAURANT_MENU_FEATURE,RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
+export const RECOVERY_FEATURES=['agent-tabular-migration-v1','agent-master-migration-v1',RECEIPT_REVIEW_FEATURE,PURCHASE_UNITS_FEATURE,'stock-supplier-lot-returns-v1','stock-receipt-lots-v1','stock-lot-count-v1','stock-lots-v1',WAREHOUSE_FEATURE,PRIVATE_QUICK_FEATURE,RESTAURANT_PUBLIC_MENU_FEATURE,RESTAURANT_MENU_FEATURE,RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
 export const recoveryDataError=()=>Error('備份保護紀錄不完整或內容不同，請保留原檔核對')
 export function recoveryFeatureFloor(features=[],minimum=1){
- if(![1,2,3,4,5,6,7,8,9,10].includes(minimum)||!Array.isArray(features)||features.some(feature=>!RECOVERY_FEATURES.includes(feature)))throw recoveryDataError()
- return Math.max(minimum,features.includes('agent-master-migration-v1')?10:features.includes(PRIVATE_QUICK_FEATURE)?9:features.includes(RESTAURANT_PUBLIC_MENU_FEATURE)?8:features.includes(RESTAURANT_MENU_FEATURE)?7:features.includes(RESTAURANT_FUNDS_FEATURE)?6:features.includes(KITCHEN_PRINT_FEATURE)?5:features.includes(RESTAURANT_INTAKE_FEATURE)?4:features.includes('record-shapes-v1')?3:features.includes('cross-storage-v1')?2:1)
+ if(![1,2,3,4,5,6,7,8,9,10,11].includes(minimum)||!Array.isArray(features)||features.some(feature=>!RECOVERY_FEATURES.includes(feature)))throw recoveryDataError()
+ return Math.max(minimum,features.includes('agent-tabular-migration-v1')?11:features.includes('agent-master-migration-v1')?10:features.includes(PRIVATE_QUICK_FEATURE)?9:features.includes(RESTAURANT_PUBLIC_MENU_FEATURE)?8:features.includes(RESTAURANT_MENU_FEATURE)?7:features.includes(RESTAURANT_FUNDS_FEATURE)?6:features.includes(KITCHEN_PRINT_FEATURE)?5:features.includes(RESTAURANT_INTAKE_FEATURE)?4:features.includes('record-shapes-v1')?3:features.includes('cross-storage-v1')?2:1)
 }
 export function retainRecoveryFeatures(book,features){
  const settings=new Map(book.settings.map(row=>[row.key,row]))
+ if(features.includes('agent-tabular-migration-v1'))settings.set('agentTabularMigrationVersionFence',{key:'agentTabularMigrationVersionFence',value:'1'})
  if(features.includes('agent-master-migration-v1'))settings.set('agentMasterMigrationVersionFence',{key:'agentMasterMigrationVersionFence',value:'1'})
  if(features.includes(RECEIPT_REVIEW_FEATURE))settings.set(RECEIPT_REVIEW_SETTING,{key:RECEIPT_REVIEW_SETTING,value:'1'})
  if(features.includes(PURCHASE_UNITS_FEATURE))settings.set(PURCHASE_UNITS_SETTING,{key:PURCHASE_UNITS_SETTING,value:'1'})
@@ -66,6 +67,7 @@ export function recoveryBook(data,storage,{complete=false,digest=stockLedgerDige
  validateRestaurantRecords(book.restaurantOrders,book.restaurantOperations,book.orders,book.products,{cashLogs:book.cashLog,waste:book.wasteLog,storeId,config:checkedRestaurantConfig,menuConfigurationId:readExchangeTextSetting(settings,RESTAURANT_MENU_CONFIG_KEY),menuReceiptKey:readExchangeTextSetting(settings,'orderReceiptSecret')})
  requireMasterHistory(book)
  const features=[]
+ if(settings.some(row=>row.key==='agentTabularMigrationVersionFence'&&row.value==='1'))features.push('agent-tabular-migration-v1')
  if(settings.some(row=>row.key==='agentMasterMigrationVersionFence'&&row.value==='1'))features.push('agent-master-migration-v1')
  if(settings.some(row=>row.key===RECEIPT_REVIEW_SETTING&&row.value==='1'))features.push(RECEIPT_REVIEW_FEATURE)
  if(book.purchases.some(po=>po.procurement?.version===2)||settings.some(row=>row.key===PURCHASE_UNITS_SETTING&&row.value==='1'))features.push(PURCHASE_UNITS_FEATURE)

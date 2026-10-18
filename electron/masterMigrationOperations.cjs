@@ -5,7 +5,7 @@ module.exports=function installMasterMigration(db,api,stmts){
   api.applyMasterMigration=(input,actor)=>{
     let checked=false,existing=false
     try{return db.transaction(()=>{
-      const {book,scope}=current(actor);readMasterMigrationInput(input);existing=readMasterMigrationHistory(book).byId.has(input.id);checked=true
+      const {book,scope}=current(actor),parsed=readMasterMigrationInput(input);existing=readMasterMigrationHistory(book).byId.has(input.id);checked=true
       const {preview,receipt}=verifyMasterMigration(input,book,scope,actor)
       checked=true
       if(receipt)return assertMasterMigrationResult(input,{success:true,receipt})
@@ -18,6 +18,7 @@ module.exports=function installMasterMigration(db,api,stmts){
       }
       const saved=masterMigrationReceipt(input,preview,history,actor,new Date().toISOString(),api.exportData())
       require('./databaseFeatureFence.cjs').installMasterMigrationFence(db)
+      if(parsed.source.protocol==='pos-tabular-migration/v1'){require('./databaseFeatureFence.cjs').installTabularMigrationFence(db);stmts.setSetting.run('agentTabularMigrationVersionFence','1')}
       stmts.insertAuditLog.run(masterMigrationAudit(saved))
       stmts.setSetting.run(MASTER_MIGRATION_FENCE,'1');stmts.setSetting.run(MASTER_MIGRATION_HEAD,JSON.stringify(saved.hash))
       readMasterMigrationHistory(api.exportData())

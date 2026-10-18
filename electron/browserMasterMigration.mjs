@@ -3,6 +3,8 @@ import {planBrowserStockBusiness} from './browserStockPlan.mjs'
 import {appendBrowserStockBusiness} from './browserStockCommit.mjs'
 import {validateStockCostBook} from './stockBackup.mjs'
 import {privateDraftDigest} from './privateDrafts.mjs'
+import {TABULAR_MIGRATION_PROTOCOL,TABULAR_MIGRATION_FENCE} from './tabularMigration.mjs'
+import {readMigrationDraft} from './migrationSource.mjs'
 
 export function appendBrowserMasterMigration(book,input,scope,actor,time){
   const {preview,receipt}=verifyMasterMigration(input,book,scope,actor)
@@ -28,6 +30,7 @@ export function appendBrowserMasterMigration(book,input,scope,actor,time){
   const saved=masterMigrationReceipt(input,preview,history,actor,time,next)
   next.auditLog.push(masterMigrationAudit(saved))
   next.settings=[...next.settings.filter(row=>![MASTER_MIGRATION_FENCE,MASTER_MIGRATION_HEAD].includes(row.key)),{key:MASTER_MIGRATION_FENCE,value:'1'},{key:MASTER_MIGRATION_HEAD,value:JSON.stringify(saved.hash)}]
+  if(readMigrationDraft(input.sourceText).protocol===TABULAR_MIGRATION_PROTOCOL)next.settings=[...next.settings.filter(row=>row.key!==TABULAR_MIGRATION_FENCE),{key:TABULAR_MIGRATION_FENCE,value:'1'}]
   readMasterMigrationHistory(next)
   return {book:next,receipt:saved}
 }

@@ -4,13 +4,13 @@ import {decimalUnits} from '../../electron/decimalUnits.mjs'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
 // AM3/AM4: deterministic preflight only. No storage adapter or business writer
 // is imported here. Suggested aliases are shown to the owner, not identity proof.
-const aliases={name:['name','商品名稱','品名','item name','item_name'],barcode:['barcode','條碼','ean'],price:['price','售價','selling price','standard price'],cost:['cost','成本','valuation rate'],stock:['stock','庫存','quantity','qty'],unit:['unit','單位','uom','stock uom'],phone:['phone','電話','手機','mobile']}
+import {migrationAliases as aliases,migrationColumnAliases} from '../../electron/migrationColumns.mjs'
 export function previewMigration(draft){
  draft=readMigrationDraft(JSON.stringify(draft))
  const issues=[],seen=new Set(),barcodes=new Map(),phones=new Map(),tables=[]
  const issue=(table,row,code)=>issues.push({table,row,code})
  for(const [tableIndex,table]of draft.tables.entries()){
-  const mapping=Object.fromEntries(Object.entries(aliases).flatMap(([field,names])=>{const matches=table.columns.flatMap((column,index)=>names.includes(column.trim().toLowerCase())?[index]:[]);if(matches.length>1)issue(tableIndex,null,'ambiguous-column');return matches.length===1?[[field,matches[0]]]:[]}))
+  const mapping=Object.fromEntries(Object.keys(aliases).flatMap(field=>{const names=migrationColumnAliases(field,table.entity),matches=table.columns.flatMap((column,index)=>names.includes(column.trim().toLowerCase())?[index]:[]);if(matches.length>1)issue(tableIndex,null,'ambiguous-column');return matches.length===1?[[field,matches[0]]]:[]}))
   if(table.entity==='products'&&!Object.hasOwn(mapping,'name'))issue(tableIndex,null,'missing-name-column')
   for(const [rowIndex,row]of table.rows.entries()){
    const key=canonicalSignature([draft.source.system,draft.source.company,table.entity,row.externalId])
