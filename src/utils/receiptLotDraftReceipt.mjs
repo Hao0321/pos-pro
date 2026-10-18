@@ -4,9 +4,9 @@ export const supplierLotReturnDraftKey=(storeId,userId,role,purchaseId)=>'pos_su
 // A global original-ID retry may finish while the delivery form is closed.
 // Clear only the exact reviewed input acknowledged by the financial adapter.
 export function finalizeReceiptLotDraft(result,session){
- if(!['receive-lots','purchase-return-lots'].includes(result.receipt?.kind))return result
+ if(!['receive-lots','receive-reviewed','purchase-return-lots'].includes(result.receipt?.kind))return result
  try{
-  const receipt=result.receipt,request=JSON.parse(receipt.signature),returning=receipt.kind==='purchase-return-lots',key=(returning?supplierLotReturnDraftKey:receiptLotDraftKey)(request.lots.storeId,session.userId,session.role,request.purchaseId),raw=localStorage.getItem(key)
+  const receipt=result.receipt,request=JSON.parse(receipt.signature),returning=receipt.kind==='purchase-return-lots',key=(returning?supplierLotReturnDraftKey:receiptLotDraftKey)(request.receiptReview?.storeId??request.lots.storeId,session.userId,session.role,request.purchaseId),raw=localStorage.getItem(key)
   if(raw===null)return result
   const saved=JSON.parse(raw),command=saved.form?.command
   if(saved.version!==1||!command||command.identity?.id!==receipt.id||canonicalSignature({...command.input,...command.identity})!==receipt.signature)return result

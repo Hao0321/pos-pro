@@ -1,3 +1,4 @@
+import {assertReceiptReviewFeature} from './receiptReview.mjs'
 import {assertPurchaseUnitFeature} from './purchaseUnitPricing.mjs'
 import {replayStockLedger} from './stockLedgerModel.mjs'
 import {assertStockCustodyMatchesBook,stockLedgerError} from './stockOpeningPlan.mjs'
@@ -19,6 +20,7 @@ const immutableOrder=row=>Object.fromEntries(orderFields.map(key=>[key,row[key]?
 export function validateStockCostBook(book,validatedState=null){
  try{
   assertPurchaseUnitFeature(book)
+  assertReceiptReviewFeature(book)
   const physicalAudits=physicalStocktakeAudits(book.auditLog||[])
   if((book.settings||[]).some(row=>row.key===STOCK_COMPAT_SETTING&&row.value!=='1'))throw stockLedgerError('HISTORY')
   const hasEntries=Object.hasOwn(book,'stockCostEntries'),hasOperations=Object.hasOwn(book,'stockCostOperations')
@@ -72,7 +74,7 @@ export function validateStockCostBook(book,validatedState=null){
     const audit=(book.auditLog||[]).find(row=>row.id==='stock-operation:'+input.id),saved=audit&&(typeof audit.detail==='string'?JSON.parse(audit.detail):audit.detail)
     if(!saved||saved.signature!==canonicalSignature(input))throw stockLedgerError('HISTORY')
     if(input.protocol===PHYSICAL_STOCKTAKE&&!same(saved.stocktake,evidence.stocktake))throw stockLedgerError('HISTORY')
-    if(evidence.inventory?.modern){const purchase=(book.purchases||[]).find(row=>row.id===input.purchaseId),event=purchase?.procurement?.[['receive','receive-lots'].includes(input.kind)?'receipts':'returns']?.find(row=>row.id===input.id);if(!same(event,evidence.inventory.event))throw stockLedgerError('HISTORY')}
+    if(evidence.inventory?.modern){const purchase=(book.purchases||[]).find(row=>row.id===input.purchaseId),event=purchase?.procurement?.[['receive','receive-lots','receive-reviewed'].includes(input.kind)?'receipts':'returns']?.find(row=>row.id===input.id);if(!same(event,evidence.inventory.event))throw stockLedgerError('HISTORY')}
    }else if(method==='addWaste'){
     if(!same((book.wasteLog||[]).find(row=>row.id===input.id),evidence.waste))throw stockLedgerError('HISTORY')
    }else if(method==='addProduct'){

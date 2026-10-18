@@ -4,6 +4,7 @@ import {projectStockLedger,stockLedgerDigest,stockLedgerAcknowledgement} from '.
 import {salesDate} from './salesRules.mjs'
 import {withStockBookHead} from './stockBookAnchor.mjs'
 import {materializeLotProducts} from './lotBusinessPolicy.mjs'
+import {hasReceiptLots} from './receiptReview.mjs'
 
 export function appendBrowserStockBusiness(before,after,state,command,runtime){
   if(!state.projection)throw Error('這份成本帳尚未開帳')
@@ -22,6 +23,6 @@ export function appendBrowserStockBusiness(before,after,state,command,runtime){
   const hash=stockLedgerDigest(body),receipt=stockLedgerAcknowledgement(body,hash,projection)
   const operation={id:canonicalSignature([method,input.id]),method,operationId:input.id,actorId:actor.userId,signature:canonicalSignature(input),receipt}
   if(before.stockCostOperations.some(row=>row.id===operation.id))throw Error('成本原編號已存在')
-  const featureSetting={'receive-lots':'stockReceiptLotsVersionFence','purchase-return-lots':'stockSupplierLotReturnsVersionFence'}[input.kind]
+  const featureSetting=hasReceiptLots(input)?'stockReceiptLotsVersionFence':{'purchase-return-lots':'stockSupplierLotReturnsVersionFence'}[input.kind]
   return withStockBookHead({...planned.book,...(featureSetting?{settings:[...planned.book.settings.filter(row=>row.key!==featureSetting),{key:featureSetting,value:'1'}]}:{}),products:materializeLotProducts(planned.book.products,projection,body.evidence.products),stockCostEntries:[...before.stockCostEntries,{...body,hash}],stockCostOperations:[...before.stockCostOperations,operation]},hash)
 }

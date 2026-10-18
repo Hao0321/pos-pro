@@ -1,3 +1,4 @@
+const {RECEIPT_REVIEW_KIND,hasReceiptLots}=require('./receiptReview.mjs')
 const {isProcurement}=require('./procurementRules.mjs')
 const {canonicalSignature,operationHeader}=require('./operationRules.mjs')
 const {signature:checkoutSignature}=require('./checkoutSignature.mjs')
@@ -33,7 +34,7 @@ module.exports=function installStockBusinessOperations(db,api,store){
   const [table,column]=targets[method]
   return !!db.prepare('SELECT 1 FROM '+table+' WHERE '+column+'=?').get(method==='applyInventoryOperation'?'stock-operation:'+id:id)
  }
- const requiresCost=(method,input)=>method==='applyInventoryOperation'?['receive','receive-lots','purchase-return','purchase-return-lots','stocktake'].includes(input.kind):method==='applySalesOperation'?['deliver','return'].includes(input.action):method==='applyRestaurantOperation'?input.action!=='configure':true
+ const requiresCost=(method,input)=>method==='applyInventoryOperation'?['receive','receive-lots','receive-reviewed','purchase-return','purchase-return-lots','stocktake'].includes(input.kind):method==='applySalesOperation'?['deliver','return'].includes(input.action):method==='applyRestaurantOperation'?input.action!=='configure':true
  function before(method,input){
   const products=api.getProducts(),facts={products}
   if(method==='refundOrder'){facts.original=api.getOrder(input.refundOf);facts.previousRefunds=api.getOrders().filter(row=>row.refundOf===input.refundOf)}
@@ -58,7 +59,7 @@ module.exports=function installStockBusinessOperations(db,api,store){
    else{
     const purchase=api.getPurchases().find(row=>row.id===input.purchaseId),modern=isProcurement(purchase)
     if(!purchase||!facts.purchase)throw stockLedgerError('HISTORY')
-    const event=modern?purchase.procurement[['receive','receive-lots'].includes(input.kind)?'receipts':'returns'].find(row=>row.id===input.id):null
+    const event=modern?purchase.procurement[['receive','receive-lots','receive-reviewed'].includes(input.kind)?'receipts':'returns'].find(row=>row.id===input.id):null
     output.inventory={kind:input.kind,purchaseId:purchase.id,modern,items:purchase.items,beforeReceived:facts.purchase.items.map(row=>row.received||0),event,creditCents:['purchase-return','purchase-return-lots'].includes(input.kind)?Math.round(event?.amount*100):0}
     include(purchase.items.filter((_,index)=>input.quantities[index]>0))
    }
@@ -84,7 +85,7 @@ module.exports=function installStockBusinessOperations(db,api,store){
  }
  for(const method of STOCK_BUSINESS_METHODS)api[method]=function(...args){
   if(!store.active()){
-   if(method==='applyInventoryOperation'&&args[0]?.kind==='receive-lots')return {success:false,committed:false,error:'請先核對庫存成本與批次，再使用分批收貨'}
+   if(method==='applyInventoryOperation'&&hasReceiptLots(args[0]||{}))return {success:false,committed:false,error:'請先核對庫存成本與批次，再使用分批收貨'}
    if(method==='applyInventoryOperation'&&args[0]?.kind==='purchase-return-lots')return {success:false,committed:false,error:'請先核對庫存成本與批次，再使用批次退貨'}
    if(method==='applyInventoryOperation'&&args[0]?.protocol==='pos-physical-stocktake/v1')return db.transaction(()=>{const result=originals[method].apply(api,args);if(result?.success)store.ensureCompatibility();return result})()
    return originals[method].apply(api,args)
@@ -107,8 +108,9 @@ module.exports=function installStockBusinessOperations(db,api,store){
     if(result?.success!==true)throw stockLedgerError('HISTORY')
     current();return result
    }
-   if(method==='applyInventoryOperation'&&input.kind==='receive-lots'&&(!state.projection.lots||input.lots?.storeId!==api.getSetting('sharedStoreId')||input.lots?.epoch!==db.prepare('SELECT value FROM sales_runtime WHERE id=?').get('epoch')?.value))throw stockLedgerError('STALE')
+   if(method==='applyInventoryOperation'&&hasReceiptLots(input)&&(!state.projection.lots||input.lots?.storeId!==api.getSetting('sharedStoreId')||input.lots?.epoch!==db.prepare('SELECT value FROM sales_runtime WHERE id=?').get('epoch')?.value))throw stockLedgerError('STALE')
    if(method==='applyInventoryOperation'&&input.kind==='purchase-return-lots'&&(!state.projection.lots||input.lots?.storeId!==api.getSetting('sharedStoreId')||input.lots?.epoch!==db.prepare('SELECT value FROM sales_runtime WHERE id=?').get('epoch')?.value))throw stockLedgerError('STALE')
+   if(method==='applyInventoryOperation'&&input.kind===RECEIPT_REVIEW_KIND&&!!state.projection.lots!==hasReceiptLots(input))throw stockLedgerError('STALE')
    if(cost&&method!=='addProduct'){
     operationHeader(input)
     if(Math.abs(Date.now()-Date.parse(input.time))>300000)throw stockLedgerError('STALE')
@@ -120,7 +122,7 @@ module.exports=function installStockBusinessOperations(db,api,store){
     if(!cost){current();return result}
     const proof=evidence(method,input,facts,result),now=new Date(),date=method==='applySalesOperation'?input.date:salesDate(new Date(input.time||now))
     const receipt=store.append(input,verified,{time:now.toISOString(),date},method,proof,projection=>{if(projection.lots)for(const product of proof.products)db.prepare('UPDATE products SET stock=? WHERE id=?').run(require('./warehousePlan.mjs').warehouseLocationUnits(projection.custody,'main',product.id,product.unit)/1000,product.id)})
-    if(input.kind==='receive-lots'){require('./databaseFeatureFence.cjs').installReceiptLotsFence(db);db.prepare('INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('stockReceiptLotsVersionFence','1')}
+    if(hasReceiptLots(input)){require('./databaseFeatureFence.cjs').installReceiptLotsFence(db);db.prepare('INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('stockReceiptLotsVersionFence','1')}
     if(input.kind==='purchase-return-lots'){require('./databaseFeatureFence.cjs').installSupplierLotReturnsFence(db);db.prepare('INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('stockSupplierLotReturnsVersionFence','1')}
     current()
     const products=new Map(api.getProducts().map(row=>[row.id,row]))

@@ -25,11 +25,14 @@ function offlineShell() {
     const assets=fs.readdirSync(path.join(output,'assets')).filter(name=>/\.(js|css)$/.test(name)).sort()
     const scenariosDir=path.join(output,'scenarios','donburi')
     const scenarioFiles=fs.existsSync(scenariosDir)?fs.readdirSync(scenariosDir).filter(name=>/\.(html|css|mjs)$/.test(name)).sort().map(name=>'scenarios/donburi/'+name):[]
-    const agentFiles=['agent/manifest.json','agent/document-draft-v1.schema.json','agent/business-document-v1.schema.json','llms.txt','THIRD_PARTY_LICENSES.txt']
+    // The canonical task documents work on ordinary static hosts. The hidden
+    // discovery alias is online metadata; a host hiding dotfiles must not
+    // prevent the entire trading shell from installing its offline cache.
+    const agentFiles=[...fs.readdirSync(path.join(output,'agent'),{recursive:true}).filter(name=>/\.(json|txt)$/.test(name)).sort().map(name=>'agent/'+name.replaceAll('\\','/')),'llms.txt','THIRD_PARTY_LICENSES.txt']
     const languageFiles=fs.readdirSync(path.join(output,'i18n'),{recursive:true}).filter(name=>name.endsWith('.mjs')).sort().map(name=>'i18n/'+name.replaceAll('\\','/'))
     const bundleFiles=[...assets.map(name=>'assets/'+name),...scenarioFiles,...agentFiles,...languageFiles]
     const cachedFiles=['index.html','manifest.webmanifest','apple-touch-icon.png','icon-192.png','icon-512.png',...bundleFiles]
-    const version=hash(Buffer.concat(cachedFiles.flatMap(name=>[Buffer.from(name),fs.readFileSync(path.join(output,name))])))
+    const version=hash(Buffer.concat([...cachedFiles,'.well-known/pos-agent.json'].flatMap(name=>[Buffer.from(name),fs.readFileSync(path.join(output,name))])))
     const core=['./',...cachedFiles.map(name=>'./'+name)]
     const {source:worker,files:workerFiles}=renderOfflineWorker(fs.readFileSync(path.join(root,'public/sw.js'),'utf8'),'pos-pro-'+version,core)
     fs.writeFileSync(path.join(output,'sw.js'),worker)

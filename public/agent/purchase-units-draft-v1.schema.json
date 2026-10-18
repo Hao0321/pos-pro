@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:pos-pro:purchase-units-draft:v1",
+  "title": "Owner-reviewed package purchase draft",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "protocol": {
+      "const": "pos-purchase-units-draft/v1"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "storeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "epoch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "role": {
+          "const": "owner"
+        }
+      },
+      "required": [
+        "storeId",
+        "epoch",
+        "userId",
+        "role"
+      ]
+    },
+    "supplierId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "catalogueDigest": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000000
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "quantity": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 32
+          },
+          "unitPrice": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 32
+          },
+          "mode": {
+            "enum": [
+              "base",
+              "pack"
+            ]
+          },
+          "purchasedUnit": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 32
+          },
+          "baseQuantityPerUnit": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 32
+          },
+          "baseUnit": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 32
+          }
+        },
+        "required": [
+          "key",
+          "quantity"
+        ]
+      }
+    }
+  },
+  "required": [
+    "protocol",
+    "scope",
+    "supplierId",
+    "catalogueDigest",
+    "items"
+  ]
+}

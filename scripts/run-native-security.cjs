@@ -1,5 +1,7 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--receipt-review':['native-receipt-review.cjs','POS_RECEIPT_REVIEW_NATIVE_PASS',false],
+  '--agent-migration-ui':['native-agent-migration-ui.cjs','POS_AGENT_MIGRATION_UI_PASS',true],
   '--purchase-units-shared':['native-purchase-units-shared.cjs','POS_PURCHASE_UNITS_TRANSPORT_PASS',true],
   '--purchase-units-browser-ui':['native-purchase-units-browser-ui.cjs','POS_PURCHASE_UNITS_BROWSER_PASS',true],
   '--purchase-units-ui':['native-purchase-units-ui.cjs','POS_PURCHASE_UNITS_UI_PASS',true],

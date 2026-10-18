@@ -1,0 +1,14 @@
+// @vitest-environment jsdom
+import React from 'react'
+import {afterEach,beforeEach,test,expect,vi} from 'vitest'
+import {render,fireEvent,waitFor,act,cleanup} from '@testing-library/react'
+vi.mock('../../src/utils/dataAccess',()=>({loadPrivateDraftContext:async()=>({storeId:'source-test',epoch:'epoch',userId:'owner',role:'owner'})}))
+vi.mock('../../src/utils/csv',()=>({readFileAsText:vi.fn()}))
+import {readFileAsText} from '../../src/utils/csv'
+import AgentMigrationPanel from '../../src/components/AgentMigrationPanel'
+const packet=id=>JSON.stringify({protocol:'pos-migration-draft/v1',id,source:{system:'legacy',company:'original-company'},tables:[{entity:'products',columns:['Name','unit'],rows:[{externalId:'00001',values:['Rice','kg']}]}]})
+beforeEach(()=>{localStorage.clear();vi.stubGlobal('navigator',{locks:{request:async(_key,_options,callback)=>callback()}});readFileAsText.mockReset()})
+afterEach(()=>{cleanup();vi.unstubAllGlobals()})
+async function panel(){render(<AgentMigrationPanel session={{userId:'owner',role:'owner'}} store={{}} onClose={()=>{}}/>);await waitFor(()=>expect(document.querySelector('[data-migration-text]').disabled).toBe(false));return {input:document.querySelector('[data-migration-file]'),text:document.querySelector('[data-migration-text]')}}
+test('AM1 a slower older file cannot replace text entered after selecting it',async()=>{let complete;readFileAsText.mockImplementation(()=>new Promise(resolve=>{complete=resolve}));const {input,text}=await panel();fireEvent.change(input,{target:{files:[new File(['old'],'old.json')]}});fireEvent.change(text,{target:{value:'Later original input, still incomplete'}});await act(async()=>{complete(packet('old'));await Promise.resolve()});expect(text.value).toBe('Later original input, still incomplete');expect(document.querySelector('[data-migration-result]')).toBe(null);expect(localStorage.getItem('pos_atomic_records_v1')).toBe(null)})
+test('AM1 two files completing in reverse order preserve the newer source and a recoverable device draft',async()=>{const pending=[];readFileAsText.mockImplementation(()=>new Promise(resolve=>pending.push(resolve)));const {input,text}=await panel();fireEvent.change(input,{target:{files:[new File(['one'],'one.json')]}});fireEvent.change(input,{target:{files:[new File(['two'],'two.json')]}});await act(async()=>{pending[1](packet('newest'));await Promise.resolve()});await waitFor(()=>expect(document.querySelector('[data-migration-result]')).not.toBe(null));await act(async()=>{pending[0](packet('older'));await Promise.resolve()});expect(JSON.parse(text.value).id).toBe('newest');const key=Object.keys(localStorage).find(key=>key.startsWith('pos_migration_preview_v1:'));expect(JSON.parse(localStorage.getItem(key)).form.text).toBe(text.value);expect(localStorage.getItem('pos_atomic_records_v1')).toBe(null)})

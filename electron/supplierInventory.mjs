@@ -7,7 +7,7 @@ import {supplierActor,assertProcurementApproval} from './supplierControl.mjs'
 import {validateSupplierLedgerRecords,planSupplierRegistration,supplierControlFromEntries,supplierLedgerEvidence,assertSupplierLedgerView} from './supplierLedger.mjs'
 import {assertPrivateQuickPurchase} from './privateDrafts.mjs'
 
-const procurement=request=>['receive','receive-lots'].includes(request.kind)||PROCUREMENT_KINDS.includes(request.kind)
+const procurement=request=>['receive','receive-lots','receive-reviewed'].includes(request.kind)||PROCUREMENT_KINDS.includes(request.kind)
 function checkContext(request,data){
  const context=supplierInventoryContext(request),active=data.supplierFence||(data.supplierEntries||[]).length>0
  if(!context){if(active)throw Error('採購流程已升級，請保留草稿並重新核對供應商帳');return null}

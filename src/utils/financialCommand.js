@@ -1,3 +1,4 @@
+import {RECEIPT_REVIEW_KIND,hasReceiptLots,assertReceiptReviewHistory} from '../../electron/receiptReview.mjs'
 import { browserStorage } from './browserStorage'
 import {assertStoredBrowserCostReceipt} from './browserStockBusiness'
 import {PROCUREMENT_KINDS,isPurchaseCreate,isProcurement,procurementEvent,validateProcurement} from '../../electron/procurementRules.mjs'
@@ -17,7 +18,7 @@ import {assertStoredBrowserWarehouse} from './browserWarehouse'
 import {assertLotResult} from '../../electron/browserLots.mjs'
 import {assertStoredBrowserLot} from './browserLots'
 export const FINANCIAL_PENDING='pos_pending_financial_v1'
-const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt','receive-lots':'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt','stock-cost':'receipt',warehouse:'receipt',lots:'receipt'}
+const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt','receive-lots':'receipt','receive-reviewed':'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt','stock-cost':'receipt',warehouse:'receipt',lots:'receipt'}
 for(const kind of PROCUREMENT_KINDS)fields[kind]='receipt'
 let running=false
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value
@@ -60,13 +61,14 @@ export function assertReceipt(kind,request,result){
       if(request.action==='cancel'&&row.refundId&&(result.refund?.id!==row.refundId||result.refund.shiftId!==request.shiftId||result.refund.total!==-result.entry.total))throw Error('預訂回覆缺少退款流水')
     }
   }
-  if(['stocktake','receive','receive-lots',...PROCUREMENT_KINDS].includes(kind)){
+  if(['stocktake','receive','receive-lots','receive-reviewed',...PROCUREMENT_KINDS].includes(kind)){
     assertSupplierInventoryResult(request,result)
     if(row.kind!==kind||row.signature!==JSON.stringify(canonical(request))||!Array.isArray(row.productIds)||!row.productIds.length&&!PROCUREMENT_KINDS.includes(kind)||!Array.isArray(result.products)||result.products.length!==row.productIds.length||new Set(row.productIds).size!==row.productIds.length||row.productIds.some(id=>!result.products.some(p=>p.id===id)))throw Error('庫存保存結果尚未確認：回覆內容不符')
     if(kind==='stocktake'&&(row.productIds.length!==request.counts.length||request.counts.some(c=>!row.productIds.includes(c.id))))throw Error('盤點回覆缺少原品項')
     if(kind==='stocktake'&&request.protocol===PHYSICAL_STOCKTAKE)assertPhysicalStocktakeResult(request,result)
-    if(['receive','receive-lots'].includes(kind)&&(row.purchaseId!==request.purchaseId||result.purchase?.id!==request.purchaseId))throw Error('到貨回覆缺少原進貨單')
-    if(['receive-lots','purchase-return-lots'].includes(kind)){
+    if(['receive','receive-lots','receive-reviewed'].includes(kind)&&(row.purchaseId!==request.purchaseId||result.purchase?.id!==request.purchaseId))throw Error('到貨回覆缺少原進貨單')
+    if(kind===RECEIPT_REVIEW_KIND)assertReceiptReviewHistory(request,result.purchase,row.productIds)
+    if(hasReceiptLots(request)||kind==='purchase-return-lots'){
       const cost=result.costReceipt
       if(cost?.protocol!=='pos-stock-cost/v1'||cost.success!==true||cost.id!==request.id||cost.sourceMethod!=='applyInventoryOperation'||!Number.isSafeInteger(cost.sequence)||cost.sequence<2||typeof cost.eventId!=='string'||!cost.eventId||['eventHash','stateDigest'].some(key=>!/^sha256:[a-f0-9]{64}$/.test(cost[key])))throw Error('批次與成本來源需要核對，請保留原資料')
     }
@@ -84,7 +86,7 @@ export function assertReceipt(kind,request,result){
     }
   }
   if(!globalThis.window?.electronAPI){
-    const method={refund:'refundOrder',waste:'addWaste',restaurant:'applyRestaurantOperation',sales:'applySalesOperation',stocktake:'applyInventoryOperation',receive:'applyInventoryOperation','receive-lots':'applyInventoryOperation'}[kind]||(PROCUREMENT_KINDS.includes(kind)?'applyInventoryOperation':null)
+    const method={refund:'refundOrder',waste:'addWaste',restaurant:'applyRestaurantOperation',sales:'applySalesOperation',stocktake:'applyInventoryOperation',receive:'applyInventoryOperation','receive-lots':'applyInventoryOperation','receive-reviewed':'applyInventoryOperation'}[kind]||(PROCUREMENT_KINDS.includes(kind)?'applyInventoryOperation':null)
     if(method)assertStoredBrowserCostReceipt(method,request,result)
   }
 }

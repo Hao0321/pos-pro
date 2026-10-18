@@ -1,3 +1,4 @@
+import {RECEIPT_REVIEW_KIND,isReceiving,hasReceiptLots,assertLiveReceiptReview,assertReceiptReviewHistory} from './receiptReview.mjs'
 import {canonicalSignature,operationHeader,quantityValue,moneyValue} from './operationRules.mjs'
 import {PROCUREMENT_KINDS,isPurchaseCreate,isProcurement,planProcurement,recordProcurementReceipt,procurementEvent,validateProcurement,procurementDate} from './procurementRules.mjs'
 import {PHYSICAL_STOCKTAKE,PHYSICAL_MEANING,planPhysicalStocktake,assertPhysicalStocktakeReceipt} from './physicalStocktake.mjs'
@@ -9,7 +10,7 @@ export function planInventory(request,data,actor){
   operationHeader(request)
   const products=new Map(data.products.map(p=>[p.id,{...p}])),changed=new Set(),created=new Set()
   let purchase=null,supplier=null,cashLog=null,stocktake=null
-  const arrival=request.kind===RECEIPT_LOT_KIND?receiptLots(request):null,acceptedPrices=new Set()
+  const arrival=hasReceiptLots(request)?receiptLots(request):null,acceptedPrices=new Set()
   if(request.kind==='stocktake'){
     if(request.protocol!==undefined&&request.protocol!==PHYSICAL_STOCKTAKE)throw Error('盤點版本不支援，請保留原草稿核對')
     if(request.protocol===PHYSICAL_STOCKTAKE||request.quantityMeaning===PHYSICAL_MEANING)stocktake=planPhysicalStocktake(request,data)
@@ -22,12 +23,13 @@ export function planInventory(request,data,actor){
       else{quantityValue(count.stock,'實盤數量');quantityValue(count.expectedStock,'盤點時庫存');if(p.stock!==count.expectedStock)throw Error('盤點期間庫存已變更，請重新核對 '+p.name);p.stock=count.stock}
       changed.add(p.id)
     }
-  }else if(['receive',RECEIPT_LOT_KIND].includes(request.kind)){
+  }else if(isReceiving(request.kind)){
+    assertLiveReceiptReview(request,data)
     const original=data.purchases.find(p=>p.id===request.purchaseId)
     if(!original||!['ordered','partial'].includes(original.status))throw Error('進貨單已到貨或不存在')
     if(request.expectedPurchase!==canonicalSignature(original))throw Error('進貨單已變更，請重新核對')
     if(!Array.isArray(request.quantities)||request.quantities.length!==original.items.length||!request.quantities.some(q=>q>0))throw Error('請填本次到貨量')
-    const newPrices=arrival?.newItems||(original.procurement?.version===2?receiptNewItemPrices(request.newItems===undefined?[]:request.newItems,request.quantities.map(q=>Math.round(q*1000))):[])
+    const newPrices=arrival?.newItems||([2].includes(original.procurement?.version)||request.kind===RECEIPT_REVIEW_KIND?receiptNewItemPrices(request.newItems===undefined?[]:request.newItems,request.quantities.map(q=>Math.round(q*1000))):[])
     supplier=data.suppliers.find(s=>s.id===original.supplierId);supplier=supplier?structuredClone(supplier):null
     const links=[]
     const items=original.items.map((item,index)=>{
@@ -46,7 +48,7 @@ export function planInventory(request,data,actor){
           }else{
             id='p-'+request.id+'-'+index;if(products.has(id))throw Error('新商品編號衝突，請核對')
             const price=newPrices.find(row=>row.lineIndex===index)
-            if((arrival||original.procurement?.version===2)&&!price)throw Error('請確認新商品的售價')
+            if((arrival||original.procurement?.version===2||request.kind===RECEIPT_REVIEW_KIND)&&!price)throw Error('請確認新商品的售價')
             if(price)acceptedPrices.add(index)
             const p={id,name:item.name,category:item.category||'未分類',price:price?price.priceCents/100:Math.round(item.unitCost*1.3),cost:purchaseReferenceCost(item).amount??0,stock:qty,unit:item.unit||'個',supplierId:original.supplierId||'',noBarcode:true,barcode:'',imageUrl:'',expiryDate:'',reorderLevel:0}
             if(typeof p.name!=='string'||!p.name.trim())throw Error('進貨品項缺少名稱')
@@ -91,6 +93,7 @@ export function inventoryReceipt(request,row,data){
     const expected=[...new Set(purchase?.items.filter((_,i)=>request.quantities?.[i]>0).map(item=>item.productId))]
     if(!expected.length||expected.length!==row.productIds.length||expected.some(id=>!id||!row.productIds.includes(id)))throw Error('原退貨庫存回執不完整，請保留原編號核對')
   }
+  if(request.kind===RECEIPT_REVIEW_KIND)assertReceiptReviewHistory(request,purchase,row.productIds)
   if(row.document){validateProcurement(purchase);if(!isProcurement(purchase)||purchase.procurement.revision<row.purchaseVersion||canonicalSignature(procurementEvent(purchase,request))!==canonicalSignature(row.document))throw Error('採購歷史文件缺失，請保留原編號核對')}
   const cashLog=row.cashLogId?data.cashLogs?.find(l=>l.id===row.cashLogId):null
   if(row.cashLogId&&!cashLog)throw Error('原付款現金流水已不存在，請保留原編號核對')

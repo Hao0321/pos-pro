@@ -148,7 +148,7 @@ function cashMovement(request,data,actor,entry,type){
   return {id:entry.cashLogId,shiftId:shift.id,time:request.time,type,amount:entry.amount,reason:label+' '+request.purchaseId,cashier:actor?.username||actor?.userId||''}
 }
 export function procurementEvent(po,request){
-  const collection={receive:'receipts','receive-lots':'receipts','purchase-bill':'bills','purchase-pay':'payments','purchase-reverse':'reversals','purchase-return':'returns','purchase-return-lots':'returns','purchase-refund':'refunds','purchase-refund-reverse':'refundReversals'}[request.kind]
+  const collection={receive:'receipts','receive-lots':'receipts','receive-reviewed':'receipts','purchase-bill':'bills','purchase-pay':'payments','purchase-reverse':'reversals','purchase-return':'returns','purchase-return-lots':'returns','purchase-refund':'refunds','purchase-refund-reverse':'refundReversals'}[request.kind]
   const event=collection?po.procurement[collection].find(r=>r.id===request.id):request.kind==='purchase-cancel'?po.procurement.cancel:{id:po.procurement.createdOperationId,time:po.procurement.createdAt}
   if(!event)throw Error('採購操作缺少保存文件')
   return {collection:collection||request.kind,id:event.id,signature:canonicalSignature(event)}

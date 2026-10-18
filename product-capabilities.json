@@ -35,7 +35,8 @@
     "delivery.installation",
     "update.client-check",
     "update.release-channel",
-    "operations.scale"
+    "operations.scale",
+    "migration.switching"
   ],
   "capabilities": [
     {
@@ -252,6 +253,13 @@
         "nextAction": "建立並審查信任政策後驗證精確來源與簽章；不自動購買憑證或發布"
       },
       "nextExperiment": "與本地更新器共同驗證正式來源的獨立讀回"
+    },
+    {
+      "id": "migration.switching",
+      "name": "Agent 一鍵搬家、來源對照、試搬、核對與可追溯切換",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "依官方 know-how 建立來源原編號、欄位對照、重複提示、原文字草稿、期初與開放單據核對；逐類型接上原子搬家與回執。任意 ERP／CRM 與真實外部 Agent 的完整搬家仍未驗收。"
     },
     {
       "id": "operations.scale",

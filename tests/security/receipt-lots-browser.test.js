@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import {makeReceiptReview} from '../../electron/receiptReview.mjs'
 import {beforeEach,afterEach,test,expect,vi} from 'vitest'
 import fixture from '../fixtures/lot-count-native-v1.json'
 import {readPortableBackup} from '../../electron/backupEnvelope.mjs'
@@ -37,7 +38,7 @@ test('expired goods in backroom stay owned and held without reviving main availa
 })
 test('new SKU requires accepted sale price; existing SKU cannot be repriced by receiving',async()=>{
  await purchase(true);const input=await receipt(),before=raw();expect((await commitBrowserInventory(input,owner)).success).toBe(false);expect(raw()).toBe(before)
- const withPrice=await receipt([allocation(2000)],[{lineIndex:0,priceCents:0}]);const result=ok(await commitBrowserInventory(withPrice,owner));expect(result.products[0]).toMatchObject({name:'Rice arrival',unit:'公斤',price:0,cost:.07});expect(state().projection.custody.sources.at(-1).valueCents).toBe(14)
+ const withPrice=await receipt([allocation(2000)],[{lineIndex:0,priceCents:0}]);withPrice.kind='receive-reviewed';withPrice.receiptReview=makeReceiptReview(withPrice,{...book(),storeId:withPrice.lots.storeId,epoch:withPrice.lots.epoch});const result=ok(await commitBrowserInventory(withPrice,owner));expect(result.products[0]).toMatchObject({name:'Rice arrival',unit:'公斤',price:0,cost:.07});expect(state().projection.custody.sources.at(-1).valueCents).toBe(14)
 })
 test('existing SKU price input is rejected before changing stock, purchase or ledger',async()=>{await purchase();const input=await receipt([allocation(2000)],[{lineIndex:0,priceCents:9999}]),before=raw();expect((await commitBrowserInventory(input,owner)).success).toBe(false);expect(raw()).toBe(before)})
 test.each(['sum','location','date','required-none','epoch','store','head','extra','staff'])('refuses %s with the complete original browser record preserved',async control=>{

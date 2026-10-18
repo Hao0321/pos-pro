@@ -373,8 +373,8 @@ export function useStore(session){
   }
   async function commitInventory(kind,input,identity=null,prepare=null){
     if(dataError)throw Error(dataError)
-    const state=isPurchaseCreate(kind)&&identity?await refreshSuppliers():supplierRef.current,original=['receive','receive-lots'].includes(kind)?purchases.find(po=>po.id===input.purchaseId):null
-    const controlled=kind!=='stocktake'&&!(['receive','receive-lots'].includes(kind)&&!original?.procurement&&!state?.legacyReadOnly)
+    const state=isPurchaseCreate(kind)&&identity?await refreshSuppliers():supplierRef.current,original=['receive','receive-lots','receive-reviewed'].includes(kind)?purchases.find(po=>po.id===input.purchaseId):null
+    const controlled=kind!=='stocktake'&&!(['receive','receive-lots','receive-reviewed'].includes(kind)&&!original?.procurement&&!state?.legacyReadOnly)
     if(controlled&&!state)throw Error('請先載入供應商與採購資料，再保存原草稿')
     const command=supplierInventoryCommand(kind,input,identity,state,{controlled})
     const result=await executeFinancial(kind,command.input,request=>applyInventoryOperation(request,session),setFinancialState,command.identity,null,prepare)
@@ -441,7 +441,7 @@ export function useStore(session){
   }
   async function retryFinancial(){
     const pending=readPendingFinancial();if(!pending)return
-    const ports={restaurant:r=>applyRestaurantOperation(r,session),refund:r=>dbRefund(r.refundOf,r,null,null,sessionRef.current),topup:addTopup,waste:r=>addWaste(r,sessionRef.current),cashlog:addCashLog,stocktake:r=>applyInventoryOperation(r,session),receive:r=>applyInventoryOperation(r,session),'receive-lots':r=>applyInventoryOperation(r,session)}
+    const ports={restaurant:r=>applyRestaurantOperation(r,session),refund:r=>dbRefund(r.refundOf,r,null,null,sessionRef.current),topup:addTopup,waste:r=>addWaste(r,sessionRef.current),cashlog:addCashLog,stocktake:r=>applyInventoryOperation(r,session),receive:r=>applyInventoryOperation(r,session),'receive-lots':r=>applyInventoryOperation(r,session),'receive-reviewed':r=>applyInventoryOperation(r,session)}
     ports.exchange=r=>applyExchangeOperation(r,session)
     ports['stock-cost']=r=>applyStockSetupOperation(r,sessionRef.current)
     ports.lots=r=>applyLotOperation(r,sessionRef.current)
@@ -454,7 +454,7 @@ export function useStore(session){
     if(pending.kind==='topup'){setMembers(p=>p.map(m=>m.id===result.member.id?result.member:m));setTopups(p=>[result.topup,...p.filter(t=>t.id!==result.topup.id)])}
     if(pending.kind==='refund'){setOrders(p=>[result.order,...p.filter(o=>o.id!==result.order.id).map(o=>o.id===result.original.id?result.original:o)]);setProducts(p=>p.map(i=>result.products.find(n=>n.id===i.id)||i));if(result.member)setMembers(p=>p.map(m=>m.id===result.member.id?result.member:m))}
     if(pending.kind==='waste'){setWasteLog(p=>[result.waste,...p.filter(w=>w.id!==result.waste.id)]);setProducts(p=>p.map(i=>i.id===result.product.id?result.product:i))}
-    if(['stocktake','receive','receive-lots',...PROCUREMENT_KINDS].includes(pending.kind))applyInventoryResult(result)
+    if(['stocktake','receive','receive-lots','receive-reviewed',...PROCUREMENT_KINDS].includes(pending.kind))applyInventoryResult(result)
     if(pending.kind==='cashlog')window.dispatchEvent(new Event('pos-cash-operation'))
     if(pending.kind==='restaurant')await applyRestaurantResult(result)
     if(pending.kind==='exchange')window.dispatchEvent(new CustomEvent('pos-exchange-operation',{detail:result}))

@@ -1,3 +1,4 @@
+import {RECEIPT_REVIEW_FEATURE,RECEIPT_REVIEW_SETTING} from './receiptReview.mjs'
 import {PURCHASE_UNITS_FEATURE,PURCHASE_UNITS_SETTING} from './purchaseUnitPricing.mjs'
 import {BROWSER_COLLECTIONS,OPTIONAL_COLLECTIONS,browserToBook,materialSignature} from './recoveryRules.mjs'
 import {validateStockCostBook} from './stockBackup.mjs'
@@ -19,7 +20,7 @@ import {usesRestaurantPublicMenu,RESTAURANT_PUBLIC_MENU_FEATURE} from './restaur
 import {usesPrivateQuickDrafts,PRIVATE_QUICK_FEATURE} from './privateDrafts.mjs'
 import {WAREHOUSE_FEATURE,WAREHOUSE_SETTING} from './warehouseRules.mjs'
 
-export const RECOVERY_FEATURES=[PURCHASE_UNITS_FEATURE,'stock-supplier-lot-returns-v1','stock-receipt-lots-v1','stock-lot-count-v1','stock-lots-v1',WAREHOUSE_FEATURE,PRIVATE_QUICK_FEATURE,RESTAURANT_PUBLIC_MENU_FEATURE,RESTAURANT_MENU_FEATURE,RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
+export const RECOVERY_FEATURES=[RECEIPT_REVIEW_FEATURE,PURCHASE_UNITS_FEATURE,'stock-supplier-lot-returns-v1','stock-receipt-lots-v1','stock-lot-count-v1','stock-lots-v1',WAREHOUSE_FEATURE,PRIVATE_QUICK_FEATURE,RESTAURANT_PUBLIC_MENU_FEATURE,RESTAURANT_MENU_FEATURE,RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
 export const recoveryDataError=()=>Error('備份保護紀錄不完整或內容不同，請保留原檔核對')
 export function recoveryFeatureFloor(features=[],minimum=1){
  if(![1,2,3,4,5,6,7,8,9].includes(minimum)||!Array.isArray(features)||features.some(feature=>!RECOVERY_FEATURES.includes(feature)))throw recoveryDataError()
@@ -27,6 +28,7 @@ export function recoveryFeatureFloor(features=[],minimum=1){
 }
 export function retainRecoveryFeatures(book,features){
  const settings=new Map(book.settings.map(row=>[row.key,row]))
+ if(features.includes(RECEIPT_REVIEW_FEATURE))settings.set(RECEIPT_REVIEW_SETTING,{key:RECEIPT_REVIEW_SETTING,value:'1'})
  if(features.includes(PURCHASE_UNITS_FEATURE))settings.set(PURCHASE_UNITS_SETTING,{key:PURCHASE_UNITS_SETTING,value:'1'})
  if(features.includes('stock-cost-v1'))settings.set(STOCK_COMPAT_SETTING,{key:STOCK_COMPAT_SETTING,value:'1'})
  if(features.includes('stock-supplier-lot-returns-v1'))settings.set('stockSupplierLotReturnsVersionFence',{key:'stockSupplierLotReturnsVersionFence',value:'1'})
@@ -61,6 +63,7 @@ export function recoveryBook(data,storage,{complete=false,digest=stockLedgerDige
  const checkedRestaurantConfig=readRestaurantConfig(storage==='browser'&&restaurantConfig!=null?JSON.parse(restaurantConfig):restaurantConfig??null,book.products)
  validateRestaurantRecords(book.restaurantOrders,book.restaurantOperations,book.orders,book.products,{cashLogs:book.cashLog,waste:book.wasteLog,storeId,config:checkedRestaurantConfig,menuConfigurationId:readExchangeTextSetting(settings,RESTAURANT_MENU_CONFIG_KEY),menuReceiptKey:readExchangeTextSetting(settings,'orderReceiptSecret')})
  const features=[]
+ if(settings.some(row=>row.key===RECEIPT_REVIEW_SETTING&&row.value==='1'))features.push(RECEIPT_REVIEW_FEATURE)
  if(book.purchases.some(po=>po.procurement?.version===2)||settings.some(row=>row.key===PURCHASE_UNITS_SETTING&&row.value==='1'))features.push(PURCHASE_UNITS_FEATURE)
  if(usesPrivateQuickDrafts(book.restaurantOperations,book.auditLog)){
   if(!settings.some(row=>row.key===STOCK_COMPAT_SETTING&&row.value==='1'))throw recoveryDataError()

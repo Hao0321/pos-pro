@@ -13,10 +13,10 @@ export function receiptNewItemPrices(raw,totals){
 
 // RL1–RL4: an explicit new command cannot degrade to quantity-only receiving.
 export function receiptLots(request){
- warehouseRecord(request,['kind','purchaseId','expectedPurchase','quantities','lots',...['id','time','supplierContext'].filter(key=>Object.hasOwn(request||{},key))])
+ warehouseRecord(request,['kind','purchaseId','expectedPurchase','quantities','lots',...['id','time','supplierContext','receiptReview'].filter(key=>Object.hasOwn(request||{},key))])
  const raw=request?.lots
  warehouseRecord(raw,['protocol','storeId','epoch','expectedStateDigest','allocations','newItems'])
- if(request.kind!==RECEIPT_LOT_KIND||raw.protocol!==RECEIPT_LOT_PROTOCOL||!/^sha256:[a-f0-9]{64}$/.test(raw.expectedStateDigest))throw lotError('INPUT')
+ if(![RECEIPT_LOT_KIND,'receive-reviewed'].includes(request.kind)||raw.protocol!==RECEIPT_LOT_PROTOCOL||!/^sha256:[a-f0-9]{64}$/.test(raw.expectedStateDigest))throw lotError('INPUT')
  for(const key of ['storeId','epoch'])warehouseText(raw[key])
  if(!Array.isArray(request.quantities)||!request.quantities.length||request.quantities.length>10000||!Array.isArray(raw.allocations)||!raw.allocations.length||raw.allocations.length>10000||!Array.isArray(raw.newItems)||raw.newItems.length>request.quantities.length)throw lotError('INPUT')
  const totals=request.quantities.map(()=>0)

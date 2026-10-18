@@ -1,3 +1,4 @@
+import {RECEIPT_REVIEW_KIND,assertReceiptReviewHistory} from './receiptReview.mjs'
 import {PURCHASE_UNITS_KIND,assertPurchaseUnitReview} from './purchaseUnitPricing.mjs'
 import {canonicalSignature,operationHeader} from './operationRules.mjs'
 import {INVENTORY_ACTION,INVENTORY_PREFIX} from './inventoryOperations.mjs'
@@ -6,7 +7,7 @@ import {procurementApprovalMaterial,purchaseMatchesApproval,supplierActor} from 
 import {only,businessId} from './businessExchange.mjs'
 import {assertPrivateQuickPurchase} from './privateDrafts.mjs'
 const groups=['receipts','bills','payments','reversals','returns','refunds','refundReversals']
-const collection={receive:'receipts','receive-lots':'receipts','purchase-bill':'bills','purchase-pay':'payments','purchase-reverse':'reversals','purchase-return':'returns','purchase-return-lots':'returns','purchase-refund':'refunds','purchase-refund-reverse':'refundReversals'}
+const collection={receive:'receipts','receive-lots':'receipts','receive-reviewed':'receipts','purchase-bill':'bills','purchase-pay':'payments','purchase-reverse':'reversals','purchase-return':'returns','purchase-return-lots':'returns','purchase-refund':'refunds','purchase-refund-reverse':'refundReversals'}
 export function supplierInventoryContext(request){
   const context=request.supplierContext
   if(context===undefined)return null
@@ -33,7 +34,7 @@ export function readSupplierInventoryOperations(audits=[]){
     if(!receipt||typeof receipt.signature!=='string')throw Error('採購原始回執需要核對')
     const request=JSON.parse(receipt.signature);operationHeader(request)
     if(row.id!==INVENTORY_PREFIX+request.id||receipt.id!==request.id||receipt.kind!==request.kind||receipt.signature!==canonicalSignature(request))throw Error('採購回執與原操作不一致')
-    if(!['receive','receive-lots',...PROCUREMENT_KINDS].includes(request.kind))return []
+    if(!['receive','receive-lots','receive-reviewed',...PROCUREMENT_KINDS].includes(request.kind))return []
     const purchaseId=isPurchaseCreate(request.kind)?request.purchase?.id:request.purchaseId;businessId(purchaseId)
     const context=supplierInventoryContext(request),actor={userId:row.userId||'',username:row.username||'',role:row.role}
     assertPrivateQuickPurchase(request,{receiptActor:actor})
@@ -94,7 +95,8 @@ export function assertSupplierInventoryTransition(row,timeline,credits,data){
   const before=timeline.snapshots.get(version-1),event=collection[row.request.kind]?after.procurement[collection[row.request.kind]].find(entry=>entry.id===row.request.id):after.procurement.cancel
   if(!event)throw Error('採購回執缺少該次保存文件')
   let planned,cashLog=null
-  if(['receive','receive-lots'].includes(row.request.kind)){
+  if(['receive','receive-lots','receive-reviewed'].includes(row.request.kind)){
+    if(row.request.kind===RECEIPT_REVIEW_KIND)assertReceiptReviewHistory(row.request,after,row.receipt.productIds)
     const quantities=row.request.quantities
     if(!Array.isArray(quantities)||quantities.length!==before.items.length)throw Error('採購收貨歷史數量不完整')
     const items=before.items.map((item,index)=>{

@@ -6,6 +6,7 @@ import {unpackRecoveryGraph} from '../../electron/recoveryGraph.mjs'
 import {browserToBook} from '../../electron/recoveryRules.mjs'
 import {validateStockCostBook} from '../../electron/stockBackup.mjs'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
+import {makeReceiptReview} from '../../electron/receiptReview.mjs'
 import {PURCHASE_UNITS_SETTING,purchaseSourceSignature} from '../../electron/purchaseUnitPricing.mjs'
 import {readRecords,writeRecords,RECORD_KEY} from '../../src/utils/browserStorage'
 import {commitBrowserInventory} from '../../src/utils/browserInventory'
@@ -46,7 +47,7 @@ test('quota failure, invalid facts, stale scope, staff and forged owner preserve
 },15000)
 test('catalogue packaging needs an explicit new-SKU sale price, keeps original cost and links the real base unit',async()=>{
  seed('reference');await getBrowserSupplierState(owner);let r=readRecords();writeRecords({pos_suppliers:r.data.pos_suppliers.map(row=>({...row,catalog:[{id:'unit-catalog',name:'New rice',unit:'袋',cost:100,productId:null}]}))},r.revision);ok(await commitBrowserInventory(await create('new-unit-po',true),owner));const input=await command('receive',{purchaseId:'new-unit-po',quantities:[3]}),before=raw();expect((await commitBrowserInventory(input,owner)).success).toBe(false);expect(raw()).toBe(before)
- const saved=ok(await commitBrowserInventory({...input,newItems:[{lineIndex:0,priceCents:4500}]},owner));expect(saved.products[0]).toMatchObject({unit:'公斤',stock:3,price:45,cost:33.33});expect(saved.purchase.procurement.receipts[0].amount).toBe(100);expect(saved.supplier.catalog[0].productId).toBe(saved.products[0].id);assertReceipt('receive',{...input,newItems:[{lineIndex:0,priceCents:4500}]},saved)
+ const reviewed={...input,kind:'receive-reviewed',newItems:[{lineIndex:0,priceCents:4500}]};reviewed.receiptReview=makeReceiptReview(reviewed,{...book(),...input.supplierContext});const saved=ok(await commitBrowserInventory(reviewed,owner));expect(saved.products[0]).toMatchObject({unit:'公斤',stock:3,price:45,cost:33.33});expect(saved.purchase.procurement.receipts[0].amount).toBe(100);expect(saved.supplier.catalog[0].productId).toBe(saved.products[0].id);assertReceipt('receive-reviewed',reviewed,saved)
 },15000)
 test('an existing SKU cannot be repriced through a package receipt or lose its feature fence',async()=>{
  seed('reference');ok(await commitBrowserInventory(await create(),owner));let before=raw(),input=await command('receive',{purchaseId:'unit-po',quantities:[1],newItems:[{lineIndex:0,priceCents:999999}]});expect((await commitBrowserInventory(input,owner)).success).toBe(false);expect(raw()).toBe(before)

@@ -3,8 +3,8 @@ import {RESTAURANT_AGENT_PROTOCOL,restaurantAgentExampleItem,validateRestaurantA
 
 export const AGENT_HANDOFF_PROTOCOL='pos-agent-handoff/v1'
 export function isAgentDocumentText(raw){return typeof raw==='string'&&(/^[\s\uFEFF]*\{/.test(raw)||raw.includes('```'))}
-export function parseAgentDocument(raw,{plainDecimalPlaces=null}={}){
-  if(typeof raw!=='string'||new TextEncoder().encode(raw).length>32768)throw Error('單據太大，請分批匯入（每次最多 32 KB）')
+export function parseAgentDocument(raw,{plainDecimalPlaces=null,maxBytes=32768}={}){
+  if(!Number.isSafeInteger(maxBytes)||maxBytes<1||maxBytes>250000||typeof raw!=='string'||new TextEncoder().encode(raw).length>maxBytes)throw Error('單據太大，請分批匯入（每次最多 32 KB）')
   let value=raw.replace(/^\uFEFF/,'').trim()
   if(value.includes('```')){
     const match=/```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```/i.exec(value)

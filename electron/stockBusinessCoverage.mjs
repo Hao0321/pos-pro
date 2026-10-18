@@ -20,7 +20,7 @@ export function assertStockBusinessCoverage(book,state){
   }
   for(const product of book.products||[]){
     if(original('addProduct',product.id))continue
-    if(!state.entries.some(row=>row.method==='applyInventoryOperation'&&['receive','receive-lots'].includes(row.input.kind)&&row.evidence.products.some(pair=>pair.id===product.id&&pair.beforeUnits===0&&pair.afterUnits>0)))throw stockLedgerError('HISTORY')
+    if(!state.entries.some(row=>row.method==='applyInventoryOperation'&&['receive','receive-lots','receive-reviewed'].includes(row.input.kind)&&row.evidence.products.some(pair=>pair.id===product.id&&pair.beforeUnits===0&&pair.afterUnits>0)))throw stockLedgerError('HISTORY')
   }
   for(const waste of book.wasteLog||[]){
     if(original('addWaste',waste.id))continue
@@ -36,7 +36,7 @@ export function assertStockBusinessCoverage(book,state){
     if(audit.action!=='INVENTORY_OPERATION'||!audit.id.startsWith('stock-operation:'))continue
     if(legacy.applyInventoryOperation.includes(audit.id.slice('stock-operation:'.length)))continue
     const detail=typeof audit.detail==='string'?JSON.parse(audit.detail):audit.detail,input=JSON.parse(detail.signature)
-    if(['receive','receive-lots','purchase-return','purchase-return-lots','stocktake'].includes(input.kind)&&!original('applyInventoryOperation',input.id))throw stockLedgerError('HISTORY')
+    if(['receive','receive-lots','receive-reviewed','purchase-return','purchase-return-lots','stocktake'].includes(input.kind)&&!original('applyInventoryOperation',input.id))throw stockLedgerError('HISTORY')
   }
   for(const receipt of book.restaurantOperations||[])if(receipt.action!=='configure'&&!original('applyRestaurantOperation',receipt.id))throw stockLedgerError('HISTORY')
   for(const receipt of book.salesOperations||[])if(['deliver','return'].includes(receipt.action)&&!original('applySalesOperation',receipt.id))throw stockLedgerError('HISTORY')

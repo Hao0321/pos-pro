@@ -6,8 +6,13 @@ let server,base,orders,notifications,settings
 beforeEach(async()=>{
   orders=new Map();notifications=[];settings=new Map()
   const db={getProducts:()=>[{id:'p',name:'商品',price:12,stock:5,cost:3,supplierId:'private',barcode:'private',unit:'個',category:'餐點'}],getSetting:k=>settings.get(k),setSetting:(k,v)=>settings.set(k,v),getOrder:id=>orders.get(id),addOrder:o=>{orders.set(o.id,o);return {success:true}}}
-  server=start(0,db,()=>({isDestroyed:()=>false,webContents:{send:(...args)=>notifications.push(args)}}),{host:'127.0.0.1',disableTunnel:true})
-  await server.ready;base='http://127.0.0.1:'+server.getActualPort()
+  // An OS-assigned ephemeral port can be on Fetch's forbidden-port list.
+  // Check the actual transport, retrying only that specific fixture condition.
+  for(let attempt=0;attempt<8;attempt++){
+    server=start(0,db,()=>({isDestroyed:()=>false,webContents:{send:(...args)=>notifications.push(args)}}),{host:'127.0.0.1',disableTunnel:true})
+    await server.ready;base='http://127.0.0.1:'+server.getActualPort()
+    try{await fetch(base+'/llms.txt');break}catch(error){await server.close();if(error.cause?.message!=='bad port'||attempt===7)throw error}
+  }
 })
 afterEach(async()=>{await server.close()})
 const body=()=>({requestId:randomUUID(),items:[{id:'p',qty:2}],customerName:'顧客'})

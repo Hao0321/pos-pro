@@ -6,7 +6,8 @@ import {stockLedgerError} from './stockOpeningPlan.mjs'
 import {planTradeStock} from './stockTradePlans.mjs'
 import {planOperationalStock} from './stockOperationalPlans.mjs'
 import {assertLotBusinessReady,planLotBusinessMove,lotAcquireTarget} from './lotBusinessPolicy.mjs'
-import {receiptLots,placeReceiptLots,RECEIPT_LOT_KIND} from './receiptLots.mjs'
+import {receiptLots,placeReceiptLots} from './receiptLots.mjs'
+import {hasReceiptLots} from './receiptReview.mjs'
 import {lotRegistry,lotError} from './lotRules.mjs'
 import {planSupplierLotReturn,SUPPLIER_LOT_RETURN} from './supplierLotReturn.mjs'
 
@@ -25,7 +26,7 @@ export function planStockBusiness(previous,body){
  if(!previous||!STOCK_BUSINESS_METHODS.includes(method)||!input||typeof input.id!=='string'||!input.id||!evidence||!Array.isArray(evidence.products))throw stockLedgerError('INPUT')
  if(date<previous.journals[0].date)throw stockLedgerError('STALE')
  assertLotBusinessReady(previous,body)
- const arrival=method==='applyInventoryOperation'&&input.kind===RECEIPT_LOT_KIND?receiptLots(input):null
+ const arrival=method==='applyInventoryOperation'&&hasReceiptLots(input)?receiptLots(input):null
  if(arrival&&(!previous.lots||body.actor?.role!=='owner'||arrival.expectedStateDigest!==body.beforeDigest))throw lotError('STALE')
  const arrivalItems=[]
  const supplierReturn=method==='applyInventoryOperation'&&input.kind===SUPPLIER_LOT_RETURN?planSupplierLotReturn(previous,body):null
