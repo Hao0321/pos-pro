@@ -2,8 +2,7 @@ import {tr,trMessage} from "../i18n"
 import { browserStorage } from '../utils/browserStorage'
 import { useState, useEffect } from 'react'
 import { Cloud, CloudOff, ArrowUp, ArrowDown, RefreshCw, Check } from 'lucide-react'
-import { isCloudEnabled } from '../utils/supabaseClient'
-import { pushAll, pullAll } from '../utils/cloudSync'
+import { isCloudEnabled } from '../utils/cloudConfig'
 
 function formatAgo(iso) {
   if (!iso||!Number.isFinite(Date.parse(iso))) return tr('尚未同步')
@@ -39,6 +38,7 @@ export default function SyncStatusBadge({ onGoToSettings }) {
     setBusy('push')
     setFeedback('')
     try {
+      const {pushAll}=await import('../utils/cloudSync')
       const report = await pushAll(() => {})
       const total = report.reduce((s, r) => s + (r.count || 0), 0)
       browserStorage.setItem('pos_last_sync', new Date().toISOString())
@@ -58,6 +58,7 @@ export default function SyncStatusBadge({ onGoToSettings }) {
     setBusy('pull')
     setFeedback('')
     try {
+      const {pullAll}=await import('../utils/cloudSync')
       await pullAll(() => {})
       browserStorage.setItem('pos_last_sync', new Date().toISOString())
       setFeedback('✓ 拉取完成，重新載入...')

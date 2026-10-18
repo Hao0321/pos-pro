@@ -9,10 +9,23 @@ function offlineShell() {
   const hash=bytes=>createHash('sha256').update(bytes).digest('hex')
   return {name:'pos-offline-shell',apply:'build',closeBundle(){
     const root=process.cwd(),output=path.join(root,'dist')
+    // JsBarcode publishes MIT-LICENSE.txt, which Vite's standard name lookup misses.
+    const noticesFile=path.join(output,'THIRD_PARTY_LICENSES.txt')
+    let notices=fs.readFileSync(noticesFile,'utf8')
+    const barcodeLicense=fs.readFileSync(path.join(root,'node_modules/jsbarcode/MIT-LICENSE.txt'),'utf8').trim()
+    if(/^## jsbarcode - /m.test(notices)&&!notices.includes(barcodeLicense)){
+      const empty=/^(## jsbarcode - [^\r\n]+\r?\n)(?:\r?\n)*(?=## |$)/m
+      if(!empty.test(notices))throw Error('JsBarcode license text differs; review bundled notices')
+      notices=notices.replace(empty,(_section,heading)=>heading+'\n'+barcodeLicense+'\n\n')
+      fs.writeFileSync(noticesFile,notices)
+    }
+    if(notices.split(/^## /m).slice(1).some(section=>!section.slice(section.indexOf('\n')+1).trim()))
+      throw Error('Bundled dependency license text is missing')
+
     const assets=fs.readdirSync(path.join(output,'assets')).filter(name=>/\.(js|css)$/.test(name)).sort()
     const scenariosDir=path.join(output,'scenarios','donburi')
     const scenarioFiles=fs.existsSync(scenariosDir)?fs.readdirSync(scenariosDir).filter(name=>/\.(html|css|mjs)$/.test(name)).sort().map(name=>'scenarios/donburi/'+name):[]
-    const agentFiles=['agent/manifest.json','agent/document-draft-v1.schema.json','agent/business-document-v1.schema.json','llms.txt']
+    const agentFiles=['agent/manifest.json','agent/document-draft-v1.schema.json','agent/business-document-v1.schema.json','llms.txt','THIRD_PARTY_LICENSES.txt']
     const languageFiles=fs.readdirSync(path.join(output,'i18n'),{recursive:true}).filter(name=>name.endsWith('.mjs')).sort().map(name=>'i18n/'+name.replaceAll('\\','/'))
     const bundleFiles=[...assets.map(name=>'assets/'+name),...scenarioFiles,...agentFiles,...languageFiles]
     const cachedFiles=['index.html','manifest.webmanifest','apple-touch-icon.png','icon-192.png','icon-512.png',...bundleFiles]
@@ -33,6 +46,7 @@ export default defineConfig({
   test: { setupFiles:['./tests/setup-locale.js'], exclude: ['**/node_modules/**','**/.git/**','**/.rd/**','**/dist/**','**/release/**','**/build/**'] },
   server: { host: '127.0.0.1' },
   build: {
+    license: { fileName: 'THIRD_PARTY_LICENSES.txt' },
     outDir: 'dist',
     emptyOutDir: true,
     chunkSizeWarningLimit: 700,
@@ -43,6 +57,7 @@ export default defineConfig({
           groups: [
             { name: 'translations', test: /public[\\/]i18n[\\/](?:messages\.mjs|catalogue[\\/])/ },
             { name: 'react-vendor', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+            { name: 'icons', test: /node_modules[\\/]lucide-react[\\/]/ },
             { name: 'supabase', test: /node_modules[\\/]@supabase[\\/]/ },
           ],
         },

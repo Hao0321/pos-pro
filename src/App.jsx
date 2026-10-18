@@ -1,44 +1,44 @@
 import {tr,trMessage} from "./i18n"
 import { browserStorage } from './utils/browserStorage'
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
-import { Menu, X, Cloud } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { useStore } from './store/useStore'
 import { getSession, destroySession, writeAuditLog, startIdleTimer, hasPermission, createBackup, getBackupList } from './utils/security'
 import LoginScreen from './pages/LoginScreen'
 import Sidebar from './components/Sidebar'
 import DisplayPreferences from './components/DisplayPreferences'
 import {readRecoveryCommand} from './utils/recoveryClient'
-import POSPage from './pages/POSPage'
-import InventoryPage from './pages/InventoryPage'
-import MembersPage from './pages/MembersPage'
+const POSPage=lazy(()=>import('./pages/POSPage'))
+const InventoryPage=lazy(()=>import('./pages/InventoryPage'))
+const MembersPage=lazy(()=>import('./pages/MembersPage'))
 const RefundPage=lazy(()=>import('./pages/RefundPage'))
 const StockSetupPage=lazy(()=>import('./pages/StockSetupPage'))
 const LotPage=lazy(()=>import('./pages/LotPage'))
 const WarehousePage=lazy(()=>import('./pages/WarehousePage'))
 const StockHistoryPage=lazy(()=>import('./pages/StockHistoryPage'))
 const ReportsPage=lazy(()=>import('./pages/ReportsPage'))
-import AccountingPage from './pages/AccountingPage'
-import PurchasePage from './pages/PurchasePage'
-import StocktakePage from './pages/StocktakeRouter'
+const AccountingPage=lazy(()=>import('./pages/AccountingPage'))
+const PurchasePage=lazy(()=>import('./pages/PurchasePage'))
+const StocktakePage=lazy(()=>import('./pages/StocktakeRouter'))
 import {readPendingFinancial} from './utils/financialCommand'
-import PromotionsPage from './pages/PromotionsPage'
-import SettingsPage from './pages/SettingsPage'
-import ScenarioTemplatesPage from './pages/ScenarioTemplatesPage'
-import ReadinessPage from './pages/ReadinessPage'
-import SharedDevicesPage from './pages/SharedDevicesPage'
-import RestaurantPage from './pages/RestaurantPage'
-import QuickDocumentPage from './pages/QuickDocumentPage'
+const PromotionsPage=lazy(()=>import('./pages/PromotionsPage'))
+const SettingsPage=lazy(()=>import('./pages/SettingsPage'))
+const ScenarioTemplatesPage=lazy(()=>import('./pages/ScenarioTemplatesPage'))
+const ReadinessPage=lazy(()=>import('./pages/ReadinessPage'))
+const SharedDevicesPage=lazy(()=>import('./pages/SharedDevicesPage'))
+const RestaurantPage=lazy(()=>import('./pages/RestaurantPage'))
+const QuickDocumentPage=lazy(()=>import('./pages/QuickDocumentPage'))
 const BusinessExchangePage=lazy(()=>import('./pages/BusinessExchangePage'))
 const SalesPage=lazy(()=>import('./pages/SalesPage'))
 const CustomerLedgerPage=lazy(()=>import('./pages/CustomerLedgerPage'))
 const SupplierLedgerPage=lazy(()=>import('./pages/SupplierLedgerPage'))
 const RecoveryPage=lazy(()=>import('./pages/RecoveryPage'))
-import OrdersPage from './pages/OrdersPage'
+const OrdersPage=lazy(()=>import('./pages/OrdersPage'))
 const DashboardPage=lazy(()=>import('./pages/DashboardPage'))
 import SimpleHomePage from './pages/SimpleHomePage'
 import './styles/easy-workspace.css'
-import ShiftPage from './pages/ShiftPage'
-import WastePage from './pages/WastePage'
+const ShiftPage=lazy(()=>import('./pages/ShiftPage'))
+const WastePage=lazy(()=>import('./pages/WastePage'))
 import { isElectron } from './utils/dataAccess'
 import useIsMobile from './hooks/useIsMobile'
 import {useDisplayPreferences} from './i18n'
@@ -80,7 +80,6 @@ export default function App() {
   useEffect(()=>{if(isElectron)window.electronAPI.auth.session().then(setSession).catch(()=>setSession(null))},[])
   const [menuOpen, setMenuOpen] = useState(false)
   const [pendingOrders, setPendingOrders] = useState(0)
-  const [autoSync, setAutoSync] = useState(null) // 'syncing' | 'done' | 'failed' | null
   const [backupIssue,setBackupIssue]=useState('')
   const [sharedConnected,setSharedConnected]=useState(true)
   useEffect(()=>{const changed=e=>setSharedConnected(e.detail.connected);window.addEventListener('pos-shared-connection',changed);return()=>window.removeEventListener('pos-shared-connection',changed)},[])
@@ -185,76 +184,43 @@ export default function App() {
         )}
         {/* Quick entry locks its fields while retaining the same-document recovery action. */}
         <main className="workspace-content" data-view={view} inert={store.checkoutState.phase!=='idle'&&view!=='recovery'||store.financialState.phase!=='idle'&&!['quick','exchange','sales','customers','suppliers','stocktake','refunds','stocksetup','warehouse','recovery','lots'].includes(view)?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
-          {view==='recovery'&&session.role==='owner'&&<Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><RecoveryPage store={store} session={session}/></Suspense>}
-          {view === 'dashboard' && can('pos.use') && (simpleMode?<SimpleHomePage store={store} session={session} area={workspaceArea} onAreaChange={setWorkspaceArea}/>:<Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><DashboardPage store={store} session={session}/></Suspense>)}
-          {view === 'overview' && can('reports.view') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><DashboardPage store={store} session={session}/></Suspense>}
+          <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}>
+          {view==='recovery'&&session.role==='owner'&&<RecoveryPage store={store} session={session}/>}
+          {view === 'dashboard' && can('pos.use') && (simpleMode?<SimpleHomePage store={store} session={session} area={workspaceArea} onAreaChange={setWorkspaceArea}/>:<DashboardPage store={store} session={session}/>)}
+          {view === 'overview' && can('reports.view') && <DashboardPage store={store} session={session}/>}
           {view === 'quick' && can('pos.use') && <QuickDocumentPage key={session.userId+':'+session.role} store={store} session={session} incoming={incomingDraft} onIncomingConsumed={consumeIncoming}/>}
-          {view === 'exchange' && can('purchase.edit') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><BusinessExchangePage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
-          {view === 'customers' && session.role==='owner' && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><CustomerLedgerPage store={store} session={session}/></Suspense>}
-          {view === 'suppliers' && session.role==='owner' && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><SupplierLedgerPage key={session.userId} store={store} session={session}/></Suspense>}
-          {view === 'sales' && session.role==='owner' && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><SalesPage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
+          {view === 'exchange' && can('purchase.edit') && <BusinessExchangePage key={session.userId+':'+session.role} store={store} session={session}/>}
+          {view === 'customers' && session.role==='owner' && <CustomerLedgerPage store={store} session={session}/>}
+          {view === 'suppliers' && session.role==='owner' && <SupplierLedgerPage key={session.userId} store={store} session={session}/>}
+          {view === 'sales' && session.role==='owner' && <SalesPage key={session.userId+':'+session.role} store={store} session={session}/>}
           {view === 'pos'        && can('pos.use')         && <POSPage        store={store} session={session}/>}
           {view === 'restaurant' && can('pos.use') && <RestaurantPage store={store} session={session}/>}
           {view === 'shifts'     && can('pos.use')         && <ShiftPage      store={store} session={session}/>}
           {view === 'inventory'  && can('inventory.view')  && <InventoryPage  store={store} session={session}/>}
-          {view === 'lots' && can('inventory.view') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><LotPage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
-          {view === 'warehouse' && can('inventory.view') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><WarehousePage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
+          {view === 'lots' && can('inventory.view') && <LotPage key={session.userId+':'+session.role} store={store} session={session}/>}
+          {view === 'warehouse' && can('inventory.view') && <WarehousePage key={session.userId+':'+session.role} store={store} session={session}/>}
           {view === 'waste'      && can('inventory.view')  && <WastePage      store={store} session={session}/>}
           {view === 'members'    && can('members.view')    && <MembersPage    store={store} session={session}/>}
-          {view === 'refunds' && can('pos.refund') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><RefundPage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
-          {view === 'reports'    && can('reports.view')    && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><ReportsPage store={store} session={session}/></Suspense>}
+          {view === 'refunds' && can('pos.refund') && <RefundPage key={session.userId+':'+session.role} store={store} session={session}/>}
+          {view === 'reports'    && can('reports.view')    && <ReportsPage store={store} session={session}/>}
           {view === 'accounting' && can('accounting.view') && <AccountingPage store={store} session={session}/>}
           {view === 'purchase'   && can('purchase.view')   && <PurchasePage   store={store} session={session}/>}
           {view === 'stocktake'  && can('stocktake.view')  && <StocktakePage  store={store} session={session}/>}
-          {view === 'stocksetup' && can('inventory.cost') && (store.stockSetupEnabled||store.financialState.kind==='stock-cost') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><StockSetupPage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
-          {view === 'stockhistory' && can('inventory.cost') && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><StockHistoryPage key={session.userId+':'+session.role} store={store} session={session}/></Suspense>}
+          {view === 'stocksetup' && can('inventory.cost') && (store.stockSetupEnabled||store.financialState.kind==='stock-cost') && <StockSetupPage key={session.userId+':'+session.role} store={store} session={session}/>}
+          {view === 'stockhistory' && can('inventory.cost') && <StockHistoryPage key={session.userId+':'+session.role} store={store} session={session}/>}
           {view === 'promotions' && can('promotions.view') && <PromotionsPage store={store} session={session}/>}
           {view === 'orders'     && can('pos.use')         && <OrdersPage store={store} session={session}/>}
           {view === 'settings'   && can('settings.view')   && <SettingsPage   session={session} onLogout={handleLogout} store={store}/>}
           {view === 'scenarios'  && can('settings.edit')   && <ScenarioTemplatesPage session={session} store={store}/>}
           {view === 'readiness' && can('pos.use') && <ReadinessPage store={store} session={session} backupIssue={backupIssue} onBackupVerified={()=>setBackupIssue('')}/>}
           {view === 'devices' && can('settings.edit') && <SharedDevicesPage/>}
+          </Suspense>
         </main>
       </div>
 
-      {autoSync && (
-        <div style={syncOverlay.root}>
-          <div style={syncOverlay.box}>
-            <Cloud size={28} style={{
-              color: autoSync === 'failed' ? 'var(--red)' : 'var(--blue)',
-              animation: autoSync === 'syncing' ? 'spin 1.4s linear infinite' : 'none',
-            }}/>
-            <div style={{textAlign:'center'}}>
-              <div style={{fontWeight:600, fontSize:15}}>
-                {autoSync === 'syncing' && tr("同步雲端資料中...")}
-                {autoSync === 'done' && tr("✓ 同步完成，重新載入中")}
-                {autoSync === 'failed' && tr("雲端同步失敗，使用本機資料")}
-              </div>
-              <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:4}}>
-                {autoSync === 'syncing' && tr("從雲端拉取最新資料")}
-                {autoSync === 'failed' && tr("檢查網路或稍後再從設定手動同步")}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   )
-}
-
-const syncOverlay = {
-  root: {
-    position:'fixed', inset:0, zIndex:9999,
-    background:'rgba(23,37,60,0.40)', backdropFilter:'blur(4px)',
-    display:'flex', alignItems:'center', justifyContent:'center',
-  },
-  box: {
-    background:'var(--bg-raised)', borderRadius:'var(--r4)',
-    padding:'28px 36px', display:'flex', flexDirection:'column',
-    alignItems:'center', gap:14,
-    boxShadow:'var(--shadow-lg)', border:'1px solid var(--border-dim)',
-    minWidth:260, maxWidth:360,
-  },
 }
 
 const mob = {

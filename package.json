@@ -47,28 +47,28 @@
   },
   "dependencies": {
     "@noble/hashes": "2.4.0",
-    "@supabase/supabase-js": "^2.106.2",
     "better-sqlite3": "13.0.3",
     "cloudflared": "^0.7.1",
     "electron-store": "^10.0.0",
     "express": "5.2.1",
+    "ws": "8.22.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@supabase/supabase-js": "^2.106.2",
+    "@testing-library/react": "16.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "electron": "44.6.0",
+    "electron-builder": "26.15.3",
     "html5-qrcode": "^2.3.8",
     "jsbarcode": "^3.11.6",
+    "jsdom": "27.4.0",
     "lucide-react": "^0.383.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "ws": "8.22.0"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "6.1.2",
-    "electron": "44.6.0",
-    "electron-builder": "26.15.3",
     "vite": "8.3.3",
-    "vitest": "5.0.3",
-    "@testing-library/react": "16.3.0",
-    "jsdom": "27.4.0",
-    "@electric-sql/pglite": "0.5.8"
+    "vitest": "5.0.3"
   },
   "build": {
     "appId": "com.posPro.desktop",
