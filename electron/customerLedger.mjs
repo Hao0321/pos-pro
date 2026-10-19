@@ -2,12 +2,14 @@ import {canonicalSignature,operationHeader,moneyValue} from './operationRules.mj
 import {businessId} from './businessExchange.mjs'
 import {salesActor,salesText,salesOnly,salesDate,validateSalesDay,salesCents,salesAmount,salesClaim,salesDocumentAt,validateSalesDocument,SALES_COLLECTION} from './salesRules.mjs'
 import {customerClaimKey} from './customerCredit.mjs'
-import {openingBalanceTimeline,assertOpeningBalanceOrdinaryIds,assertOpeningBalanceParties,assertOpeningBalanceRequest,syncOpeningBalanceProjection,openingBalanceClaim,openingBalanceView} from './openingBalanceLedger.mjs'
+import {openingBalanceTimeline,assertOpeningBalanceOrdinaryIds,assertOpeningBalanceParties,assertOpeningBalanceRequest,syncOpeningBalanceProjection,openingBalanceClaim,openingBalanceView,assertOpeningActivation} from './openingBalanceLedger.mjs'
+import {OPENING_ACTIVATION} from './openingCutoverRules.mjs'
 
 export const CUSTOMER_KIND='customer-ledger'
 export const CUSTOMER_ACTIONS=['customer-create','customer-update','receive','allocate','unallocate','refund','refund-reverse','receipt-reverse']
 const rootFields=['id','kind','time','date','storeId','epoch','expectedRevision','action','expectedOpeningDigest']
 const fields={
+  [OPENING_ACTIVATION]:['openingBatchId','sourceDigest','reviewed'],
   'customer-create':['customer'], 'customer-update':['customerId','customer'],
   receive:['customerId','amount','method','reference','note','shiftId','confirmed'],
   allocate:['customerId','receiptId','items','reviewed'],
@@ -25,6 +27,7 @@ function emptyProjection(){return {entries:[],customers:new Map(),receipts:new M
 const available=receipt=>receipt.reversed?0:cents(receipt.event.amount)-receipt.allocated-receipt.refunded
 function projectOne(state,event){
   state.entries.push(event)
+  if(event.action===OPENING_ACTIVATION)return
   if(event.action==='customer-create'||event.action==='customer-update'){
     const previous=state.customers.get(event.customerId)
     state.customers.set(event.customerId,{...event.customer,createdAt:previous?.createdAt||event.time,updatedAt:event.time,revision:(previous?.revision||0)+1})
@@ -78,13 +81,18 @@ function atCommit(document,revision,ledgerRevision,data,history){
   }
   return salesDocumentAt(document,revision)
 }
-function derive(request,data,actor,state,{history=false}={}){
+function derive(request,data,actor,state,{history=false,openingReceipt=null}={}){
   validateHeader(request)
   if(request.storeId!==data.storeId)throw Object.assign(Error('客戶款項屬於另一間店'),{historyUncertain:true})
   if(!history&&request.epoch!==data.epoch)throw Object.assign(Error('資料已還原或更換，請以原編號核對客戶款項'),{historyUncertain:true})
   if(request.expectedRevision!==state.entries.length)throw Error('客戶款項已更新，請重新核對')
   assertOpeningBalanceRequest(request,state.opening,!['customer-create','customer-update'].includes(request.action),{history})
   if(!history&&(Math.abs(Date.now()-Date.parse(request.time))>300000||request.date>salesDate(new Date())))throw Error('客戶款項日期或操作時間已過期，請重新核對')
+  if(request.action===OPENING_ACTIVATION){
+    if(!history&&!openingReceipt)throw Error('帳款生效紀錄只能由整批搬家交易保存。')
+    assertOpeningActivation(request,'receivable',data,state.entries.length+1,actor,openingReceipt)
+    return {version:1,id:request.id,storeId:data.storeId,revision:state.entries.length+1,time:request.time,date:request.date,action:request.action,openingBatchId:request.openingBatchId,sourceDigest:request.sourceDigest,actor:salesActor(actor),input:structuredClone(request)}
+  }
   const customerId=request.action==='customer-create'?request.customer?.id:request.customerId
   businessId(customerId)
   const event={version:1,id:request.id,storeId:data.storeId,revision:state.entries.length+1,time:request.time,date:request.date,action:request.action,customerId,actor:salesActor(actor),input:structuredClone(request)}
@@ -212,6 +220,11 @@ export function planCustomerLedger(request,data,actor){
   const event=derive(request,data,actor,state),receipt=receiptFor(event)
   const cashLog=event.cashLogId?{id:event.cashLogId,shiftId:event.shiftId,time:event.time,type:event.cashType,amount:event.amount,reason:'客戶收付 '+event.customerId,cashier:event.actor.username}:null
   return {event,receipt,cashLog}
+}
+export function planCustomerOpeningActivation(request,data,actor,receipt){
+  const state=project([...(data.customerEntries||[])].sort((a,b)=>a.revision-b.revision),data.openingBalanceContext,data.storeId),event=derive(request,data,actor,state,{openingReceipt:receipt})
+  if(event.action!==OPENING_ACTIVATION)throw Error('帳款生效紀錄需要原搬家來源。')
+  return {event,receipt:receiptFor(event),cashLog:null}
 }
 export function customerLedgerReceipt(request,receipt,data){
   if(receipt?.id!==request.id||receipt.kind!==CUSTOMER_KIND||receipt.signature!==canonicalSignature(request))throw Object.assign(Error('原客戶款項編號已存在且內容不同，請核對原紀錄'),{operationConflict:true})

@@ -2,10 +2,13 @@ import useDeviceDraft from '../../hooks/useDeviceDraft'
 import {CUSTOMER_ACTIONS} from '../../../electron/customerLedger.mjs'
 import {customerDraftKey} from '../../utils/customerDraftReceipt.mjs'
 const object=value=>value&&typeof value==='object'&&!Array.isArray(value)
-const fields=['action','customerId','storeId','epoch','ledgerRevision','date','amount','method','reference','note','reason','confirmed','receiptId','allocationId','refundId','customer','items','agentDraftId','operationIdentity','submittedShiftId']
+const fields=['action','customerId','storeId','epoch','ledgerRevision','date','amount','method','reference','note','reason','confirmed','receiptId','allocationId','refundId','customer','items','agentDraftId','operationIdentity','submittedShiftId','expectedOpeningDigest','fundingKind']
 export function validCustomerDraft(value){
   if(value===null)return true
   if(!object(value)||Object.keys(value).some(key=>!fields.includes(key))||!CUSTOMER_ACTIONS.includes(value.action)||!Number.isSafeInteger(value.ledgerRevision)||value.ledgerRevision<0||typeof value.confirmed!=='boolean'||!['cash','bank'].includes(value.method))return false
+ if(value.expectedOpeningDigest!==undefined&&value.expectedOpeningDigest!==null&&(typeof value.expectedOpeningDigest!=='string'||!/^[a-f0-9]{64}$/.test(value.expectedOpeningDigest)))return false
+ if(value.expectedOpeningDigest===null&&!value.operationIdentity)return false
+ if(value.fundingKind!==undefined&&value.fundingKind!=='opening-credit')return false
   if(['customerId','storeId','epoch','date'].some(key=>typeof value[key]!=='string'||!value[key]||value[key].length>128))return false
   for(const[key,max]of Object.entries({amount:40,reference:100,note:1000,reason:500,receiptId:128,allocationId:128,refundId:128,agentDraftId:128,submittedShiftId:128}))if(value[key]!==undefined&&(typeof value[key]!=='string'||value[key].length>max))return false
   if(value.operationIdentity!==undefined&&(!object(value.operationIdentity)||Object.keys(value.operationIdentity).some(key=>!['id','time'].includes(key))||typeof value.operationIdentity.id!=='string'||!/^[A-Za-z0-9_-]{1,128}$/.test(value.operationIdentity.id)||typeof value.operationIdentity.time!=='string'||!Number.isFinite(Date.parse(value.operationIdentity.time))))return false

@@ -62,7 +62,8 @@ export function stockAccountingTimeline(state,data){
 }
 
 export function stockPeriodDisclosure(report,from,to){
- if(report?.status!=='active')return {profitComplete:true,assetsComplete:true,unknownProfitSources:0,unknownOwnedSources:0,legacyReferenceOrders:0,chronologyReview:false}
+ const openingReviewPending=report?.financialOpening?.pending===true,openingHistoryIncomplete=(report?.financialOpening?.cutoffDates||[]).some(date=>from<date)
+ if(report?.status!=='active')return {profitComplete:!openingHistoryIncomplete,assetsComplete:!openingReviewPending,unknownProfitSources:0,unknownOwnedSources:0,legacyReferenceOrders:0,chronologyReview:false,...(openingReviewPending?{openingReviewPending,openingHistoryIncomplete}:{})}
  const {sources,moves,confirmations,legacyReferences}=report.timeline,unknownOwned=new Set(),unknownProfit=new Set(),owned=stage=>['available','reserved','quarantined'].includes(stage)
  let chronologyReview=false
  for(const source of sources){
@@ -75,11 +76,12 @@ export function stockPeriodDisclosure(report,from,to){
   if(relevant.some(row=>row.date>=from&&(!owned(row.to)||row.from&&!owned(row.from))))unknownProfit.add(source.sourceId)
  }
  const legacy=new Set(legacyReferences.filter(row=>row.date>=from&&row.date<=to).map(row=>row.orderId))
- return {profitComplete:!unknownProfit.size&&!legacy.size&&!chronologyReview,assetsComplete:!unknownOwned.size&&!chronologyReview,unknownProfitSources:unknownProfit.size,unknownOwnedSources:unknownOwned.size,legacyReferenceOrders:legacy.size,chronologyReview}
+ return {profitComplete:!unknownProfit.size&&!legacy.size&&!chronologyReview&&!openingHistoryIncomplete,assetsComplete:!unknownOwned.size&&!chronologyReview&&!openingReviewPending,unknownProfitSources:unknownProfit.size,unknownOwnedSources:unknownOwned.size,legacyReferenceOrders:legacy.size,chronologyReview,...(openingReviewPending?{openingReviewPending,openingHistoryIncomplete}:{})}
 }
 
 export function makeStockAccountingReport(state,data){
- if(!state.projection)return {status:'reference-only-not-activated'}
+ const cutoffs=[...new Set(data.openingSourceCutoffs||[])].sort(),opening=cutoffs.length?{financialOpening:{pending:true,cutoffDates:cutoffs}}:{}
+ if(!state.projection)return {status:'reference-only-not-activated',...(cutoffs.length?{...opening,journals:composeStockJournal(null,data)}:{})}
  const journals=composeStockJournal(state.projection,data);validateStockJournalSelection(journals)
- return {status:'active',sequence:state.entries.length,stateDigest:state.stateDigest,journals,timeline:stockAccountingTimeline(state,data),valuation:state.valuation,frozenManualIds:(state.projection.legacyJournals||[]).filter(row=>row.type==='manual').map(row=>row.id)}
+ return {status:'active',sequence:state.entries.length,stateDigest:state.stateDigest,journals,timeline:stockAccountingTimeline(state,data),valuation:state.valuation,...opening,frozenManualIds:(state.projection.legacyJournals||[]).filter(row=>row.type==='manual').map(row=>row.id)}
 }

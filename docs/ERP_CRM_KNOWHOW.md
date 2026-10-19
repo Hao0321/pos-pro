@@ -25,6 +25,10 @@
 
 M17m 的原單帳款核心開始把這項規則接入既有客戶／供應商款項帳：搬剩下的餘額，保留原總額與以前已付作為參考；原單貸項是可抵付來源，不能偽造成一筆銀行收款或預付款。來源在確切帳本版本生效，後來的貸項不能拿去重播更早的抵付。核心試算已可處理原單與新單共同分配、解除與實際退款；正式帳款搬入、完整組合流程與裝置驗收尚未完成，現有公開搬家入口仍會阻擋帳款。
 
+M17m-B.2 開發核心將標準 JSON 整份來源接到真正的原子保存與格式14回執；兩邊款項帳各保留來源生效紀錄，實際收付款畫面和總帳可讀取原單與貸項。保存前先投影完整結果，保存後重新核對，最後一步失敗也整批回退；還原後保留原編號防重，上一版真正程式拒絕新資料的寫入。這仍不是公開帳款搬家功能完成：簡易匯入、原始財務 CSV／XLSX、受控更正、完整開帳與真人／裝置驗收都繼續列為未完成。
+
+2026-10-19 新增訂位與會員福利整合目標，官方研究與具體容量／核銷規則見 [訂位與會員福利規格](RESERVATIONS_LOYALTY_SPEC.md)。既有桌碼點餐、基本點數與儲值不等於已完成訂位、候位、點數批次或電子券，也不能據此宣稱超越 inline／Ocard。
+
 控制科目與期初待核對科目參考 [ERPNext 期初餘額](https://docs.frappe.io/erpnext/opening-balance)，採用的工程規則是原單、庫存與其他期初帳分開核對，防止控制科目重複入帳；差異保留待查，不能自動塞進盈餘。各項判準與尚待完成項目見 [原單帳款規格](OPENING_BALANCE_MIGRATION_SPEC.md)。
 
 CRM 參考 [Microsoft 匯入對照與替代鍵](https://learn.microsoft.com/en-us/power-apps/user/import-data)、[重複客戶檢視與合併](https://learn.microsoft.com/en-us/power-apps/user/merge-duplicate-records)、[客戶聯絡同意](https://learn.microsoft.com/en-us/dynamics365/customer-insights/data/consent-management) 及 [同意紀錄搬移](https://learn.microsoft.com/en-us/dynamics365/customer-insights/journeys/real-time-marketing-migrate-consent)。我們採取「提示可能重複、店主決定保留欄位、拒絕優先保留、未知不補成同意」的產品政策。這些官方文件不是各地法律認定。

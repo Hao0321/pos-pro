@@ -2,7 +2,7 @@ import {salesCents,salesAmount} from './salesRules.mjs'
 const line=(account,debit=0,credit=0)=>({account,debit,credit})
 export function customerLedgerToJournalEntries(entries=[]){
   return entries.flatMap(event=>{
-    if(['customer-create','customer-update'].includes(event.action))return []
+    if(['customer-create','customer-update','opening-import'].includes(event.action))return []
     const money=event.amount,cash=event.method==='cash'?'1101':'1103'
     // A carried credit already reduced AR at cut-over. Its allocation only
     // links two claims in the same control account; it is not a cash advance.

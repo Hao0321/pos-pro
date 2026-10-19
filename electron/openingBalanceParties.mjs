@@ -31,6 +31,11 @@ function directory(items){
 }
 export const openingFinancialCustomerId=(storeId,key)=>'opening-customer-'+privateDraftDigest([storeId,key]).slice(0,40)
 export const openingFinancialSupplierId=(storeId,source,externalId)=>'migr-s-'+privateDraftDigest([storeId,masterSourceKey(source,'suppliers',externalId)]).slice(0,40)
+export function openingBalanceSourceProfile(parsed,party){
+ const entity=party.side==='receivable'?'customers':'suppliers',rows=[]
+ for(const [table,source]of parsed.source.tables.entries())if(source.entity===entity)for(const [row,item]of source.rows.entries())if(item.externalId===party.externalId)rows.push({table,row,source,item})
+ return sourceProfile(party,rows)
+}
 
 // Pure identity projection. A name/phone suggests choices; it never establishes
 // a permanent identity. Membership is intentionally absent from the directory.

@@ -6,7 +6,7 @@ import {retainStockCostCompatibility} from './stockCompatibility.mjs'
 import {PURCHASE_UNITS_SETTING,retainPurchaseUnitFeature} from './purchaseUnitPricing.mjs'
 
 export const RECOVERY_PROTOCOL='pos-recovery-v1'
-const materialAudit=new Set(['AGENT_OPENING_MIGRATION','AGENT_MASTER_MIGRATION',INVENTORY_ACTION,EXCHANGE_ACTION,'SCENARIO_TEMPLATE_APPLY'])
+const materialAudit=new Set(['AGENT_OPENING_CUTOVER','AGENT_OPENING_MIGRATION','AGENT_MASTER_MIGRATION',INVENTORY_ACTION,EXCHANGE_ACTION,'SCENARIO_TEMPLATE_APPLY'])
 export const isMaterialAudit=row=>materialAudit.has(row.action)
 // Customer tracking identity belongs to its restored order records. Login and
 // integration credentials remain current; a tracking key is not an owner login.
@@ -79,7 +79,7 @@ export function operationRecords(book){
   for(const row of book.auditLog){
     if(!isMaterialAudit(row))continue
     const receipt=typeof row.detail==='string'?JSON.parse(row.detail):row.detail
-    const method=row.action==='AGENT_OPENING_MIGRATION'?'applyOpeningMigration':row.action==='AGENT_MASTER_MIGRATION'?'applyMasterMigration':row.action===INVENTORY_ACTION?'applyInventoryOperation':row.action===EXCHANGE_ACTION?'applyExchangeOperation':'applyScenarioTemplate'
+    const method=['AGENT_OPENING_MIGRATION','AGENT_OPENING_CUTOVER'].includes(row.action)?'applyOpeningMigration':row.action==='AGENT_MASTER_MIGRATION'?'applyMasterMigration':row.action===INVENTORY_ACTION?'applyInventoryOperation':row.action===EXCHANGE_ACTION?'applyExchangeOperation':'applyScenarioTemplate'
     add(method,method==='applyScenarioTemplate'?receipt.operationId:receipt.id,receipt)
   }
   for(const row of book.stockCostOperations||[])if(!rows.some(record=>record.method===row.method&&record.id===row.operationId))add(row.method,row.operationId,row)

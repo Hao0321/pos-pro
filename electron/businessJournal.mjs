@@ -9,7 +9,7 @@ import {restaurantFundsWaste} from './restaurantFundedPlan.mjs'
 
 // Preserve the existing category and source order. Native opening previews and
 // the live accounting screen must calculate from the same source functions.
-export function automaticBusinessJournal({orders=[],products=[],topups=[],wasteLog=[],purchases=[],salesDocuments=[],customerEntries=[],supplierEntries=[],restaurantEntries=[]}){
+export function automaticBusinessJournal({orders=[],products=[],topups=[],wasteLog=[],purchases=[],salesDocuments=[],customerEntries=[],supplierEntries=[],restaurantEntries=[],openingJournals=[]}){
   const originals=new Map()
   const menuWasteCosts=new Map()
   for(const entry of restaurantEntries){
@@ -29,5 +29,6 @@ export function automaticBusinessJournal({orders=[],products=[],topups=[],wasteL
     ...customerLedgerToJournalEntries(customerEntries),
     ...supplierLedgerToJournalEntries(supplierEntries),
     ...restaurantFundsToJournalEntries(restaurantEntries),
+    ...openingJournals,
   ]
 }

@@ -36,7 +36,13 @@
     "update.client-check",
     "update.release-channel",
     "operations.scale",
-    "migration.switching"
+    "migration.switching",
+    "reservations.capacity",
+    "reservations.journey",
+    "reservations.deposits",
+    "loyalty.programs",
+    "loyalty.entitlements",
+    "loyalty.customer-experience"
   ],
   "capabilities": [
     {
@@ -259,7 +265,49 @@
       "name": "Agent 一鍵搬家、來源對照、試搬、核對與可追溯切換",
       "status": "planned",
       "implementation": "partial",
-      "nextExperiment": "主檔及原庫存已接通來源原編號、逐格核對、實際成本帳試搬、原子開帳及回執；CSV／TSV／有界 XLSX 保留原檔與實際列號。M17m 原單帳款核心可在試算中透過既有客戶／供應商帳處理原單、新單、貸項與退款；內部整份來源規劃可同時核對主檔／庫存／帳款、獨立五項合計及財務往來身分，明確不授權保存，尚無正式帳款搬入入口。接續完成共同成本試搬後影像與原子保存、原編號復原、受控更正、畫面、備份及新格式前版保護；預收預付、儲值點數、歷史、整體切換對帳、真實廠牌、外部 Agent、跨裝置草稿及真人／實體裝置仍需驗收。原31義務與完整 ERP／CRM 切換範圍保留。"
+      "nextExperiment": "主檔及原庫存已有來源原編號、逐格核對、成本試搬及回執；CSV／TSV／有界 XLSX 保留原檔。M17m 開發中的原單帳款格式14，已將標準 JSON 來源的主檔、庫存、原應收付和貸項接到共同試搬與原子保存、原編號復原、完整備份與前版保護，日常收付款畫面與總帳開始接入原單。公開簡易搬家入口仍未開放帳款；接續驗收完整畫面、原始財務 CSV／XLSX、受控更正及整體切換對帳。預收預付、儲值點數、歷史、真實廠牌、外部 Agent、跨裝置草稿及真人／實體裝置仍需驗收。原有32項及新增訂位／會員福利全部義務保留。"
+    },
+    {
+      "id": "reservations.capacity",
+      "name": "訂位餐期、桌位容量、併桌與衝突防護",
+      "status": "planned",
+      "implementation": "not-implemented",
+      "nextExperiment": "依 RESERVATIONS_LOYALTY_SPEC.md 驗證時段重疊、桌位合併、跨午夜與雙客戶競搶最後桌位；桌號點餐不視為訂位完成"
+    },
+    {
+      "id": "reservations.journey",
+      "name": "手機訂位、候位、改期、到店與點餐整合",
+      "status": "planned",
+      "implementation": "not-implemented",
+      "nextExperiment": "從顧客公開訂位到店家確認、候位轉正、入座及原單點餐，完成原編號恢復、四語與真實首次使用驗收"
+    },
+    {
+      "id": "reservations.deposits",
+      "name": "訂位訂金、取消政策、原款退款與提醒",
+      "status": "planned",
+      "implementation": "not-implemented",
+      "nextExperiment": "固定政策版本，區分訂位成功、實際收款與退款完成；驗證原單抵款與提醒回執，外部付款／通路保留待接通狀態"
+    },
+    {
+      "id": "loyalty.programs",
+      "name": "店家自訂點數活動、會員分級與福利範本",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "既有基本集點、折抵與生日贈點不等於完整福利設計；補店主範本、規則版本、升等條件、金額範例與啟用流程"
+    },
+    {
+      "id": "loyalty.entitlements",
+      "name": "點數批次、兌換券、到期、核銷與退款",
+      "status": "planned",
+      "implementation": "not-implemented",
+      "nextExperiment": "驗證發放、領取、原子核銷、相同 ID 重試、雙機兌換、原期限退回與訂單折扣分攤；券與點數不能繞過原交易保存"
+    },
+    {
+      "id": "loyalty.customer-experience",
+      "name": "顧客會員權益頁、個資隔離與福利資料搬家",
+      "status": "planned",
+      "implementation": "not-implemented",
+      "nextExperiment": "驗證會員身分與個人券夾權限、手機無痛查詢、活動版本與剩餘權益匯出入；同場景測量後才能主張超越 Ocard"
     },
     {
       "id": "operations.scale",

@@ -5,7 +5,8 @@ import {procurementSummary,isPurchaseCreate} from './procurementRules.mjs'
 import {supplierClaimKey} from './supplierCredit.mjs'
 import {SUPPLIER_CONTROL_ACTIONS,emptySupplierControl,supplierActor,deriveSupplierControl,projectSupplierControl,supplierControlView,assertProcurementApproval,validateSupplierPaymentApproval,consumeSupplierPaymentApproval} from './supplierControl.mjs'
 import {buildSupplierPurchaseTimelines,supplierPurchaseAt,supplierInventoryContext,assertSupplierInventoryTransition} from './procurementHistory.mjs'
-import {openingBalanceTimeline,assertOpeningBalanceOrdinaryIds,assertOpeningBalanceParties,assertOpeningBalanceRequest,syncOpeningBalanceProjection,openingBalanceClaim,openingBalanceView} from './openingBalanceLedger.mjs'
+import {openingBalanceTimeline,assertOpeningBalanceOrdinaryIds,assertOpeningBalanceParties,assertOpeningBalanceRequest,syncOpeningBalanceProjection,openingBalanceClaim,openingBalanceView,assertOpeningActivation} from './openingBalanceLedger.mjs'
+import {OPENING_ACTIVATION} from './openingCutoverRules.mjs'
 
 export const SUPPLIER_KIND='supplier-ledger'
 export const SUPPLIER_MONEY_ACTIONS=['pay','allocate','unallocate','refund','refund-reverse','pay-reverse']
@@ -13,6 +14,7 @@ export const SUPPLIER_ACTIONS=[...SUPPLIER_CONTROL_ACTIONS,...SUPPLIER_MONEY_ACT
 const rootFields=['id','kind','action','time','date','storeId','epoch','expectedRevision','expectedOpeningDigest']
 const partyFields=['supplierId','expectedSupplierName']
 const fields={
+ [OPENING_ACTIVATION]:['openingBatchId','sourceDigest','reviewed'],
  'policy-set':['mode','reason','reviewed'],
  'purchase-enroll':['purchaseId','expectedPurchaseRevision','reviewed'],
  'purchase-approve':['purchaseId','expectedPurchaseRevision','reviewed'],
@@ -31,6 +33,7 @@ const sum=items=>items.reduce((total,row)=>total+cents(row.amount),0)
 const remaining=payment=>payment.reversed?0:cents(payment.event.amount)-payment.allocated-payment.refunded
 function emptyProjection(){return {entries:[],control:emptySupplierControl(),payments:new Map(),allocations:new Map(),refunds:new Map(),reversedRefunds:new Set(),credits:new Map(),latestDay:new Map()}}
 function projectOne(state,event){
+ if(event.action===OPENING_ACTIVATION){state.entries.push(event);return}
  state.entries.push(event)
  if(projectSupplierControl(state.control,event))return
  if(!SUPPLIER_MONEY_ACTIONS.includes(event.action))throw Error('供應商款項歷史含有不支援的操作')
@@ -66,7 +69,7 @@ function eventHeader(request,data,actor,state,history){
  if(request.storeId!==data.storeId)throw Object.assign(Error('這筆供應商操作屬於另一間店'),{historyUncertain:true})
  if(!history&&request.epoch!==data.epoch)throw Object.assign(Error('資料已還原或更換，請以原編號核對供應商款項'),{historyUncertain:true})
  if(request.expectedRevision!==state.entries.length)throw Error('供應商帳已更新，請重新核對')
- assertOpeningBalanceRequest(request,state.opening,SUPPLIER_MONEY_ACTIONS.includes(request.action),{history})
+ assertOpeningBalanceRequest(request,state.opening,SUPPLIER_MONEY_ACTIONS.includes(request.action)||request.action===OPENING_ACTIVATION,{history})
  const now=data.now??Date.now()
  if(!history&&(Math.abs(now-Date.parse(request.time))>300000||request.date>salesDate(new Date(now))))throw Error('供應商操作日期或時間已過期，請重新核對')
  return {version:1,id:request.id,storeId:data.storeId,revision:state.entries.length+1,time:request.time,date:request.date,action:request.action,actor:supplierActor(actor),input:structuredClone(request)}
@@ -93,9 +96,10 @@ function historicalData(request,data,eventRevision,timelines){
  const purchases=data.purchases.map(po=>revisions.has(po.id)?supplierPurchaseAt(timelines,po.id,revisions.get(po.id),eventRevision):po)
  return {...data,purchases}
 }
-function derive(request,data,actor,state,{history=false,timelines=null}={}){
+function derive(request,data,actor,state,{history=false,timelines=null,openingReceipt=null}={}){
  validateHeader(request)
  const event=eventHeader(request,data,actor,state,history)
+ if(request.action===OPENING_ACTIVATION){if(!history&&!openingReceipt)throw Error('帳款生效紀錄只能由整批搬家交易保存。');assertOpeningActivation(request,'payable',data,state.entries.length+1,actor,openingReceipt);return {...event,openingBatchId:request.openingBatchId,sourceDigest:request.sourceDigest}}
  let controlData=data
  if(history&&request.purchaseId)controlData=historicalData(request,data,event.revision,timelines)
  if(request.action==='payment-propose'){const supplier=supplierFor(request,data,history);controlData={...controlData,suppliers:[supplier,...data.suppliers.filter(row=>row.id!==supplier.id)]}}
@@ -165,6 +169,7 @@ const cashFor=event=>event.cashLogId?{id:event.cashLogId,shiftId:event.shiftId,t
 function validateCash(event,receipt,logs=[]){const expected=cashFor(event),actual=expected?logs.find(row=>row.id===expected.id):null;if(canonicalSignature(actual)!==canonicalSignature(expected)||receipt.cashLogId!==(event.cashLogId||null))throw Error('供應商款項與原現金流水不符');return actual}
 function project(entries=[],context,storeId){const timeline=openingBalanceTimeline(context,'payable',entries.length,storeId),state=emptyProjection();for(const event of [...entries].sort((a,b)=>a.revision-b.revision)){syncOpening(state,timeline);projectOne(state,event)}syncOpening(state,timeline);return state}
 export function planSupplierLedger(request,data,actor){const state=project(data.supplierEntries,data.openingBalanceContext,data.storeId);assertOpeningBalanceOrdinaryIds(state.opening,data.purchases);assertOpeningBalanceParties(state.opening,new Set(data.suppliers.map(row=>row.id)));const event=derive(request,data,actor,state);return {event,receipt:receiptFor(event),cashLog:cashFor(event)}}
+export function planSupplierOpeningActivation(request,data,actor,receipt){const state=project(data.supplierEntries,data.openingBalanceContext,data.storeId),event=derive(request,data,actor,state,{openingReceipt:receipt});if(event.action!==OPENING_ACTIVATION)throw Error('帳款生效紀錄需要原搬家來源。');return {event,receipt:receiptFor(event),cashLog:null}}
 export function planSupplierRegistration(request,purchase,data,actor){
  if(!isPurchaseCreate(request.kind))throw Error('只有建立新採購能自動登記核准，舊單請明確納入')
  const context=supplierInventoryContext(request);if(!context)throw Error('採購登記缺少供應商帳版本')

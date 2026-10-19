@@ -2,8 +2,9 @@ import {salesSummary,salesCents,salesAmount} from '../../electron/salesRules.mjs
 import {businessId,businessInstant,only,text} from '../../electron/businessExchange.mjs'
 import {moneyValue,operationHeader} from '../../electron/operationRules.mjs'
 export const CUSTOMER_RECEIPT_DRAFT='pos-customer-receipt-draft/v1'
-export function customerOpenClaims(documents,customerId,entries,today){
-  return documents.filter(d=>d.customer.id===customerId).flatMap(doc=>salesSummary(doc,today,entries).claims.filter(c=>c.owed>0).map(c=>({documentId:doc.id,deliveryId:c.delivery.id,expectedRevision:doc.revision,dueDate:c.delivery.dueDate,date:c.delivery.date,owed:c.owed,name:doc.items.map(i=>i.name).join('、')}))).sort((a,b)=>a.dueDate.localeCompare(b.dueDate)||a.date.localeCompare(b.date)||a.deliveryId.localeCompare(b.deliveryId))
+export function customerOpenClaims(documents,customerId,entries,today,openingClaims=[]){
+  const carried=openingClaims.filter(row=>row.customerId===customerId&&row.owed>0).map(row=>({documentId:row.documentId,deliveryId:row.deliveryId,expectedRevision:row.revision,dueDate:row.dueDate,date:row.date,owed:row.owed,name:row.number,opening:true}))
+  return [...documents.filter(d=>d.customer.id===customerId).flatMap(doc=>salesSummary(doc,today,entries).claims.filter(c=>c.owed>0).map(c=>({documentId:doc.id,deliveryId:c.delivery.id,expectedRevision:doc.revision,dueDate:c.delivery.dueDate,date:c.delivery.date,owed:c.owed,name:doc.items.map(i=>i.name).join('、')}))),...carried].sort((a,b)=>a.dueDate.localeCompare(b.dueDate)||a.date.localeCompare(b.date)||a.deliveryId.localeCompare(b.deliveryId))
 }
 export function suggestCustomerAllocation(receipt,claims){
   let remaining=salesCents(receipt?.available||0)

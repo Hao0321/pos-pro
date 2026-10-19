@@ -94,6 +94,7 @@ export default function AccountingPage({ store,session }) {
         {accounting.error&&<p role="alert">{trMessage(accounting.error)}</p>}
         {!validPeriod&&<p role="alert">{tr('請確認起訖日期，結束日不能早於開始日')}</p>}
         {canRead&&accounting.report.status==='active'&&<p className="accounting-notice">{tr('成本已按實際庫存異動計算；開帳前的分錄保留原紀錄。')}</p>}
+        {canRead&&accounting.report.financialOpening?.pending&&<p role="status" className="accounting-notice">{tr('期初對帳尚未完成')}</p>}
         {canRead&&(!pnl.complete||!balance.complete)&&<p role="status" className="accounting-notice">{tr('成本或帳務仍有待核對項目，完整毛利、淨利與資產不顯示為已確認。')}</p>}
         {canRead&&tab === 'pnl'     && <PnLView     pnl={pnl} from={from} to={to} />}
         {canRead&&tab === 'journal' && <JournalView grouped={grouped} manualEntries={manualEntries} deleteManualEntry={deleteManualEntry} frozenIds={accounting.report.status==='active'?accounting.report.frozenManualIds||[]:[]}/>}

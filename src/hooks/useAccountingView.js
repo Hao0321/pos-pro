@@ -9,5 +9,5 @@ export default function useAccountingView(store,session){
  useEffect(()=>{let cancelled=false;loadStockAccountingState(session).then(report=>{if(!cancelled)setRead({key,refresh,report})}).catch(error=>{if(!cancelled)setRead({key,refresh,error:error.message})});return()=>{cancelled=true}},[key,refresh])
  if(read?.key!==key||read?.refresh!==refresh)return {loading:true,journals:[]}
  if(read.error)return {loading:false,error:read.error,journals:[]}
- return {loading:false,report:read.report,journals:read.report.status==='active'?read.report.journals:store.allJournal||[]}
+ return {loading:false,report:read.report,journals:read.report.journals||store.allJournal||[]}
 }

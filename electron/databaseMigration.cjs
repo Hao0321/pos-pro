@@ -6,6 +6,7 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
     require('./masterMigration.mjs').readMasterMigrationHistory(data)
     if(rawSettings.some(row=>row.key==='agentMasterMigrationVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installMasterMigrationFence(db)
     if(rawSettings.some(row=>row.key==='stockOpeningMigrationVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installOpeningMigrationFence(db)
+    if(rawSettings.some(row=>row.key==='openingCutoverVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installCutoverFence(db)
     if(rawSettings.some(row=>row.key==='agentWorkbookMigrationVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installWorkbookMigrationFence(db)
     if(rawSettings.some(row=>row.key==='agentTabularMigrationVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installTabularMigrationFence(db)
     data={...data,settings:encoding.settingsForValidation(rawSettings,'sqlite')}
@@ -14,10 +15,11 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
     require('./procurementRules.mjs').validateProcurementRecords(data.purchases||[],data.cashLog||[])
     require('./businessExchange.mjs').validateExchangeSettings(data.settings||[],data.purchases||[],data.auditLog||[])
     const exchange=require('./businessExchange.mjs')
-    require('./supplierLedger.mjs').validateSupplierLedgerRecords(data.supplierEntries||[],data.supplierOperations||[],{storeId:exchange.readExchangeTextSetting(data.settings||[],'sharedStoreId'),suppliers:data.suppliers||[],purchases:data.purchases||[],inventoryAudits:data.auditLog||[],cashLogs:data.cashLog||[]})
+    const openingBalanceContext=require('./openingCutoverHistory.mjs').readOpeningCutoverHistory(data).context
+    require('./supplierLedger.mjs').validateSupplierLedgerRecords(data.supplierEntries||[],data.supplierOperations||[],{storeId:exchange.readExchangeTextSetting(data.settings||[],'sharedStoreId'),suppliers:data.suppliers||[],purchases:data.purchases||[],inventoryAudits:data.auditLog||[],cashLogs:data.cashLog||[],openingBalanceContext})
     if(data.supplierEntries?.length||data.supplierOperations?.length)require('./databaseFeatureFence.cjs').installSupplierFence(db)
     for(const [key,table]of [['supplierEntries','supplier_entries'],['supplierOperations','supplier_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
-    require('./customerLedger.mjs').validateCustomerLedgerRecords(data.customerEntries||[],data.customerOperations||[],{storeId:data.settings?.find(s=>s.key==='sharedStoreId')?.value,documents:data.salesDocuments||[],salesOperations:data.salesOperations||[],cashLogs:data.cashLog||[]})
+    require('./customerLedger.mjs').validateCustomerLedgerRecords(data.customerEntries||[],data.customerOperations||[],{storeId:data.settings?.find(s=>s.key==='sharedStoreId')?.value,documents:data.salesDocuments||[],salesOperations:data.salesOperations||[],cashLogs:data.cashLog||[],openingBalanceContext})
     if(data.customerEntries?.length||data.customerOperations?.length)require('./databaseFeatureFence.cjs').installCustomerFence(db)
     for(const [key,table]of [['customerEntries','customer_entries'],['customerOperations','customer_operations']])for(const row of data[key]||[])db.prepare('INSERT INTO '+table+' (id,data) VALUES (?,?)').run(row.id,JSON.stringify(row))
     require('./salesPlan.mjs').validateSalesRecords(data.salesDocuments||[],data.salesOperations||[],data.cashLog||[],data.settings?.find(s=>s.key==='sharedStoreId')?.value,data.products||[],exchange.readExchangeStore(exchange.readExchangeTextSetting(data.settings||[],exchange.EXCHANGE_SETTING)).quotes)

@@ -2,10 +2,13 @@ import useDeviceDraft from '../../hooks/useDeviceDraft'
 import {SUPPLIER_ACTIONS} from '../../../electron/supplierLedger.mjs'
 import {supplierDraftKey} from '../../utils/supplierDraftReceipt.mjs'
 const object=value=>value&&typeof value==='object'&&!Array.isArray(value)
-const fields=['action','supplierId','expectedSupplierName','storeId','epoch','ledgerRevision','date','amount','method','reference','note','reason','confirmed','paymentId','allocationId','refundId','proposalId','purchaseId','expectedPurchaseRevision','mode','items','agentDraftId','operationIdentity','submittedShiftId']
+const fields=['action','supplierId','expectedSupplierName','storeId','epoch','ledgerRevision','date','amount','method','reference','note','reason','confirmed','paymentId','allocationId','refundId','proposalId','purchaseId','expectedPurchaseRevision','mode','items','agentDraftId','operationIdentity','submittedShiftId','expectedOpeningDigest','fundingKind']
 export function validSupplierDraft(value){
  if(value===null)return true
  if(!object(value)||Object.keys(value).some(key=>!fields.includes(key))||!SUPPLIER_ACTIONS.includes(value.action)||!Number.isSafeInteger(value.ledgerRevision)||value.ledgerRevision<0||typeof value.confirmed!=='boolean'||!['cash','bank'].includes(value.method))return false
+ if(value.expectedOpeningDigest!==undefined&&value.expectedOpeningDigest!==null&&(typeof value.expectedOpeningDigest!=='string'||!/^[a-f0-9]{64}$/.test(value.expectedOpeningDigest)))return false
+ if(value.expectedOpeningDigest===null&&!value.operationIdentity)return false
+ if(value.fundingKind!==undefined&&value.fundingKind!=='opening-credit')return false
  if(['storeId','epoch','date'].some(key=>typeof value[key]!=='string'||!value[key]||value[key].length>128))return false
  if(typeof value.supplierId!=='string'||value.supplierId.length>128||value.action!=='policy-set'&&!value.supplierId)return false
  if(['pay','payment-propose','allocate','unallocate','refund','refund-reverse','pay-reverse'].includes(value.action)&&(typeof value.expectedSupplierName!=='string'||!value.expectedSupplierName.trim()))return false

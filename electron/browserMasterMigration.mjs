@@ -8,7 +8,7 @@ import {TABULAR_MIGRATION_PROTOCOL,TABULAR_MIGRATION_FENCE} from './tabularMigra
 import {OPENING_MASTER_PROTOCOL} from './openingMigrationSource.mjs'
 
 export function appendBrowserMasterMigration(book,input,scope,actor,time,{deferOpeningReceipt=false}={}){
-  if(deferOpeningReceipt){if(input?.protocol!==OPENING_MASTER_PROTOCOL)throw Error('期初主檔只能與原期初批次一起保存。')}
+  if(deferOpeningReceipt){if(![OPENING_MASTER_PROTOCOL,'pos-opening-master-migration/v2'].includes(input?.protocol))throw Error('期初主檔只能與原期初批次一起保存。')}
   else assertPublicMasterMigration(input)
   const {preview,receipt}=verifyMasterMigration(input,book,scope,actor)
   if(receipt)return {book,receipt}

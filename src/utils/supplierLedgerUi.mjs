@@ -4,8 +4,9 @@ import {moneyValue,operationHeader} from '../../electron/operationRules.mjs'
 import {supplierClaimKey} from '../../electron/supplierCredit.mjs'
 export const SUPPLIER_PAYMENT_DRAFT='pos-supplier-payment-draft/v1'
 const cents=value=>Math.round(value*100)
-export function supplierOpenClaims(purchases,supplierId,entries,today){
- return purchases.filter(po=>isProcurement(po)&&po.supplierId===supplierId).flatMap(po=>procurementSummary(po,today,entries).bills.filter(bill=>bill.balance>0).map(bill=>({purchaseId:po.id,invoiceId:bill.id,expectedRevision:po.procurement.revision,dueDate:bill.dueDate,date:bill.date,reference:bill.reference,owed:bill.balance,name:po.items.map(item=>item.name).join('、')}))).sort((a,b)=>a.dueDate.localeCompare(b.dueDate)||a.date.localeCompare(b.date)||a.purchaseId.localeCompare(b.purchaseId)||a.invoiceId.localeCompare(b.invoiceId))
+export function supplierOpenClaims(purchases,supplierId,entries,today,openingClaims=[]){
+ const carried=openingClaims.filter(row=>row.supplierId===supplierId&&row.owed>0).map(row=>({purchaseId:row.purchaseId,invoiceId:row.invoiceId,expectedRevision:row.revision,dueDate:row.dueDate,date:row.date,reference:row.number,owed:row.owed,name:row.number,opening:true}))
+ return [...purchases.filter(po=>isProcurement(po)&&po.supplierId===supplierId).flatMap(po=>procurementSummary(po,today,entries).bills.filter(bill=>bill.balance>0).map(bill=>({purchaseId:po.id,invoiceId:bill.id,expectedRevision:po.procurement.revision,dueDate:bill.dueDate,date:bill.date,reference:bill.reference,owed:bill.balance,name:po.items.map(item=>item.name).join('、')}))),...carried].sort((a,b)=>a.dueDate.localeCompare(b.dueDate)||a.date.localeCompare(b.date)||a.purchaseId.localeCompare(b.purchaseId)||a.invoiceId.localeCompare(b.invoiceId))
 }
 export function suggestSupplierAllocation(payment,claims){
  let remaining=cents(payment?.available||0)

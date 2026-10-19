@@ -1,7 +1,7 @@
 const {readMasterMigrationInput,readMasterMigrationHistory,previewMasterMigration,verifyMasterMigration,masterMigrationReceipt,masterMigrationAudit,MASTER_MIGRATION_HEAD,MASTER_MIGRATION_FENCE,assertMasterMigrationResult,assertPublicMasterMigration}=require('./masterMigration.mjs'),{OPENING_MASTER_PROTOCOL}=require('./openingMigrationSource.mjs')
 module.exports=function installMasterMigration(db,api,stmts){
   const current=actor=>{const scope=api.getPrivateDraftContext(actor);return {book:api.exportData(),scope}}
-  const assertOpening=input=>{if(!db.inTransaction||input?.protocol!==OPENING_MASTER_PROTOCOL)throw Error('期初主檔只能與原期初批次一起保存。')}
+  const assertOpening=input=>{if(!db.inTransaction||![OPENING_MASTER_PROTOCOL,'pos-opening-master-migration/v2'].includes(input?.protocol))throw Error('期初主檔只能與原期初批次一起保存。')}
   const preview=(input,actor)=>db.transaction(()=>{const {book,scope}=current(actor);return previewMasterMigration(input,book,scope,actor)})()
   const persist=(parsed,saved,validate=true)=>{
     require('./databaseFeatureFence.cjs').installMasterMigrationFence(db)

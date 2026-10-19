@@ -21,4 +21,5 @@ module.exports=function installOpeningMigration(db,api,stmts,store,openingMaster
    const final=api.exportData();readOpeningMigrationHistory(final);validateStockCostBook(final);return assertOpeningMigrationResult(input,{success:true,receipt:saved})
   }))()}catch(error){return {success:false,committed:checked&&!existing?false:null,error:error.message}}
  }
+ require('./openingCutoverOperations.cjs')(db,api,stmts,store,openingMasters)
 }

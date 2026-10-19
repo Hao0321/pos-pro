@@ -14,6 +14,7 @@ import {assertProductPricingUnchanged} from './costPricing.mjs'
 import {captureRestaurantCostBasis} from './stockReportBasis.mjs'
 import {stockUnits} from './stockBusinessPlan.mjs'
 import {validateCustomerLedgerRecords} from './customerLedger.mjs'
+import {readOpeningCutoverHistory} from './openingCutoverHistory.mjs'
 import {verifyRefundReview} from './refundReview.mjs'
 import {salesDate} from './salesRules.mjs'
 import {RESTAURANT_MENU_CONFIG_KEY} from './restaurantMenuOriginal.mjs'
@@ -42,6 +43,7 @@ export function browserStockContexts(book,runtime){
     supplierFence:runtime.supplierFence,supplierEntries:book.supplierEntries,supplierOperations:book.supplierOperations,inventoryAudits:book.auditLog,
     documents:book.salesDocuments,operations:book.salesOperations,salesOperations:book.salesOperations,customerEntries:book.customerEntries,customerOperations:book.customerOperations,
     quotes:readExchangeStore(readExchangeTextSetting(book.settings,EXCHANGE_SETTING)).quotes}
+  data.openingBalanceContext=readOpeningCutoverHistory(book).context
   data.customerLedger=validateCustomerLedgerRecords(data.customerEntries,data.customerOperations,data)
   return data
 }

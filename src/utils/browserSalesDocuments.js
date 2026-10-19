@@ -3,6 +3,8 @@ import {readExchangeTextSetting,readExchangeStore,EXCHANGE_SETTING} from '../../
 import {salesDate} from '../../electron/salesRules.mjs'
 import {planSales,salesReceipt,validateSalesRecords} from '../../electron/salesPlan.mjs'
 import {validateCustomerLedgerRecords} from '../../electron/customerLedger.mjs'
+import {browserToBook} from '../../electron/recoveryRules.mjs'
+import {readOpeningCutoverHistory} from '../../electron/openingCutoverHistory.mjs'
 import {hasBrowserStockCost,commitBrowserStockBusiness} from './browserStockBusiness'
 
 export function readBrowserTrading(record){
@@ -11,6 +13,7 @@ export function readBrowserTrading(record){
     openShift:rows.pos2_shifts.find(s=>s.status==='open')||null,quotes:readExchangeStore(readExchangeTextSetting(rows.pos_business_settings,EXCHANGE_SETTING)).quotes}
   validateSalesRecords(data.documents,data.operations,data.cashLogs,data.storeId,data.products,data.quotes)
   data.salesOperations=data.operations
+  data.openingBalanceContext=readOpeningCutoverHistory(browserToBook(record.data)).context
   data.customerLedger=validateCustomerLedgerRecords(data.customerEntries,data.customerOperations,data)
   return data
 }

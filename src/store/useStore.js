@@ -191,7 +191,7 @@ export function useStore(session){
   // Each browser command commits before updating state. Re-saving UI snapshots
   // here could overwrite a newer durable operation when its reply is delayed.
 
-  const autoJournal = useMemo(()=>automaticBusinessJournal({orders,products,topups,wasteLog,purchases,salesDocuments:sales.documents,customerEntries:sales.customerLedger?.entries||[],supplierEntries:supplierState?.supplierLedger.entries||[],restaurantEntries}),[orders,products,topups,wasteLog,purchases,sales,supplierState,restaurantEntries])
+  const autoJournal = useMemo(()=>automaticBusinessJournal({orders,products,topups,wasteLog,purchases,salesDocuments:sales.documents,customerEntries:sales.customerLedger?.entries||[],supplierEntries:supplierState?.supplierLedger.entries||[],restaurantEntries,openingJournals:[...(sales.customerLedger?.openingJournals||[]),...(supplierState?.supplierLedger.openingJournals||[])]}),[orders,products,topups,wasteLog,purchases,sales,supplierState,restaurantEntries])
   const allJournal  = useMemo(()=>[...autoJournal,...manualEntries].sort((a,b)=>b.date.localeCompare(a.date)),[autoJournal,manualEntries])
 
   const addManualEntry = useCallback(async e=>{
