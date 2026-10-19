@@ -4,6 +4,7 @@ import {replayReservationReceipts,reservationReceipt,reservationCommand,reservat
 import {makeReservationBarrier,readReservationBarrier,RESERVATION_BARRIER} from './reservationBarrier.mjs'
 import {RESERVATION_ACTION,RESERVATION_HEAD,RESERVATION_FENCE,RESERVATION_METHOD,reservationError} from './reservationConfig.mjs'
 import {readExchangeTextSetting} from './businessExchange.mjs'
+import {RESERVATION_PUBLIC_FENCE} from './reservationGuest.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b),clone=value=>structuredClone(value)
 const bad=()=>{throw reservationError('HISTORY')}
@@ -26,6 +27,8 @@ function inspect(book,known){
  const recorded=(book.auditLog||[]).filter(row=>row.action===RESERVATION_ACTION||String(row.id).startsWith('reservation:')).map(readAudit).sort((a,b)=>a.revision-b.revision),rows=new Map()
  for(const receipt of [...recorded,...known]){if(receipt.event.storeId!==storeId)bad();const prior=rows.get(receipt.id);if(prior&&!same(prior,receipt))bad();rows.set(receipt.id,receipt)}
  const all=[...rows.values()].sort((a,b)=>a.revision-b.revision)
+ const publicFlag=setting(RESERVATION_PUBLIC_FENCE)
+ if(publicFlag!==undefined&&publicFlag!=='1'||all.some(row=>['publish','guest'].includes(row.event.input.action))&&publicFlag!=='1')bad()
  if(all.length&&(flag!=='1'||all[0].event.input.action!=='configure'))bad()
  const stored=replayReservationReceipts(recorded,storeId),state=replayReservationReceipts(all,storeId)
  if(head!==stored.head)bad()
@@ -45,6 +48,6 @@ export function assertReservationResult(request,result){
  if(typeof result.state.now!=='string'||!Number.isFinite(Date.parse(result.state.now))||reservationParts(Date.parse(result.state.now),result.state.config?.timeZone).date!==result.state.today)bad()
  const replay=replayReservationReceipts(result.state.entries,result.storeId),receipt=result.state.entries.find(row=>row.id===request.id)
  if(!same(receipt,result.receipt)||receipt.signature!==canonicalSignature(request)||!same(receipt,reservationReceipt(receipt.event)))bad()
- if(!same(replay.config,result.state.config)||!same(replay.bookings,result.state.bookings)||replay.revision!==result.state.revision||replay.configVersion!==result.state.configVersion||replay.head!==result.state.head||typeof result.state.needsRecovery!=='boolean')bad()
+ if(!same(replay.config,result.state.config)||!same(replay.bookings,result.state.bookings)||replay.revision!==result.state.revision||replay.configVersion!==result.state.configVersion||replay.publicEnabled!==result.state.publicEnabled||replay.head!==result.state.head||typeof result.state.needsRecovery!=='boolean')bad()
  return result
 }

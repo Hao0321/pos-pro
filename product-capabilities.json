@@ -272,14 +272,14 @@
       "name": "訂位餐期、桌位容量、併桌與衝突防護",
       "status": "planned",
       "implementation": "not-implemented",
-      "nextExperiment": "依 RESERVATIONS_LOYALTY_SPEC.md 驗證時段重疊、桌位合併、跨午夜與雙客戶競搶最後桌位；桌號點餐不視為訂位完成"
+      "nextExperiment": "桌位容量、候位與網站共用權威已有開發實作及競搶檢查；持續依 RESERVATIONS_LOYALTY_SPEC.md 驗證完整到店、點餐、實際營業容量與真實使用情境"
     },
     {
       "id": "reservations.journey",
       "name": "手機訂位、候位、改期、到店與點餐整合",
       "status": "planned",
       "implementation": "not-implemented",
-      "nextExperiment": "從顧客公開訂位到店家確認、候位轉正、入座及原單點餐，完成原編號恢復、四語與真實首次使用驗收"
+      "nextExperiment": "免登入網站到電腦及配對手機、私人原單查詢、改期取消、斷線與還原已有隔離店面檢查；公開部署、憑證到期撤銷、候位入座及原單點餐、實體手機與真實首次使用驗收仍待完成"
     },
     {
       "id": "reservations.deposits",

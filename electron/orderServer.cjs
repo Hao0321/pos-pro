@@ -80,6 +80,7 @@ module.exports=function startOrderServer(port,db,getMainWindow,options={}) {
     if (++state.count>(isQuote?120:30)) return res.status(429).json({success:false,error:'送單過於頻繁，請稍後再試'})
     next()
   }
+  require('./reservationHttp.cjs')(app,db,admitCustomer,getMainWindow)
   app.post('/api/menu/quote',admitCustomer,express.json({limit:'32kb',strict:true}),(req,res)=>{try{
     if(!req.body||Object.keys(req.body).some(key=>!['items','table','key'].includes(key)))throw Error('選項需要核對')
     const result=menuSnapshot(req.body,({state,table,cartContext})=>{

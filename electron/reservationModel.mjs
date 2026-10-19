@@ -3,10 +3,11 @@ import {privateDraftDigest,draftObject} from './privateDrafts.mjs'
 import {defaultReservationConfig,normalizeReservationConfig,reservationError,reservationId,reservationText,reservationInteger,RESERVATION_PROTOCOL,RESERVATION_EVENT} from './reservationConfig.mjs'
 import {reservationParts,reservationWindows} from './reservationCalendar.mjs'
 import {reservationSpan,reservationOccupies,chooseReservationTables} from './reservationCapacity.mjs'
+import {guestReservationRequest,guestReservationOperationId,guestReservationActor,guestReservationOriginal} from './reservationGuest.mjs'
 
 const clone=value=>structuredClone(value),same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 export const reservationBookingId=(storeId,id)=>'booking-'+privateDraftDigest([storeId,id]).slice(0,48)
-export const emptyReservationState=()=>({revision:0,head:null,configVersion:0,config:defaultReservationConfig(),bookings:[],events:[]})
+export const emptyReservationState=()=>({revision:0,head:null,configVersion:0,publicEnabled:false,config:defaultReservationConfig(),bookings:[],events:[]})
 const header=['protocol','id','storeId','epoch','action','expectedRevision','time'],fields={configure:['config','reviewed'],book:['date','slot','partySize','customer','channel','tableIds','note','reviewed'],waitlist:['date','slot','partySize','customer','channel','tableIds','note','reviewed'],move:['bookingId','expectedBookingRevision','date','slot','partySize','tableIds','reason','reviewed'],promote:['bookingId','expectedBookingRevision','date','slot','partySize','tableIds','reason','reviewed'],status:['bookingId','expectedBookingRevision','status','reason','reviewed'],recover:['reviewed']}
 export function reservationActor(actor,users=null){
  draftObject(actor,['userId','username','role','token','loginAt','expiresAt'],['userId','username','role']);reservationId(actor.userId);reservationText(actor.username,100,true)
@@ -14,10 +15,13 @@ export function reservationActor(actor,users=null){
  return {userId:actor.userId,username:actor.username,role:actor.role}
 }
 export function reservationCommand(input){
- if(!Object.hasOwn(fields,input?.action))throw reservationError('HISTORY')
- draftObject(input,[...header,...fields[input.action]]);reservationId(input.id);reservationId(input.storeId);reservationId(input.epoch);reservationInteger(input.expectedRevision,0,Number.MAX_SAFE_INTEGER-1)
+ const extra=input?.action==='publish'?['enabled','reviewed']:input?.action==='guest'?['request','reviewed']:fields[input?.action]
+ if(!extra)throw reservationError('HISTORY')
+ draftObject(input,[...header,...extra]);reservationId(input.id);reservationId(input.storeId);reservationId(input.epoch);reservationInteger(input.expectedRevision,0,Number.MAX_SAFE_INTEGER-1)
  if(input.protocol!==RESERVATION_PROTOCOL||typeof input.time!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(input.time)||!Number.isFinite(Date.parse(input.time))||input.reviewed!==true)throw reservationError('HISTORY')
  if(new Date(input.time).toISOString()!==input.time.replace(/Z$/,input.time.includes('.')?'Z':'.000Z'))throw reservationError('HISTORY')
+ if(input.action==='guest'){guestReservationRequest(input.request);if(input.id!==guestReservationOperationId(input.request)||input.storeId!==input.request.storeId)throw reservationError('HISTORY')}
+ if(input.action==='publish'&&typeof input.enabled!=='boolean')throw reservationError('CONFIG')
  return input
 }
 function customer(input){draftObject(input,['name','contact']);return {name:reservationText(input.name,100,true),contact:reservationText(input.contact,100)}}
@@ -55,12 +59,29 @@ function changeBooking(input,state,now){
  }
  return {booking:next,reason}
 }
-export function deriveReservationEvent(input,state,actor,time,{allowRecovery=false}={}){
- reservationCommand(input);actor=reservationActor(actor);const now=Date.parse(time)
+function guestChange(input,state,now){
+ const request=input.request
+ if(request.action!=='cancel'&&(!state.publicEnabled||!state.config.enabled||request.configVersion!==state.configVersion))throw reservationError('STALE')
+ if(request.action==='book')return newBooking({...input,...request,action:'book',channel:'online',tableIds:[]},state,now)
+ const booking=state.bookings.find(row=>row.id===request.bookingId)
+ if(!guestReservationOriginal(state,request.bookingId)||!booking||booking.status!=='confirmed'||booking.startMs<=now)throw reservationError('STATUS')
+ if(request.action==='cancel')return changeBooking({...input,...request,action:'status',status:'cancelled',reason:'客人從訂位網站取消'},state,now)
+ // A guest move uses the online notice and online tables, including when the
+ // merchant has since limited a table to staff bookings.
+ const span=reservationSpan(state.config,request.date,request.slot,now,{publicRequest:true})
+ const tableIds=chooseReservationTables(state.config,state.bookings,span,request.partySize,[],{online:true,ignoreId:booking.id,now})
+ return changeBooking({...input,...request,action:'move',tableIds,reason:'客人從訂位網站改期'},state,now)
+}
+export function deriveReservationEvent(input,state,actor,time,{allowRecovery=false,allowGuest=false}={}){
+ reservationCommand(input)
+ if(input.action==='guest'){if(!allowGuest||!same(actor,guestReservationActor(input)))throw Error('權限不足');actor=guestReservationActor(input)}else actor=reservationActor(actor)
+ const now=Date.parse(time)
  if(!Number.isFinite(now)||input.expectedRevision!==state.revision)throw reservationError('STALE')
  if(state.needsRecovery&&input.action!=='recover')throw reservationError('RECOVERY')
  let change
  if(input.action==='recover'){if(actor.role!=='owner')throw Error('權限不足');if(!allowRecovery)throw reservationError('RECOVERY');change={recoveredHead:state.head}}
+ else if(input.action==='publish'){if(actor.role!=='owner')throw Error('權限不足');if(input.enabled&&(!state.config.enabled||!state.config.tables.some(row=>row.online)))throw reservationError('CONFIG');change={publicEnabled:input.enabled}}
+ else if(input.action==='guest')change=guestChange(input,state,now)
  else if(input.action==='configure')change=configure(input,state,actor,now)
  else if(['book','waitlist'].includes(input.action))change=newBooking(input,state,now)
  else change=changeBooking(input,state,now)
@@ -70,6 +91,7 @@ export function deriveReservationEvent(input,state,actor,time,{allowRecovery=fal
 export function projectReservationEvent(state,event){
  const next={...state,revision:event.sequence,head:event.hash,events:[...state.events,clone(event)],needsRecovery:false}
  if(event.change.config){next.config=clone(event.change.config);next.configVersion=event.sequence}
+ if(Object.hasOwn(event.change,'publicEnabled'))next.publicEnabled=event.change.publicEnabled
  if(event.change.booking){const booking=clone(event.change.booking);next.bookings=[...state.bookings.filter(row=>row.id!==booking.id),booking].sort((a,b)=>a.startMs-b.startMs||a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id))}
  return next
 }
@@ -79,19 +101,19 @@ export function replayReservationReceipts(receipts,storeId){
  for(const receipt of [...receipts].sort((a,b)=>a.revision-b.revision)){
   const event=receipt?.event
   if(!event||event.storeId!==storeId||ids.has(event.id)||!same(receipt,reservationReceipt(event)))throw reservationError('HISTORY')
-  const actual=deriveReservationEvent(event.input,state,event.actor,event.time,{allowRecovery:event.input.action==='recover'})
+  const actual=deriveReservationEvent(event.input,state,event.actor,event.time,{allowRecovery:event.input.action==='recover',allowGuest:true})
   if(!same(actual,event))throw reservationError('HISTORY');ids.add(event.id);state=projectReservationEvent(state,event)
  }
  return state
 }
-export function planReservation(input,data,actor){
- reservationActor(actor,data.users);reservationCommand(input)
+export function planReservation(input,data,actor,{allowGuest=false}={}){
+ if(!allowGuest||input?.action!=='guest')reservationActor(actor,data.users);reservationCommand(input)
  if(input.storeId!==data.storeId||input.epoch!==data.epoch||Math.abs(data.now-Date.parse(input.time))>300000)throw reservationError('STALE')
- const event=deriveReservationEvent(input,data.state,actor,new Date(data.now).toISOString(),{allowRecovery:data.state.needsRecovery===true})
+ const event=deriveReservationEvent(input,data.state,actor,new Date(data.now).toISOString(),{allowRecovery:data.state.needsRecovery===true,allowGuest})
  return {event,receipt:reservationReceipt(event),state:projectReservationEvent(data.state,event)}
 }
 // Authenticated staff view; this contains customer contacts and is never a
 // guest availability or receipt response.
 export function reservationStaffView(state,now){
- return {revision:state.revision,head:state.head,configVersion:state.configVersion,config:clone(state.config),bookings:clone(state.bookings),needsRecovery:state.needsRecovery===true,history:state.events.map(event=>({id:event.id,action:event.input.action,bookingId:event.change.booking?.id||null,actor:clone(event.actor),time:event.time})),today:reservationParts(now,state.config.timeZone).date,now:new Date(now).toISOString()}
+ return {revision:state.revision,head:state.head,configVersion:state.configVersion,publicEnabled:state.publicEnabled,config:clone(state.config),bookings:clone(state.bookings),needsRecovery:state.needsRecovery===true,history:state.events.map(event=>({id:event.id,action:event.input.action,bookingId:event.change.booking?.id||null,actor:clone(event.actor),time:event.time})),today:reservationParts(now,state.config.timeZone).date,now:new Date(now).toISOString()}
 }

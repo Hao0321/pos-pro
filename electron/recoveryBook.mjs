@@ -23,14 +23,15 @@ import {usesRestaurantPublicMenu,RESTAURANT_PUBLIC_MENU_FEATURE} from './restaur
 import {usesPrivateQuickDrafts,PRIVATE_QUICK_FEATURE} from './privateDrafts.mjs'
 import {WAREHOUSE_FEATURE,WAREHOUSE_SETTING} from './warehouseRules.mjs'
 
-export const RECOVERY_FEATURES=['reservation-capacity-v1','opening-cutover-v1','stock-opening-migration-v1','agent-workbook-migration-v1','agent-tabular-migration-v1','agent-master-migration-v1',RECEIPT_REVIEW_FEATURE,PURCHASE_UNITS_FEATURE,'stock-supplier-lot-returns-v1','stock-receipt-lots-v1','stock-lot-count-v1','stock-lots-v1',WAREHOUSE_FEATURE,PRIVATE_QUICK_FEATURE,RESTAURANT_PUBLIC_MENU_FEATURE,RESTAURANT_MENU_FEATURE,RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
+export const RECOVERY_FEATURES=['reservation-public-v1','reservation-capacity-v1','opening-cutover-v1','stock-opening-migration-v1','agent-workbook-migration-v1','agent-tabular-migration-v1','agent-master-migration-v1',RECEIPT_REVIEW_FEATURE,PURCHASE_UNITS_FEATURE,'stock-supplier-lot-returns-v1','stock-receipt-lots-v1','stock-lot-count-v1','stock-lots-v1',WAREHOUSE_FEATURE,PRIVATE_QUICK_FEATURE,RESTAURANT_PUBLIC_MENU_FEATURE,RESTAURANT_MENU_FEATURE,RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
 export const recoveryDataError=()=>Error('備份保護紀錄不完整或內容不同，請保留原檔核對')
 export function recoveryFeatureFloor(features=[],minimum=1){
  if(![1,2,3,4,5,6,7,8,9,10,11,12,13,14,15].includes(minimum)||!Array.isArray(features)||features.some(feature=>!RECOVERY_FEATURES.includes(feature)))throw recoveryDataError()
- return Math.max(minimum,features.includes('reservation-capacity-v1')?15:features.includes('opening-cutover-v1')?14:features.includes('stock-opening-migration-v1')?13:features.includes('agent-workbook-migration-v1')?12:features.includes('agent-tabular-migration-v1')?11:features.includes('agent-master-migration-v1')?10:features.includes(PRIVATE_QUICK_FEATURE)?9:features.includes(RESTAURANT_PUBLIC_MENU_FEATURE)?8:features.includes(RESTAURANT_MENU_FEATURE)?7:features.includes(RESTAURANT_FUNDS_FEATURE)?6:features.includes(KITCHEN_PRINT_FEATURE)?5:features.includes(RESTAURANT_INTAKE_FEATURE)?4:features.includes('record-shapes-v1')?3:features.includes('cross-storage-v1')?2:1)
+ return Math.max(minimum,features.includes('reservation-public-v1')?16:features.includes('reservation-capacity-v1')?15:features.includes('opening-cutover-v1')?14:features.includes('stock-opening-migration-v1')?13:features.includes('agent-workbook-migration-v1')?12:features.includes('agent-tabular-migration-v1')?11:features.includes('agent-master-migration-v1')?10:features.includes(PRIVATE_QUICK_FEATURE)?9:features.includes(RESTAURANT_PUBLIC_MENU_FEATURE)?8:features.includes(RESTAURANT_MENU_FEATURE)?7:features.includes(RESTAURANT_FUNDS_FEATURE)?6:features.includes(KITCHEN_PRINT_FEATURE)?5:features.includes(RESTAURANT_INTAKE_FEATURE)?4:features.includes('record-shapes-v1')?3:features.includes('cross-storage-v1')?2:1)
 }
 export function retainRecoveryFeatures(book,features){
  const settings=new Map(book.settings.map(row=>[row.key,row]))
+ if(features.includes('reservation-public-v1'))settings.set('reservationPublicVersionFence',{key:'reservationPublicVersionFence',value:'1'})
  if(features.includes('reservation-capacity-v1'))settings.set('reservationVersionFence',{key:'reservationVersionFence',value:'1'})
  if(features.includes('opening-cutover-v1'))settings.set('openingCutoverVersionFence',{key:'openingCutoverVersionFence',value:'1'})
  if(features.includes('stock-opening-migration-v1'))settings.set('stockOpeningMigrationVersionFence',{key:'stockOpeningMigrationVersionFence',value:'1'})
@@ -75,6 +76,7 @@ export function recoveryBook(data,storage,{complete=false,digest=stockLedgerDige
  readReservationBook(book)
  requireMasterHistory(book)
  const features=[]
+ if(settings.some(row=>row.key==='reservationPublicVersionFence'&&row.value==='1'))features.push('reservation-public-v1')
  if(settings.some(row=>row.key==='reservationVersionFence'&&row.value==='1'))features.push('reservation-capacity-v1')
  if(settings.some(row=>row.key==='openingCutoverVersionFence'&&row.value==='1'))features.push('opening-cutover-v1')
  if(settings.some(row=>row.key==='stockOpeningMigrationVersionFence'&&row.value==='1'))features.push('stock-opening-migration-v1')

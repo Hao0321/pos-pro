@@ -173,6 +173,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // ----- Server -----
+  onReservationChanged:(callback)=>{const handler=()=>callback();ipcRenderer.on('reservation:changed',handler);return()=>ipcRenderer.removeListener('reservation:changed',handler)},
   server: {
     getLocalIP: () => ipcRenderer.invoke('server:getLocalIP'),
     getStatus: () => ipcRenderer.invoke('server:getStatus'),

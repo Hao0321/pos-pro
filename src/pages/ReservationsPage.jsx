@@ -4,6 +4,7 @@ import {getReservationState} from '../utils/dataAccess'
 import {readPendingFinancial} from '../utils/financialCommand'
 import ReservationForm from './reservations/ReservationForm'
 import ReservationSettings from './reservations/ReservationSettings'
+import ReservationWebsite from './reservations/ReservationWebsite'
 import './reservations/reservations.css'
 
 const labels={waiting:'候位中',confirmed:'已訂位',arrived:'已報到',seated:'用餐中',completed:'已離席',cancelled:'已取消', 'no-show':'未到店'}
@@ -21,8 +22,8 @@ export default function ReservationsPage({session,store}){
  const [state,setState]=useState(null),[date,setDate]=useState(''),[showForm,setShowForm]=useState(false),[showSettings,setShowSettings]=useState(false),[dialog,setDialog]=useState(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),sequence=useRef(0),lock=useRef(false),refresh=useRef(null)
  useEffect(()=>{
   let alive=true;const load=async()=>{const ticket=++sequence.current;try{const value=await getReservationState(session);if(alive&&ticket===sequence.current){setState(value);setDate(old=>old||value.today);return value}}catch(e){if(alive&&ticket===sequence.current)setError(e.message)}return null};refresh.current=load;load()
-  const updated=()=>load(),timer=setInterval(()=>{if(document.visibilityState==='visible')load()},15000);window.addEventListener('pos-data-refreshed',updated);window.addEventListener('focus',updated);window.addEventListener('pos-reservation-operation',updated)
-  return()=>{alive=false;sequence.current++;clearInterval(timer);window.removeEventListener('pos-data-refreshed',updated);window.removeEventListener('focus',updated);window.removeEventListener('pos-reservation-operation',updated);refresh.current=null}
+  const updated=()=>load(),unsubscribe=window.electronAPI?.onReservationChanged?.(updated),timer=setInterval(()=>{if(document.visibilityState==='visible')load()},15000);window.addEventListener('pos-data-refreshed',updated);window.addEventListener('focus',updated);window.addEventListener('pos-reservation-operation',updated)
+  return()=>{alive=false;sequence.current++;clearInterval(timer);unsubscribe?.();window.removeEventListener('pos-data-refreshed',updated);window.removeEventListener('focus',updated);window.removeEventListener('pos-reservation-operation',updated);refresh.current=null}
  },[session.userId,session.role])
  function saved(result){sequence.current++;setState(result.state);setError('');setNotice(result.receipt.event.input.action==='waitlist'?'已加入候位，尚未保留桌位。':result.receipt.event.input.action==='book'?'訂位已保存。':'訂位異動已保存。');const entry=result.receipt.event.change.booking;if(entry)setDate(entry.date)}
  async function operation(action,fields={}){
@@ -48,6 +49,7 @@ export default function ReservationsPage({session,store}){
   <header className="reservation-title"><div><h1>{tr('訂位與候位')}</h1><p>{tr('選日期、看空桌、安心接待。')}</p></div><div className="reservation-actions"><button className="btn btn-primary" data-reservation-create disabled={disabled||!state.config.enabled||showSettings||showForm||!!dialog} onClick={()=>{setNotice('');setShowForm(true)}}>{tr('新增訂位')}</button>{session.role==='owner'&&<button className="btn btn-ghost" data-reservation-open-settings disabled={busy||pending||showForm||showSettings||!!dialog} onClick={()=>setShowSettings(true)}>{tr('訂位設定')}</button>}</div></header>
   {error&&<p role="alert">{trMessage(error)}</p>}{notice&&<p role="status">{tr(notice)}</p>}
   {state.needsRecovery&&<section className="card reservation-recovery"><h2>{tr('先找回未來訂位')}</h2><p>{tr('這份備份較舊，已知訂位仍會顯示。核對後再恢復接單。')}</p>{session.role==='owner'?<button className="btn btn-primary" data-reservation-recover disabled={busy||pending} onClick={()=>operation('recover')}>{tr('已核對，找回訂位並繼續接單')}</button>:<p>{tr('請老闆核對後恢復接單。')}</p>}</section>}
+  <ReservationWebsite state={state} owner={session.role==='owner'} disabled={actionDisabled||!state.config.enabled} onToggle={()=>operation('publish',{enabled:!state.publicEnabled})}/>
   {!state.config.enabled&&!state.needsRecovery&&<p className="reservation-caption">{tr(state.revision?'已暫停接受新訂位。':'先設定桌位與時間，就能開始接訂位。')}</p>}
   {showSettings&&session.role==='owner'&&<ReservationSettings state={state} session={session} store={store} onSaved={saved} onClose={()=>setShowSettings(false)}/>}
   {showForm&&<ReservationForm state={state} session={session} store={store} onSaved={saved} onClose={()=>setShowForm(false)}/>}
@@ -55,6 +57,6 @@ export default function ReservationsPage({session,store}){
   <label className="reservation-date-filter">{tr('查看哪一天')}<input className="field" data-reservation-filter type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
   <div className="reservation-list">{active.map(card)}</div>{!active.length&&<p>{tr('這天還沒有待接待的客人。')}</p>}
   {!!closed.length&&<details><summary>{tr('查看已結束的訂位')}</summary><div className="reservation-list">{closed.map(card)}</div></details>}
-  <details className="reservation-privacy"><summary>{tr('訂位接單方式')}</summary><p>{tr('目前由店員登記電話與現場訂位；配對手機與電腦共用同一份資料。')}</p></details>
+  <details className="reservation-privacy"><summary>{tr('訂位接單方式')}</summary><p>{tr('客人從網站訂位，店員也能登記電話與現場訂位；手機與電腦共用同一份資料。')}</p></details>
  </main>
 }
