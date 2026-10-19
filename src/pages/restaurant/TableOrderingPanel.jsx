@@ -1,13 +1,15 @@
 import {useEffect,useRef,useState} from 'react'
 import QRCode from 'qrcode'
+import {getReservationState} from '../../utils/dataAccess'
 import {tr,trMessage,getLocale} from '../../i18n'
 import {canonicalSignature} from '../../../electron/operationRules.mjs'
 import {readPendingFinancial} from '../../utils/financialCommand'
 
 const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
-export default function TableOrderingPanel({config,store,reload,settingsDirty=false}){
- const [count,setCount]=useState(String(config.tableOrdering?.tables.length||5)),[error,setError]=useState(''),[busy,setBusy]=useState(false),[codes,setCodes]=useState([]),lock=useRef(false)
+export default function TableOrderingPanel({config,session,store,reload,settingsDirty=false}){
+ const [count,setCount]=useState(String(config.tableOrdering?.tables.length||5)),[error,setError]=useState(''),[busy,setBusy]=useState(false),[codes,setCodes]=useState([]),[reservationTables,setReservationTables]=useState([]),lock=useRef(false)
  useEffect(()=>{setCount(String(config.tableOrdering?.tables.length||5))},[config.tableOrdering?.tables.length])
+ useEffect(()=>{let alive=true;getReservationState(session).then(value=>{if(alive){setReservationTables(value.config.tables);if(value.config.tables.length)setCount(String(value.config.tables.length))}}).catch(e=>{if(alive)setError(e.message)});return()=>{alive=false}},[session.userId,session.role,config.tableOrdering?.tables.length])
  async function loadCodes(){
   const api=window.electronAPI;if(!api?.db.getTableOrderingContext)throw Error('桌碼請在店面電腦或配對手機產生')
   const [context,status]=await Promise.all([api.db.getTableOrderingContext(),api.server.getStatus()])
@@ -23,7 +25,9 @@ export default function TableOrderingPanel({config,store,reload,settingsDirty=fa
    else{
     if(!config.enabled)throw Error('請先由老闆啟用出餐，再接單備餐')
     if(!/^[1-9]\d{0,2}$/.test(count)||Number(count)>200)throw Error('桌數請填 1 到 200')
-    const tables=Array.from({length:Number(count)},(_,i)=>config.tableOrdering?.tables[i]||{id:'table-'+crypto.randomUUID(),label:String(i+1)})
+    const reservations=await getReservationState(session),shared=reservations.config.tables
+    const tables=shared.length?shared.map(row=>({id:row.id,label:row.name})):Array.from({length:Number(count)},(_,i)=>config.tableOrdering?.tables[i]||{id:'table-'+crypto.randomUUID(),label:String(i+1)})
+    setReservationTables(shared);setCount(String(tables.length))
     await store.commitRestaurant({action:'configure',expectedConfig:canonicalSignature(config),config:{...config,tableOrdering:{version:1,enabled:true,tables}}})
    }
    await reload?.();await loadCodes()
@@ -42,7 +46,8 @@ export default function TableOrderingPanel({config,store,reload,settingsDirty=fa
   {!available?<p>{tr('桌碼請在店面電腦或配對手機產生')}</p>:<>
    <p>{tr('填桌數，產生每桌專用點餐碼。')}</p>
    {settingsDirty&&<p>{tr('請先儲存出餐設定')}</p>}
-   <label>{tr('幾張桌子？')}<input data-table-count className="field" inputMode="numeric" aria-label={tr('桌數')} value={count} onChange={e=>setCount(e.target.value)} disabled={busy}/></label>
+   <label>{tr('幾張桌子？')}<input data-table-count className="field" inputMode="numeric" aria-label={tr('桌數')} value={count} onChange={e=>setCount(e.target.value)} disabled={busy||!!reservationTables.length}/></label>
+   {!!reservationTables.length&&<p>{tr('訂位與點餐共用桌位。')}</p>}
    <div style={{display:'flex',gap:10,flexWrap:'wrap',marginTop:12}}><button className="btn btn-primary" style={{minHeight:48}} disabled={busy||!config.enabled||settingsDirty} data-table-produce onClick={produce}>{busy?tr('核對中…'):tr('產生桌碼')}</button>{config.tableOrdering?.enabled&&<button className="btn btn-ghost" style={{minHeight:48}} disabled={busy||settingsDirty} data-table-download onClick={download}>{tr('下載桌碼')}</button>}</div>
    {!!codes.length&&<><p role="status">{tr('已準備 {0} 張桌碼',{0:codes.length})}</p><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:12}}>{codes.map(row=><div key={row.id} style={{textAlign:'center'}}><strong>{tr('桌號 {0}',{0:row.label})}</strong><img alt={tr('桌號 {0}',{0:row.label})} src={row.image} style={{display:'block',width:180,maxWidth:'100%',margin:'0 auto'}}/></div>)}</div></>}
   </>}

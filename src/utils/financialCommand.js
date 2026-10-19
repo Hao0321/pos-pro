@@ -1,3 +1,4 @@
+import {assertReservationResult} from '../../electron/reservationHistory.mjs'
 import {RECEIPT_REVIEW_KIND,hasReceiptLots,assertReceiptReviewHistory} from '../../electron/receiptReview.mjs'
 import { browserStorage } from './browserStorage'
 import {assertStoredBrowserCostReceipt} from './browserStockBusiness'
@@ -18,7 +19,7 @@ import {assertStoredBrowserWarehouse} from './browserWarehouse'
 import {assertLotResult} from '../../electron/browserLots.mjs'
 import {assertStoredBrowserLot} from './browserLots'
 export const FINANCIAL_PENDING='pos_pending_financial_v1'
-const fields={refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt','receive-lots':'receipt','receive-reviewed':'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt','stock-cost':'receipt',warehouse:'receipt',lots:'receipt'}
+const fields={reservation:'receipt',refund:'order',topup:'topup',cashlog:'cashLog',waste:'waste',stocktake:'receipt',receive:'receipt','receive-lots':'receipt','receive-reviewed':'receipt',restaurant:'receipt',exchange:'receipt',sales:'receipt','customer-ledger':'receipt','supplier-ledger':'receipt','stock-cost':'receipt',warehouse:'receipt',lots:'receipt'}
 for(const kind of PROCUREMENT_KINDS)fields[kind]='receipt'
 let running=false
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value
@@ -35,6 +36,7 @@ export function assertReceipt(kind,request,result){
   finiteTree(result)
   const row=result?.[fields[kind]]
   if(result?.success!==true||row?.id!==request.id)throw Error('保存結果尚未確認：回覆缺少正確的異動編號')
+  if(kind==='reservation')assertReservationResult(request,result)
   if(kind==='exchange')assertExchangeReceipt(request,result)
   if(kind==='sales')assertSalesResult(request,result)
   if(kind==='customer-ledger')assertCustomerLedgerResult(request,result)

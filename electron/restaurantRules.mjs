@@ -1,3 +1,4 @@
+import {ordinaryRestaurantOperations} from './reservationBarrier.mjs'
 import {operationHeader,moneyValue,quantityValue,canonicalSignature} from './operationRules.mjs'
 import {normalizeTableOrdering,customerIntakeSource,assertCustomerOrderLink,validateTableOrderSources} from './tableOrdering.mjs'
 import {normalizeKitchenPrinting} from './kitchenPrint.mjs'
@@ -65,6 +66,7 @@ function validateSchedule(day,slot){
 }
 export function validateRestaurantRecords(entries,operations,orders,products,context={}){
   if(!Array.isArray(entries)||!Array.isArray(operations))throw Error('預訂紀錄格式不正確')
+  operations=ordinaryRestaurantOperations(operations)
   validateTableOrderSources(orders)
   validateFundedRestaurantRecords(entries,operations,orders,products,context)
   const seen=new Set(),customerIds=new Set()

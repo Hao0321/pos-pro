@@ -6,7 +6,7 @@ import {retainStockCostCompatibility} from './stockCompatibility.mjs'
 import {PURCHASE_UNITS_SETTING,retainPurchaseUnitFeature} from './purchaseUnitPricing.mjs'
 
 export const RECOVERY_PROTOCOL='pos-recovery-v1'
-const materialAudit=new Set(['AGENT_OPENING_CUTOVER','AGENT_OPENING_MIGRATION','AGENT_MASTER_MIGRATION',INVENTORY_ACTION,EXCHANGE_ACTION,'SCENARIO_TEMPLATE_APPLY'])
+const materialAudit=new Set(['RESERVATION_OPERATION','AGENT_OPENING_CUTOVER','AGENT_OPENING_MIGRATION','AGENT_MASTER_MIGRATION',INVENTORY_ACTION,EXCHANGE_ACTION,'SCENARIO_TEMPLATE_APPLY'])
 export const isMaterialAudit=row=>materialAudit.has(row.action)
 // Customer tracking identity belongs to its restored order records. Login and
 // integration credentials remain current; a tracking key is not an owner login.
@@ -75,11 +75,11 @@ export function operationRecords(book){
     for(const row of book[key])add(method,row.id,row)
   for(const row of book.shifts){add('openShift',row.id,row);if(row.status==='closed')add('closeShift',row.id,row)}
   for(const [key,method] of [['restaurantOperations','applyRestaurantOperation'],['salesOperations','applySalesOperation'],['customerOperations','applyCustomerLedgerOperation'],['supplierOperations','applySupplierLedgerOperation']])
-    for(const row of book[key]||[])if(!(key==='supplierOperations'&&row.internal))add(method,row.id,row)
+    for(const row of book[key]||[])if(!(key==='supplierOperations'&&row.internal)&&row.kind!=='reservation-read-barrier/v1')add(method,row.id,row)
   for(const row of book.auditLog){
     if(!isMaterialAudit(row))continue
     const receipt=typeof row.detail==='string'?JSON.parse(row.detail):row.detail
-    const method=['AGENT_OPENING_MIGRATION','AGENT_OPENING_CUTOVER'].includes(row.action)?'applyOpeningMigration':row.action==='AGENT_MASTER_MIGRATION'?'applyMasterMigration':row.action===INVENTORY_ACTION?'applyInventoryOperation':row.action===EXCHANGE_ACTION?'applyExchangeOperation':'applyScenarioTemplate'
+    const method=row.action==='RESERVATION_OPERATION'?'applyReservationOperation':['AGENT_OPENING_MIGRATION','AGENT_OPENING_CUTOVER'].includes(row.action)?'applyOpeningMigration':row.action==='AGENT_MASTER_MIGRATION'?'applyMasterMigration':row.action===INVENTORY_ACTION?'applyInventoryOperation':row.action===EXCHANGE_ACTION?'applyExchangeOperation':'applyScenarioTemplate'
     add(method,method==='applyScenarioTemplate'?receipt.operationId:receipt.id,receipt)
   }
   for(const row of book.stockCostOperations||[])if(!rows.some(record=>record.method===row.method&&record.id===row.operationId))add(row.method,row.operationId,row)
@@ -90,7 +90,7 @@ export function operationRecords(book){
 export function pendingOperation(pending){
   if(!pending||JSON.stringify(pending).length>1024*1024)throw Error('待確認異動紀錄需要核對')
   const request=pending.kind==='checkout'?pending.plan?.order:pending.request
-  const method=({checkout:'checkout',refund:'refundOrder',topup:'addTopup',cashlog:'addCashLog',waste:'addWaste',restaurant:'applyRestaurantOperation','kitchen-print':'applyKitchenPrintOperation',exchange:'applyExchangeOperation',sales:'applySalesOperation','customer-ledger':'applyCustomerLedgerOperation','supplier-ledger':'applySupplierLedgerOperation','stock-cost':'applyStockCostOperation',lots:'applyLotOperation',warehouse:'applyWarehouseOperation','product-open':'addProduct'})[pending.kind]
+  const method=({reservation:'applyReservationOperation',checkout:'checkout',refund:'refundOrder',topup:'addTopup',cashlog:'addCashLog',waste:'addWaste',restaurant:'applyRestaurantOperation','kitchen-print':'applyKitchenPrintOperation',exchange:'applyExchangeOperation',sales:'applySalesOperation','customer-ledger':'applyCustomerLedgerOperation','supplier-ledger':'applySupplierLedgerOperation','stock-cost':'applyStockCostOperation',lots:'applyLotOperation',warehouse:'applyWarehouseOperation','product-open':'addProduct'})[pending.kind]
     ||(['stocktake','receive','receive-lots','receive-reviewed'].includes(pending.kind)||pending.kind?.startsWith('purchase-')?'applyInventoryOperation':null)
   if(!method||typeof request?.id!=='string'||!request.id||request.id.length>128)throw Error('待確認異動紀錄需要核對')
   return {method,id:request.id,request}

@@ -1,3 +1,4 @@
+import {ordinaryRestaurantOperations} from './reservationBarrier.mjs'
 import {canonicalSignature} from './operationRules.mjs'
 import {stockLedgerError} from './stockOpeningPlan.mjs'
 import {expectedRestaurantFundedPostings,restaurantFundsWaste} from './restaurantFundedPlan.mjs'
@@ -38,7 +39,7 @@ export function assertStockBusinessCoverage(book,state){
     const detail=typeof audit.detail==='string'?JSON.parse(audit.detail):audit.detail,input=JSON.parse(detail.signature)
     if(['receive','receive-lots','receive-reviewed','purchase-return','purchase-return-lots','stocktake'].includes(input.kind)&&!original('applyInventoryOperation',input.id))throw stockLedgerError('HISTORY')
   }
-  for(const receipt of book.restaurantOperations||[])if(receipt.action!=='configure'&&!original('applyRestaurantOperation',receipt.id))throw stockLedgerError('HISTORY')
+  for(const receipt of ordinaryRestaurantOperations(book.restaurantOperations||[]))if(receipt.action!=='configure'&&!original('applyRestaurantOperation',receipt.id))throw stockLedgerError('HISTORY')
   for(const receipt of book.salesOperations||[])if(['deliver','return'].includes(receipt.action)&&!original('applySalesOperation',receipt.id))throw stockLedgerError('HISTORY')
   return true
 }

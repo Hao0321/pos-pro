@@ -7,6 +7,7 @@ export const WORKSPACE_TASKS=[
   {id:'sale',title:'賣東西、收款',detail:'點商品，確認金額，再收款。',view:'pos',perm:'pos.use',words:'收銀 結帳 現場'},
   {id:'quick',title:'幫我建單',detail:'點商品、貼內容，或交給 Agent。',view:'quick',perm:'pos.use',words:'開單 匯入 agent AI'},
   {id:'restaurant',title:'接預訂、準備出餐',detail:'預訂、現場與外送放在一起看。',view:'restaurant',perm:'pos.use',words:'丼飯 餐飲 交付 取餐'},
+  {id:'reservations',title:'訂位與候位',detail:'選日期、看空桌、安心接待。',view:'reservations',perm:'pos.use',words:'桌位 排桌 訂位 候位 用餐 reservation booking waitlist'},
   {id:'purchase',title:'進貨、退貨、付款',detail:'從叫貨到收到貨、付清款項。',view:'purchase',perm:'purchase.view',words:'供應商 請款 應付 退款'},
   {id:'exchange',title:'報價給客戶、分享價目表',detail:'選客戶與商品，保存報價，再交給對方。',view:'exchange',perm:'purchase.edit',words:'客戶價格 公開目錄 供應商 agent catalogue quote pricing'},
   {id:'shifts',title:'開始營業、收攤',detail:'確認零用金與這班實際現金。',view:'shifts',perm:'pos.use',words:'開班 交班 日結 關店'},
@@ -32,7 +33,7 @@ export const WORKSPACE_TASKS=[
   {id:'suppliers',title:'供應商訂金、抵付與退回款',detail:'記錄已付訂金，再分配到已核對的請款。',view:'suppliers',perm:'purchase.edit',words:'供應商 預付 訂金 核准 審核 抵付 退款 supplier prepayment advance approval deposit'},
 ]
 export const WORKSPACE_AREAS=[
-  {id:'crm',title:'顧客與點餐',code:'CRM',intro:'幫你照顧客人',detail:'會員、點數、儲值、點餐與預訂。',description:'會員、點數、儲值、點餐和預訂，讓接單與經營回頭客更方便。',taskIds:['customers','sales','members','orders','restaurant','exchange','quick','sale','refunds','promotions','reports']},
+  {id:'crm',title:'顧客與點餐',code:'CRM',intro:'幫你照顧客人',detail:'會員、點數、儲值、點餐與預訂。',description:'會員、點數、儲值、點餐和預訂，讓接單與經營回頭客更方便。',taskIds:['reservations','customers','sales','members','orders','restaurant','exchange','quick','sale','refunds','promotions','reports']},
   {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['customers','sales','sale','refunds','quick','exchange','inventory','purchase','suppliers','shifts','stocktake','stocksetup','stockhistory','warehouse','lots','waste','accounting','reports','readiness','devices','settings','recovery','scenarios']},
 ]
 export function workspaceTasks(session,query='',area='all',options={}){

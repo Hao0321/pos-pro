@@ -1,5 +1,9 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--reservation-restaurant':['native-reservation-restaurant.cjs','POS_RESERVATION_RESTAURANT_PASS',false],
+  '--reservation-browser-ui':['native-reservation-browser-ui.cjs','POS_RESERVATION_BROWSER_UI_PASS',true],
+  '--reservations-ui':['native-reservations-ui.cjs','POS_RESERVATIONS_UI_PASS',true],
+  '--reservations':['native-reservations.cjs','POS_RESERVATIONS_NATIVE_PASS',false],
   '--opening-cutover-ui':['native-opening-cutover-ui.cjs','POS_OPENING_CUTOVER_UI_PASS',true],
   '--opening-cutover':['native-opening-cutover.cjs','POS_OPENING_CUTOVER_NATIVE_PASS',false],
   '--opening-whole-source':['native-opening-whole-source.cjs','POS_OPENING_WHOLE_SOURCE_PASS',false],

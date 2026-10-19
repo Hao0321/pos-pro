@@ -26,6 +26,7 @@ const SettingsPage=lazy(()=>import('./pages/SettingsPage'))
 const ScenarioTemplatesPage=lazy(()=>import('./pages/ScenarioTemplatesPage'))
 const ReadinessPage=lazy(()=>import('./pages/ReadinessPage'))
 const SharedDevicesPage=lazy(()=>import('./pages/SharedDevicesPage'))
+const ReservationsPage=lazy(()=>import('./pages/ReservationsPage'))
 const RestaurantPage=lazy(()=>import('./pages/RestaurantPage'))
 const QuickDocumentPage=lazy(()=>import('./pages/QuickDocumentPage'))
 const BusinessExchangePage=lazy(()=>import('./pages/BusinessExchangePage'))
@@ -135,7 +136,7 @@ export default function App() {
   const can = (perm) => hasPermission(session, perm)
 
   const NAV_LABELS = {
-    recovery:'資料復原',dashboard:'首頁',overview:'營運總覽',quick:'快速建單', pos:'收銀台',restaurant:'預訂出餐', shifts:'班別交班', readiness:'營業前檢查',devices:'共用店面',
+    recovery:'資料復原',dashboard:'首頁',overview:'營運總覽',quick:'快速建單', pos:'收銀台',reservations:'訂位與候位',restaurant:'預訂出餐', shifts:'班別交班', readiness:'營業前檢查',devices:'共用店面',
     inventory:'庫存管理', purchase:'進貨管理',suppliers:'供應商與預付款',exchange:'報價與價目表',sales:'銷售與應收',customers:'客戶與款項', waste:'損耗管理',
     stocktake:'每日盤點', stockhistory:'庫存去哪了', lots:'批次與效期', warehouse:'搬貨、存放地點', promotions:'促銷活動', members:'會員',
     reports:'報表分析', accounting:'會計帳務', orders:'顧客點餐', settings:'設定', scenarios:'情境模板',
@@ -194,6 +195,7 @@ export default function App() {
           {view === 'suppliers' && session.role==='owner' && <SupplierLedgerPage key={session.userId} store={store} session={session}/>}
           {view === 'sales' && session.role==='owner' && <SalesPage key={session.userId+':'+session.role} store={store} session={session}/>}
           {view === 'pos'        && can('pos.use')         && <POSPage        store={store} session={session}/>}
+          {view === 'reservations' && can('pos.use') && <ReservationsPage store={store} session={session}/>}
           {view === 'restaurant' && can('pos.use') && <RestaurantPage store={store} session={session}/>}
           {view === 'shifts'     && can('pos.use')         && <ShiftPage      store={store} session={session}/>}
           {view === 'inventory'  && can('inventory.view')  && <InventoryPage  store={store} session={session}/>}

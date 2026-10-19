@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   db: {
     previewMasterMigration: input=>ipcRenderer.invoke('db:previewMasterMigration',input),
     applyMasterMigration: input=>ipcRenderer.invoke('db:applyMasterMigration',input),
+    getReservationState: ()=>ipcRenderer.invoke('db:getReservationState'),
+    getReservationAvailability: input=>ipcRenderer.invoke('db:getReservationAvailability',input),
+    applyReservationOperation: input=>ipcRenderer.invoke('db:applyReservationOperation',input),
     previewOpeningMigration: input=>ipcRenderer.invoke('db:previewOpeningMigration',input),
     applyOpeningMigration: input=>ipcRenderer.invoke('db:applyOpeningMigration',input),
     getPrivateDraftContext:()=>ipcRenderer.invoke('db:getPrivateDraftContext'),

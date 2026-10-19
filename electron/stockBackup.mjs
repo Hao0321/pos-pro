@@ -1,3 +1,4 @@
+import {readReservationBook} from './reservationHistory.mjs'
 import {assertReceiptReviewFeature} from './receiptReview.mjs'
 import {assertPurchaseUnitFeature} from './purchaseUnitPricing.mjs'
 import {replayStockLedger} from './stockLedgerModel.mjs'
@@ -30,6 +31,7 @@ export function validateStockCostBook(book,validatedState=null){
   if(hasEntries&&(!Array.isArray(book.stockCostEntries)||!Array.isArray(book.stockCostOperations)))throw stockLedgerError('HISTORY')
   const state=validatedState||replayStockLedger(book.stockCostEntries||[],book.stockCostOperations||[])
   readOpeningMigrationHistory(book)
+  readReservationBook(book)
   assertStockBookHead(book,state)
   const warehouseFlag=(book.settings||[]).find(row=>row.key===WAREHOUSE_SETTING)
   if(warehouseFlag&&warehouseFlag.value!=='1'||state.projection?.warehousing&&!warehouseFlag)throw stockLedgerError('HISTORY')

@@ -1,7 +1,7 @@
 import {assertPrivateDraftContext,draftObject,privateDraftDigest} from '../../electron/privateDrafts.mjs'
 const prefix='pos_workspace_draft_v1:'
 const invalid=()=>Error('這個裝置的草稿讀不到，原內容仍保留。')
-export function workspaceScope(context,kind){assertPrivateDraftContext(context);if(!['menu-setup','menu-order','ordinary-order','restaurant-settings','quick'].includes(kind)||['menu-setup','restaurant-settings'].includes(kind)&&context.role!=='owner')throw invalid();return {context:structuredClone(context),kind,key:prefix+[context.storeId,context.epoch,context.userId,context.role,kind].map(encodeURIComponent).join(':')}}
+export function workspaceScope(context,kind){assertPrivateDraftContext(context);if(!['menu-setup','menu-order','ordinary-order','restaurant-settings','quick','reservation','reservation-settings'].includes(kind)||['menu-setup','restaurant-settings','reservation-settings'].includes(kind)&&context.role!=='owner')throw invalid();return {context:structuredClone(context),kind,key:prefix+[context.storeId,context.epoch,context.userId,context.role,kind].map(encodeURIComponent).join(':')}}
 function safe(value,depth=0){
  if(depth>20)throw invalid()
  if(value===null||typeof value==='boolean')return

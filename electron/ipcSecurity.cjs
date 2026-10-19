@@ -25,10 +25,11 @@ const staffChannels = new Set(['db:getLotState','db:applyLotOperation','db:getWa
   'db:getCashLog','db:addCashLog','db:getWasteLog','db:addWaste','db:addTopup','db:getTopups','db:writeAuditLog',
   'printer:printReceipt','printer:openCashDrawer','printer:getStatus','barcode:generate','barcode:generateLabel',
   'barcode:printLabels','server:getLocalIP','server:getStatus','shared:getStatus','settings:get'])
-for(const channel of ['db:getPrivateDraftContext','db:lookupPrivateDraftOriginal'])staffChannels.add(channel)
+for(const channel of ['db:getReservationState','db:getReservationAvailability','db:applyReservationOperation','db:getPrivateDraftContext','db:lookupPrivateDraftOriginal'])staffChannels.add(channel)
 function authorizeActor(db,s,channel,args=[]){
   if(!s||!['owner','staff'].includes(s.role))throw Error('請先登入，或重新驗證身份')
   if(s.role!=='owner'&&!staffChannels.has(channel))throw Error('權限不足')
+  if(s.role!=='owner'&&channel==='db:applyReservationOperation'&&['configure','recover'].includes(args[0]?.action))throw Error('權限不足')
   if(s.role!=='owner'&&channel==='db:applyLotOperation'&&!['dispose','count'].includes(args[0]?.action))throw Error('權限不足')
   if(s.role!=='owner'&&channel==='settings:get'&&!['pointsEarnRate','pointsRedeemRate','birthdayBonus','dailySalesGoal'].includes(args[0]))throw Error('權限不足')
   if(s.role!=='owner'&&['db:addMember','db:updateMember'].includes(channel)){

@@ -4,6 +4,8 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
     const rawSettings=data.settings||[],encoding=require('./settingEncoding.mjs')
     encoding.validateSettingRows(rawSettings,'sqlite')
     require('./masterMigration.mjs').readMasterMigrationHistory(data)
+    require('./reservationHistory.mjs').readReservationBook(data)
+    if(rawSettings.some(row=>row.key==='reservationVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installReservationFence(db)
     if(rawSettings.some(row=>row.key==='agentMasterMigrationVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installMasterMigrationFence(db)
     if(rawSettings.some(row=>row.key==='stockOpeningMigrationVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installOpeningMigrationFence(db)
     if(rawSettings.some(row=>row.key==='openingCutoverVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installCutoverFence(db)

@@ -1,3 +1,4 @@
+import {ordinaryRestaurantOperations} from './reservationBarrier.mjs'
 import {canonicalSignature,operationHeader} from './operationRules.mjs'
 import {summarizeRestaurantFunds,RESTAURANT_FUNDS_PROTOCOL} from './restaurantFunds.mjs'
 import {expectedRestaurantFundedPostings,restaurantFundsCashLog,restaurantFundsWaste,sameRestaurantFundedOrder,FUNDED_RESTAURANT_SOURCE} from './restaurantFundedPlan.mjs'
@@ -39,6 +40,7 @@ export function fundedRestaurantSnapshot(entry,operations,version){
  return snapshot
 }
 export function validateFundedRestaurantRecords(entries,operations,orders,products,{cashLogs,waste,storeId,config,menuConfigurationId,menuReceiptKey}={}){
+  operations=ordinaryRestaurantOperations(operations)
   validateRestaurantMenuBook(config,entries,operations,menuConfigurationId,orders,menuReceiptKey)
   const modern=entries.filter(entry=>Object.hasOwn(entry,'funds')),sources=orders.filter(order=>order.source===FUNDED_RESTAURANT_SOURCE)
   if(!modern.length){if(sources.length)throw invalid();return}

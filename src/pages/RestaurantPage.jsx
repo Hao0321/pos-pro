@@ -61,7 +61,7 @@ export default function RestaurantPage({store,session}){
     {!data&&<p>{tr("載入正式預訂紀錄中…")}</p>}
     {data&&<CustomerIntakePanel data={data} store={store} session={session} commit={commit} reload={()=>reloadRef.current?.()}/>}
     {data&&owner&&<RestaurantMenuEditor data={data} products={products} session={session} store={store} settingsDirty={settingsEditing} onEditing={setMenuEditing} reload={()=>reloadRef.current?.()}/>}
-    {data&&owner&&<TableOrderingPanel config={config} store={store} settingsDirty={settingsEditing||menuEditing} reload={()=>reloadRef.current?.()}/>}
+    {data&&owner&&<TableOrderingPanel session={session} config={config} store={store} settingsDirty={settingsEditing||menuEditing} reload={()=>reloadRef.current?.()}/>}
     {data&&<KitchenPrintPanel printing={printing} store={store} session={session} entries={data.entries} settingsDirty={settingsEditing||menuEditing}/>}
     {owner&&data&&<RestaurantSettingsEditor key={session.userId+':'+session.role} data={data} products={products} session={session} store={store} menuEditing={menuEditing} onEditing={setSettingsEditing} reload={()=>reloadRef.current?.()}/>}
     {data&&!config.enabled&&<p>{tr("老闆確認設定後即可接單。既有預訂仍可出餐、收款與取消。")}</p>}
