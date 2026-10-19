@@ -26,6 +26,7 @@ if(sharedStoreMode&&!window.electronAPI){
   db.previewMasterMigration=input=>rpc('db:previewMasterMigration',input)
   db.applyMasterMigration=input=>rpc('db:applyMasterMigration',input)
   db.getReservationState=()=>rpc('db:getReservationState')
+  db.getReservationDiningContext=input=>rpc('db:getReservationDiningContext',input)
   db.getReservationAvailability=input=>rpc('db:getReservationAvailability',input)
   db.applyReservationOperation=input=>rpc('db:applyReservationOperation',input)
   db.previewOpeningMigration=input=>rpc('db:previewOpeningMigration',input)

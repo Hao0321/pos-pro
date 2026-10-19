@@ -11,6 +11,7 @@ import {assertRestaurantMenuActor,materializeRestaurantMenu,menuConfigurationRec
 import {assertRestaurantMenuSetupReview} from './restaurantMenuSetup.mjs'
 import {assertOrdinaryRestaurantAgentSource} from './ordinaryRestaurantAgent.mjs'
 import {assertPrivateDraftOperation} from './privateDrafts.mjs'
+import {assertReservationDiningOrder,validateReservationDiningEntry} from './reservationDining.mjs'
 
 export const RESTAURANT_KIND='restaurant'
 export const RESTAURANT_STATES=['reserved','cooking','ready','dispatched','completed','cancelled']
@@ -79,6 +80,7 @@ export function validateRestaurantRecords(entries,operations,orders,products,con
     }
     if(seen.has(e.id)||!RESTAURANT_STATES.includes(e.status)||!['preorder','walkin','delivery'].includes(e.channel)||!Number.isSafeInteger(e.version)||e.version<1||!Array.isArray(e.items)||!e.items.length||!Array.isArray(e.allocations)||!e.allocations.length)throw Error('預訂歷史紀錄需要核對')
     seen.add(e.id);text(e.customer,100,'稱呼');text(e.contact,100,'聯絡方式');text(e.note,1000,'備註');operationHeader({id:e.id,time:e.createdAt})
+    if(e.reservationDining){const created=operations.find(row=>row.id===e.id);if(!created)throw Error('訂位餐飲來源需要核對');validateReservationDiningEntry(e,JSON.parse(created.signature))}
     if(Object.hasOwn(e,'customerOrderId')){id(e.customerOrderId);if(customerIds.has(e.customerOrderId))throw Error('顧客原單已重複接單');customerIds.add(e.customerOrderId);assertCustomerOrderLink(e,orders)}
     if(!['reserved','cancelled'].includes(e.status)&&!e.startedAt||e.startedAt&&!Number.isFinite(Date.parse(e.startedAt)))throw Error('製作紀錄需要核對')
     const itemIds=new Set(),resourceIds=new Set()
@@ -105,6 +107,7 @@ export function restaurantReceipt(request,receipt,data){
   return {success:true,receipt,entry,products,config:data.config,order:entry?.saleId?data.orders.find(o=>o.id===entry.saleId):null,refund:entry?.refundId?data.orders.find(o=>o.id===entry.refundId):null}
 }
 export function planRestaurant(request,data,actor,finance){
+  const dining=Object.hasOwn(request||{},'reservationDining')?assertReservationDiningOrder(request,data.reservationState,{storeId:data.storeId,epoch:data.epoch},data.now):null
   if(request.action==='configure'&&(request.storeId!==undefined||request.epoch!==undefined)){
     assertRestaurantMenuActor(actor,data.users)
     if(actor.role!=='owner')throw Error('只有老闆能修改預訂設定')
@@ -118,10 +121,10 @@ export function planRestaurant(request,data,actor,finance){
   const boundary={...request};if(privateDraft)delete boundary.draftContext;if(ordinaryAgent){delete boundary.agentDraft;delete boundary.ordinaryReview}
   assertRestaurantMenuBoundary(boundary,{configuration:request.action==='configure',creation:!!menu})
   if(request.action!=='configure'&&data.entries.some(entry=>entry.id===request.entryId&&entry.funds))return planFundedRestaurant(request,data,actor)
-  const plan=planLegacyRestaurant(request,data,actor,finance,menu)
+  const plan=planLegacyRestaurant(request,data,actor,finance,menu,dining)
   return request.action==='create'&&data.config.fundsEnabled?initializeFundedRestaurant(plan,request,data,actor):plan
 }
-function planLegacyRestaurant(request,data,actor,finance,menu=null){
+function planLegacyRestaurant(request,data,actor,finance,menu=null,dining=null){
   operationHeader(request)
   if(!actor||!['owner','staff'].includes(actor.role))throw Error('權限不足')
   if(request.kind!==RESTAURANT_KIND)throw Error('預訂操作類型不正確')
@@ -161,6 +164,7 @@ function planLegacyRestaurant(request,data,actor,finance,menu=null){
     entry.pickupNumber=positiveInt(data.entries.filter(e=>e.day===entry.day).reduce((n,e)=>Math.max(n,e.pickupNumber||0),0)+1,'取餐號',1000000)
     if(menu)entry.menu=menu
     if(customerSource){entry.customerOrderId=customerSource.id;entry.tableNum=customerSource.tableNum||'';if(customerSource.tableId)entry.tableId=customerSource.tableId;assertCustomerOrderLink(entry,data.orders)}
+    if(dining){if(customerSource)throw Error('請分開核對訂位點餐與網路餐點原單');Object.assign(entry,{reservationDining:structuredClone(dining),tableIds:[...dining.tableIds],tableId:dining.tableIds.length===1?dining.tableIds[0]:'',tableNum:dining.tableNames.join(' + ')})}
     if(entry.channel!=='walkin'&&!entry.contact||entry.channel==='delivery'&&!entry.note)throw Error('預訂／外送須填聯絡方式，外送另須填地址')
     stock(entry.allocations,-1);next.entries.unshift(entry)
   }else{

@@ -25,7 +25,7 @@ module.exports=(db,stmts)=>({
   this.getRestaurantState()
   const row=db.prepare('SELECT data FROM restaurant_operations WHERE id=?').get(input.id)
   const receipt=row?JSON.parse(row.data):null,original=privateDraftOriginal(input,receipt,actor)
-  if(original.status!=='matched'||original.action!=='configure')return original
+  if(original.status!=='matched'||original.action!=='configure'&&!JSON.parse(receipt.signature).reservationDining)return original
   const result=this.applyRestaurantOperation(JSON.parse(receipt.signature),actor)
   if(result?.success!==true||result.receipt?.signature!==receipt.signature)throw Error('保存結果尚未確認，請保留原編號核對。')
   return {...original,result}

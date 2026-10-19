@@ -595,12 +595,12 @@ module.exports = function initDatabase(dbPath) {
       return row ? row.value : null
     },
     setSetting(key, value) {
-      if(['reservationPublicVersionFence','reservationVersionFence','reservationBookHead','openingCutoverVersionFence','openingCutoverHead','stockOpeningMigrationVersionFence','stockOpeningMigrationHead','agentWorkbookMigrationVersionFence','agentTabularMigrationVersionFence','agentMasterMigrationVersionFence','agentMasterMigrationHead'].includes(key))throw Error('搬家保護紀錄由正式搬入與完整備份流程管理');if(key==='stockCostVersionFence')throw Error('成本資料的版本保護由完整備份流程管理')
+      if(['reservationServiceVersionFence','reservationPublicVersionFence','reservationVersionFence','reservationBookHead','openingCutoverVersionFence','openingCutoverHead','stockOpeningMigrationVersionFence','stockOpeningMigrationHead','agentWorkbookMigrationVersionFence','agentTabularMigrationVersionFence','agentMasterMigrationVersionFence','agentMasterMigrationHead'].includes(key))throw Error('搬家保護紀錄由正式搬入與完整備份流程管理');if(key==='stockCostVersionFence')throw Error('成本資料的版本保護由完整備份流程管理')
       if(key==='businessExchangeV1')throw Error('報價歷史只能由正式報價或還原流程保存')
       stmts.setSetting.run(key, value)
       return { success: true }
     },
-    setSettings(values){if(['reservationPublicVersionFence','reservationVersionFence','reservationBookHead','openingCutoverVersionFence','openingCutoverHead','stockOpeningMigrationVersionFence','stockOpeningMigrationHead','agentWorkbookMigrationVersionFence','agentTabularMigrationVersionFence','agentMasterMigrationVersionFence','agentMasterMigrationHead'].some(key=>Object.hasOwn(values,key)))throw Error('搬家保護紀錄由正式搬入與完整備份流程管理');if(Object.hasOwn(values,'stockCostVersionFence'))throw Error('成本資料的版本保護由完整備份流程管理');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');db.transaction(()=>{for(const [key,value]of Object.entries(values))stmts.setSetting.run(key,value)})();return {success:true}},
+    setSettings(values){if(['reservationServiceVersionFence','reservationPublicVersionFence','reservationVersionFence','reservationBookHead','openingCutoverVersionFence','openingCutoverHead','stockOpeningMigrationVersionFence','stockOpeningMigrationHead','agentWorkbookMigrationVersionFence','agentTabularMigrationVersionFence','agentMasterMigrationVersionFence','agentMasterMigrationHead'].some(key=>Object.hasOwn(values,key)))throw Error('搬家保護紀錄由正式搬入與完整備份流程管理');if(Object.hasOwn(values,'stockCostVersionFence'))throw Error('成本資料的版本保護由完整備份流程管理');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');db.transaction(()=>{for(const [key,value]of Object.entries(values))stmts.setSetting.run(key,value)})();return {success:true}},
     getAllSettings() {
       const rows = stmts.getAllSettings.all()
       const result = {}
@@ -752,12 +752,12 @@ module.exports = function initDatabase(dbPath) {
   require('./openingMigrationOperations.cjs')(db,api,stmts,stockStore,openingMasters)
   recordShapes.attachFinancial(api)
   require('./tableOrderingOperations.cjs')(db,api)
-  require('./kitchenPrintOperations.cjs')(db,api,kitchenStore)
+  const kitchenRuntime=require('./kitchenPrintOperations.cjs')(db,api,kitchenStore)
   const restaurantWithStock=api.applyRestaurantOperation
   api.applyRestaurantOperation=function(request,actor){if(require('./privateDrafts.mjs').assertPrivateDraftCaller(request,actor))this.getPrivateDraftContext(actor);return restaurantWithStock.call(this,request,actor)}
   const inventoryWithStock=api.applyInventoryOperation
   api.applyInventoryOperation=function(request,actor){if(require('./privateDrafts.mjs').assertPrivateDraftCaller(request,actor))this.getPrivateDraftContext(actor);return inventoryWithStock.call(this,request,actor)}
-  require('./reservationOperations.cjs')(db,api,stmts,stockStore)
+  require('./reservationOperations.cjs')(db,api,stmts,stockStore,kitchenRuntime)
   lotRuntime.installGuards()
   return api
 }

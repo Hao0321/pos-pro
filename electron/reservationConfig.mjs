@@ -3,7 +3,7 @@ import {reservationDate,reservationMinutes,reservationZone} from './reservationC
 
 export const RESERVATION_PROTOCOL='pos-reservation/v1',RESERVATION_EVENT='pos-reservation-event/v1',RESERVATION_FEATURE='reservation-capacity-v1',RESERVATION_FENCE='reservationVersionFence',RESERVATION_HEAD='reservationBookHead',RESERVATION_ACTION='RESERVATION_OPERATION',RESERVATION_METHOD='applyReservationOperation'
 const errors={CONFIG:'訂位設定需要核對。',HISTORY:'訂位紀錄或保存回執需要核對，請保留原編號。',STALE:'訂位資料已更新，請重新核對。',FULL:'這個時段已沒有合適桌位，請選其他時間。',RECOVERY:'資料已還原，請先核對未來訂位，再恢復接單。',TIME:'訂位日期或時段需要核對。',STATUS:'這筆訂位目前不能進行這個操作。'}
-export const reservationError=code=>Object.assign(Error(errors[code]||errors.HISTORY),{code:'RESERVATION_'+code})
+export const reservationError=code=>Object.assign(Error(code==='DINING_RECOVERY'?'訂位對應的餐飲原單尚未找回，請先用完整備份核對復原。':code==='ACCESS'?'私人訂位連結需要更新，請聯絡店家。':errors[code]||errors.HISTORY),{code:'RESERVATION_'+code})
 export const reservationId=value=>{if(typeof value!=='string'||!/^[-A-Za-z0-9_:]{1,128}$/.test(value))throw reservationError('HISTORY');return value}
 export function reservationText(value,max,required=false,multiline=false){if(multiline&&typeof value==='string')value=value.replace(/\r\n?/g,'\n');if(typeof value!=='string'||value.length>max||/[\p{Cc}\p{Cf}]/u.test(multiline?value.replace(/\n/g,''):value)||required&&!value.trim())throw reservationError('CONFIG');return value.trim()}
 export const reservationInteger=(value,min,max)=>{if(!Number.isSafeInteger(value)||value<min||value>max)throw reservationError('CONFIG');return value}

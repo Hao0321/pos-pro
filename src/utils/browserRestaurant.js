@@ -13,11 +13,15 @@ import {assertCustomerMenuIntake} from '../../electron/restaurantCustomerMenu.mj
 import {previewRestaurantMenuSetup} from '../../electron/restaurantMenuSetup.mjs'
 import {previewRestaurantAgent} from '../../electron/restaurantAgent.mjs'
 import {assertPrivateDraftCaller} from '../../electron/privateDrafts.mjs'
+import {readReservationBook} from '../../electron/reservationHistory.mjs'
+import {browserToBook} from '../../electron/recoveryRules.mjs'
+import {canonicalSignature} from '../../electron/operationRules.mjs'
 function read(){
   const saved=readRecords(),r=saved.data,settings=Object.fromEntries(r.pos_business_settings.map(s=>[s.key,JSON.parse(s.value)]))
   const data={products:r.pos2_products,entries:r.pos_restaurant_orders,operations:r.pos_restaurant_operations,orders:r.pos2_orders,waste:r.pos2_waste,cashLogs:r.pos2_cash_log,shifts:r.pos2_shifts,settings,config:readRestaurantConfig(settings.restaurantConfig,r.pos2_products),storeId:settings.sharedStoreId||'',epoch:saved.salesEpoch,costMode:hasBrowserStockCost(saved)?'active':'reference',now:Date.now()}
   data.date=salesDate(new Date(data.now))
   data.users=r.pos_users;data.suppliers=r.pos_suppliers;data.menuConfigurationId=settings[RESTAURANT_MENU_CONFIG_KEY]||''
+  data.reservationState=readReservationBook(browserToBook(r)).state
   data.fundsSetupEligible=browserFundsSetupEligible(saved)
   validateRestaurantRecords(data.entries,data.operations,data.orders,data.products,{cashLogs:data.cashLogs,waste:data.waste,storeId:data.storeId,config:data.config,menuConfigurationId:data.menuConfigurationId,menuReceiptKey:data.settings.orderReceiptSecret})
   return {saved,data}
@@ -34,6 +38,7 @@ export function commitBrowserRestaurant(request,actor){
       if(request?.action==='configure'&&(request.storeId!==undefined||request.epoch!==undefined))assertRestaurantMenuActor(actor,readRecords().data.pos_users)
       if(assertPrivateDraftCaller(request,actor)&&!readRecords().data.pos_users.some(user=>user.id===actor?.userId&&user.username===actor.username&&user.role===actor.role))throw Error('權限不足')
       const {saved,data}=read(),old=data.operations.find(r=>r.id===request?.id);replay=!!old;historyChecked=true
+      if(Object.hasOwn(request||{},'reservationDining')){const parent=readReservationBook(browserToBook(saved.data)).recorded.find(row=>row.id===request.reservationDining?.parentId);if(!old||!parent||parent.event.input.action!=='dine'||canonicalSignature(parent.event.input.order)!==canonicalSignature(request))throw Error('請從原訂位流程保存餐點')}
       if(Object.hasOwn(request?.config||{},'menu')||usesRestaurantMenu(data.config,data.entries,data.operations))assertRestaurantMenuActor(actor,data.users)
       if(hasBrowserStockCost(saved))return commitBrowserStockBusiness('applyRestaurantOperation',request,actor,saved)
       assertOriginalOperationAvailable('applyRestaurantOperation',request.id,saved,request)

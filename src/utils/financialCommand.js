@@ -1,4 +1,5 @@
 import {assertReservationResult} from '../../electron/reservationHistory.mjs'
+import {assertReservationDiningResult} from '../../electron/reservationDiningResult.mjs'
 import {RECEIPT_REVIEW_KIND,hasReceiptLots,assertReceiptReviewHistory} from '../../electron/receiptReview.mjs'
 import { browserStorage } from './browserStorage'
 import {assertStoredBrowserCostReceipt} from './browserStockBusiness'
@@ -23,20 +24,23 @@ const fields={reservation:'receipt',refund:'order',topup:'topup',cashlog:'cashLo
 for(const kind of PROCUREMENT_KINDS)fields[kind]='receipt'
 let running=false
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value
-function finiteTree(value,depth=0){if(depth>16)throw Error('異動紀錄需要核對');if(typeof value==='number'&&!Number.isFinite(value))throw Error('異動紀錄含無效數字');if(value&&typeof value==='object')for(const v of Object.values(value))finiteTree(v,depth+1)}
+const financialDepth=(kind,input)=>kind==='reservation'&&input?.action==='dine'?24:16
+function finiteTree(value,depth=0,limit=16){if(depth>limit)throw Error('異動紀錄需要核對');if(typeof value==='number'&&!Number.isFinite(value))throw Error('異動紀錄含無效數字');if(value&&typeof value==='object')for(const v of Object.values(value))finiteTree(v,depth+1,limit)}
 export function readPendingFinancial(){
   const raw=browserStorage.getItem(FINANCIAL_PENDING);if(!raw)return null
-  const p=JSON.parse(raw),s=JSON.parse(p.signature);finiteTree(p)
+  const p=JSON.parse(raw),s=JSON.parse(p.signature);finiteTree(p,0,financialDepth(p.kind,p.request))
   if(!Object.hasOwn(fields,p.kind)||s.kind!==p.kind||!s.input||typeof p.request?.id!=='string'||!p.request.id||!Number.isFinite(Date.parse(p.request.time)))throw Error('待確認異動紀錄損壞，請保留紀錄核對')
   const input={...p.request};delete input.id;delete input.time
   if(JSON.stringify(canonical(input))!==JSON.stringify(canonical(s.input)))throw Error('待確認異動內容不一致，請保留紀錄核對')
   return p
 }
 export function assertReceipt(kind,request,result){
-  finiteTree(result)
+  // Every reservation reply includes the complete history, which can already
+  // contain a dining/menu proof even when this command only records departure.
+  finiteTree(result,0,kind==='reservation'?24:16)
   const row=result?.[fields[kind]]
   if(result?.success!==true||row?.id!==request.id)throw Error('保存結果尚未確認：回覆缺少正確的異動編號')
-  if(kind==='reservation')assertReservationResult(request,result)
+  if(kind==='reservation'){assertReservationResult(request,result);if(request.action==='dine'){assertReservationDiningResult(request,result);assertReceipt('restaurant',request.order,result.dining)}}
   if(kind==='exchange')assertExchangeReceipt(request,result)
   if(kind==='sales')assertSalesResult(request,result)
   if(kind==='customer-ledger')assertCustomerLedgerResult(request,result)
@@ -102,7 +106,7 @@ function clearOriginal(pending){
 export async function executeFinancial(kind, input, persist,onState=()=>{},identity=null,verifyLegacy=null,prepare=null) {
   if(running)throw Error('正在保存異動，請勿重複提交')
   if(!Object.hasOwn(fields,kind))throw Error('異動類型不正確')
-  finiteTree(input);running=true;let pending,createdPending=false
+  finiteTree(input,0,financialDepth(kind,input));running=true;let pending,createdPending=false
   const notify=(phase,message='')=>onState({phase,kind:pending?.kind||kind,id:pending?.request.id||null,message})
   try{
   const signature=JSON.stringify({kind,input})

@@ -4,7 +4,7 @@ import {workspaceScope,readWorkspaceDraft,writeWorkspaceDraft,clearWorkspaceDraf
 import {privateDraftDigest} from '../../electron/privateDrafts.mjs'
 import {readPendingFinancial} from '../utils/financialCommand'
 
-function originalLookup(kind,current,state){return {context:current.scope.context,id:current.original.id,digest:current.original.digest,...(kind==='quick'||kind==='ordinary-order'?{family:kind==='quick'&&state?.draft?.kind==='purchase'?'quick-purchase':'quick-restaurant'}:{})}}
+function originalLookup(kind,current,state){return {context:current.scope.context,id:current.original.id,digest:current.original.digest,...(kind==='quick'||kind==='ordinary-order'||kind.startsWith('reservation-ordinary-order:')?{family:kind==='quick'&&state?.draft?.kind==='purchase'?'quick-purchase':'quick-restaurant'}:{})}}
 const originalAction=(kind,input)=>input.family==='quick-purchase'?'purchase-create':['menu-setup','restaurant-settings'].includes(kind)?'configure':'create'
 
 export default function useWorkspaceDraft({kind,session,state,hasContent,validate,onRestore,onOriginal,findOriginal,enabled=true}){

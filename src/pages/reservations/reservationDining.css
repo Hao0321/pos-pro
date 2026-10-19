@@ -1,0 +1,3 @@
+.reservation-dining{padding:20px;margin:20px 0;min-width:0;scroll-margin-top:16px}.reservation-dining .menu-editor{max-width:100%;box-sizing:border-box}.reservation-dining .field,.reservation-dining .btn{min-height:48px;font-size:16px}.reservation-dining h2,.reservation-dining p{overflow-wrap:anywhere}.reservation-member{min-width:0;flex:1 1 180px}.reservation-member select{max-width:100%}@media(max-width:600px){.reservation-dining{padding:12px}.reservation-dining .reservation-title{align-items:flex-start;flex-direction:column}.reservation-dining .reservation-title>.btn{width:100%}}
+
+.reservation-settlement{font-weight:700}.reservation-unsettled{color:var(--red);font-size:18px}

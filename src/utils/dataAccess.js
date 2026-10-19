@@ -26,6 +26,7 @@ export async function applyWarehouseOperation(input,actor){return isElectron?win
 export async function previewMasterMigration(input,actor){return isElectron?window.electronAPI.db.previewMasterMigration(input):(await import('./browserMasterMigration')).previewBrowserMasterMigration(input,actor)}
 export async function applyMasterMigration(input,actor){return isElectron?window.electronAPI.db.applyMasterMigration(input):(await import('./browserMasterMigration')).commitBrowserMasterMigration(input,actor)}
 export async function getReservationState(actor){return isElectron?window.electronAPI.db.getReservationState():(await import('./browserReservations')).getBrowserReservationState(actor)}
+export async function getReservationDiningContext(input,actor){return isElectron?window.electronAPI.db.getReservationDiningContext(input):(await import('./browserReservations')).getBrowserReservationDiningContext(input,actor)}
 export async function getReservationAvailability(input,actor){return isElectron?window.electronAPI.db.getReservationAvailability(input):(await import('./browserReservations')).getBrowserReservationAvailability(input,actor)}
 export async function applyReservationOperation(input,actor){return isElectron?window.electronAPI.db.applyReservationOperation(input):(await import('./browserReservations')).commitBrowserReservation(input,actor)}
 export async function previewOpeningMigration(input,actor){return isElectron?window.electronAPI.db.previewOpeningMigration(input):(await import('./browserOpeningMigration')).previewBrowserOpeningMigration(input,actor)}

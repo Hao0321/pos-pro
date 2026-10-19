@@ -1,4 +1,5 @@
 import {RECEIPT_REVIEW_KIND,hasReceiptLots,retainReceiptReviewFeature} from './receiptReview.mjs'
+import {readReservationBook} from './reservationHistory.mjs'
 import {isProcurement} from './procurementRules.mjs'
 import {PURCHASE_UNITS_KIND,retainPurchaseUnitFeature} from './purchaseUnitPricing.mjs'
 import {canonicalSignature,operationHeader,moneyValue,quantityValue} from './operationRules.mjs'
@@ -50,7 +51,7 @@ export function browserStockContexts(book,runtime){
 export function browserRestaurantData(book,runtime={}){
   const settings=Object.fromEntries(book.settings.map(row=>[row.key,JSON.parse(row.value)]))
   const now=Date.parse(runtime.timestamp||new Date().toISOString())
-  return {products:book.products,users:book.users,suppliers:book.suppliers||[],menuConfigurationId:settings[RESTAURANT_MENU_CONFIG_KEY]||'',entries:book.restaurantOrders,operations:book.restaurantOperations,orders:book.orders,waste:book.wasteLog,cashLogs:book.cashLog,shifts:book.shifts,settings,config:readRestaurantConfig(settings.restaurantConfig,book.products),storeId:settings.sharedStoreId||'',epoch:runtime.epoch,costMode:book.stockCostEntries?.length?'active':'reference',now,date:salesDate(new Date(now))}
+  return {reservationState:readReservationBook(book).state,products:book.products,users:book.users,suppliers:book.suppliers||[],menuConfigurationId:settings[RESTAURANT_MENU_CONFIG_KEY]||'',entries:book.restaurantOrders,operations:book.restaurantOperations,orders:book.orders,waste:book.wasteLog,cashLogs:book.cashLog,shifts:book.shifts,settings,config:readRestaurantConfig(settings.restaurantConfig,book.products),storeId:settings.sharedStoreId||'',epoch:runtime.epoch,costMode:book.stockCostEntries?.length?'active':'reference',now,date:salesDate(new Date(now))}
 }
 function productWithDefaults(data){
   for(const key of ['price','cost'])moneyValue(data[key]??0,key)

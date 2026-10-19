@@ -71,7 +71,7 @@ export function reviewedOrdinaryRestaurantDraft(draft,context,result,now=Date.no
 }
 export function assertOrdinaryRestaurantAgentSource(request,{data=null,actor=null}={}){
  const draft=assertOrdinaryRestaurantAgentDraft(request.agentDraft),review=validateOrdinaryRestaurantReview(request.ordinaryReview),fields=restaurantAgentFields(draft),age=Date.parse(request.time)-Date.parse(draft.issuedAt)
- object(request,['id','kind','action','time','storeId','epoch','costMode','fundsProtocol','day','slot','channel','customer','contact','note','items','agentDraft','ordinaryReview','draftContext'],['id','kind','action','time','storeId','epoch','costMode','day','slot','channel','customer','contact','note','items','agentDraft','ordinaryReview'])
+ object(request,['id','kind','action','time','storeId','epoch','costMode','fundsProtocol','day','slot','channel','customer','contact','note','items','agentDraft','ordinaryReview','draftContext','reservationDining'],['id','kind','action','time','storeId','epoch','costMode','day','slot','channel','customer','contact','note','items','agentDraft','ordinaryReview'])
  const fundingMatches=review.source.fundsEnabled?request.fundsProtocol==='pos-restaurant-funds/v1':!Object.hasOwn(request,'fundsProtocol')
  const sourceMatches=request.kind==='restaurant'&&request.action==='create'&&request.id==='agent-'+draft.id&&request.time===review.issuedAt&&age>= -300000&&age<=86400000&&same(review.input,inputFor(draft))&&same(review.scope,{storeId:request.storeId,epoch:request.epoch,costMode:request.costMode})&&same(request.items,review.items.map(({id,price,qty})=>({id,price,qty})))&&!Object.entries(fields).some(([key,value])=>request[key]!==value)&&fundingMatches
  if(!sourceMatches)throw Error('原編號已用於不同內容，請保留原單核對。')

@@ -4,6 +4,7 @@ import {summarizeRestaurantFunds,RESTAURANT_FUNDS_PROTOCOL} from './restaurantFu
 import {expectedRestaurantFundedPostings,restaurantFundsCashLog,restaurantFundsWaste,sameRestaurantFundedOrder,FUNDED_RESTAURANT_SOURCE} from './restaurantFundedPlan.mjs'
 import {validateRestaurantMenuBook,fundedRestaurantProductIds,assertMenuCreateResult} from './restaurantMenuOriginal.mjs'
 import {assertPrivateDraftOperation} from './privateDrafts.mjs'
+import {validateReservationDiningEntry} from './reservationDining.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 const invalid=()=>Error('預訂款項、交付或原料來源不完整，請保留原單核對。')
@@ -61,6 +62,7 @@ export function validateFundedRestaurantRecords(entries,operations,orders,produc
     if(history.length!==entry.version||history.some((row,index)=>row.entityVersion!==index+1||row.fundsProtocol!==RESTAURANT_FUNDS_PROTOCOL))throw invalid()
     if(new Set(history.map(row=>row.id)).size!==history.length||history.some(row=>!row.actor?.userId||typeof row.actor.username!=='string'||!['owner','staff'].includes(row.actor.role)||!Array.isArray(row.productIds)||row.productIds.length!==productIds.size||new Set(row.productIds).size!==row.productIds.length||row.productIds.some(id=>!productIds.has(id))))throw invalid()
     const initial=history[0],created=request(initial),facts={entryId:entry.id,items:entry.funds.items,itemAllocations:entry.funds.itemAllocations}
+    validateReservationDiningEntry(entry,created)
     if(created.action!=='create'||created.id!==entry.id||created.time!==entry.createdAt||initial.fundsInitialSignature!==canonicalSignature(facts)||!entry.menu&&!same(created.items.map(row=>({id:row.id,price:row.price,qty:row.qty})),entry.funds.items.map(row=>({id:row.id,price:row.price,qty:row.qty}))))throw invalid()
     assertMenuCreateResult(created,entry,initial)
     if(!created.storeId||created.storeId!==storeId||!created.epoch||initial.eventSignature||initial.orderId||initial.cashLogId)throw invalid()

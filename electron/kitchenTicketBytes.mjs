@@ -16,7 +16,7 @@ export function validateKitchenPrintFormat(value){
 }
 export function kitchenTicketBytes(ticket,format){
  validateKitchenPrintFormat(format)
- if(ticket?.protocol!=='pos-kitchen-ticket/v1'||!['prepare','cancel'].includes(ticket.kind)||!Array.isArray(ticket.items)||ticket.items.length>100)throw Error('備餐單內容需要核對')
+ if(!['pos-kitchen-ticket/v1','pos-kitchen-ticket/v2'].includes(ticket?.protocol)||!['prepare','cancel'].includes(ticket.kind)||!Array.isArray(ticket.items)||ticket.items.length>100)throw Error('備餐單內容需要核對')
  const w=words[format.locale],line=v=>wrap(v,format.columns),big=v=>'\x1d\x21\x11'+line(v)+'\x1d\x21\x00',rule=line('-'.repeat(format.columns))
  let result='\x1b\x40\x1b\x61\x01'+big(w[ticket.kind])
  if(ticket.copy>0)result+=big(w.copy+' #'+ticket.copy)

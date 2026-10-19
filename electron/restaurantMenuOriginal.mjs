@@ -36,7 +36,7 @@ export function restaurantMenuAuthorityPreview(input,data){
 export function restaurantMenuPreview(input,data,actor){assertRestaurantMenuActor(actor,data.users);return restaurantMenuAuthorityPreview(input,data)}
 export function materializeRestaurantMenu(request,data,actor){
  assertPrivateDraftOperation(request,{data,actor})
- const allowed=['id','kind','action','time','storeId','epoch','fundsProtocol','costMode','day','slot','channel','customer','contact','note','menuProtocol','menuReview','agentDraft','draftContext','customerOrderId','customerOrderSignature']
+ const allowed=['id','kind','action','time','storeId','epoch','fundsProtocol','costMode','day','slot','channel','customer','contact','note','menuProtocol','menuReview','agentDraft','draftContext','customerOrderId','customerOrderSignature','reservationDining']
  if(Object.keys(request).some(key=>!allowed.includes(key))||request.action!=='create'||request.menuProtocol!==RESTAURANT_MENU_PROTOCOL||request.fundsProtocol!=='pos-restaurant-funds/v1')throw invalid()
  assertRestaurantMenuActor(actor,data.users);currentConfiguration(data);only(request.menuReview,['configurationId','quote'])
  const receipt=data.operations.find(receipt=>receipt.id===request.menuReview.configurationId),saved=configuration(receipt),quote=validateRestaurantMenuQuote(request.menuReview.quote)

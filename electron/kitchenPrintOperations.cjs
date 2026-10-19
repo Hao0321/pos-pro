@@ -1,13 +1,13 @@
 const {randomUUID}=require('node:crypto'),{canonicalSignature}=require('./operationRules.mjs'),{normalizeKitchenPrinting,kitchenDestination,appendKitchenRestaurant,planKitchenAction,claimKitchenJob,finishKitchenJob,kitchenJobView,kitchenPrintReceipt}=require('./kitchenPrint.mjs')
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b),defaultPolicy=()=>({version:1,enabled:false,destination:null,format:null})
 module.exports=function installKitchenPrint(db,api,storage){
- let workerSession='',activeAttempts=new Set();const listeners=new Set()
+ let workerSession='',activeAttempts=new Set(),deferDepth=0,queuedWake=false;const listeners=new Set()
  const epoch=()=>db.prepare('SELECT value FROM sales_runtime WHERE id=?').get('epoch').value
  const runtime=()=>({epoch:epoch(),session:workerSession,activeAttempts:[...activeAttempts]})
  const actorCheck=(actor,owner=false)=>{if(!actor||!['owner',...(owner?[]:['staff'])].includes(actor.role)||!api.getUsers().some(u=>u.id===actor.userId&&u.username===actor.username&&u.role===actor.role))throw Error('請先登入以處理廚房列印');return actor}
  const policy=state=>state.data.config.kitchenPrinting||defaultPolicy()
  function binding(state){const value=policy(state);try{const current=kitchenDestination(api.getAllSettings());if(!value.destination||!same(current,value.destination)||Number(api.getAllSettings().receiptWidth||32)!==value.format?.columns)throw Error('印表機設定已變更，請重新確認測試紙張');const row=db.prepare('SELECT value FROM kitchen_print_runtime WHERE id=?').get('binding'),proof=row?JSON.parse(row.value):null;if(!proof||proof.epoch!==epoch()||!same(proof.destination,value.destination)||!same(proof.format,value.format))throw Error('請先確認這台電腦的測試紙張');return {ready:true,destination:current,format:value.format}}catch(error){return {ready:false,error:error.message}}}
- function wake(){for(const fn of listeners)try{fn()}catch{}}
+ function wake(){if(deferDepth){queuedWake=true;return}for(const fn of listeners)try{fn()}catch{}}
  function receipt(request,state){return kitchenPrintReceipt(request,state)}
  const originalRestaurant=api.applyRestaurantOperation
  api.applyRestaurantOperation=function(request,actor){
@@ -27,7 +27,7 @@ module.exports=function installKitchenPrint(db,api,storage){
   if(paperBinding)db.prepare('INSERT INTO kitchen_print_runtime (id,value) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value').run('binding',JSON.stringify(paperBinding))
   if(!existing){const after=storage.read(),next=appendKitchenRestaurant(before,after.data,request,actor,epoch(),policy(after).enabled);if(next.receipt)storage.save(next.state,before)}
   storage.enforce();return result
- })();if(result?.success===true)wake();return result}catch(error){return {success:false,committed:error.historyUncertain||!checked||existing?null:false,error:error.message,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{})}}}
+ })();if(result?.success===true&&!existing)wake();return result}catch(error){return {success:false,committed:error.historyUncertain||!checked||existing?null:false,error:error.message,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{})}}}
  for(const method of ['setSetting','setSettings']){const original=api[method];api[method]=function(...args){const values=method==='setSetting'?{[args[0]]:args[1]}:args[0];if(Object.hasOwn(values||{},'restaurantConfig')){const previous=storage.read().data.config.kitchenPrinting??null,raw=values.restaurantConfig,next=typeof raw==='string'?JSON.parse(raw):raw;if(!same(previous,next?.kitchenPrinting??null))throw Error('請從廚房列印設定確認印表機')}return original.apply(this,args)}}
  api.getKitchenPrintState=actor=>{actorCheck(actor);let storeId=api.getSetting('sharedStoreId');if(!storeId){storeId=randomUUID();api.setSetting('sharedStoreId',storeId)}const state=storage.read(),bound=binding(state);let setup=null;if(actor.role==='owner')try{setup={destination:kitchenDestination(api.getAllSettings()),columns:Number(api.getAllSettings().receiptWidth||32)}}catch{}return {protocol:'pos-kitchen-print-state/v1',storeId,actor:{userId:actor.userId,username:actor.username,role:actor.role},now:new Date().toISOString(),policy:policy(state),binding:bound,setup,jobs:state.jobs.map(job=>kitchenJobView(job,runtime()))}}
  api.applyKitchenPrintOperation=(request,actor)=>{actorCheck(actor);let checked=false,existing=false;try{const result=db.transaction(()=>{
@@ -44,4 +44,5 @@ module.exports=function installKitchenPrint(db,api,storage){
  api.applyKitchenPrintClaim=request=>db.transaction(()=>{const state=storage.read(),bound=binding(state);if(!bound.ready||!same(request.destination,bound.destination)||!same(request.format,bound.format))return {success:false,committed:false,error:bound.error||'印表機設定已變更'};const next=claimKitchenJob(state,state.data,request,{...runtime(),enabled:policy(state).enabled});if(!next.receipt)return {success:true,claimed:false};storage.save(next.state,state);return {success:true,claimed:true,job:next.state.jobs.find(j=>j.id===request.jobId),receipt:next.receipt}})()
  api.applyKitchenPrintFinish=request=>db.transaction(()=>{const state=storage.read(),next=finishKitchenJob(state,request,runtime());if(!next.receipt)return {success:true,saved:false};storage.save(next.state,state);return {success:true,saved:true,receipt:next.receipt}})()
  storage.enforce()
+ return {deferWake(consume){if(db.inTransaction||typeof consume!=='function')throw Error('請從原訂位流程保存餐點');const previous=queuedWake;deferDepth++;let result;try{result=consume();if(result?.success!==true)queuedWake=previous;return result}catch(error){queuedWake=previous;throw error}finally{deferDepth--;if(!deferDepth&&queuedWake){queuedWake=false;wake()}}}}
 }

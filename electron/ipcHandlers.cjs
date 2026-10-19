@@ -1,5 +1,4 @@
 module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrderServer, getLocalIP,sharedStore,stockSetupEnabled=false }) {
-  const orderServer = getOrderServer()
   function handle(channel, handler) {
     ipcMain.handle(channel, (event, ...args) => {
       ipcSecurity.authorize(event, channel, args)
@@ -38,6 +37,7 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:getReservationState',()=>db.getReservationState(ipcSecurity.current()))
   handle('db:getReservationAvailability',(_e,input)=>db.getReservationAvailability(input,ipcSecurity.current()))
   handle('db:applyReservationOperation',(_e,input)=>db.applyReservationOperation(input,ipcSecurity.current()))
+  handle('db:getReservationDiningContext',(_e,input)=>db.getReservationDiningContext(input,ipcSecurity.current()))
   handle('db:previewOpeningMigration',(_e,input)=>db.previewOpeningMigration(input,ipcSecurity.current()))
   handle('db:applyOpeningMigration',(_e,input)=>db.applyOpeningMigration(input,ipcSecurity.current()))
   handle('db:getPrivateDraftContext',()=>db.getPrivateDraftContext(ipcSecurity.current()))
@@ -88,6 +88,7 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:updateOrderStatus', (_e, id, status) => {
     const result = db.updateOrderStatus(id, status,ipcSecurity.current())
     // 通知 WebSocket 客戶端
+    const orderServer=getOrderServer()
     if (orderServer && orderServer.broadcast) {
       orderServer.broadcast(JSON.stringify({ type: 'order-status', orderId: id, status }))
     }
@@ -231,10 +232,10 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
 
   // ----- Server Info -----
   handle('server:getLocalIP', () => getLocalIP())
-  handle('server:getStatus', () => ({
+  handle('server:getStatus', () => {const orderServer=getOrderServer();return {
     running: orderServer?.isRunning?.() === true,
     ip: getLocalIP(),
     port: orderServer?.getActualPort?.() || db.getSetting('serverPort') || '3080',
     tunnelUrl: orderServer?.getTunnelUrl?.() || null,
-  }))
+  }})
 }

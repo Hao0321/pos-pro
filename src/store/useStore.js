@@ -62,6 +62,7 @@ export function useStore(session){
   const salesRef=useRef(sales)
   useEffect(()=>{salesRef.current=sales},[sales])
   const [customerTarget,setCustomerTarget]=useState(''),[salesTarget,setSalesTarget]=useState('')
+  const [restaurantTarget,setRestaurantTarget]=useState(null),[reservationTarget,setReservationTarget]=useState(null)
   const [salesQuote,setSalesQuote]=useState(null)
   const [manualEntries, setManualEntries] = useState([])
   const [cart,          setCart]          = useState([])
@@ -440,10 +441,11 @@ export function useStore(session){
     await applyRestaurantResult(result)
     return result
   }
-  async function commitReservation(input,identity=null){
+  async function commitReservation(input,identity=null,prepare=null){
     if(dataError)throw Error(dataError)
     if(checkoutRef.current.getState().phase!=='idle')throw Error('請先確認原收款交易')
-    const result=await executeFinancial('reservation',input,request=>applyReservationOperation(request,sessionRef.current),setFinancialState,identity)
+    const result=await executeFinancial('reservation',input,request=>applyReservationOperation(request,sessionRef.current),setFinancialState,identity,null,prepare)
+    if(result.dining)await applyRestaurantResult(result.dining)
     window.dispatchEvent(new CustomEvent('pos-reservation-operation',{detail:result}));return result
   }
   async function retryFinancial(){
@@ -465,7 +467,7 @@ export function useStore(session){
     if(['stocktake','receive','receive-lots','receive-reviewed',...PROCUREMENT_KINDS].includes(pending.kind))applyInventoryResult(result)
     if(pending.kind==='cashlog')window.dispatchEvent(new Event('pos-cash-operation'))
     if(pending.kind==='restaurant')await applyRestaurantResult(result)
-    if(pending.kind==='reservation')window.dispatchEvent(new CustomEvent('pos-reservation-operation',{detail:result}))
+    if(pending.kind==='reservation'){if(result.dining)await applyRestaurantResult(result.dining);window.dispatchEvent(new CustomEvent('pos-reservation-operation',{detail:result}))}
     if(pending.kind==='exchange')window.dispatchEvent(new CustomEvent('pos-exchange-operation',{detail:result}))
     if(pending.kind==='sales')applySalesResult(result)
     if(pending.kind==='customer-ledger')applyCustomerLedgerResult(result)
@@ -616,6 +618,7 @@ export function useStore(session){
     settingsTarget,openHardwareSettings:()=>{setSettingsTarget({tab:'hardware'});setView('settings')},consumeSettingsTarget:()=>setSettingsTarget(null),
     stockSetupEnabled,commitStockSetup,commitWarehouse,commitLot,
     supplierState,supplierTarget,openSupplierLedger:(supplierId='',purchaseId='')=>{setSupplierTarget({supplierId,purchaseId});setView('suppliers')},consumeSupplierTarget:()=>setSupplierTarget(null),purchaseTarget,openPurchaseSuppliers:()=>{setPurchaseTarget({tab:'suppliers'});setView('purchase')},openPurchaseDocument:id=>{setPurchaseTarget({id});setView('purchase')},consumePurchaseTarget:()=>setPurchaseTarget(null),commitSupplierLedger,refreshSuppliers,
+    restaurantTarget,openRestaurantEntry:(id,bookingId='')=>{setRestaurantTarget({id,bookingId});setView('restaurant')},consumeRestaurantTarget:()=>setRestaurantTarget(null),reservationTarget,openReservationBooking:id=>{setReservationTarget({id});setView('reservations')},consumeReservationTarget:()=>setReservationTarget(null),
     products,members,orders,purchases,sales,salesQuote,openSalesQuote:quote=>{setSalesQuote({id:quote.id,revision:quote.revision});setView('sales')},consumeSalesQuote:()=>setSalesQuote(null),cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitReservation,commitInventory,commitRestaurant,commitExchange,commitSales,commitCustomerLedger,refreshTrading,customerTarget,openCustomerLedger:id=>{setCustomerTarget(id);setView("customers")},consumeCustomerTarget:()=>setCustomerTarget(""),salesTarget,openSalesDocument:id=>{setSalesTarget(id);setView("sales")},consumeSalesTarget:()=>setSalesTarget(""),restaurantConfig,
     activeMember,setActiveMember:value=>{ensureCartEditable();setActiveMember(value)},
     addToCart,removeFromCart,updateCartQty,updateCartItemPrice,clearCart,stageQuickSale,

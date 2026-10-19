@@ -27,7 +27,8 @@ export default function RestaurantPage({store,session}){
   const [orderMode,setOrderMode]=useState('menu')
   const panel={...modal,top:viewport.top+16,bottom:'auto',maxHeight:Math.max(120,viewport.height-32)}
   const [data,setData]=useState(null),[pay,setPay]=useState(null),[cancel,setCancel]=useState(null),[error,setError]=useState(''),[message,setMessage]=useState(''),[saving,setSaving]=useState(false),[filter,setFilter]=useState('active')
-  const busy=useRef(false)
+  const busy=useRef(false),focusedTarget=useRef(null)
+  useEffect(()=>{const id=store.restaurantTarget?.id;if(!data||!id||focusedTarget.current===id||!data.entries.some(row=>row.id===id))return;focusedTarget.current=id;setFilter('all');requestAnimationFrame(()=>{const element=document.querySelector('[data-restaurant-entry="'+id+'"]');element?.scrollIntoView({block:'center'});element?.focus({preventScroll:true})})},[data,store.restaurantTarget])
   const owner=session.role==='owner',products=store.products
   function acceptState(next){setData(next)}
   const funds=useRestaurantFundsForms({data,session,store,onState:acceptState,onResult:result=>setMessage(result.receipt.action==='funds-receive'?'已保存這次收款':result.receipt.action==='funds-refund'?'已保存這次退款':'已保存取消與款項')})
@@ -54,6 +55,7 @@ export default function RestaurantPage({store,session}){
   const config=data?.config||defaultRestaurantConfig()
   const list=data?.entries.filter(e=>filter==='all'||!['cancelled','completed'].includes(e.status)).sort((a,b)=>a.day.localeCompare(b.day)||a.slot.localeCompare(b.slot)||(a.pickupNumber||0)-(b.pickupNumber||0))||[]
   return <div className="restaurant-page" style={{padding:16,overflowY:'auto',height:'100%'}}>
+    {store.restaurantTarget?.bookingId&&<button type="button" className="btn btn-primary" data-return-reservation style={{position:'sticky',top:0,zIndex:10,width:'100%',minHeight:48,marginBottom:12}} onClick={()=>{const id=store.restaurantTarget.bookingId;store.consumeRestaurantTarget();store.openReservationBooking(id)}}>{tr('回到這一桌')}</button>}
     <h2 className="page-title">{tr("預訂出餐")}</h2><p>{tr('接單、備餐、收款，都在這裡。')}</p>
     {error&&<p role="alert" style={{color:'var(--red)',overflowWrap:'anywhere'}}>{trMessage(error)}</p>}
     {message&&<p role="status" style={{color:'var(--green)',overflowWrap:'anywhere'}}>{trMessage(message)}</p>}
@@ -75,7 +77,7 @@ export default function RestaurantPage({store,session}){
       const funding=restaurantFundingView(e,session.role),money=cents=>'NT$ '+fundsAmountText(cents)
       const status={reserved:'cooking',cooking:'ready',ready:e.channel==='delivery'?'dispatched':'completed',dispatched:'completed'}[e.status]
       const nextAction={cooking:'開始製作',ready:'餐點好了',dispatched:'出發配送',completed:e.channel==='delivery'?'完成交付':'交給客人'}[status]
-      return <article className="card" key={e.id} data-restaurant-id={e.id} style={{padding:14,marginBottom:12,overflowWrap:'anywhere'}}>
+      return <article className="card" key={e.id} data-restaurant-entry={e.id} tabIndex={store.restaurantTarget?.id===e.id?-1:undefined} data-restaurant-id={e.id} style={{padding:14,marginBottom:12,overflowWrap:'anywhere'}}>
         <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',gap:10}}><h3 style={{fontSize:22,marginBottom:4}}>{e.tableNum?tr('桌號 {0}',{0:e.tableNum}):e.customer||tr(channels[e.channel])}</h3><strong>NT$ {e.total}</strong></div>
         <strong>{!e.customerOrderId&&<>{e.day} {e.slot} · </>}{tr('取餐號 {0}',{0:e.pickupNumber?String(e.pickupNumber).padStart(3,'0'):e.id})}</strong><p>{e.items.map(i=>`${i.name} × ${i.qty}`).join('、')}</p><p data-kitchen-status={e.status}>{tr(labels[e.status])} · {funding.funded?<span data-restaurant-funding data-funds-due={funding.dueCents} data-funds-retained={funding.retainedCents}>{e.status==='cancelled'?funding.summary.refundedCents?tr('已退回 {0}',{0:money(funding.summary.refundedCents)}):tr('不需收款'):!funding.totalCents?tr('不需收款'):funding.dueCents?tr('已收 {0}，還差 {1}',{0:money(funding.retainedCents),1:money(funding.dueCents)}):tr('款項已收齊')}</span>:e.saleId?tr("已收款"):tr("未收款")}{e.contact?' · '+e.contact:''}</p>{e.note&&<p>{e.note}</p>}
         <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>

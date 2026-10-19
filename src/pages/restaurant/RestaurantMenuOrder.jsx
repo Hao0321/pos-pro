@@ -14,6 +14,8 @@ import {privateDraftDigest} from '../../../electron/privateDrafts.mjs'
 import {publicRestaurantMenu} from '../../../electron/restaurantCustomerMenu.mjs'
 import {prepareRestaurantCommand} from '../../utils/restaurantCommand.mjs'
 import './RestaurantMenuEditor.css'
+import {validDiningDraft,diningForm,diningPending} from '../../utils/reservationDiningDraft.mjs'
+import DiningMemberSelect from '../reservations/DiningMemberSelect'
 
 const money=cents=>'NT$ '+(cents/100).toFixed(2).replace(/\.00$/,'')
 const blank=data=>{const now=new Date();return {channel:'walkin',day:data.today||`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`,slot:'12:00',customer:'',contact:'',note:''}}
@@ -26,16 +28,17 @@ function checkPreview(value,items,data,session){
  if(canonicalSignature(quote.scope)!==canonicalSignature({storeId:data.storeId,epoch:data.epoch,costMode:data.costMode})||!['owner','staff'].includes(session.role))throw Error('店面或帳號已變更，請保留原輸入核對。')
  return value
 }
-export default function RestaurantMenuOrder({data,session,store,reload,active,onComplete,onResume}){
- const menu=data.config.menu,viewport=useVisibleViewport(),[selection,setSelection]=useState(null),[cart,setCart]=useState([]),[preview,setPreview]=useState(null),[step,setStep]=useState('edit'),[form,setForm]=useState(()=>blank(data)),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[pending,setPending]=useState(null),[pendingError,setPendingError]=useState('')
+export default function RestaurantMenuOrder({data,session,store,reload,active,onComplete,onResume,dining=null}){
+ const [diningSource,setDiningSource]=useState(()=>dining?structuredClone(dining.source):null)
+ const menu=data.config.menu,viewport=useVisibleViewport(),[selection,setSelection]=useState(null),[cart,setCart]=useState([]),[preview,setPreview]=useState(null),[step,setStep]=useState('edit'),[form,setForm]=useState(()=>dining?diningForm(dining.source,data.now):blank(data)),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[pending,setPending]=useState(null),[pendingError,setPendingError]=useState('')
  const lock=useRef(false),root=useRef(null),recovery=useRef(null),sequence=useRef(0),latest=useRef({data,session});latest.current={data,session}
  const menuRevision=privateDraftDigest(menu?publicRestaurantMenu(data.config,store.products):null),[draftRevision,setDraftRevision]=useState(menuRevision),[cartLabels,setCartLabels]=useState([]),[selectionLabel,setSelectionLabel]=useState('')
- const workspace=useWorkspaceDraft({kind:'menu-order',session,state:{cart,labels:cartLabels,selection,selectionLabel,form,menuRevision:draftRevision},hasContent:!!cart.length||!!selection||Object.entries(form).some(([key,value])=>['customer','contact','note'].includes(key)&&value),validate:validStaffMenuDraft,onRestore:value=>{setCart(value?.cart??[]);setCartLabels(value?.labels??[]);setSelection(value?.selection??null);setSelectionLabel(value?.selectionLabel??'');setForm(value?.form??blank(latest.current.data));setDraftRevision(value?.menuRevision??menuRevision);setPreview(null);setStep('edit');setError('');origin.current=scope(latest.current.data,latest.current.session);if(value&&(value.cart.length||value.selection))onResume?.()},onOriginal:async(result,_state,completion)=>{if(result.action!=='create')throw Error('原單資料需要核對');const original=readPendingFinancial();if(original?.request.id===result.id){if(privateDraftDigest(original.request)!==result.digest)throw Error('原單資料需要核對');await store.retryFinancial()}if(completion?.isCurrent&&!completion.isCurrent())return;finish();await reload?.()},enabled:!!menu})
+ const workspace=useWorkspaceDraft({kind:dining?'reservation-menu-order:'+dining.source.bookingId:'menu-order',session,state:{cart,labels:cartLabels,selection,selectionLabel,form,menuRevision:draftRevision,...(dining?{dining:diningSource}:{})},hasContent:!!cart.length||!!selection||Object.entries(form).some(([key,value])=>['customer','contact','note'].includes(key)&&value),validate:(value,context)=>dining?validDiningDraft(value,context,validStaffMenuDraft,dining.source.bookingId):validStaffMenuDraft(value),onRestore:value=>{if(dining)setDiningSource(value?.dining||structuredClone(dining.source));setCart(value?.cart??[]);setCartLabels(value?.labels??[]);setSelection(value?.selection??null);setSelectionLabel(value?.selectionLabel??'');setForm(value?.form??(dining?diningForm(dining.source,latest.current.data.now):blank(latest.current.data)));setDraftRevision(value?.menuRevision??menuRevision);setPreview(null);setStep('edit');setError('');origin.current=scope(latest.current.data,latest.current.session);if(value&&(value.cart.length||value.selection))onResume?.()},onOriginal:async(result,_state,completion)=>{if(result.action!=='create')throw Error('原單資料需要核對');const original=diningPending(readPendingFinancial(),dining?.source.bookingId);if(original?.request.id===result.id){if(privateDraftDigest(original.request)!==result.digest)throw Error('原單資料需要核對');await store.retryFinancial()}if(completion?.isCurrent&&!completion.isCurrent())return;workspace.complete();finish(result.entryId);await reload?.()},enabled:!!menu})
  const context=scope(data,session),source=canonicalSignature({menu:menu??null,recipes:data.config.recipes,products:store.products.map(({id,name,price,cost,unit})=>({id,name,price,cost,unit:unit||''}))})
  const origin=useRef(context);if(!cart.length&&!selection)origin.current=context
  const displaced=origin.current!==context
- const pendingMenu=pending?.kind==='restaurant'&&pending.request.action==='create'&&!pending.request.customerOrderId&&pending.request.menuProtocol==='pos-restaurant-menu/v1',blocked=busy||!!pending||!!pendingError||displaced||workspace.blocked
- function readPending(){try{setPending(readPendingFinancial());setPendingError('')}catch(cause){setPendingError(cause.message)}}
+ const pendingMenu=!dining&&pending?.kind==='restaurant'&&pending.request.action==='create'&&!pending.request.customerOrderId&&pending.request.menuProtocol==='pos-restaurant-menu/v1',blocked=busy||!!pending||!!pendingError||displaced||workspace.blocked
+ function readPending(){try{setPending(diningPending(readPendingFinancial(),dining?.source.bookingId));setPendingError('')}catch(cause){setPendingError(cause.message)}}
  useEffect(()=>{readPending()},[store.financialState?.phase,store.financialState?.id])
  useEffect(()=>{sequence.current++;setPreview(null);setStep('edit')},[context,source])
  useEffect(()=>()=>{sequence.current++},[])
@@ -48,7 +51,7 @@ export default function RestaurantMenuOrder({data,session,store,reload,active,on
  },[pendingMenu])
  function editSelection(value){workspace.begin();sequence.current++;setSelection(value);try{setSelectionLabel(restaurantMenuLineSummary(value,publicRestaurantMenu(data.config,store.products)).name)}catch{setSelectionLabel(menu?.offers.find(row=>row.id===value.offerId)?.name||selectionLabel)}setError('')}
  function choice(group,option,count){const selected=selection.selections.find(row=>row.groupId===group.id)||{groupId:group.id,choices:[]},choices=group.min===1&&group.max===1?[{id:option.id,qty:1}]:[...selected.choices.filter(row=>row.id!==option.id),...(count?[{id:option.id,qty:count}]:[])];editSelection({...selection,selections:[...selection.selections.filter(row=>row.groupId!==group.id),{groupId:group.id,choices}]})}
- function finish(){setCart([]);setCartLabels([]);setSelection(null);setSelectionLabel('');setPreview(null);setStep('edit');setForm(blank(latest.current.data));setMessage('已接單，請到工作單開始備餐。');onComplete?.()}
+ function finish(entryId){setCart([]);setCartLabels([]);setSelection(null);setSelectionLabel('');setPreview(null);setStep('edit');setForm(dining?diningForm(dining.source,latest.current.data.now):blank(latest.current.data));setMessage('已接單，請到工作單開始備餐。');onComplete?.(entryId)}
  async function quote(items,review=false){
   if(lock.current||blocked)return;lock.current=true;setBusy(true);setError('');setMessage('');const ticket=++sequence.current,expected=context
   try{const result=checkPreview(await loadRestaurantMenuQuote({items},session),items,data,session)
@@ -66,10 +69,12 @@ export default function RestaurantMenuOrder({data,session,store,reload,active,on
    if(retry){const original=readPendingFinancial();if(original?.kind!=='restaurant'||original.request.action!=='create'||original.request.customerOrderId||original.request.menuProtocol!=='pos-restaurant-menu/v1')throw Error('請先核對上一筆異動')}
    else if(step!=='review'||!preview?.availability.available||scope(latest.current.data,latest.current.session)!==context)throw Error('請重新核對餐點與總額')
    const identity=retry?null:{id:workspace.documentId(),time:preview.menuReview.quote.issuedAt},source=retry?null:{action:'create',...form,...preview.menuReview.quote.scope,fundsProtocol:'pos-restaurant-funds/v1',menuProtocol:'pos-restaurant-menu/v1',menuReview:preview.menuReview,draftContext:structuredClone(workspace.assertScope(preview.menuReview.quote.scope))}
-   if(!retry){const prepared=prepareRestaurantCommand(source,{state:data,identity});workspace.remember({...prepared.input,id:identity.id,time:identity.time})}
-   const result=retry?await store.retryFinancial():await store.commitRestaurant(source,identity)
+   let child=null
+   if(!retry){const prepared=prepareRestaurantCommand(source,{state:data,identity});child={...prepared.input,id:identity.id,time:identity.time};if(dining)child=await dining.prepareRequest(child,diningSource);workspace.remember(child)}
+   const command=child?Object.fromEntries(Object.entries(child).filter(([key])=>!['id','time'].includes(key))):null
+   const result=retry?await store.retryFinancial():await store.commitRestaurant(command,identity)
    if(!result?.success||result.receipt?.action!=='create'||!result.entry?.menu)throw Error('保存結果尚未確認，請保留原編號核對。')
-   workspace.complete();finish();await reload?.()
+   workspace.complete();finish(result.entry.id);await reload?.()
   }catch(cause){setError(cause.message);if(!readPendingFinancialSafe()){workspace.uncommitted();setPreview(null);setStep('edit')}}finally{lock.current=false;setBusy(false);readPending()}
  }
  const offer=menu?.offers.find(row=>row.id===selection?.offerId),quoteValue=preview?.menuReview.quote,invalidSelection=!!selection&&(!offer||!offer.variants.some(row=>row.id===selection.variantId)||selection.selections.some(group=>!offer.groups.some(row=>row.id===group.groupId&&group.choices.every(choice=>row.choices.some(option=>option.id===choice.id)))))
@@ -78,7 +83,7 @@ export default function RestaurantMenuOrder({data,session,store,reload,active,on
   {message&&<p role="status" data-staff-menu-message>{tr(message)}</p>}
   {pendingMenu&&createPortal(<div className="menu-setup-recovery-overlay"><section ref={recovery} className="card menu-editor menu-setup-recovery" role="dialog" aria-modal="true" aria-labelledby="staff-menu-recovery-title" data-staff-menu-pending style={{top:viewport.top+16,maxHeight:Math.max(120,viewport.height-32)}}><h3 id="staff-menu-recovery-title">{tr('核對上次接單')}</h3><p>{tr('上次接單尚未確認，請沿用原編號核對。')}</p><button type="button" className="btn btn-primary" data-staff-menu-retry disabled={busy} onClick={()=>save(true)}>{busy?tr('核對中…'):tr('核對上次接單')}</button><button type="button" className="btn btn-ghost" data-staff-menu-recover-elsewhere disabled={busy} onClick={()=>store.setView(session.role==='owner'?'recovery':'dashboard')}>{tr(session.role==='owner'?'資料復原':'回首頁核對原單')}</button><details><summary>{tr('原單資料')}</summary><code>{pending.request.id}</code>{error&&<p role="alert">{trMessage(error)}</p>}</details></section></div>,document.body)}
   {active&&menu&&<section ref={root} className="card menu-editor staff-menu-order" data-staff-menu>
-   <h3>{tr('新增正式訂單')}</h3>{error&&<p role="alert" data-staff-menu-error>{trMessage(error)}</p>}{displaced&&<p role="alert">{tr('店面或帳號已變更，請保留原輸入核對。')}</p>}{pendingError&&<p role="alert">{trMessage(pendingError)}</p>}{pending&&!pendingMenu&&<p>{tr('請先核對上一筆異動')}</p>}
+   <h3>{tr(dining?'這一桌的餐點':'新增正式訂單')}</h3>{dining&&<p data-reservation-dining-source>{diningSource.customer.name} · {diningSource.tableNames.join(' + ')}</p>}{error&&<p role="alert" data-staff-menu-error>{trMessage(error)}</p>}{displaced&&<p role="alert">{tr('店面或帳號已變更，請保留原輸入核對。')}</p>}{pendingError&&<p role="alert">{trMessage(pendingError)}</p>}{pending&&!pendingMenu&&<p>{tr('請先核對上一筆異動')}</p>}
    <form onSubmit={event=>{event.preventDefault();if(step==='review')save();else quote(cart,true)}}>
     <fieldset disabled={blocked}>
      {step==='edit'?<>
@@ -93,7 +98,9 @@ export default function RestaurantMenuOrder({data,session,store,reload,active,on
       {!!cart.length&&<div data-staff-cart>{cart.map((item,index)=>{const row=quoteValue?.items[index],selectedOffer=menu.offers.find(offer=>offer.id===item.offerId);return <div className="menu-editor-review" data-staff-line={index} key={index}><p><strong>{row?.name||cartLabels[index]||selectedOffer?.name||item.offerId}</strong><span>× {item.qty}</span></p>{!row&&<small>{[selectedOffer?.variants.find(variant=>variant.id===item.variantId)?.name,...item.selections.flatMap(group=>group.choices.map(choice=>selectedOffer?.groups.find(row=>row.id===group.groupId)?.choices.find(row=>row.id===choice.id)?.name))].filter(Boolean).join(' · ')}</small>}<button type="button" className="btn btn-ghost" data-staff-remove={index} onClick={()=>remove(index)}>{tr('移除品項')}</button></div>})}</div>}
      </>:<div data-staff-review>{quoteValue.items.map(item=><div key={item.id} className="menu-editor-review"><p><strong>{item.name} × {item.qty}</strong><span>{money(Math.round(item.price*100)*item.qty)}</span></p></div>)}</div>}
      {quoteValue&&<p className="staff-menu-total" data-staff-total={quoteValue.totalCents}>{tr('合計')} <strong>{money(quoteValue.totalCents)}</strong></p>}
-     {step==='review'&&<div className="menu-editor-two">
+     {dining&&<button type="button" className="btn btn-ghost" data-reservation-dining-recheck onClick={async()=>{try{setDiningSource(await dining.refreshSource(diningSource));setError('')}catch(error){setError(error.message)}}}>{tr('重新核對桌位')}</button>}
+     {dining&&<DiningMemberSelect source={diningSource} members={dining.members} locked={!!dining.source.memberId} onChange={memberId=>{workspace.begin();setDiningSource(old=>({...old,memberId}))}}/>}
+     {step==='review'&&!dining&&<div className="menu-editor-two">
       <label>{tr('接單方式')}<select className="field" data-staff-channel value={form.channel} onChange={event=>setForm({...form,channel:event.target.value})}>{Object.entries({walkin:'現場',preorder:'預訂',delivery:'外送'}).map(([value,label])=><option key={value} value={value}>{tr(label)}</option>)}</select></label>
       <label>{tr('取餐／出發日期')}<input className="field" data-staff-day type="date" required value={form.day} onChange={event=>setForm({...form,day:event.target.value})}/></label>
       <label>{tr('時段')}<select className="field" data-staff-slot value={form.slot} onChange={event=>setForm({...form,slot:event.target.value})}>{Array.from({length:96},(_,n)=>`${String(Math.floor(n/4)).padStart(2,'0')}:${String(n%4*15).padStart(2,'0')}`).map(value=><option key={value}>{value}</option>)}</select></label>
@@ -101,6 +108,7 @@ export default function RestaurantMenuOrder({data,session,store,reload,active,on
       <label>{tr('電話／聯絡方式（預訂與外送必填）')}<input className="field" data-staff-contact maxLength={100} required={form.channel!=='walkin'} value={form.contact} onChange={event=>setForm({...form,contact:event.target.value})}/></label>
       <label>{tr('地址／備註（外送必填）')}<input className="field" data-staff-note maxLength={1000} required={form.channel==='delivery'} value={form.note} onChange={event=>setForm({...form,note:event.target.value})}/></label>
      </div>}
+     {step==='review'&&dining&&<label>{tr('餐點備註')}<input className="field" data-staff-note maxLength={1000} value={form.note} onChange={event=>setForm({...form,note:event.target.value})}/></label>}
      <div className="menu-editor-actions">{step==='review'&&<button type="button" className="btn btn-ghost" data-staff-back onClick={()=>setStep('edit')}>{tr('返回修改')}</button>}<button className="btn btn-primary" data-staff-next={step} type="submit" disabled={!cart.length||step==='review'&&!preview?.availability.available}>{busy?tr('核對中…'):tr(step==='review'?'確認接單並預留':'下一步：確認餐點')}</button></div>
      {step==='review'&&<small>{tr('接單先預留，收款另行確認。')}</small>}
     </fieldset>

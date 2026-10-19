@@ -5,6 +5,9 @@ import {makeReservationBarrier,readReservationBarrier,RESERVATION_BARRIER} from 
 import {RESERVATION_ACTION,RESERVATION_HEAD,RESERVATION_FENCE,RESERVATION_METHOD,reservationError} from './reservationConfig.mjs'
 import {readExchangeTextSetting} from './businessExchange.mjs'
 import {RESERVATION_PUBLIC_FENCE} from './reservationGuest.mjs'
+import {RESERVATION_SERVICE_FENCE} from './reservationService.mjs'
+import {reservationDiningMissing,reservationDiningLinks} from './reservationDining.mjs'
+import {assertReservationReception} from './reservationReception.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b),clone=value=>structuredClone(value)
 const bad=()=>{throw reservationError('HISTORY')}
@@ -18,10 +21,10 @@ export function reservationKnownReceipts(graph,storeId){
  }
  return [...known.values()].sort((a,b)=>a.revision-b.revision)
 }
-export function readReservationBook(book,known=[]){
- try{return inspect(book,known)}catch{bad()}
+export function readReservationBook(book,known=[],options={}){
+ try{return inspect(book,known,options)}catch{bad()}
 }
-function inspect(book,known){
+function inspect(book,known,options){
  const settings=book.settings||[],setting=key=>{const rows=settings.filter(row=>row.key===key);if(rows.length>1)bad();return rows[0]?.value},storeId=readExchangeTextSetting(settings,'sharedStoreId'),flag=setting(RESERVATION_FENCE),rawHead=setting(RESERVATION_HEAD),head=rawHead===undefined?null:JSON.parse(rawHead)
  if(flag!==undefined&&flag!=='1')bad()
  const recorded=(book.auditLog||[]).filter(row=>row.action===RESERVATION_ACTION||String(row.id).startsWith('reservation:')).map(readAudit).sort((a,b)=>a.revision-b.revision),rows=new Map()
@@ -29,14 +32,18 @@ function inspect(book,known){
  const all=[...rows.values()].sort((a,b)=>a.revision-b.revision)
  const publicFlag=setting(RESERVATION_PUBLIC_FENCE)
  if(publicFlag!==undefined&&publicFlag!=='1'||all.some(row=>['publish','guest'].includes(row.event.input.action))&&publicFlag!=='1')bad()
+ const serviceFlag=setting(RESERVATION_SERVICE_FENCE)
+ if(serviceFlag!==undefined&&(serviceFlag!=='1'||publicFlag!=='1')||all.some(row=>['protect','access','dine'].includes(row.event.input.action))&&serviceFlag!=='1')bad()
  if(all.length&&(flag!=='1'||all[0].event.input.action!=='configure'))bad()
  const stored=replayReservationReceipts(recorded,storeId),state=replayReservationReceipts(all,storeId)
  if(head!==stored.head)bad()
  for(const [index,receipt]of recorded.entries())if(!same(receipt,all[index]))bad()
  const barriers=(book.restaurantOperations||[]).filter(row=>row.kind===RESERVATION_BARRIER||String(row.id).startsWith('reservation-barrier-'))
  if(recorded.length){if(barriers.length!==1||!same(readReservationBarrier(barriers[0]),recorded[0]))bad()}else if(barriers.length)bad()
- state.needsRecovery=recorded.length<all.length
- return {state,receipts:all,recorded,missing:all.filter(row=>!recorded.some(saved=>saved.id===row.id)),activation:all.length?makeReservationBarrier(all[0]):null,storedHead:stored.head,byId:new Map(all.map(row=>[row.id,row]))}
+ if(reservationDiningMissing(stored,book).length)bad()
+ const diningMissing=reservationDiningMissing(state,book,{strict:options.strictDining===true})
+ state.needsRecovery=recorded.length<all.length||diningMissing.length>0
+ return {state,receipts:all,recorded,diningMissing,missing:all.filter(row=>!recorded.some(saved=>saved.id===row.id)),activation:all.length?makeReservationBarrier(all[0]):null,storedHead:stored.head,byId:new Map(all.map(row=>[row.id,row]))}
 }
 export function reservationResult(request,receipt,history,scope,now,orderingTables=[]){
  reservationCommand(request)
@@ -48,6 +55,6 @@ export function assertReservationResult(request,result){
  if(typeof result.state.now!=='string'||!Number.isFinite(Date.parse(result.state.now))||reservationParts(Date.parse(result.state.now),result.state.config?.timeZone).date!==result.state.today)bad()
  const replay=replayReservationReceipts(result.state.entries,result.storeId),receipt=result.state.entries.find(row=>row.id===request.id)
  if(!same(receipt,result.receipt)||receipt.signature!==canonicalSignature(request)||!same(receipt,reservationReceipt(receipt.event)))bad()
- if(!same(replay.config,result.state.config)||!same(replay.bookings,result.state.bookings)||replay.revision!==result.state.revision||replay.configVersion!==result.state.configVersion||replay.publicEnabled!==result.state.publicEnabled||replay.head!==result.state.head||typeof result.state.needsRecovery!=='boolean')bad()
- return result
+ if(!same(replay.config,result.state.config)||!same(replay.bookings,result.state.bookings)||!same(replay.guestLinkPolicy,result.state.guestLinkPolicy)||!same(reservationDiningLinks(replay),result.state.diningLinks)||replay.revision!==result.state.revision||replay.configVersion!==result.state.configVersion||replay.publicEnabled!==result.state.publicEnabled||replay.head!==result.state.head||typeof result.state.needsRecovery!=='boolean')bad()
+ assertReservationReception(result.state);return result
 }

@@ -1,0 +1,2 @@
+import {tr} from '../../i18n'
+export default function DiningMemberSelect({source,members,onChange,locked=false}){return <label className="reservation-member">{tr('會員（可不選）')}<select className="field" data-reservation-dining-member value={source.memberId||''} disabled={locked} onChange={event=>onChange(event.target.value||null)}><option value="">{tr('這次不連結會員')}</option>{members.map(row=><option key={row.id} value={row.id}>{row.name}{row.phone?' · '+row.phone:''}</option>)}</select></label>}

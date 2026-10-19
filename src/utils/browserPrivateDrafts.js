@@ -27,7 +27,7 @@ export async function lookupBrowserPrivateDraftOriginal(input,actor){await getBr
  }
  browserRestaurantState()
  const receipt=saved.data.pos_restaurant_operations.find(row=>row.id===input.id),original=privateDraftOriginal(input,receipt,actor)
- if(original.status!=='matched'||original.action!=='configure')return original
+ if(original.status!=='matched'||original.action!=='configure'&&!JSON.parse(receipt.signature).reservationDining)return original
  const result=browserStockBusinessResult('applyRestaurantOperation',JSON.parse(receipt.signature),saved,actor)
  if(result?.success!==true||result.receipt?.signature!==receipt.signature)throw Error('保存結果尚未確認，請保留原編號核對。')
  return {...original,result}

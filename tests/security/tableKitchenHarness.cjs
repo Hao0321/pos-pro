@@ -53,6 +53,7 @@ async function paired(actor=staff){
 async function downloadCodes(){const file=path.join(out,'table-codes.html'),done=new Promise((resolve,reject)=>pc.webContents.session.once('will-download',(_event,item)=>{item.setSavePath(file);item.once('done',(_event,state)=>state==='completed'?resolve(file):reject(Error(state)))}));await tap(pc,'[data-table-download]');return done}
 async function finish(){for(const w of windows)if(!w.isDestroyed())w.destroy();await shared?.stop();await ordering?.close();db?.close()}
 module.exports={app,setup,nativePrefs,createCodes,guest,fillGuest,submitGuest,confirmedGuest,paired,downloadCodes,finish,prefs,login,nav,js,wait,input,select,tap,button,capture,out,root,q,owner,staff,t,errors,rendererPath,get pc(){return pc},get db(){return db},get origin(){return origin},get shared(){return shared},get ordering(){return ordering},loseNative(){nativeLost=true},loseKitchen(){kitchenLost=true},loseKitchenConfiguration(){configurationLost=true},loseRestaurant(){restaurantLost=true},loseSharedRestaurant(){sharedRestaurantLost=true},loseMenuConfiguration(){menuConfigurationLost=true},loseSharedMenuConfiguration(){sharedMenuConfigurationLost=true}}
+module.exports.replaceOrdering=next=>{ordering=next;origin='http://127.0.0.1:'+next.getActualPort()}
 module.exports.loseInventory=()=>{inventoryLost=true}
 module.exports.loseSharedInventory=()=>{sharedInventoryLost=true}
 module.exports.loseSettingsConfiguration=()=>{settingsConfigurationLost=true}

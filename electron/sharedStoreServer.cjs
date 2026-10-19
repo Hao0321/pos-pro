@@ -65,6 +65,7 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(method==='db:previewMasterMigration')return db.previewMasterMigration(args[0],actor)
     if(method==='db:applyMasterMigration')return db.applyMasterMigration(args[0],actor)
     if(method==='db:getReservationState')return db.getReservationState(actor)
+    if(method==='db:getReservationDiningContext')return db.getReservationDiningContext(args[0],actor)
     if(method==='db:getReservationAvailability')return db.getReservationAvailability(args[0],actor)
     if(method==='db:applyReservationOperation')return db.applyReservationOperation(args[0],actor)
     if(method==='db:previewOpeningMigration')return db.previewOpeningMigration(args[0],actor)
