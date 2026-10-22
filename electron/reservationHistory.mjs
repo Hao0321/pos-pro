@@ -8,6 +8,8 @@ import {RESERVATION_PUBLIC_FENCE} from './reservationGuest.mjs'
 import {RESERVATION_SERVICE_FENCE} from './reservationService.mjs'
 import {reservationDiningMissing,reservationDiningLinks} from './reservationDining.mjs'
 import {assertReservationReception} from './reservationReception.mjs'
+import {RESERVATION_DEPOSIT_FENCE} from './reservationDepositPolicy.mjs'
+import {RESERVATION_DEPOSIT_FIELDS,reservationDepositMissing,assertReservationDepositView} from './reservationDeposits.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b),clone=value=>structuredClone(value)
 const bad=()=>{throw reservationError('HISTORY')}
@@ -22,7 +24,7 @@ export function reservationKnownReceipts(graph,storeId){
  return [...known.values()].sort((a,b)=>a.revision-b.revision)
 }
 export function readReservationBook(book,known=[],options={}){
- try{return inspect(book,known,options)}catch{bad()}
+ try{return inspect(book,known,options)}catch(cause){throw Object.assign(reservationError('HISTORY'),{cause})}
 }
 function inspect(book,known,options){
  const settings=book.settings||[],setting=key=>{const rows=settings.filter(row=>row.key===key);if(rows.length>1)bad();return rows[0]?.value},storeId=readExchangeTextSetting(settings,'sharedStoreId'),flag=setting(RESERVATION_FENCE),rawHead=setting(RESERVATION_HEAD),head=rawHead===undefined?null:JSON.parse(rawHead)
@@ -34,6 +36,8 @@ function inspect(book,known,options){
  if(publicFlag!==undefined&&publicFlag!=='1'||all.some(row=>['publish','guest'].includes(row.event.input.action))&&publicFlag!=='1')bad()
  const serviceFlag=setting(RESERVATION_SERVICE_FENCE)
  if(serviceFlag!==undefined&&(serviceFlag!=='1'||publicFlag!=='1')||all.some(row=>['protect','access','dine'].includes(row.event.input.action))&&serviceFlag!=='1')bad()
+ const depositFlag=setting(RESERVATION_DEPOSIT_FENCE)
+ if(depositFlag!==undefined&&(depositFlag!=='1'||serviceFlag!=='1')||all.some(row=>Object.hasOwn(RESERVATION_DEPOSIT_FIELDS,row.event.input.action))&&depositFlag!=='1')bad()
  if(all.length&&(flag!=='1'||all[0].event.input.action!=='configure'))bad()
  const stored=replayReservationReceipts(recorded,storeId),state=replayReservationReceipts(all,storeId)
  if(head!==stored.head)bad()
@@ -42,8 +46,10 @@ function inspect(book,known,options){
  if(recorded.length){if(barriers.length!==1||!same(readReservationBarrier(barriers[0]),recorded[0]))bad()}else if(barriers.length)bad()
  if(reservationDiningMissing(stored,book).length)bad()
  const diningMissing=reservationDiningMissing(state,book,{strict:options.strictDining===true})
- state.needsRecovery=recorded.length<all.length||diningMissing.length>0
- return {state,receipts:all,recorded,diningMissing,missing:all.filter(row=>!recorded.some(saved=>saved.id===row.id)),activation:all.length?makeReservationBarrier(all[0]):null,storedHead:stored.head,byId:new Map(all.map(row=>[row.id,row]))}
+ if(reservationDepositMissing(stored,book,{strict:true}).length)bad()
+ const depositMissing=reservationDepositMissing(state,book);state.depositRecovery=depositMissing.length>0
+ state.needsRecovery=recorded.length<all.length||diningMissing.length>0||depositMissing.length>0
+ return {state,receipts:all,recorded,diningMissing,depositMissing,missing:all.filter(row=>!recorded.some(saved=>saved.id===row.id)),activation:all.length?makeReservationBarrier(all[0]):null,storedHead:stored.head,byId:new Map(all.map(row=>[row.id,row]))}
 }
 export function reservationResult(request,receipt,history,scope,now,orderingTables=[]){
  reservationCommand(request)
@@ -56,5 +62,7 @@ export function assertReservationResult(request,result){
  const replay=replayReservationReceipts(result.state.entries,result.storeId),receipt=result.state.entries.find(row=>row.id===request.id)
  if(!same(receipt,result.receipt)||receipt.signature!==canonicalSignature(request)||!same(receipt,reservationReceipt(receipt.event)))bad()
  if(!same(replay.config,result.state.config)||!same(replay.bookings,result.state.bookings)||!same(replay.guestLinkPolicy,result.state.guestLinkPolicy)||!same(reservationDiningLinks(replay),result.state.diningLinks)||replay.revision!==result.state.revision||replay.configVersion!==result.state.configVersion||replay.publicEnabled!==result.state.publicEnabled||replay.head!==result.state.head||typeof result.state.needsRecovery!=='boolean')bad()
- assertReservationReception(result.state);return result
+ // Ordinary format17 responses predate deposit fields. Accept their absence
+ // only while the replayed original history contains no deposit feature.
+ if(!same(replay.depositPolicy,result.state.depositPolicy===undefined?null:result.state.depositPolicy)||replay.depositPolicy&&typeof result.state.depositRecovery!=='boolean'||!replay.depositPolicy&&result.state.depositRecovery===true||result.state.depositRecovery!==undefined&&typeof result.state.depositRecovery!=='boolean')bad();assertReservationDepositView(result.state);assertReservationReception(result.state);return result
 }

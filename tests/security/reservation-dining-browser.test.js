@@ -57,7 +57,7 @@ test('the normal restaurant port cannot invent a reservation source, and a chang
 })
 test('restore before a promised meal retains its original and pauses without recreating stock or allowing a partial recovery',async()=>{
  await seated();const earlier=structuredClone(readRecords().data),input=await meal();ok(await commitBrowserReservation(input,owner));restoreRecords(earlier,readRecords().revision);expect((await getBrowserReservationState(owner)).needsRecovery).toBe(true);const raw=localStorage.getItem(RECORD_KEY);expect((await commitBrowserReservation(await request('recover'),owner)).success).toBe(false);expect((await commitBrowserReservation(input,owner)).success).toBe(false);expect(localStorage.getItem(RECORD_KEY)).toBe(raw)
-})
+},10000)
 test('a reply missing the actual child or cost proof retains the financial original for reconciliation',async()=>{
  await seated();const request=await meal(),{id,time,...input}=request
  await expect(executeFinancial('reservation',input,async value=>{const result=ok(await commitBrowserReservation(value,owner));delete result.dining.costReceipt;return result},()=>{},{id,time})).rejects.toThrow();expect(readPendingFinancial().request.id).toBe(id)

@@ -285,8 +285,8 @@
       "id": "reservations.deposits",
       "name": "訂位訂金、取消政策、原款退款與提醒",
       "status": "planned",
-      "implementation": "not-implemented",
-      "nextExperiment": "固定政策版本，區分訂位成功、實際收款與退款完成；驗證原單抵款與提醒回執，外部付款／通路保留待接通狀態"
+      "implementation": "partial",
+      "nextExperiment": "M19開發中：原生／瀏覽器政策、原收退款、預收分錄與格式18保護已有實作；接續完成真正餐點自動抵款、四語極簡設定與客人核對、共享裝置及完整營業流程。收款介面尚未開放，外部金流與提醒回執仍待驗收。"
     },
     {
       "id": "loyalty.programs",

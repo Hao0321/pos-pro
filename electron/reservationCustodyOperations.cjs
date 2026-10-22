@@ -1,6 +1,6 @@
-const {RESERVATION_CUSTODY_METHODS,reservationRequiresCompleteRecovery,assertReservationBusinessChange}=require('./reservationCustody.mjs')
+const {RESERVATION_CUSTODY_METHODS,reservationRequiresCompleteRecovery,assertReservationBusinessChange,reservationIncompleteRecoveryError}=require('./reservationCustody.mjs')
 const {operationRecords}=require('./recoveryRules.mjs')
-const {reservationError,RESERVATION_METHOD}=require('./reservationConfig.mjs')
+const {RESERVATION_METHOD}=require('./reservationConfig.mjs')
 const typed=new Set(['checkout','refundOrder','applyInventoryOperation','applyRestaurantOperation','applySalesOperation','applyOpeningMigration','addWaste','addTopup','addCashLog','applyCustomerLedgerOperation','applySupplierLedgerOperation','applyWarehouseOperation','applyLotOperation','applyStockCostOperation'])
 module.exports=function(db,api,{book,known}){
  const hasKnown=()=>!!db.prepare('SELECT 1 FROM recovery_original_ids WHERE method=? LIMIT 1').get(RESERVATION_METHOD)
@@ -21,7 +21,7 @@ module.exports=function(db,api,{book,known}){
     }
     const active=operationRecords(full).find(row=>row.method===method&&row.id===id)
     if(active&&(method!=='checkout'||['completed','refunded'].includes(active.receipt.status))){allowed=true;return}
-    throw reservationError('DINING_RECOVERY')
+    throw reservationIncompleteRecoveryError(before,retainedHistory)
    }).immediate()}catch(error){if(!typed.has(method))throw error;return {success:false,committed:!checked||retained?null:false,error:error.message,errorCode:error.code||'RESERVATION_CUSTODY',...(['checkout','refundOrder'].includes(method)?{protocol:'pos-checkout-v5',orderId:id}:{} )}}
    // The shared native authority executes these synchronous calls in one event
    // loop. Preserve the existing command's own transaction, automatic expiry

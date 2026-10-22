@@ -11,12 +11,12 @@ import {previewBrowserMasterMigration,commitBrowserMasterMigration} from '../../
 const actor={userId:'owner',username:'Lot fixture',role:'owner'},set=Storage.prototype.setItem
 const document=(id='browser-first')=>({protocol:'pos-migration-draft/v1',id,source:{system:'Legacy',company:'Company 001'},tables:[{entity:'products',columns:['Name','unit','price','cost'],rows:[{externalId:'0001',values:['Browser new product','piece','0100.00','025.50']}]},{entity:'customers',columns:['Name','phone'],rows:[{externalId:'C0001',values:['New customer','0900000001']}]}]})
 beforeEach(()=>{
- localStorage.clear();vi.stubGlobal('navigator',{locks:{request:async(_name,callback)=>callback()}})
+ localStorage.clear();vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(new Date('2026-10-23T03:00:00.000Z'));vi.stubGlobal('navigator',{locks:{request:async(_name,callback)=>callback()}})
  const portable=readPortableBackup(fixture,'browser'),graph=unpackRecoveryGraph(portable.protection,'browser')
  const seed={version:1,revision:1,salesEpoch:'browser-master-epoch',data:portable.book,recovery:{version:portable.protection.version,snapshots:graph.snapshots.map(row=>({...row,data:row.storage==='sqlite'?row.data:JSON.parse(row.data)})),originalIds:graph.originalIds,events:graph.events.map(row=>({...row,receipt:JSON.parse(row.receipt)}))}}
  localStorage.setItem(RECORD_KEY,JSON.stringify(seed))
 })
-afterEach(()=>{Storage.prototype.setItem=set;vi.unstubAllGlobals()})
+afterEach(()=>{Storage.prototype.setItem=set;vi.useRealTimers();vi.unstubAllGlobals()})
 async function request(doc=document()){
  const scope=await getBrowserPrivateDraftContext(actor),input=makeMasterMigrationInput(JSON.stringify(doc),scope),view=await previewBrowserMasterMigration(input,actor)
  expect(view.ready).toBe(true)
@@ -43,4 +43,14 @@ test('MM4 browser generic writers cannot fabricate migration receipts or change 
  const input=await request();expect((await commitBrowserMasterMigration(input,actor)).success).toBe(true);const saved=readRecords(),raw=localStorage.getItem(RECORD_KEY)
  expect(()=>writeRecords({pos_audit_log:[]},saved.revision)).toThrow('搬家回執');expect(()=>writeRecords({pos_business_settings:saved.data.pos_business_settings.filter(row=>row.key!=='agentMasterMigrationHead')},saved.revision)).toThrow('搬家保護')
  expect(localStorage.getItem(RECORD_KEY)).toBe(raw)
+})
+test('MM3 a new-day preview reconciles real lot expiry while an original migration replay remains read-only the next day',async()=>{
+ const initial=readRecords().data.pos_stock_cost_entries.length,input=await request(),prepared=readRecords()
+ expect(prepared.data.pos_stock_cost_entries).toHaveLength(initial+1)
+ expect(prepared.data.pos_stock_cost_entries.at(-1).input).toMatchObject({action:'expire',day:'2026-10-23'})
+ const saved=await commitBrowserMasterMigration(input,actor);expect(saved.success,saved.error).toBe(true)
+ vi.setSystemTime(new Date('2026-10-24T03:00:00.000Z'));const raw=localStorage.getItem(RECORD_KEY)
+ expect((await commitBrowserMasterMigration(input,actor)).receipt).toEqual(saved.receipt);expect(localStorage.getItem(RECORD_KEY)).toBe(raw)
+ const next=await request(document('next-day'));expect(readRecords().data.pos_stock_cost_entries.at(-1).input).toMatchObject({action:'expire',day:'2026-10-24'})
+ const second=await commitBrowserMasterMigration(next,actor);expect(second.success,second.error).toBe(true)
 })

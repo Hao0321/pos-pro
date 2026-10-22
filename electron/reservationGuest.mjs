@@ -7,7 +7,8 @@ export const RESERVATION_PUBLIC_FENCE='reservationPublicVersionFence'
 export function guestReservationRequest(value){
  const fields={book:['configVersion','date','slot','partySize','customer','note','accessHash'],move:['configVersion','bookingId','expectedBookingRevision','date','slot','partySize'],cancel:['bookingId','expectedBookingRevision']}
  if(!Object.hasOwn(fields,value?.action))throw reservationError('CONFIG')
- draftObject(value,['protocol','requestId','storeId','action',...fields[value.action]])
+ const quote=value.action==='book'&&Object.hasOwn(value,'depositQuoteHash')?['depositQuoteHash']:[]
+ draftObject(value,['protocol','requestId','storeId','action',...fields[value.action],...quote]);if(quote.length&&(typeof value.depositQuoteHash!=='string'||!/^[a-f0-9]{64}$/.test(value.depositQuoteHash)))throw reservationError('CONFIG')
  if(value.protocol!==GUEST_RESERVATION_PROTOCOL||typeof value.requestId!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value.requestId))throw reservationError('CONFIG')
  reservationId(value.storeId)
  if(value.action!=='book'){reservationId(value.bookingId);reservationInteger(value.expectedBookingRevision,1,Number.MAX_SAFE_INTEGER-1)}

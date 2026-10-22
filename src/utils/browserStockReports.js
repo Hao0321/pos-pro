@@ -1,3 +1,7 @@
+import {readReservationBook,reservationKnownReceipts} from '../../electron/reservationHistory.mjs'
+import {browserProtectionGraph} from './browserProtection'
+import {readExchangeTextSetting} from '../../electron/businessExchange.mjs'
+import {depositError} from '../../electron/reservationDepositPolicy.mjs'
 import {readRecords} from './browserStorage'
 import {browserToBook} from '../../electron/recoveryRules.mjs'
 import {validateStockCostBook} from '../../electron/stockBackup.mjs'
@@ -15,6 +19,8 @@ function snapshot(actor,ownerOnly){
  if(!user||user.username!==actor.username||user.role!==actor.role||!['owner',...(ownerOnly?[]:['staff'])].includes(user.role))throw Error('權限不足')
  const data={products:book.products,orders:book.orders,members:book.members,restaurantEntries:book.restaurantOrders}
  if(user.role==='owner'){
+  const reservations=readReservationBook(book,reservationKnownReceipts(browserProtectionGraph(record),readExchangeTextSetting(book.settings,'sharedStoreId')));if(reservations.depositMissing.length)throw depositError('RECOVERY');data.reservationEntries=reservations.receipts
+
   const trading=readBrowserTrading(record),supplier=readBrowserSupplier(record),today=salesDate(new Date())
   Object.assign(data,{purchases:book.purchases,topups:book.memberTopups,wasteLog:book.wasteLog,manualJournal:book.manualJournal,salesDocuments:book.salesDocuments,customerEntries:book.customerEntries,supplierEntries:book.supplierEntries,openingJournals:[...(trading.customerLedger.openingJournals||[]),...(supplier.supplierLedger.openingJournals||[])],openingSourceCutoffs:[...(trading.customerLedger.openingCutoffDates||[]),...(supplier.supplierLedger.openingCutoffDates||[])],sales:{storeId:trading.storeId,epoch:record.salesEpoch,today,documents:trading.documents,customerLedger:trading.customerLedger},supplierState:{storeId:supplier.storeId,epoch:record.salesEpoch,today,supplierLedger:supplier.supplierLedger}})
  }

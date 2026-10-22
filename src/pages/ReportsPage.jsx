@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { TrendingUp, ShoppingCart, Users, Package, ArrowUp, ArrowDown, Download, Zap, AlertTriangle, Trophy } from 'lucide-react'
 import { exportXLS } from '../utils/exportXLS'
 import { productPerformance,classifyProductRevenue } from '../utils/analytics'
-import {businessReportRows,businessCashFlows,reportDay,reportLineRevenue} from '../utils/businessReports'
+import {businessReportRows,businessCashFlows,cashFlowTotals,reportDay,reportLineRevenue} from '../utils/businessReports'
 import {salesDate,salesSummary} from '../../electron/salesRules.mjs'
 import useSalesReportView from '../hooks/useSalesReportView'
 import ReportCostStatus from '../components/ReportCostStatus'
@@ -81,19 +81,14 @@ export default function ReportsPage({ store:sourceStore,session }) {
 
   // Pay method breakdown (支援混合付款拆分)
   const payBreakdown = useMemo(() => {
-    let cash = 0, card = 0,bank=0
-    for (const o of filtered.filter(row=>row.source!=='business-report')) {
-      if (o.payMethod === 'cash') cash += o.total
-      else if (o.payMethod === 'mixed' && Array.isArray(o.payments)) {
-        for (const p of o.payments) {
-          if (p.method === 'cash') cash += p.amount
-          else card += p.amount
-        }
-      } else card += o.total
+    const rows=[]
+    for (const o of filtered.filter(row=>!['business-report','restaurant-funded'].includes(row.source))) {
+      if(o.payMethod==='mixed'&&Array.isArray(o.payments))rows.push(...o.payments)
+      else rows.push({method:o.payMethod,amount:o.total})
     }
-    for(const row of businessCashFlows(businessDocuments,customerEntries,store.purchases,supplierEntries).filter(row=>inRange(row.date))){if(row.method==='cash')cash+=row.amount;else bank+=row.amount}
-    return { cash, card,bank, total: cash+card+bank }
-  }, [filtered,businessDocuments,customerEntries,store.purchases,supplierEntries,range,today])
+    rows.push(...businessCashFlows(businessDocuments,customerEntries,store.purchases,supplierEntries,store.reservationEntries,store.restaurantEntries).filter(row=>inRange(row.date)))
+    return cashFlowTotals(rows)
+  }, [filtered,businessDocuments,customerEntries,store.purchases,supplierEntries,store.reservationEntries,store.restaurantEntries,range,today])
 
   // 30 天商品表現分析（基於 store.orders 全部訂單，獨立於 range filter）
   const perf30d = useMemo(() => waiting?{enriched:[],topSellers:[],slowMovers:[],highMargin:[]}:actual?report.performance:productPerformance(products, orders, 30), [products, orders,actual,report,waiting])
@@ -256,7 +251,7 @@ export default function ReportsPage({ store:sourceStore,session }) {
         {/* Pay breakdown */}
         <div className="card" data-pay-breakdown style={{padding:'18px 20px'}}>
           <div style={rs.cardTitle}>{tr('實際收付淨額')}</div>
-          <p style={{fontSize:12,color:'var(--text-secondary)',marginTop:8}}>{tr('包含客戶收款與供應商收付；預收、預付的抵付不會重複計入。')}</p>
+          <p style={{fontSize:12,color:'var(--text-secondary)',marginTop:8}}>{tr('包含訂位訂金、餐飲與往來收付；抵款和交付不會重複計入。')}</p>
           <div style={{marginTop:20, display:'flex', flexDirection:'column', gap:14}}>
             {[
               ['cash','現金', payBreakdown.cash, 'var(--green)'],
@@ -268,7 +263,7 @@ export default function ReportsPage({ store:sourceStore,session }) {
                 <div key={method} data-pay-method={method}>
                   <div style={{display:'flex', justifyContent:'space-between', marginBottom:6, fontSize:13}}>
                     <span style={{color:'var(--text-secondary)'}}>{tr(label)}</span>
-                    <span data-pay-amount style={{fontFamily:'var(--font-mono)', fontSize:12,color:val<0?'var(--red)':undefined}}>NT$ {Math.round(val*100)/100}</span>
+                    <span data-pay-amount style={{fontFamily:'var(--font-mono)', fontSize:12,color:val<0?'var(--red)':undefined}}>NT$ {formatMoneyCents(payBreakdown.exact[method])}</span>
                   </div>
                   <div style={{height:6, background:'var(--border-dim)', borderRadius:3}}>
                     <div data-pay-bar style={{height:'100%', width:`${pct}%`, background:color, borderRadius:3, transition:'width .6s var(--ease)'}}/>

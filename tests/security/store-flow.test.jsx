@@ -11,10 +11,10 @@ beforeEach(()=>{
   map=new Map();rejectRecord=false
   vi.stubGlobal('localStorage',{getItem:k=>map.get(k)??null,setItem:(k,v)=>{if(rejectRecord&&k===RECORD_KEY)throw new Error('容量不足');map.set(k,String(v))},removeItem:k=>map.delete(k)})
   vi.stubGlobal('navigator',{locks:{request:async(_name,options,cb)=>typeof options==='function'?options({}):cb({})}})
-  writeRecords({pos2_products:[{id:'p',name:'商品',price:30,stock:10,cost:10}],pos2_members:[],pos2_shifts:[{id:'s',status:'open'}]})
+  writeRecords({pos_users:[{id:'owner',username:'店主',role:'owner'}],pos2_products:[{id:'p',name:'商品',price:30,stock:10,cost:10}],pos2_members:[],pos2_shifts:[{id:'s',status:'open'}]})
 })
 afterEach(()=>{cleanup();vi.unstubAllGlobals()})
-async function store(){const hook=renderHook(()=>useStore({userId:'owner',role:'owner'}));await waitFor(()=>expect(hook.result.current.ready).toBe(true));return hook}
+async function store(){const hook=renderHook(()=>useStore({userId:'owner',username:'店主',role:'owner'}));await waitFor(()=>expect(hook.result.current.ready).toBe(true));return hook}
 test('real store commits a sale, updates canonical stock and clears the cart only after acknowledgement',async()=>{
   const {result}=await store();act(()=>result.current.addToCart(result.current.products[0],2))
   let order;await act(async()=>{order=await result.current.checkout('cash',100)})

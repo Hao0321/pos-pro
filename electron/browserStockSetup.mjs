@@ -1,3 +1,4 @@
+import {readReservationBook} from './reservationHistory.mjs'
 import {canonicalSignature} from './operationRules.mjs'
 import {prepareStockOpening} from './stockOpening.mjs'
 import {readExchangeTextSetting} from './businessExchange.mjs'
@@ -13,7 +14,7 @@ export function stockSetupOwner(book,actor){
   return {userId:user.id,username:user.username,role:user.role}
 }
 export function prepareBrowserStockOpening(book,epoch){
-  const storeId=readExchangeTextSetting(book.settings,'sharedStoreId'),value=prepareStockOpening({storeId,epoch,products:book.products,orders:book.orders,topups:book.memberTopups,wasteLog:book.wasteLog,purchases:book.purchases,salesDocuments:book.salesDocuments,customerEntries:book.customerEntries,supplierEntries:book.supplierEntries,manualJournal:book.manualJournal,restaurantEntries:book.restaurantOrders,inventoryAudits:book.auditLog})
+  const storeId=readExchangeTextSetting(book.settings,'sharedStoreId'),value=prepareStockOpening({storeId,epoch,products:book.products,orders:book.orders,topups:book.memberTopups,wasteLog:book.wasteLog,purchases:book.purchases,salesDocuments:book.salesDocuments,customerEntries:book.customerEntries,supplierEntries:book.supplierEntries,manualJournal:book.manualJournal,restaurantEntries:book.restaurantOrders,reservationEntries:readReservationBook(book).recorded,inventoryAudits:book.auditLog})
   const ids=rows=>rows.map(row=>row.id).sort(),legacyOperationIds={checkout:ids(book.orders.filter(row=>!row.refundOf)),refundOrder:ids(book.orders.filter(row=>row.refundOf)),addProduct:ids(book.products),addWaste:ids(book.wasteLog),applyRestaurantOperation:ids(book.restaurantOperations),applySalesOperation:ids(book.salesOperations),applyInventoryOperation:book.auditLog.filter(row=>row.action==='INVENTORY_OPERATION').map(row=>row.id.slice('stock-operation:'.length)).sort()}
   const material=canonicalSignature({...JSON.parse(value.material),legacyOperationIds})
   return {preview:{...value.preview,snapshotDigest:stockLedgerDigest(material)},material}

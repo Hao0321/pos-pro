@@ -3,7 +3,8 @@ import {finalizePurchaseDraft} from '../utils/purchaseDraftReceipt.mjs'
 import { settledOrders, netSale, orderCost } from '../utils/orderLedger'
 import {finalizeReceiptLotDraft} from '../utils/receiptLotDraftReceipt.mjs'
 import { executeFinancial, FINANCIAL_PENDING,readPendingFinancial } from '../utils/financialCommand'
-import {applyReservationOperation} from '../utils/dataAccess'
+import {reservationDepositReportEntries} from '../../electron/reservationDeposits.mjs'
+import {getReservationState,applyReservationOperation} from '../utils/dataAccess'
 import {loadRefundContext} from '../utils/dataAccess'
 import {loadStockSetupAccess,loadStockSetupState,applyStockSetupOperation,loadWarehouseState,applyWarehouseOperation,loadLotState,applyLotOperation} from '../utils/dataAccess'
 import { browserStorage, writeRecords, acquireBrowserEditor } from '../utils/browserStorage'
@@ -82,6 +83,7 @@ export function useStore(session){
   const [birthdayBonus, setBirthdayBonus] = useState(100)
   const [restaurantConfig,setRestaurantConfig]=useState(defaultRestaurantConfig)
   const [restaurantEntries,setRestaurantEntries]=useState([])
+  const [reservationEntries,setReservationEntries]=useState([])
 
   const checkoutRef = useRef(null)
   if (!checkoutRef.current) checkoutRef.current=createCheckoutCoordinator({
@@ -125,10 +127,11 @@ export function useStore(session){
         session.role==='owner'?loadPurchases([]):Promise.resolve([]),
         session.role==='owner'?loadSalesState(session):Promise.resolve({documents:[]}),
         session.role==='owner'?loadSupplierState(session):Promise.resolve(null),
+        session.role==='owner'?getReservationState(session).then(reservationDepositReportEntries):Promise.resolve([]),
       ])
       if(cancelled)return
-      const fallbacks = [[], [], [], [], [], [], [], null,{config:defaultRestaurantConfig()},[],{documents:[]},null]
-      const [p, m, o, j, held, waste, tps, shift,restaurant,po,salesState,supplierSnapshot] = results.map((r, i) => {
+      const fallbacks = [[], [], [], [], [], [], [], null,{config:defaultRestaurantConfig()},[],{documents:[]},null,[]]
+      const [p, m, o, j, held, waste, tps, shift,restaurant,po,salesState,supplierSnapshot,reservations] = results.map((r, i) => {
         if (r.status === 'fulfilled') return r.value
         setDataError('資料載入失敗，請保留原資料並重試：' + String(r.reason?.message || '讀取失敗'))
         console.error('[POS] init load failed:', i, r.reason)
@@ -146,7 +149,7 @@ export function useStore(session){
       setTopups(Array.isArray(tps) ? tps : [])
       setOpenShiftState(shift || null)
       setRestaurantConfig(restaurant.config)
-      setRestaurantEntries(restaurant.entries||[])
+      setRestaurantEntries(restaurant.entries||[]);setReservationEntries(reservations)
       // 載入點數規則 / 生日贈點
       try {
         const [earn, redeem, bday] = await Promise.all([
@@ -193,7 +196,7 @@ export function useStore(session){
   // Each browser command commits before updating state. Re-saving UI snapshots
   // here could overwrite a newer durable operation when its reply is delayed.
 
-  const autoJournal = useMemo(()=>automaticBusinessJournal({orders,products,topups,wasteLog,purchases,salesDocuments:sales.documents,customerEntries:sales.customerLedger?.entries||[],supplierEntries:supplierState?.supplierLedger.entries||[],restaurantEntries,openingJournals:[...(sales.customerLedger?.openingJournals||[]),...(supplierState?.supplierLedger.openingJournals||[])]}),[orders,products,topups,wasteLog,purchases,sales,supplierState,restaurantEntries])
+  const autoJournal = useMemo(()=>automaticBusinessJournal({orders,products,topups,wasteLog,purchases,salesDocuments:sales.documents,customerEntries:sales.customerLedger?.entries||[],supplierEntries:supplierState?.supplierLedger.entries||[],restaurantEntries,reservationEntries,openingJournals:[...(sales.customerLedger?.openingJournals||[]),...(supplierState?.supplierLedger.openingJournals||[])]}),[orders,products,topups,wasteLog,purchases,sales,supplierState,restaurantEntries,reservationEntries])
   const allJournal  = useMemo(()=>[...autoJournal,...manualEntries].sort((a,b)=>b.date.localeCompare(a.date)),[autoJournal,manualEntries])
 
   const addManualEntry = useCallback(async e=>{
@@ -446,7 +449,7 @@ export function useStore(session){
     if(checkoutRef.current.getState().phase!=='idle')throw Error('請先確認原收款交易')
     const result=await executeFinancial('reservation',input,request=>applyReservationOperation(request,sessionRef.current),setFinancialState,identity,null,prepare)
     if(result.dining)await applyRestaurantResult(result.dining)
-    window.dispatchEvent(new CustomEvent('pos-reservation-operation',{detail:result}));return result
+    setReservationEntries(result.state.entries);window.dispatchEvent(new CustomEvent('pos-reservation-operation',{detail:result}));return result
   }
   async function retryFinancial(){
     const pending=readPendingFinancial();if(!pending)return
@@ -467,7 +470,7 @@ export function useStore(session){
     if(['stocktake','receive','receive-lots','receive-reviewed',...PROCUREMENT_KINDS].includes(pending.kind))applyInventoryResult(result)
     if(pending.kind==='cashlog')window.dispatchEvent(new Event('pos-cash-operation'))
     if(pending.kind==='restaurant')await applyRestaurantResult(result)
-    if(pending.kind==='reservation'){if(result.dining)await applyRestaurantResult(result.dining);window.dispatchEvent(new CustomEvent('pos-reservation-operation',{detail:result}))}
+    if(pending.kind==='reservation'){setReservationEntries(result.state.entries);if(result.dining)await applyRestaurantResult(result.dining);window.dispatchEvent(new CustomEvent('pos-reservation-operation',{detail:result}))}
     if(pending.kind==='exchange')window.dispatchEvent(new CustomEvent('pos-exchange-operation',{detail:result}))
     if(pending.kind==='sales')applySalesResult(result)
     if(pending.kind==='customer-ledger')applyCustomerLedgerResult(result)
@@ -569,15 +572,15 @@ export function useStore(session){
   // 從 SQLite 重新載入資料（用於備份還原後）
   const reloadFromDB = useCallback(async () => {
     if(isElectron&&window.electronAPI.db.getStoreSnapshot){
-      const s=await window.electronAPI.db.getStoreSnapshot()
+      const s=await window.electronAPI.db.getStoreSnapshot();const reservations=session?.role==='owner'?reservationDepositReportEntries(await getReservationState(session)):[]
       setProducts(s.products);setMembers(s.members);setOrders(s.orders);setManualEntries(s.manualEntries);setHeldOrders(s.heldOrders);setWasteLog(s.wasteLog);setTopups(s.topups);setOpenShiftState(s.openShift);setPurchases(s.purchases||[])
       setRestaurantConfig(s.restaurantConfig||defaultRestaurantConfig())
-      setRestaurantEntries(s.restaurantEntries||[])
+      setRestaurantEntries(s.restaurantEntries||[]);setReservationEntries(reservations)
       setSales(s.sales||{documents:[]})
       salesRef.current=s.sales||{documents:[]};supplierRef.current=s.supplierState||null;setSupplierState(s.supplierState||null)
       setPointsRule({earn:s.rules.earn==null?10:Number(s.rules.earn),redeem:s.rules.redeem==null?1:Number(s.rules.redeem)});setBirthdayBonus(s.rules.birthdayBonus==null?100:Number(s.rules.birthdayBonus));return
     }
-    const [p,m,o,j,restaurant,waste,tps,shift,held,po,salesState,suppliers] = await Promise.all([
+    const [p,m,o,j,restaurant,waste,tps,shift,held,po,salesState,suppliers,reservations] = await Promise.all([
       loadProducts([]),
       loadMembers([]),
       loadOrders([]),
@@ -586,13 +589,14 @@ export function useStore(session){
       session?.role==='owner'?loadPurchases([]):Promise.resolve([]),
       session?.role==='owner'?loadSalesState(session):Promise.resolve({documents:[]}),
       session?.role==='owner'?loadSupplierState(session):Promise.resolve(null),
+      session?.role==='owner'?getReservationState(session).then(reservationDepositReportEntries):Promise.resolve([]),
     ])
     setProducts(p)
     setMembers(m)
     setOrders(o)
     setManualEntries(j)
     setPurchases(po);salesRef.current=salesState;setSales(salesState);supplierRef.current=suppliers;setSupplierState(suppliers)
-    setWasteLog(waste);setTopups(tps);setOpenShiftState(shift||null);setHeldOrders(held);setRestaurantConfig(restaurant.config);setRestaurantEntries(restaurant.entries||[])
+    setWasteLog(waste);setTopups(tps);setOpenShiftState(shift||null);setHeldOrders(held);setRestaurantConfig(restaurant.config);setRestaurantEntries(restaurant.entries||[]);setReservationEntries(reservations)
   }, [session?.userId,session?.role])
   async function reloadAfterRecovery(){
     try{await reloadFromDB();setDataError('');window.dispatchEvent(new Event('pos-data-refreshed'))}
@@ -626,7 +630,7 @@ export function useStore(session){
     addProduct,updateProduct,deleteProduct,findByBarcode,
     addMember,updateMember,deleteMember,findMember,
     categories,todayOrders,todayRevenue,lowStockCount,todayProfit,todaySales,todayBusinessCount:todayOrders.length+todaySales.deliveries,
-    allJournal,autoJournal,manualEntries,
+    allJournal,autoJournal,manualEntries,reservationEntries,restaurantEntries,
     addManualEntry,deleteManualEntry,
     reloadFromDB,reloadAfterRecovery,
     // v2.1

@@ -595,12 +595,12 @@ module.exports = function initDatabase(dbPath) {
       return row ? row.value : null
     },
     setSetting(key, value) {
-      if(['reservationServiceVersionFence','reservationPublicVersionFence','reservationVersionFence','reservationBookHead','openingCutoverVersionFence','openingCutoverHead','stockOpeningMigrationVersionFence','stockOpeningMigrationHead','agentWorkbookMigrationVersionFence','agentTabularMigrationVersionFence','agentMasterMigrationVersionFence','agentMasterMigrationHead'].includes(key))throw Error('搬家保護紀錄由正式搬入與完整備份流程管理');if(key==='stockCostVersionFence')throw Error('成本資料的版本保護由完整備份流程管理')
+      if(['reservationDepositVersionFence','reservationServiceVersionFence','reservationPublicVersionFence','reservationVersionFence','reservationBookHead','openingCutoverVersionFence','openingCutoverHead','stockOpeningMigrationVersionFence','stockOpeningMigrationHead','agentWorkbookMigrationVersionFence','agentTabularMigrationVersionFence','agentMasterMigrationVersionFence','agentMasterMigrationHead'].includes(key))throw Error('搬家保護紀錄由正式搬入與完整備份流程管理');if(key==='stockCostVersionFence')throw Error('成本資料的版本保護由完整備份流程管理')
       if(key==='businessExchangeV1')throw Error('報價歷史只能由正式報價或還原流程保存')
       stmts.setSetting.run(key, value)
       return { success: true }
     },
-    setSettings(values){if(['reservationServiceVersionFence','reservationPublicVersionFence','reservationVersionFence','reservationBookHead','openingCutoverVersionFence','openingCutoverHead','stockOpeningMigrationVersionFence','stockOpeningMigrationHead','agentWorkbookMigrationVersionFence','agentTabularMigrationVersionFence','agentMasterMigrationVersionFence','agentMasterMigrationHead'].some(key=>Object.hasOwn(values,key)))throw Error('搬家保護紀錄由正式搬入與完整備份流程管理');if(Object.hasOwn(values,'stockCostVersionFence'))throw Error('成本資料的版本保護由完整備份流程管理');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');db.transaction(()=>{for(const [key,value]of Object.entries(values))stmts.setSetting.run(key,value)})();return {success:true}},
+    setSettings(values){if(['reservationDepositVersionFence','reservationServiceVersionFence','reservationPublicVersionFence','reservationVersionFence','reservationBookHead','openingCutoverVersionFence','openingCutoverHead','stockOpeningMigrationVersionFence','stockOpeningMigrationHead','agentWorkbookMigrationVersionFence','agentTabularMigrationVersionFence','agentMasterMigrationVersionFence','agentMasterMigrationHead'].some(key=>Object.hasOwn(values,key)))throw Error('搬家保護紀錄由正式搬入與完整備份流程管理');if(Object.hasOwn(values,'stockCostVersionFence'))throw Error('成本資料的版本保護由完整備份流程管理');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');db.transaction(()=>{for(const [key,value]of Object.entries(values))stmts.setSetting.run(key,value)})();return {success:true}},
     getAllSettings() {
       const rows = stmts.getAllSettings.all()
       const result = {}
@@ -685,7 +685,7 @@ module.exports = function initDatabase(dbPath) {
     },
     addCashLog(data) {
       try{return db.transaction(()=>{
-        operationHeader(data);if(data.id.startsWith('customer-cash:'))throw Error('客戶收付現金流水只能由原客戶款項操作保存');const old=db.prepare('SELECT * FROM cash_log WHERE id=?').get(data.id)
+        operationHeader(data);if(data.id.startsWith('reservation-deposit-'))throw Error('訂金現金流水只能由正式訂位收退款保存');if(data.id.startsWith('customer-cash:'))throw Error('客戶收付現金流水只能由原客戶款項操作保存');const old=db.prepare('SELECT * FROM cash_log WHERE id=?').get(data.id)
         if(old){if(!sameCommand(old,data,['shiftId','time','type','amount','reason','cashier']))throw Error('現金流水編號內容不一致');return {success:true,cashLog:old}}
         moneyValue(data.amount,'現金流水',.01)
         if(!['in','out'].includes(data.type)||stmts.getShiftById.get(data.shiftId)?.status!=='open')throw Error('現金異動或班別不正確')

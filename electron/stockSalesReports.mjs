@@ -69,5 +69,5 @@ export function makeStockSalesReport(state,data,today,scope='owner'){
  const from=ranges.last30[0],to=today,performance=productCostPerformance(data.products,revenues,costs,from,to,owner?stockValues(state.projection.custody,data.products):null)
  if(owner)performance.unallocatedCostCents=periods.last30.unallocatedCostCents
  // No journal, source evidence, supplier ledger or actual asset value to staff.
- return {status:'active',scope:owner?'store':'pos',today,sequence:state.entries.length,stateDigest:state.stateDigest,periods,days,performance,data:{products:data.products,orders:data.orders,members:data.members||[],...(owner?{sales:data.sales,supplierState:data.supplierState,purchases:data.purchases}:{purchases:[]})}}
+ return {status:'active',scope:owner?'store':'pos',today,sequence:state.entries.length,stateDigest:state.stateDigest,periods,days,performance,data:{products:data.products,orders:data.orders,members:data.members||[],...(owner?{sales:data.sales,supplierState:data.supplierState,purchases:data.purchases,reservationEntries:data.reservationEntries||[],restaurantEntries:data.restaurantEntries||[]}:{purchases:[]})}}
 }

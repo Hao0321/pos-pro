@@ -268,7 +268,7 @@ function JournalView({ grouped, manualEntries, deleteManualEntry,frozenIds }) {
   )
 }
 
-const TYPE_LABEL = { 'stock-cost':'庫存成本異動',auto_sale:'銷售', auto_cogs:'成本', auto_discount:'折抵', auto_balance:'儲值折抵', auto_topup:'會員儲值', auto_business_sale:'客戶銷售與應收',auto_customer_ledger:'客戶預收與抵付',auto_supplier_ledger:'供應商預付與抵付',manual:'手動', }
+const TYPE_LABEL = { auto_reservation_deposit:'訂位訂金', 'stock-cost':'庫存成本異動',auto_sale:'銷售', auto_cogs:'成本', auto_discount:'折抵', auto_balance:'儲值折抵', auto_topup:'會員儲值', auto_business_sale:'客戶銷售與應收',auto_customer_ledger:'客戶預收與抵付',auto_supplier_ledger:'供應商預付與抵付',manual:'手動', }
 const TYPE_STYLE = {
   auto_business_sale:{background:'var(--blue-dim)',color:'var(--blue)'},
   auto_customer_ledger:{background:'var(--teal-dim)',color:'var(--teal)'},

@@ -29,7 +29,7 @@ for(const channel of ['db:getReservationState','db:getReservationDiningContext',
 function authorizeActor(db,s,channel,args=[]){
   if(!s||!['owner','staff'].includes(s.role))throw Error('請先登入，或重新驗證身份')
   if(s.role!=='owner'&&!staffChannels.has(channel))throw Error('權限不足')
-  if(s.role!=='owner'&&channel==='db:applyReservationOperation'&&['configure','recover','publish','protect','access'].includes(args[0]?.action))throw Error('權限不足')
+  if(s.role!=='owner'&&channel==='db:applyReservationOperation'&&['configure','recover','publish','protect','access','deposit-policy','deposit-refund'].includes(args[0]?.action))throw Error('權限不足')
   if(s.role!=='owner'&&channel==='db:applyLotOperation'&&!['dispose','count'].includes(args[0]?.action))throw Error('權限不足')
   if(s.role!=='owner'&&channel==='settings:get'&&!['pointsEarnRate','pointsRedeemRate','birthdayBonus','dailySalesGoal'].includes(args[0]))throw Error('權限不足')
   if(s.role!=='owner'&&['db:addMember','db:updateMember'].includes(channel)){

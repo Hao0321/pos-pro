@@ -12,6 +12,7 @@ export function reservationMinutes(value,{end=false}={}){
 }
 export function reservationZone(value){
  if(typeof value!=='string'||value.length>100)bad()
+ if(formatters.has(value))return value
  try{new Intl.DateTimeFormat('en-GB',{timeZone:value}).format(0)}catch{bad()};return value
 }
 export function reservationParts(instant,zone){

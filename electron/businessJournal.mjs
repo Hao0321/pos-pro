@@ -6,10 +6,11 @@ import {supplierLedgerToJournalEntries} from './supplierJournal.mjs'
 import {restaurantFundsToJournalEntries} from './restaurantFundsJournal.mjs'
 import {restaurantMenuReferenceEvents} from './restaurantMenuCost.mjs'
 import {restaurantFundsWaste} from './restaurantFundedPlan.mjs'
+import {reservationDepositsToJournalEntries} from './reservationDepositJournal.mjs'
 
 // Preserve the existing category and source order. Native opening previews and
 // the live accounting screen must calculate from the same source functions.
-export function automaticBusinessJournal({orders=[],products=[],topups=[],wasteLog=[],purchases=[],salesDocuments=[],customerEntries=[],supplierEntries=[],restaurantEntries=[],openingJournals=[]}){
+export function automaticBusinessJournal({orders=[],products=[],topups=[],wasteLog=[],purchases=[],salesDocuments=[],customerEntries=[],supplierEntries=[],restaurantEntries=[],reservationEntries=[],openingJournals=[]}){
   const originals=new Map()
   const menuWasteCosts=new Map()
   for(const entry of restaurantEntries){
@@ -29,6 +30,7 @@ export function automaticBusinessJournal({orders=[],products=[],topups=[],wasteL
     ...customerLedgerToJournalEntries(customerEntries),
     ...supplierLedgerToJournalEntries(supplierEntries),
     ...restaurantFundsToJournalEntries(restaurantEntries),
+    ...reservationDepositsToJournalEntries(reservationEntries),
     ...openingJournals,
   ]
 }

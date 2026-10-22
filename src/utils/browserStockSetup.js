@@ -1,3 +1,6 @@
+import {readReservationBook,reservationKnownReceipts} from '../../electron/reservationHistory.mjs'
+import {browserProtectionGraph} from './browserProtection'
+import {depositError} from '../../electron/reservationDepositPolicy.mjs'
 import {readRecords,writeRecords,withSalesLock,RECORD_KEY,assertOriginalOperationAvailable} from './browserStorage'
 import {browserToBook} from '../../electron/recoveryRules.mjs'
 import {validateStockCostBook} from '../../electron/stockBackup.mjs'
@@ -14,6 +17,7 @@ import {readBrowserSupplier} from './browserSupplierLedger'
 export function browserStockSetupData(record,actor){
   const book=browserToBook(record.data);stockSetupOwner(book,actor)
   readBrowserTrading(record);readBrowserSupplier(record)
+  if(readReservationBook(book,reservationKnownReceipts(browserProtectionGraph(record),readExchangeTextSetting(book.settings,'sharedStoreId'))).depositMissing.length)throw depositError('RECOVERY')
   const state=validateStockCostBook(book),opening=state.projection?null:prepareBrowserStockOpening(book,record.salesEpoch)
   return {state,preview:opening?.preview,products:book.products,storeId:readExchangeTextSetting(book.settings,'sharedStoreId'),epoch:record.salesEpoch}
 }

@@ -26,7 +26,7 @@ module.exports=function stockCostOperations(db,api,store){
     const data={products:api.getProducts(),orders:api.getOrders(),members:api.getMembers(),restaurantEntries:api.getRestaurantState().entries}
     if(role==='owner'){
      data.sales=api.getSalesState(actor);data.supplierState=api.getSupplierState(actor)
-     Object.assign(data,{topups:api.getTopups(),wasteLog:api.getWasteLog(),purchases:api.getPurchases(),salesDocuments:data.sales.documents,customerEntries:data.sales.customerLedger.entries,supplierEntries:data.supplierState.supplierLedger.entries,manualJournal:api.getManualJournal()})
+     Object.assign(data,{topups:api.getTopups(),wasteLog:api.getWasteLog(),purchases:api.getPurchases(),salesDocuments:data.sales.documents,customerEntries:data.sales.customerLedger.entries,supplierEntries:data.supplierState.supplierLedger.entries,manualJournal:api.getManualJournal(),reservationEntries:require('./reservationDeposits.mjs').reservationDepositReportEntries(api.getReservationState(actor))})
     }
     return require('./stockSalesReports.mjs').makeStockSalesReport(state,data,salesDate(new Date()),role)
    })()
@@ -38,7 +38,7 @@ module.exports=function stockCostOperations(db,api,store){
     const state=current()
     if(!state.projection&&!db.prepare('SELECT 1 FROM settings WHERE key=?').get('openingCutoverVersionFence'))return {status:'reference-only-not-activated'}
     const sales=api.getSalesState(actor),supplier=api.getSupplierState(actor)
-    return require('./stockAccounting.mjs').makeStockAccountingReport(state,{products:api.getProducts(),orders:api.getOrders(),topups:api.getTopups(),wasteLog:api.getWasteLog(),purchases:api.getPurchases(),salesDocuments:sales.documents,customerEntries:sales.customerLedger.entries,supplierEntries:supplier.supplierLedger.entries,openingJournals:[...(sales.customerLedger.openingJournals||[]),...(supplier.supplierLedger.openingJournals||[])],openingSourceCutoffs:[...(sales.customerLedger.openingCutoffDates||[]),...(supplier.supplierLedger.openingCutoffDates||[])],manualJournal:api.getManualJournal(),restaurantEntries:api.getRestaurantState().entries})
+    return require('./stockAccounting.mjs').makeStockAccountingReport(state,{products:api.getProducts(),orders:api.getOrders(),topups:api.getTopups(),wasteLog:api.getWasteLog(),purchases:api.getPurchases(),salesDocuments:sales.documents,customerEntries:sales.customerLedger.entries,supplierEntries:supplier.supplierLedger.entries,openingJournals:[...(sales.customerLedger.openingJournals||[]),...(supplier.supplierLedger.openingJournals||[])],openingSourceCutoffs:[...(sales.customerLedger.openingCutoffDates||[]),...(supplier.supplierLedger.openingCutoffDates||[])],manualJournal:api.getManualJournal(),restaurantEntries:api.getRestaurantState().entries,reservationEntries:require('./reservationDeposits.mjs').reservationDepositReportEntries(api.getReservationState(actor))})
    })()
   },
   getStockCostState(actor){owner(actor);return db.transaction(()=>{owner(actor);const state=current();return {status:state.projection?'active':'reference-only-not-activated',sequence:state.entries.length,stateDigest:state.stateDigest,projection:state.projection,valuation:state.valuation}})()},

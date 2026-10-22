@@ -3,11 +3,12 @@ import {getBrowserPrivateDraftContext} from './browserPrivateDrafts'
 import {browserToBook,bookToBrowser} from '../../electron/recoveryRules.mjs'
 import {previewMasterMigration,assertMasterMigrationResult,verifyMasterMigration,readMasterMigrationHistory,assertPublicMasterMigration} from '../../electron/masterMigration.mjs'
 import {appendBrowserMasterMigration} from '../../electron/browserMasterMigration.mjs'
+import {expireBrowserLotsLocked} from './browserLots'
 
 export async function previewBrowserMasterMigration(input,actor){
   assertPublicMasterMigration(input)
   const scope=await getBrowserPrivateDraftContext(actor)
-  return withSalesLock(()=>previewMasterMigration(input,browserToBook(readRecords().data),scope,actor))
+  return withSalesLock(()=>previewMasterMigration(input,browserToBook(expireBrowserLotsLocked(readRecords()).data),scope,actor))
 }
 export async function commitBrowserMasterMigration(input,actor){
   const scope=await getBrowserPrivateDraftContext(actor)
@@ -15,7 +16,9 @@ export async function commitBrowserMasterMigration(input,actor){
     let writing=false,before=null,checked=false,existing=false
     try{
       assertPublicMasterMigration(input)
-      const record=readRecords(),book=browserToBook(record.data);existing=readMasterMigrationHistory(book).byId.has(input.id);checked=true
+      const original=readRecords(),originalBook=browserToBook(original.data);existing=readMasterMigrationHistory(originalBook).byId.has(input.id);checked=true
+      if(existing)return assertMasterMigrationResult(input,{success:true,receipt:verifyMasterMigration(input,originalBook,scope,actor).receipt})
+      const record=expireBrowserLotsLocked(original),book=browserToBook(record.data)
       const prior=verifyMasterMigration(input,book,scope,actor)
       if(prior.receipt)return assertMasterMigrationResult(input,{success:true,receipt:prior.receipt})
       checked=true;assertOriginalOperationAvailable('applyMasterMigration',input.id,record,input)
