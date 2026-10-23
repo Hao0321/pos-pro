@@ -7,6 +7,7 @@ import { getSession, destroySession, writeAuditLog, startIdleTimer, hasPermissio
 import LoginScreen from './pages/LoginScreen'
 import Sidebar from './components/Sidebar'
 import DisplayPreferences from './components/DisplayPreferences'
+import PendingTransactionNotice from './components/PendingTransactionNotice'
 import {readRecoveryCommand} from './utils/recoveryClient'
 const POSPage=lazy(()=>import('./pages/POSPage'))
 const InventoryPage=lazy(()=>import('./pages/InventoryPage'))
@@ -165,14 +166,10 @@ export default function App() {
       )}
 
       <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column', minWidth:0 }}>
-        {session.role==='owner'&&view!=='recovery'&&(recoveryPending||store.financialState.phase==='uncertain'||store.checkoutState.phase==='uncertain')&&<div role="status" style={{padding:12,background:'var(--amber-dim)'}}><button className="btn btn-primary" data-recovery-open onClick={()=>handleNavChange('recovery')}>{tr('一步一步找回資料')}</button></div>}
+        {session.role==='owner'&&view!=='recovery'&&recoveryPending&&<div role="status" style={{padding:12,background:'var(--amber-dim)'}}><button className="btn btn-primary" data-recovery-open onClick={()=>handleNavChange('recovery')}>{tr('一步一步找回資料')}</button></div>}
         {!sharedConnected&&<div role="alert" style={{padding:12,background:'var(--red-dim)'}}>{tr("連不上店面電腦。請恢復店面 Wi-Fi；未確認的交易請沿用原單號核對。")}</div>}
-        {view!=='recovery'&&store.financialState.phase!=='idle'&&<div data-financial-pending role="alert" style={{padding:12,background:'var(--gold-dim)'}}>{trMessage(store.financialState.message)} {store.financialState.id} {store.financialState.phase==='uncertain'&&<button onClick={()=>store.retryFinancial().catch(e=>alert(trMessage(e.message)))}>{tr("原編號重試保存異動")}</button>}</div>}
+        {view!=='recovery'&&<PendingTransactionNotice key={session.userId+':'+session.role} store={store} owner={session.role==='owner'} view={view} onRecovery={()=>handleNavChange('recovery')}/>}
         {backupIssue&&session.role==='owner'&&<div role="alert" style={{padding:10,background:'var(--amber-dim)'}}>{tr("自動備份未完成。")}<button onClick={()=>handleNavChange('readiness')}>{tr("查看與補做備份")}</button></div>}
-        {view!=='recovery'&&store.checkoutState.phase !== 'idle' && <div role="alert" style={{padding:12,background:'var(--gold-dim)'}}>
-          {trMessage(store.checkoutState.message)} {store.checkoutState.orderId}
-          {store.checkoutState.phase === 'uncertain' && <><button onClick={()=>store.reconcileCheckout().catch(e=>alert(trMessage(e.message)))}>{tr("查詢原交易")}</button><button onClick={()=>store.retryCheckout().catch(e=>alert(trMessage(e.message)))}>{tr("原單號重試保存")}</button></>}
-        </div>}
         {isMobile && (
           <div className="workspace-mobile-bar" style={mob.topBar}>
             <button aria-label={menuOpen?tr("關閉功能選單"):tr("開啟功能選單")} onClick={() => setMenuOpen(v => !v)} style={mob.menuBtn}>
