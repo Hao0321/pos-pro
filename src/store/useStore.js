@@ -1,6 +1,7 @@
 import {isPurchaseCreate} from '../../electron/procurementRules.mjs'
 import {isCashMovementRejection} from '../../electron/cashMovementDraft.mjs'
 import {isProductEdit,isProductEditRejection} from '../../electron/productEditDraft.mjs'
+import {loyaltyRules} from '../../electron/loyaltyProgram.mjs'
 import {finalizePurchaseDraft} from '../utils/purchaseDraftReceipt.mjs'
 import { settledOrders, netSale, orderCost } from '../utils/orderLedger'
 import {finalizeReceiptLotDraft} from '../utils/receiptLotDraftReceipt.mjs'
@@ -538,6 +539,8 @@ export function useStore(session){
     await setSettings({pointsEarnRate:String(e),pointsRedeemRate:String(r),birthdayBonus:String(b)})
     setPointsRule({earn:e,redeem:r});setBirthdayBonus(b)
   },[])
+  const refreshLoyaltyRules=useCallback(async value=>{const rules=loyaltyRules(value);setPointsRule({earn:rules.earn,redeem:rules.redeem});setBirthdayBonus(rules.birthdayBonus)},[])
+  const openLoyaltySettings=useCallback(()=>{if(sessionRef.current?.role!=='owner')return;setSettingsTarget({tab:'business'});setView('settings')},[])
 
   const acknowledge=result=>{if(result?.success===false)throw Error(result.error||'資料保存失敗');return result}
   const addProduct = useCallback(async p=>{
@@ -653,6 +656,8 @@ export function useStore(session){
     pointsRule, updatePointsRule,
     birthdayBonus, updateBirthdayBonus,
     updateBusinessSettings,
+    refreshLoyaltyRules,
+    openLoyaltySettings,
     manualDiscount, setManualDiscount:value=>{ensureCartEditable();setManualDiscount(value)},
   }
 }

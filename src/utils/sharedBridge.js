@@ -32,6 +32,8 @@ if(sharedStoreMode&&!window.electronAPI){
   db.previewOpeningMigration=input=>rpc('db:previewOpeningMigration',input)
   db.applyOpeningMigration=input=>rpc('db:applyOpeningMigration',input)
   db.getPrivateDraftContext=()=>rpc('db:getPrivateDraftContext')
+  db.getLoyaltyProgramPreview=input=>rpc('db:getLoyaltyProgramPreview',input)
+  db.applyLoyaltyProgram=input=>rpc('db:applyLoyaltyProgram',input)
   db.lookupPrivateDraftOriginal=input=>rpc('db:lookupPrivateDraftOriginal',input)
   db.getExchangeContext=()=>rpc('db:getExchangeContext')
   db.applyExchangeOperation=input=>rpc('db:applyExchangeOperation',input)

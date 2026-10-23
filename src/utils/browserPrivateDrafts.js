@@ -7,6 +7,7 @@ import {browserStockBusinessResult} from './browserStockBusiness'
 import {readBrowserSupplier} from './browserSupplierLedger'
 import {PRODUCT_EDIT_JOURNAL,readProductEditJournal,productEditOriginal} from '../../electron/productEditDraft.mjs'
 import {readExchangeTextSetting} from '../../electron/businessExchange.mjs'
+import {LOYALTY_PROGRAMS,readLoyaltyPrograms,loyaltyProgramOriginal,readLoyaltyRules,loyaltyFacts,issuedLoyaltyValue} from '../../electron/loyaltyProgram.mjs'
 function context(saved,actor){const raw=saved.data.pos_business_settings.find(row=>row.key==='sharedStoreId')?.value;return privateDraftContext(raw===undefined?'':JSON.parse(raw),saved.salesEpoch,actor,saved.data.pos_users)}
 export function getBrowserPrivateDraftContext(actor){return withSalesLock(()=>{
  let saved=readRecords();const users=saved.data.pos_users
@@ -17,6 +18,7 @@ export function getBrowserPrivateDraftContext(actor){return withSalesLock(()=>{
 })}
 export async function lookupBrowserPrivateDraftOriginal(input,actor){await getBrowserPrivateDraftContext(actor);return withSalesLock(()=>{
  const saved=readRecords(),current=context(saved,actor);assertDraftLookup(input,current)
+ if(input.family==='loyalty-program'){const get=key=>readExchangeTextSetting(saved.data.pos_business_settings,key);return loyaltyProgramOriginal(input,loyaltyFacts(current,readLoyaltyRules(get),readLoyaltyPrograms(get(LOYALTY_PROGRAMS)),issuedLoyaltyValue(saved.data.pos2_members,saved.data.pos2_orders)))}
  if(input.family==='product-edit')return productEditOriginal(input,current,readProductEditJournal(readExchangeTextSetting(saved.data.pos_business_settings,PRODUCT_EDIT_JOURNAL)))
  if(input.family){
   const imported=input.family==='quick-purchase-import',purchase=imported||input.family==='quick-purchase';if(purchase)readBrowserSupplier(saved);else browserRestaurantState()

@@ -62,6 +62,8 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(method==='db:getAgentContext')return db.getAgentContext(actor)
     if(method==='db:getPrivateDraftContext')return db.getPrivateDraftContext(actor)
     if(method==='db:lookupPrivateDraftOriginal')return db.lookupPrivateDraftOriginal(args[0],actor)
+    if(method==='db:getLoyaltyProgramPreview')return db.getLoyaltyProgramPreview(args[0],actor)
+    if(method==='db:applyLoyaltyProgram')return db.applyLoyaltyProgram(args[0],actor)
     if(method==='db:previewMasterMigration')return db.previewMasterMigration(args[0],actor)
     if(method==='db:applyMasterMigration')return db.applyMasterMigration(args[0],actor)
     if(method==='db:getReservationState')return db.getReservationState(actor)

@@ -26,6 +26,7 @@ export const TABS = [
 
 export default function SettingsPage({ session, onLogout, store }) {
   const [tab, setTab] = useState('general')
+  useEffect(()=>{if(store?.settingsTarget?.tab==='business'&&session.role==='owner'){setTab('business');store.consumeSettingsTarget()}},[store?.settingsTarget,session.role])
   useEffect(()=>{if(store?.settingsTarget?.tab==='hardware'&&!isSharedStore){setTab('hardware');store.consumeSettingsTarget()}},[store?.settingsTarget])
 
   return (

@@ -8,6 +8,7 @@ import {isShiftCountRequest,admitShiftCount,shiftCountResult,shiftCountRejection
 import {isCashMovementDraft,admitCashMovement,cashMovementOriginal,cashMovementRejection} from '../../electron/cashMovementDraft.mjs'
 import {isProductEdit,PRODUCT_EDIT_JOURNAL} from '../../electron/productEditDraft.mjs'
 import {commitBrowserProductEdit} from './browserProductEdit'
+import {previewBrowserLoyaltyProgram,applyBrowserLoyaltyProgram,touchesLoyaltyRules,writeBrowserLegacyLoyalty} from './browserLoyaltyProgram'
 import {moneyValue,quantityValue,operationHeader,sameCommand} from '../../electron/operationRules.mjs'
 import {commitBrowserInventory,getBrowserStocktakeState} from './browserInventory'
 import {commitBrowserRestaurant,browserRestaurantState,browserCustomerIntakeContext,browserRestaurantMenuQuote,browserRestaurantMenuSetupPreview,browserRestaurantAgentPreview} from './browserRestaurant'
@@ -36,6 +37,8 @@ export async function applyReservationOperation(input,actor){return isElectron?w
 export async function previewOpeningMigration(input,actor){return isElectron?window.electronAPI.db.previewOpeningMigration(input):(await import('./browserOpeningMigration')).previewBrowserOpeningMigration(input,actor)}
 export async function applyOpeningMigration(input,actor){return isElectron?window.electronAPI.db.applyOpeningMigration(input):(await import('./browserOpeningMigration')).commitBrowserOpeningMigration(input,actor)}
 export async function loadPrivateDraftContext(actor){return isElectron?window.electronAPI.db.getPrivateDraftContext():getBrowserPrivateDraftContext(actor)}
+export async function getLoyaltyProgramPreview(input,actor){return isElectron?window.electronAPI.db.getLoyaltyProgramPreview(input):previewBrowserLoyaltyProgram(input,actor)}
+export async function applyLoyaltyProgram(input,actor){return isElectron?window.electronAPI.db.applyLoyaltyProgram(input):applyBrowserLoyaltyProgram(input,actor)}
 export async function lookupPrivateDraftOriginal(input,actor){return isElectron?window.electronAPI.db.lookupPrivateDraftOriginal(input):lookupBrowserPrivateDraftOriginal(input,actor)}
 export const isSharedStore = !!(typeof window !== 'undefined' && window.electronAPI?.sharedStore)
 export async function loadCustomerIntakeContext(id,actor){return isElectron?window.electronAPI.db.getCustomerIntakeContext(id):browserCustomerIntakeContext(id,actor)}
@@ -270,12 +273,13 @@ export async function getSetting(key) {
   return loadLS('pos_settings_' + key, null)
 }
 export async function setSetting(key, value) {
+  if(!isElectron&&touchesLoyaltyRules({[key]:value}))return writeBrowserLegacyLoyalty({[key]:value})
   if(key===PRODUCT_EDIT_JOURNAL)throw Error('商品保存紀錄由正式保存與完整備份流程管理。')
   if(key==='businessExchangeV1')throw Error('報價歷史只能由正式報價或還原流程保存')
   if (isElectron) return window.electronAPI.settings.set(key, value)
   saveLS('pos_settings_' + key, value)
 }
-export async function setSettings(values){if(Object.hasOwn(values,PRODUCT_EDIT_JOURNAL))throw Error('商品保存紀錄由正式保存與完整備份流程管理。');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');if(isElectron)return window.electronAPI.settings.setMany(values);writeBusinessSettings(Object.fromEntries(Object.entries(values).map(([k,v])=>[k,JSON.stringify(v)])));return {success:true}}
+export async function setSettings(values){if(!isElectron&&touchesLoyaltyRules(values))return writeBrowserLegacyLoyalty(values);if(Object.hasOwn(values,PRODUCT_EDIT_JOURNAL))throw Error('商品保存紀錄由正式保存與完整備份流程管理。');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');if(isElectron)return window.electronAPI.settings.setMany(values);writeBusinessSettings(Object.fromEntries(Object.entries(values).map(([k,v])=>[k,JSON.stringify(v)])));return {success:true}}
 export async function getAllSettings() {
   if (isElectron) return window.electronAPI.settings.getAll()
   return {}

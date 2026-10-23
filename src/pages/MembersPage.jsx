@@ -96,14 +96,17 @@ export default function MembersPage({ store, session }) {
   return (
     <div style={ms.root} className={'members-page'+(selectedLive?' has-member-detail':'')}>
       <div style={ms.left} className="member-list-panel">
-        <div style={ms.header}>
+        <div style={{...ms.header,flexWrap:'wrap',gap:8}}>
           <div>
             <h2 className="page-title" style={ms.title}>{tr("會員管理")}</h2>
             <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
               {members.length}{tr(" 位會員")}</div>
           </div>
-          <button className="btn btn-primary btn-sm" onClick={startNew}>
-            <Plus size={15}/>{tr("新增會員")}</button>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {session?.role==='owner'&&<button className="btn btn-ghost" style={{minHeight:48,fontSize:16}} data-loyalty-settings-entry onClick={store.openLoyaltySettings}>{tr('設定會員福利')}</button>}
+            <button className="btn btn-primary btn-sm" onClick={startNew}>
+              <Plus size={15}/>{tr("新增會員")}</button>
+          </div>
         </div>
 
         <div style={ms.toolbar}>

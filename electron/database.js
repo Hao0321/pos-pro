@@ -764,5 +764,6 @@ module.exports = function initDatabase(dbPath) {
   require('./shiftCountOperations.cjs')(db,api)
   require('./cashMovementOperations.cjs')(db,api)
   require('./productEditOperations.cjs')(db,api)
+  require('./loyaltyProgramOperations.cjs')(db,api)
   return api
 }
