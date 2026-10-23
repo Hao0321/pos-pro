@@ -16,6 +16,7 @@ import {prepareRestaurantCommand} from '../../utils/restaurantCommand.mjs'
 import './RestaurantMenuEditor.css'
 import {validDiningDraft,diningForm,diningPending} from '../../utils/reservationDiningDraft.mjs'
 import DiningMemberSelect from '../reservations/DiningMemberSelect'
+import ReservationDepositAmounts from '../reservations/ReservationDepositAmounts'
 
 const money=cents=>'NT$ '+(cents/100).toFixed(2).replace(/\.00$/,'')
 const blank=data=>{const now=new Date();return {channel:'walkin',day:data.today||`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`,slot:'12:00',customer:'',contact:'',note:''}}
@@ -98,6 +99,7 @@ export default function RestaurantMenuOrder({data,session,store,reload,active,on
       {!!cart.length&&<div data-staff-cart>{cart.map((item,index)=>{const row=quoteValue?.items[index],selectedOffer=menu.offers.find(offer=>offer.id===item.offerId);return <div className="menu-editor-review" data-staff-line={index} key={index}><p><strong>{row?.name||cartLabels[index]||selectedOffer?.name||item.offerId}</strong><span>× {item.qty}</span></p>{!row&&<small>{[selectedOffer?.variants.find(variant=>variant.id===item.variantId)?.name,...item.selections.flatMap(group=>group.choices.map(choice=>selectedOffer?.groups.find(row=>row.id===group.groupId)?.choices.find(row=>row.id===choice.id)?.name))].filter(Boolean).join(' · ')}</small>}<button type="button" className="btn btn-ghost" data-staff-remove={index} onClick={()=>remove(index)}>{tr('移除品項')}</button></div>})}</div>}
      </>:<div data-staff-review>{quoteValue.items.map(item=><div key={item.id} className="menu-editor-review"><p><strong>{item.name} × {item.qty}</strong><span>{money(Math.round(item.price*100)*item.qty)}</span></p></div>)}</div>}
      {quoteValue&&<p className="staff-menu-total" data-staff-total={quoteValue.totalCents}>{tr('合計')} <strong>{money(quoteValue.totalCents)}</strong></p>}
+     {dining&&quoteValue&&<ReservationDepositAmounts source={diningSource} totalCents={quoteValue.totalCents}/>}
      {dining&&<button type="button" className="btn btn-ghost" data-reservation-dining-recheck onClick={async()=>{try{setDiningSource(await dining.refreshSource(diningSource));setError('')}catch(error){setError(error.message)}}}>{tr('重新核對桌位')}</button>}
      {dining&&<DiningMemberSelect source={diningSource} members={dining.members} locked={!!dining.source.memberId} onChange={memberId=>{workspace.begin();setDiningSource(old=>({...old,memberId}))}}/>}
      {step==='review'&&!dining&&<div className="menu-editor-two">

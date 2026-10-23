@@ -1,5 +1,10 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--reservation-deposit-liability-ui':['native-reservation-deposit-liability-ui.cjs','POS_RESERVATION_DEPOSIT_LIABILITY_UI_PASS',true],
+  '--reservation-deposit-reception-ui':['native-reservation-deposit-reception-ui.cjs','POS_RESERVATION_DEPOSIT_RECEPTION_UI_PASS',true],
+  '--reservation-deposit-consent-ui':['native-reservation-deposit-consent-ui.cjs','POS_RESERVATION_DEPOSIT_CONSENT_UI_PASS',true],
+  '--reservation-deposit-journey-ui':['native-reservation-deposit-journey-ui.cjs','POS_RESERVATION_DEPOSIT_JOURNEY_UI_PASS',true],
+  '--reservation-deposit-application':['native-reservation-deposit-application.cjs','POS_RESERVATION_DEPOSIT_APPLICATION_NATIVE_PASS',false],
   '--reservation-deposit-reports-ui':['native-reservation-deposit-reports-ui.cjs','POS_RESERVATION_DEPOSIT_REPORTS_UI_PASS',true],
   '--reservation-deposits':['native-reservation-deposits.cjs','POS_RESERVATION_DEPOSITS_NATIVE_PASS',false],
   '--reservation-dining-ui':['native-reservation-dining-ui.cjs','POS_RESERVATION_DINING_UI_PASS',true],

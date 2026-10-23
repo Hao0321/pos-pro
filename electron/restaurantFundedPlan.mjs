@@ -4,6 +4,8 @@ import {canonicalSignature,moneyValue,operationHeader,quantityValue} from './ope
 import {initializeRestaurantFunds,planRestaurantFundsEvent,summarizeRestaurantFunds,RESTAURANT_FUNDS_PROTOCOL} from './restaurantFunds.mjs'
 import {signature as checkoutSignature} from './checkoutSignature.mjs'
 import {fundedRestaurantProductIds,menuOriginalSignature} from './restaurantMenuOriginal.mjs'
+import {actualRestaurantRefundSources,isReservationDepositFundingRow} from './reservationDepositAllocation.mjs'
+import {assertReservationDepositTransition} from './reservationDepositTransition.mjs'
 
 export const FUNDED_RESTAURANT_SOURCE='restaurant-funded'
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
@@ -42,7 +44,7 @@ export function initializeFundedRestaurant(plan,request,data,actor){
 function payments(rows,sign=1){
   const totals=new Map()
   for(const row of rows){const amount=row.availableCents??row.amountCents;totals.set(row.method,(totals.get(row.method)||0)+amount)}
-  const result=['cash','card'].filter(method=>totals.get(method)>0).map(method=>({method,amount:sign*totals.get(method)/100}))
+  const result=['cash','card','bank'].filter(method=>totals.get(method)>0).map(method=>({method,amount:sign*totals.get(method)/100}))
   return result.length?result:[{method:'cash',amount:0}]
 }
 function recognition(event,entry,saleId=null){
@@ -62,7 +64,7 @@ function recognition(event,entry,saleId=null){
 }
 export function restaurantFundsCashLog(event){
   const receiving=event.input.action==='funds-receive'
-  const amount=receiving?(event.input.payMethod==='cash'?event.amountCents:0):event.refunds.filter(row=>row.method==='cash').reduce((sum,row)=>sum+row.amountCents,0)
+  const amount=receiving?(event.input.payMethod==='cash'?event.amountCents:0):actualRestaurantRefundSources(event).filter(row=>row.method==='cash').reduce((sum,row)=>sum+row.amountCents,0)
   if(!amount)return null
   return {id:hashId('cash',event.id),shiftId:event.input.shiftId,time:event.time,type:receiving?'in':'out',amount:amount/100,reason:(receiving?'預訂實收款 · ':'預訂退回款 · ')+event.entryId,cashier:event.actor.username}
 }
@@ -90,7 +92,11 @@ export function planFundedRestaurant(request,data,actor){
     const result=planRestaurantFundsEvent(entry.funds,request,{entryId:entry.id,version:entry.version+1,date:data.date,prepared:!!entry.startedAt,actor:who})
     event=result.event
     const s=result.summary
-    if(event.amountCents&&!data.shifts.some(shift=>shift.id===request.shiftId&&shift.status==='open'))throw Error('請先開班，將實收或退款記入目前班別。')
+    if(request.action==='funds-deposit-apply'||event.refunds.some(isReservationDepositFundingRow)){
+      const parent=assertReservationDepositTransition(request,who,event)
+      if(entry.reservationDining?.bookingId!==(request.depositApplication?.bookingId||parent.event.change.depositReturn?.bookingId))throw Error('訂金與原餐點的訂位需要核對。')
+    }
+    if((request.action==='funds-receive'?event.amountCents:actualRestaurantRefundSources(event).length)&&!data.shifts.some(shift=>shift.id===request.shiftId&&shift.status==='open'))throw Error('請先開班，將實收或退款記入目前班別。')
     entry.funds=result.funds;entry.items=s.items;entry.allocations=s.allocations;entry.quantity=s.quantity;entry.total=s.totalCents/100
     if(['cancel','cancel-part'].includes(request.action)){
       if(entry.startedAt)waste=restaurantFundsWaste(event)

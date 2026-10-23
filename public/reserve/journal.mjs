@@ -1,3 +1,4 @@
+import {assertGuestDepositReceipt} from './deposit.mjs'
 export const guestJournalKey=storeId=>'pos_guest_reservation_v1:'+storeId
 const originalPrefix=storeId=>'pos_guest_reservation_original_v1:'+storeId+':'
 const originalKey=(storeId,pending)=>originalPrefix(storeId)+pending.request.requestId
@@ -31,5 +32,7 @@ export function assertGuestReceipt(value,storeId,{request=null,bookingId=null}={
  if(value?.linkExpiresAt!==undefined&&value.linkExpiresAt!==null&&(typeof value.linkExpiresAt!=='string'||!Number.isFinite(Date.parse(value.linkExpiresAt))||new Date(value.linkExpiresAt).toISOString()!==value.linkExpiresAt))throw Error('receipt')
  if(value?.protocol!=='pos-reservation-guest-receipt/v1'||value.success!==true||value.storeId!==storeId||typeof value.needsRecovery!=='boolean'||typeof value.canCancel!=='boolean'||typeof value.canMove!=='boolean'||typeof value.originalRequestId!=='string'||!row||typeof row.id!=='string'||!/^booking-[a-f0-9]{48}$/.test(row.id)||!Number.isSafeInteger(row.revision)||row.revision<1||!['confirmed','arrived','seated','completed','cancelled','no-show'].includes(row.status)||typeof row.customer?.name!=='string'||typeof row.customer?.contact!=='string'||typeof row.note!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(row.date)||!/^\d{2}:\d{2}$/.test(row.slot)||!Number.isSafeInteger(row.partySize)||row.partySize<1||row.partySize>100||typeof row.timeZone!=='string'||bookingId&&row.id!==bookingId)throw Error('receipt')
  if(request&&(value.requestId!==request.requestId||request.action==='book'&&value.originalRequestId!==request.requestId||request.action!=='book'&&(row.id!==request.bookingId||row.revision<=request.expectedBookingRevision)))throw Error('receipt')
+ if(value.deposit!==undefined){assertGuestDepositReceipt(value.deposit,row);if(value.needsRecovery&&!value.deposit.uncertain)throw Error('receipt')}
+ if(request?.action==='book'&&request.depositQuoteHash!==undefined&&(value.deposit?.terms.hash!==request.depositQuoteHash||['date','slot','partySize'].some(key=>value.deposit.terms[key]!==request[key])))throw Error('receipt')
  return value
 }

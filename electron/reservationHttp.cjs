@@ -1,6 +1,6 @@
 const express=require('express'),path=require('node:path')
 module.exports=function(app,db,admitCustomer,getMainWindow){
- const limits=new Map(),token=req=>req.get('authorization')?.replace(/^Bearer /,''),knownCodes=new Set(['RESERVATION_CONFIG','RESERVATION_HISTORY','RESERVATION_STALE','RESERVATION_FULL','RESERVATION_RECOVERY','RESERVATION_TIME','RESERVATION_STATUS','RESERVATION_ACCESS'])
+ const limits=new Map(),token=req=>req.get('authorization')?.replace(/^Bearer /,''),knownCodes=new Set(['RESERVATION_CONFIG','RESERVATION_HISTORY','RESERVATION_STALE','RESERVATION_FULL','RESERVATION_RECOVERY','RESERVATION_TIME','RESERVATION_STATUS','RESERVATION_ACCESS','RESERVATION_DEPOSIT_REVIEW','RESERVATION_DEPOSIT_STALE'])
  app.use('/reserve',express.static(path.join(__dirname,'../public/reserve')))
  app.use('/api/reservations',(req,res,next)=>{
   const now=Date.now(),key=req.socket.remoteAddress

@@ -7,6 +7,7 @@ import {guestReservationRequest,guestReservationOperationId,guestReservationActo
 import {RESERVATION_SERVICE_FIELDS,deriveReservationService,reservationGuestAccess} from './reservationService.mjs'
 import {RESERVATION_DINING_FIELDS,deriveReservationDining,reservationDiningLinks} from './reservationDining.mjs'
 import {RESERVATION_DEPOSIT_FIELDS,deriveReservationDeposit,reservationDepositTermsForBooking,reservationDepositSummary,assertReservationDepositAcceptance} from './reservationDeposits.mjs'
+import {RESERVATION_DEPOSIT_APPLICATION_FIELDS,deriveReservationDepositApplication,deriveReservationDepositReturn} from './reservationDepositApplication.mjs'
 
 const clone=value=>structuredClone(value),same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 export const reservationBookingId=(storeId,id)=>'booking-'+privateDraftDigest([storeId,id]).slice(0,48)
@@ -18,10 +19,11 @@ export function reservationActor(actor,users=null){
  return {userId:actor.userId,username:actor.username,role:actor.role}
 }
 export function reservationCommand(input){
- const extra=input?.action==='dine'?RESERVATION_DINING_FIELDS:(Object.hasOwn(RESERVATION_DEPOSIT_FIELDS,input?.action)?RESERVATION_DEPOSIT_FIELDS[input.action]:null)||(Object.hasOwn(RESERVATION_SERVICE_FIELDS,input?.action)?RESERVATION_SERVICE_FIELDS[input.action]:null)||(input?.action==='publish'?['enabled','reviewed']:input?.action==='guest'?['request','reviewed']:fields[input?.action])
+ const extra=input?.action==='dine'?RESERVATION_DINING_FIELDS:(Object.hasOwn(RESERVATION_DEPOSIT_APPLICATION_FIELDS,input?.action)?RESERVATION_DEPOSIT_APPLICATION_FIELDS[input.action]:null)||(Object.hasOwn(RESERVATION_DEPOSIT_FIELDS,input?.action)?RESERVATION_DEPOSIT_FIELDS[input.action]:null)||(Object.hasOwn(RESERVATION_SERVICE_FIELDS,input?.action)?RESERVATION_SERVICE_FIELDS[input.action]:null)||(input?.action==='publish'?['enabled','reviewed']:input?.action==='guest'?['request','reviewed']:fields[input?.action])
  if(!Array.isArray(extra))throw reservationError('HISTORY')
  const quote=Object.hasOwn(input||{},'depositQuoteHash')&&['book','promote'].includes(input.action)?['depositQuoteHash']:[]
- draftObject(input,[...header,...extra,...quote]);if(quote.length&&(typeof input.depositQuoteHash!=='string'||!/^[a-f0-9]{64}$/.test(input.depositQuoteHash)))throw reservationError('HISTORY');reservationId(input.id);reservationId(input.storeId);reservationId(input.epoch);reservationInteger(input.expectedRevision,0,Number.MAX_SAFE_INTEGER-1)
+ const application=input?.action==='dine'&&Object.hasOwn(input,'depositReview')?['depositReview']:[]
+ draftObject(input,[...header,...extra,...quote,...application]);if(quote.length&&(typeof input.depositQuoteHash!=='string'||!/^[a-f0-9]{64}$/.test(input.depositQuoteHash)))throw reservationError('HISTORY');reservationId(input.id);reservationId(input.storeId);reservationId(input.epoch);reservationInteger(input.expectedRevision,0,Number.MAX_SAFE_INTEGER-1)
  if(input.protocol!==RESERVATION_PROTOCOL||typeof input.time!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(input.time)||!Number.isFinite(Date.parse(input.time))||input.reviewed!==true)throw reservationError('HISTORY')
  if(new Date(input.time).toISOString()!==input.time.replace(/Z$/,input.time.includes('.')?'Z':'.000Z'))throw reservationError('HISTORY')
  if(input.action==='guest'){guestReservationRequest(input.request);if(input.id!==guestReservationOperationId(input.request)||input.storeId!==input.request.storeId)throw reservationError('HISTORY')}
@@ -88,9 +90,11 @@ export function deriveReservationEvent(input,state,actor,time,{allowRecovery=fal
  let change
  if(input.action==='recover'){if(actor.role!=='owner')throw Error('權限不足');if(!allowRecovery)throw reservationError('RECOVERY');change={recoveredHead:state.head}}
  else if(input.action==='publish'){if(actor.role!=='owner')throw Error('權限不足');if(input.enabled&&(!state.config.enabled||!state.config.tables.some(row=>row.online)))throw reservationError('CONFIG');change={publicEnabled:input.enabled}}
+ else if(input.action==='deposit-apply')change=deriveReservationDepositApplication(input,state,now)
+ else if(input.action==='deposit-return')change=deriveReservationDepositReturn(input,state,actor,now)
  else if(Object.hasOwn(RESERVATION_DEPOSIT_FIELDS,input.action))change=deriveReservationDeposit(input,state,actor,now)
  else if(Object.hasOwn(RESERVATION_SERVICE_FIELDS,input.action))change=deriveReservationService(input,state,actor,now)
- else if(input.action==='dine')change=deriveReservationDining(input,state,now)
+ else if(input.action==='dine'){change=deriveReservationDining(input,state,now);if(Object.hasOwn(input,'depositReview'))Object.assign(change,deriveReservationDepositApplication({...input,orderId:input.order.id,expectedRestaurantVersion:1,applicationReview:input.depositReview},state,now,{dining:true}))}
  else if(input.action==='guest')change=guestChange(input,state,now)
  else if(input.action==='configure')change=configure(input,state,actor,now)
  else if(['book','waitlist'].includes(input.action))change=newBooking(input,state,now)
@@ -105,6 +109,7 @@ export function projectReservationEvent(state,event){
  if(event.change.guestLinkPolicy)next.guestLinkPolicy=clone(event.change.guestLinkPolicy)
  if(event.change.depositPolicy)next.depositPolicy=clone(event.change.depositPolicy)
  if(event.change.booking){const booking=clone(event.change.booking);next.bookings=[...state.bookings.filter(row=>row.id!==booking.id),booking].sort((a,b)=>a.startMs-b.startMs||a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id))}
+ if(event.change.depositApplication||event.change.depositReturn)reservationDepositSummary(next,(event.change.depositApplication||event.change.depositReturn).bookingId)
  return next
 }
 export function reservationReceipt(event){return {protocol:'pos-reservation-receipt/v1',success:true,id:event.id,signature:canonicalSignature(event.input),revision:event.sequence,event:clone(event)}}
@@ -122,6 +127,7 @@ export function planReservation(input,data,actor,{allowGuest=false}={}){
  if(!allowGuest||input?.action!=='guest')reservationActor(actor,data.users);reservationCommand(input)
  if(input.storeId!==data.storeId||input.epoch!==data.epoch||Math.abs(data.now-Date.parse(input.time))>300000)throw reservationError('STALE')
  if(input.action==='dine'&&(input.order?.costMode!==data.costMode||input.memberId!==null&&!data.members?.some(row=>row.id===input.memberId)))throw reservationError('STALE')
+ if(input.action==='deposit-apply'&&input.costMode!==data.costMode)throw reservationError('STALE')
  const event=deriveReservationEvent(input,data.state,actor,new Date(data.now).toISOString(),{allowRecovery:data.state.needsRecovery===true,allowGuest})
  return {event,receipt:reservationReceipt(event),state:projectReservationEvent(data.state,event)}
 }

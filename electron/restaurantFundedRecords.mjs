@@ -81,7 +81,7 @@ export function validateFundedRestaurantRecords(entries,operations,orders,produc
       }else if(['cancel','cancel-part'].includes(input.action)){
         if(!event)throw invalid()
         status=event.remainingQuantity?status:'cancelled';lastReason=input.reason.trim()
-      }else if(!['funds-receive','funds-refund'].includes(input.action))throw invalid()
+      }else if(!['funds-receive','funds-refund','funds-deposit-apply'].includes(input.action))throw invalid()
       const requiresEvent=input.action!=='advance'||input.status==='completed'
       if(requiresEvent!==!!event||(receipt.eventSignature??null)!==(event?canonicalSignature(event):null))throw invalid()
       if(event){

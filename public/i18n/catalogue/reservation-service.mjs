@@ -1,4 +1,8 @@
 const rows={
+ '訂金抵用':['Deposit applied','予約金を充当','订金抵用'],
+ '餐點還要收':['Meal balance due','お食事の残額','餐点还要收'],
+ '剩餘訂金 {0}':['Deposit left {0}','残りの予約金 {0}','剩余订金 {0}'],
+ '請核對餐點與份數':['Check the meals and quantities.','料理と数量をご確認ください。','请核对餐点与份数'],
  '私人訂位連結需要更新，請聯絡店家。':['This private link needs updating. Please contact the shop.','この予約リンクは更新が必要です。お店にご連絡ください。','私人订位链接需要更新，请联系店家。'],
  '私人訂位連結已變更，請重新核對。':['This private link has changed. Please check again.','予約リンクが変更されました。再度ご確認ください。','私人订位链接已变更，请重新核对。'],
  '請先啟用私人連結保護。':['Enable private-link protection first.','先に予約リンクの保護を有効にしてください。','请先启用私人链接保护。'],
@@ -54,5 +58,19 @@ const rows={
  '開啟完整備份復原':['Open complete backup recovery','完全バックアップの復元を開く','打开完整备份恢复'],
  '請老闆用完整備份找回餐點與款項。':['Ask the owner to recover orders and payment from a complete backup.','店主に完全バックアップから注文と会計を復元してもらってください。','请店主用完整备份找回餐点与款项。'],
  '已離席，餐點尚未結清':['Guests left with unsettled orders','退席済み・未精算の注文','已离席，餐点尚未结清'],
+ '已向客人說明，客人同意這筆訂金與退款條件':['I explained the deposit and refund policy; the guest agreed','預り金と返金条件を説明し、お客様の同意を得ました','已向客人说明，客人同意这笔订金与退款条件'],
+ '訂金條件已更新，原輸入仍保留。':['Deposit terms changed. Your entries are kept.','預り金の条件が更新されました。入力内容は残っています。','订金条件已更新，原输入仍保留。'],
+ '重新核對訂金':['Review deposit again','預り金を再確認','重新核对订金'],
+ '重新核對訂位':['Review booking again','予約を再確認','重新核对订位'],
+ '未使用訂金 {0}':['Unused deposit: {0}','未使用の預り金 {0}','未使用订金 {0}'],
+ '訂位已結束，這筆訂金仍待退回。':['Booking ended. This deposit still needs a refund.','予約は終了しています。この預り金の返金が必要です。','订位已结束，这笔订金仍待退回。'],
+ '查看訂金明細':['View deposit details','預り金の明細を見る','查看订金明细'],
+ '已確認實收 {0}':['Confirmed net receipts: {0}','確認済み入金（返金差引後）{0}','已确认实收 {0}'],
+ '已退回 {0}':['Refunded: {0}','返金済み {0}','已退回 {0}'],
+ '{0} 筆款項待處理':['{0} bookings need payment review','入出金の確認が必要な予約 {0}件','{0} 笔款项待处理'],
+ '已結束，仍有款項待處理':['Ended bookings with unresolved payments','終了済み・入出金の確認が必要','已结束，仍有款项待处理'],
+ '離席不會退回訂金，未用款項會繼續提醒。':['Departure does not issue a refund. Unused deposits stay on the list.','退席しても返金はされません。未使用分は引き続き表示されます。','离席不会退回订金，未用款项会继续提醒。'],
+ '查看未用訂金':['View unused deposit','未使用の預り金を見る','查看未用订金'],
+ '餐點沒有待收款':['No outstanding meal payments','飲食代の未収金はありません','餐点没有待收款'],
 }
 export default Object.fromEntries(Object.entries(rows).map(([key,value],index)=>[key,[...value,37500+index]]))

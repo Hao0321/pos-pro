@@ -1,4 +1,5 @@
 import {canonicalSignature,moneyValue,operationHeader,quantityValue} from './operationRules.mjs'
+import {assertReservationDepositApplicationDescriptor,actualRestaurantRefundSources,isReservationDepositFundingRow} from './reservationDepositAllocation.mjs'
 
 export const RESTAURANT_FUNDS_PROTOCOL='pos-restaurant-funds/v1'
 export const RESTAURANT_FUNDS_FEATURE='restaurant-funds-v1'
@@ -71,7 +72,7 @@ function summary(funds,state,details=true){
     quantity:items.reduce((sum,item)=>sum+item.qty,0),items,
     ...(details?{allocations:allocations(funds.items,funds.itemAllocations,new Map(items.map(item=>[item.id,item.qty])))}:{}),
     fulfilled:!!state.fulfilled,...(details?{fulfilment:state.fulfilled?structuredClone(state.fulfilled):null}:{}),
-    ...(details?{payments:state.payments.map(row=>({id:row.id,method:row.method,receivedCents:bounded(row.amount),refundedCents:bounded(row.refunded),availableCents:bounded(row.amount-row.refunded)}))}:{}),
+    ...(details?{payments:state.payments.map(row=>({id:row.id,method:row.method,receivedCents:bounded(row.amount),refundedCents:bounded(row.refunded),availableCents:bounded(row.amount-row.refunded),...(row.reservationDeposit?{reservationDeposit:structuredClone(row.reservationDeposit)}:{})}))}:{}),
   }
 }
 function refundSources(state,amount){
@@ -81,7 +82,7 @@ function refundSources(state,amount){
     const payment=state.payments[index],available=payment.amount-payment.refunded,take=available<remaining?available:remaining
     if(!take)continue
     payment.refunded+=take;remaining-=take
-    refunds.push({paymentId:payment.id,method:payment.method,amountCents:bounded(take)})
+    refunds.push({paymentId:payment.id,method:payment.method,amountCents:bounded(take),...(payment.reservationDeposit?{reservationDeposit:structuredClone(payment.reservationDeposit)}:{})})
   }
   if(remaining)throw fail()
   state.refunded+=amount
@@ -101,7 +102,8 @@ function cancelledItems(funds,state,input){
 }
 function apply(funds,state,input,context){
   operationHeader(input)
-  const extra=input.action==='funds-receive'?['amount','paid','payMethod','shiftId','reference']:input.action==='funds-refund'?['amount','reason','shiftId']:input.action==='cancel-part'?['quantities','reason','shiftId']:input.action==='cancel'?['reason','shiftId']:input.action==='advance'?['status']:[]
+  const extra=input.action==='funds-deposit-apply'?['depositApplication']:input.action==='funds-receive'?['amount','paid','payMethod','shiftId','reference']:input.action==='funds-refund'?['amount','reason','shiftId']:input.action==='cancel-part'?['quantities','reason','shiftId']:input.action==='cancel'?['reason','shiftId']:input.action==='advance'?['status']:[]
+  if(['funds-refund','cancel','cancel-part'].includes(input.action)&&Object.hasOwn(input,'depositDisposition'))extra.push('depositDisposition')
   only(input,['id','time','kind','action','entryId','expectedVersion','storeId','epoch','fundsProtocol','costMode',...extra])
   if(input.fundsProtocol!==undefined&&input.fundsProtocol!==RESTAURANT_FUNDS_PROTOCOL||input.costMode!==undefined&&!['active','reference'].includes(input.costMode))throw fail()
   for(const key of ['storeId','epoch'])if(input[key]!==undefined)identifier(input[key])
@@ -111,7 +113,12 @@ function apply(funds,state,input,context){
   if(typeof context.prepared!=='boolean'||state.ids.has(input.id)||context.version<=state.lastVersion)throw fail()
   const before=summary(funds,state,false)
   const event={id:input.id,entryId:context.entryId,version:context.version,time:input.time,date:context.date,actor:who,prepared:context.prepared,input:structuredClone(input),amountCents:0,changeCents:0,cancelledValueCents:0,cancelledItems:[],allocations:[],refunds:[],fulfilment:null}
-  if(input.action==='funds-receive'){
+  if(input.action==='funds-deposit-apply'){
+    const application=assertReservationDepositApplicationDescriptor(input.depositApplication)
+    if(before.fulfilled||!before.quantity||application.operationId!==input.id||application.orderId!==input.entryId||application.amountCents>before.dueCents)throw fail()
+    event.amountCents=application.amountCents;state.received+=BigInt(application.amountCents)
+    for(const source of application.sources)state.payments.push({id:source.paymentId,method:source.method,amount:BigInt(source.amountCents),refunded:0n,reservationDeposit:{applicationId:application.id,bookingId:application.bookingId,receiptId:source.receiptId,termsHash:application.termsHash,reviewHash:application.reviewHash}})
+  }else if(input.action==='funds-receive'){
     if(before.fulfilled||!before.quantity)throw Error('這張預訂已交付或取消，請勿再次收款。')
     const amount=cents(input.amount),paid=cents(input.paid)
     if(amount<=0n||amount>BigInt(before.dueCents))throw Error('這次收款須大於零，且不可超過尾款。')
@@ -125,7 +132,7 @@ function apply(funds,state,input,context){
     const amount=cents(input.amount)
     if(amount<=0n||amount>BigInt(before.retainedCents))throw Error('退款不可超過尚未退回的實收款。')
     if(!text(input.reason,1000).trim())throw Error('請填寫取消或退款原因。')
-    identifier(input.shiftId);event.amountCents=bounded(amount);event.refunds=refundSources(state,amount)
+    event.amountCents=bounded(amount);event.refunds=refundSources(state,amount)
   }else if(['cancel','cancel-part'].includes(input.action)){
     if(!before.quantity)throw Error('這張預訂已全部取消。')
     if((before.retainedCents>0||before.fulfilled)&&who.role!=='owner')throw Error('已收款或已交付預訂，請由老闆核對取消。')
@@ -134,7 +141,6 @@ function apply(funds,state,input,context){
     if(!cancelled.length)throw Error('這張預訂已全部取消。')
     const value=cancelled.reduce((sum,row)=>sum+cents(funds.items.find(item=>item.id===row.id).price)*BigInt(row.qty),0n)
     const remaining=BigInt(before.totalCents)-value,overpaid=BigInt(before.retainedCents)>remaining?BigInt(before.retainedCents)-remaining:0n
-    if(overpaid)identifier(input.shiftId)
     event.amountCents=bounded(overpaid);event.cancelledValueCents=bounded(value);event.cancelledItems=cancelled
     event.allocations=allocations(funds.items,funds.itemAllocations,new Map(cancelled.map(row=>[row.id,row.qty])))
     event.refunds=refundSources(state,overpaid)
@@ -144,9 +150,15 @@ function apply(funds,state,input,context){
     if(!context.prepared)throw Error('請先完成備餐，再交給客人。')
     const current=summary(funds,state),tenders=new Map()
     for(const payment of current.payments)tenders.set(payment.method,(tenders.get(payment.method)||0)+payment.availableCents)
-    event.fulfilment={items:structuredClone(current.items),allocations:structuredClone(current.allocations),totalCents:current.totalCents,tenders:['cash','card'].filter(method=>tenders.get(method)>0).map(method=>({method,amountCents:tenders.get(method)}))}
+    event.fulfilment={items:structuredClone(current.items),allocations:structuredClone(current.allocations),totalCents:current.totalCents,tenders:['cash','card','bank'].filter(method=>tenders.get(method)>0).map(method=>({method,amountCents:tenders.get(method)}))}
     state.fulfilled={eventId:input.id,version:context.version,time:input.time,date:context.date,...structuredClone(event.fulfilment)}
   }else throw Error('預訂款項操作不正確。')
+  if(['funds-refund','cancel','cancel-part'].includes(input.action)){
+    if(actualRestaurantRefundSources(event).length)identifier(input.shiftId)
+    const transferred=event.refunds.some(isReservationDepositFundingRow)
+    if(transferred){if(!['retain','refund'].includes(input.depositDisposition))throw Error('請確認餐點取消的訂金要保留，還是已實際退回客人。')}
+    else if(Object.hasOwn(input,'depositDisposition'))throw fail()
+  }
   state.ids.add(input.id);state.lastVersion=context.version
   const after=summary(funds,state,false)
   event.remainingQuantity=after.quantity;event.remainingTotalCents=after.totalCents

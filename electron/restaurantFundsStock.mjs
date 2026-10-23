@@ -28,7 +28,7 @@ export function planFundedRestaurantStock(c){
  const added=entry.funds.events.slice(before.funds.events.length),event=added[0]
  const monetary=input.action!=='advance'||input.status==='completed'
  if(added.length!==(monetary?1:0)||event&&(!same(event.input,input)||event.version!==entry.version))throw stockLedgerError('HISTORY')
- if(input.action==='funds-receive'||input.action==='funds-refund')return
+ if(input.action==='funds-receive'||input.action==='funds-refund'||input.action==='funds-deposit-apply')return
  if(input.action==='advance'){
   if(input.status!=='completed')return
   if(before.saleId||!entry.saleId||!event.fulfilment)throw stockLedgerError('HISTORY')

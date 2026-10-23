@@ -16,6 +16,7 @@ import {assertPrivateDraftCaller} from '../../electron/privateDrafts.mjs'
 import {readReservationBook} from '../../electron/reservationHistory.mjs'
 import {browserToBook} from '../../electron/recoveryRules.mjs'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
+import {commitBrowserReservationDepositReturn} from './browserReservationDepositReturn'
 function read(){
   const saved=readRecords(),r=saved.data,settings=Object.fromEntries(r.pos_business_settings.map(s=>[s.key,JSON.parse(s.value)]))
   const data={products:r.pos2_products,entries:r.pos_restaurant_orders,operations:r.pos_restaurant_operations,orders:r.pos2_orders,waste:r.pos2_waste,cashLogs:r.pos2_cash_log,shifts:r.pos2_shifts,settings,config:readRestaurantConfig(settings.restaurantConfig,r.pos2_products),storeId:settings.sharedStoreId||'',epoch:saved.salesEpoch,costMode:hasBrowserStockCost(saved)?'active':'reference',now:Date.now()}
@@ -31,7 +32,9 @@ export function browserCustomerIntakeContext(id,actor){const {data}=read(),order
 export function browserRestaurantMenuQuote(input,actor){return withSalesLock(()=>restaurantMenuPreview(input,read().data,actor))}
 export function browserRestaurantMenuSetupPreview(input,actor){return withSalesLock(()=>previewRestaurantMenuSetup(input,read().data,actor))}
 export function browserRestaurantAgentPreview(input,actor){return withSalesLock(()=>previewRestaurantAgent(input,read().data,actor))}
-export function commitBrowserRestaurant(request,actor){
+export async function commitBrowserRestaurant(request,actor){
+  const returned=await commitBrowserReservationDepositReturn(request,actor)
+  if(returned!==null)return returned
   return withSalesLock(()=>{
     let replay=false,historyChecked=false,writing=false,beforeRaw=null
     try{

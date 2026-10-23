@@ -2,10 +2,13 @@ import {canonicalSignature} from './operationRules.mjs'
 import {RESTAURANT_FUNDS_PROTOCOL,summarizeRestaurantFunds} from './restaurantFunds.mjs'
 import {restaurantFundsCashLog,expectedRestaurantFundedPostings,sameRestaurantFundedOrder} from './restaurantFundedPlan.mjs'
 import {fundedRestaurantProductIds,assertMenuCreateResult} from './restaurantMenuOriginal.mjs'
+import {reservationDepositReturnSources} from './reservationDepositAllocation.mjs'
+import {pendingReservationDepositEvent} from './reservationDepositTransition.mjs'
+import {assertReservationDepositReturnResult} from './reservationDepositReturnResult.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
 const invalid=()=>Error('預訂款項回覆尚未確認，請保留原編號核對。')
-export const needsRestaurantFundsResult=(request,result)=>request.fundsProtocol!==undefined||['funds-receive','funds-refund','cancel-part'].includes(request.action)||result?.receipt?.fundsProtocol!==undefined||result?.entry?.funds!==undefined
+export const needsRestaurantFundsResult=(request,result)=>request.fundsProtocol!==undefined||['funds-deposit-apply','funds-receive','funds-refund','cancel-part'].includes(request.action)||result?.receipt?.fundsProtocol!==undefined||result?.entry?.funds!==undefined
 export function assertRestaurantFundsResult(request,result){
  try{
   const {receipt,entry}=result||{},version=request.action==='create'?1:request.expectedVersion+1
@@ -34,6 +37,7 @@ export function assertRestaurantFundsResult(request,result){
    const cost=result.costReceipt
    if(cost?.protocol!=='pos-stock-cost/v1'||cost.success!==true||cost.sourceMethod!=='applyRestaurantOperation'||cost.id!==request.id||!Number.isSafeInteger(cost.sequence)||cost.sequence<1||typeof cost.eventId!=='string'||!cost.eventId||['eventHash','stateDigest'].some(key=>!/^sha256:[a-f0-9]{64}$/.test(cost[key])))throw invalid()
   }
+  if(reservationDepositReturnSources(event||{}).length&&!pendingReservationDepositEvent(entry.id,event))assertReservationDepositReturnResult(request,result)
   return result
  }catch{throw invalid()}
 }

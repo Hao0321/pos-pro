@@ -1,4 +1,13 @@
 export default {
+ '訂金處理':['Deposit choice','予約金の取り扱い','订金处理'],
+ '這筆訂金 {0}':['This deposit: {0}','今回の予約金 {0}','这笔订金 {0}'],
+ '留作訂金':['Keep as deposit','予約金として残す','留作订金'],
+ '已退回客人':['Already refunded','お客様に返金済み','已退回客人'],
+ '請選擇訂金要保留，還是已退回客人。':['Choose whether to keep the deposit or record a refund already made.','予約金を残すか、返金済みとして記録するかを選んでください。','请选择订金要保留，还是已退回客人。'],
+ '保留訂金 {0}':['Deposit kept {0}','予約金として保留 {0}','保留订金 {0}'],
+ '轉帳退回 {0}':['Bank refund {0}','銀行振込で返金 {0}','转账退回 {0}'],
+ '轉帳退款請先完成，再確認保存。':['Complete the bank refund before saving its record.','銀行で返金を済ませてから記録を保存してください。','转账退款请先完成，再确认保存。'],
+ '我已核對並保留這筆訂金':['I checked and kept this deposit.','確認し、この予約金を保留しました。','我已核对并保留这笔订金'],
  '這次未保存，輸入已保留。':['Not saved. Your input is kept.','保存されていません。入力は残っています。','本次未保存，输入已保留。'],
  '查看原因':['See reason','理由を見る','查看原因'],
  '收款':['Take payment','入金','收款'],

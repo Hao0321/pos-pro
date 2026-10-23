@@ -2,6 +2,7 @@ import {canonicalSignature} from './operationRules.mjs'
 import {reservationError} from './reservationConfig.mjs'
 import {validateReservationDiningEntry} from './reservationDining.mjs'
 import {needsRestaurantFundsResult,assertRestaurantFundsResult} from './restaurantFundsResult.mjs'
+import {assertReservationDepositApplicationResult} from './reservationDepositApplicationResult.mjs'
 
 // The parent alone cannot acknowledge a meal, stock allocation or kitchen job.
 // Both original signatures and the permanent table relationship must agree.
@@ -15,5 +16,5 @@ export function assertReservationDiningResult(request,result){
   const cost=saved.costReceipt
   if(cost?.protocol!=='pos-stock-cost/v1'||cost.success!==true||cost.id!==child.id||cost.sourceMethod!=='applyRestaurantOperation'||!Number.isSafeInteger(cost.sequence)||cost.sequence<2||typeof cost.eventId!=='string'||!cost.eventId||['eventHash','stateDigest'].some(key=>!/^sha256:[a-f0-9]{64}$/.test(cost[key])))throw reservationError('HISTORY')
  }
- return result
+ return assertReservationDepositApplicationResult(request,result)
 }

@@ -95,6 +95,7 @@
       "dist/**/*",
       "electron/**/*",
       "public/menu/**/*",
+      "public/reserve/**/*",
       "public/i18n/**/*",
       "!**/*.map"
     ],

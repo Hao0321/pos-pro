@@ -42,7 +42,8 @@
     "reservations.deposits",
     "loyalty.programs",
     "loyalty.entitlements",
-    "loyalty.customer-experience"
+    "loyalty.customer-experience",
+    "integration.community-stores"
   ],
   "capabilities": [
     {
@@ -315,6 +316,13 @@
       "status": "unmeasured",
       "implementation": "partial",
       "nextExperiment": "凍結大資料集與並行工作量，測量延遲、資源、重啟及尖峰最後庫存"
+    },
+    {
+      "id": "integration.community-stores",
+      "name": "自由工坊夥伴開店串接、每店隔離與所有人獨立免費使用",
+      "status": "planned",
+      "implementation": "proposal-only",
+      "nextExperiment": "PR991僅為自由工坊串接提案。沿平台既有tenant／instance與中央契約完成店主綁定、共同訂單與唯一庫存寫入、原單重送、收付售後、可攜切換及真實首次使用；獨立ERP不要求加入社群。未接通公開服務，不以提案或原始碼公開宣稱功能上線。"
     }
   ]
 }

@@ -1,6 +1,7 @@
 import {summarizeRestaurantFunds} from './restaurantFunds.mjs'
 import {expectedRestaurantFundedPostings,sameRestaurantFundedOrder} from './restaurantFundedPlan.mjs'
 import {restaurantMenuReferenceEvents} from './restaurantMenuCost.mjs'
+import {actualRestaurantRefundSources} from './reservationDepositAllocation.mjs'
 
 // F3: collection/refund changes cash and the contract liability. The separate
 // funded fulfilment order recognizes revenue; it cannot collect cash again.
@@ -11,8 +12,9 @@ export function restaurantFundsToJournalEntries(entries=[]){
     return entry.funds.events.flatMap(event=>{
       const receiving=event.input.action==='funds-receive'
       if(!event.amountCents)return []
-      const rows=receiving?[{method:event.input.payMethod,amountCents:event.amountCents}]:event.refunds
-      const amount=event.amountCents/100
+      const rows=receiving?[{method:event.input.payMethod,amountCents:event.amountCents}]:actualRestaurantRefundSources(event)
+      if(!rows.length)return []
+      const amount=rows.reduce((sum,row)=>sum+row.amountCents,0)/100
       const lines=receiving?
         [...rows.map(row=>({account:row.method==='cash'?'1101':'1103',debit:row.amountCents/100,credit:0})),{account:'2193',debit:0,credit:amount}]:
         [{account:'2193',debit:amount,credit:0},...rows.map(row=>({account:row.method==='cash'?'1101':'1103',debit:0,credit:row.amountCents/100}))]

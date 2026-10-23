@@ -2,6 +2,7 @@ import {validateSalesDocument,salesDate} from './salesRules.mjs'
 import {isProcurement,validateProcurement} from './procurementRules.mjs'
 import {reservationDepositsToCashFlows} from './reservationDepositJournal.mjs'
 import {summarizeRestaurantFunds} from './restaurantFunds.mjs'
+import {actualRestaurantRefundSources} from './reservationDepositAllocation.mjs'
 import {journalLineCents,centsNumber} from './journalAmounts.mjs'
 
 // Read-only report projections. These are never saved as POS checkouts, used
@@ -42,5 +43,5 @@ export function businessCashFlows(documents=[],customerEntries=[],purchases=[],s
   ...purchases.filter(isProcurement).flatMap(po=>{validateProcurement(po);return [['payments',-1],['reversals',1],['refunds',1],['refundReversals',-1]].flatMap(([group,sign])=>(po.procurement[group]||[]).map(event=>({id:event.id,date:event.date,time:event.time,method:event.method,amount:sign*event.amount})))}),
   ...supplierEntries.filter(event=>['pay','refund','refund-reverse','pay-reverse'].includes(event.action)).map(event=>({id:event.id,date:event.date,time:event.time,method:event.method,amount:(['refund','pay-reverse'].includes(event.action)?1:-1)*event.amount})),
   ...reservationDepositsToCashFlows(reservationEntries),
-  ...restaurantEntries.flatMap(entry=>{if(!entry.funds)return [];summarizeRestaurantFunds(entry.funds);return entry.funds.events.flatMap(event=>event.input.action==='funds-receive'?[{id:event.id,date:event.date,time:event.time,method:event.input.payMethod,amount:event.amountCents/100}]:event.refunds.map((source,index)=>({id:event.id+':'+index,date:event.date,time:event.time,method:source.method,amount:-source.amountCents/100})))})]
+  ...restaurantEntries.flatMap(entry=>{if(!entry.funds)return [];summarizeRestaurantFunds(entry.funds);return entry.funds.events.flatMap(event=>event.input.action==='funds-receive'?[{id:event.id,date:event.date,time:event.time,method:event.input.payMethod,amount:event.amountCents/100}]:actualRestaurantRefundSources(event).map((source,index)=>({id:event.id+':'+index,date:event.date,time:event.time,method:source.method,amount:-source.amountCents/100})))})]
 }

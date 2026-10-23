@@ -10,6 +10,7 @@ import {reservationDiningMissing,reservationDiningLinks} from './reservationDini
 import {assertReservationReception} from './reservationReception.mjs'
 import {RESERVATION_DEPOSIT_FENCE} from './reservationDepositPolicy.mjs'
 import {RESERVATION_DEPOSIT_FIELDS,reservationDepositMissing,assertReservationDepositView} from './reservationDeposits.mjs'
+import {RESERVATION_DEPOSIT_APPLICATION_FENCE} from './reservationDepositAllocation.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b),clone=value=>structuredClone(value)
 const bad=()=>{throw reservationError('HISTORY')}
@@ -38,6 +39,8 @@ function inspect(book,known,options){
  if(serviceFlag!==undefined&&(serviceFlag!=='1'||publicFlag!=='1')||all.some(row=>['protect','access','dine'].includes(row.event.input.action))&&serviceFlag!=='1')bad()
  const depositFlag=setting(RESERVATION_DEPOSIT_FENCE)
  if(depositFlag!==undefined&&(depositFlag!=='1'||serviceFlag!=='1')||all.some(row=>Object.hasOwn(RESERVATION_DEPOSIT_FIELDS,row.event.input.action))&&depositFlag!=='1')bad()
+ const applicationFlag=setting(RESERVATION_DEPOSIT_APPLICATION_FENCE)
+ if(applicationFlag!==undefined&&(applicationFlag!=='1'||depositFlag!=='1')||all.some(row=>row.event.change.depositApplication||row.event.change.depositReturn)&&applicationFlag!=='1')bad()
  if(all.length&&(flag!=='1'||all[0].event.input.action!=='configure'))bad()
  const stored=replayReservationReceipts(recorded,storeId),state=replayReservationReceipts(all,storeId)
  if(head!==stored.head)bad()

@@ -1,6 +1,7 @@
 const fs=require('node:fs'),path=require('node:path')
 const REQUIRED_IDS=['ux.tasks','ux.all-workflows','ux.human-acceptance','agent.handoff','agent.interoperability','pos.transactions','restaurant.fulfilment','restaurant.deposits-modifiers','sales.orders-receivables','crm.customers','procurement.core','procurement.returns','procurement.approvals-advances','inventory.movements-costing','inventory.warehouses-lots','inventory.units-counting','accounting.ledger','accounting.close-tax','finance.reconciliation-assets','manufacturing.mrp','people.payroll','projects.services','organization.multi-entity','integration.commerce','security.authority','recovery.backup','delivery.devices','delivery.installation','update.client-check','update.release-channel','operations.scale','migration.switching']
 REQUIRED_IDS.push('reservations.capacity','reservations.journey','reservations.deposits','loyalty.programs','loyalty.entitlements','loyalty.customer-experience')
+REQUIRED_IDS.push('integration.community-stores')
 function validateCapabilities(ledger,{root,version,completion=false}={}){
   const errors=[],open=[]
   if(ledger.schemaVersion!==1||ledger.productVersion!==version||ledger.completionScope!=='public'||ledger.allFeaturesFree!==true)errors.push('invalid contract, version or free-access policy')

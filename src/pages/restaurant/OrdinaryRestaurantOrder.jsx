@@ -12,6 +12,7 @@ import WorkspaceDraftNotice from '../../components/WorkspaceDraftNotice'
 import {restaurantAvailability} from '../../../electron/restaurantRules.mjs'
 import {validDiningDraft,diningForm,diningPending} from '../../utils/reservationDiningDraft.mjs'
 import DiningMemberSelect from '../reservations/DiningMemberSelect'
+import ReservationDepositAmounts from '../reservations/ReservationDepositAmounts'
 
 const channels={preorder:'預訂',walkin:'現場',delivery:'外送'}
 const grid={display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12},button={minHeight:48},field={minHeight:48,fontSize:18}
@@ -91,6 +92,7 @@ export default function OrdinaryRestaurantOrder({data,session,store,reload,activ
     <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:12}}><select className="field" aria-label={tr('預訂菜單')} style={{...field,flex:1,minWidth:160}} value={chosen} onChange={e=>select(e.target.value)}><option value="">{tr('選擇品項')}</option>{menu.map(row=><option key={row.id} value={row.id}>{row.name} · ${row.price}{tr(' · 可接 ')}{restaurantAvailability(row,data.config,store.products)}{tr(' 份')}</option>)}</select><button className="btn btn-ghost" style={button} type="button" disabled={!chosen} onClick={()=>{const product=store.products.find(row=>row.id===chosen);if(product)edit(f=>({...f,items:f.items.some(row=>row.id===product.id)?f.items.map(row=>row.id===product.id?{...row,qty:String(Number(row.qty)+1)}:row):[...f.items,{id:product.id,name:product.name,unit:product.unit||'個',qty:'1',price:product.price}]}))}}>{tr('加入訂單')}</button></div>
     {form.items.map(row=><div key={row.id} style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginTop:8}}><span>{row.name} · {priceText(row.price)}</span><input aria-label={tr('預訂份數 {0}',{0:row.id})} className="field" type="number" min="1" step="1" style={{...field,width:100}} value={row.qty} onChange={e=>edit(f=>({...f,items:f.items.map(item=>item.id===row.id?{...item,qty:e.target.value}:item)}))}/><button className="btn btn-ghost" style={button} type="button" onClick={()=>edit(f=>({...f,items:f.items.filter(item=>item.id!==row.id)}))}>{tr('移除品項')}</button></div>)}
     <p>{tr('應收 NT$ ')}{total===null?'—':total}{tr('。接單先預留；收款另行確認。')}</p>
+    {dining&&<ReservationDepositAmounts source={diningSource} totalCents={total===null?null:Math.round(total*100)}/>}
     <button className="btn btn-primary" style={button} type="submit" data-ordinary-save disabled={!form.items.length||!data.config.enabled}>{tr('保存預訂並預留庫存')}</button><button className="btn btn-ghost" style={button} type="button" data-ordinary-recheck disabled={!form.items.length} onClick={()=>review(true)}>{tr('保留輸入，重新核對')}</button>{modified&&<button className="btn btn-ghost" style={button} type="button" data-ordinary-discard onClick={discard}>{tr('放棄這張草稿')}</button>}
    </fieldset>
   </form>}

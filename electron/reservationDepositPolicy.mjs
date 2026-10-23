@@ -10,6 +10,7 @@ export const RESERVATION_DEPOSIT_TERMS='pos-reservation-deposit-terms/v1'
 export const MAX_DEPOSIT_CENTS=100000000000
 export const depositError=code=>Object.assign(Error({POLICY:'請核對訂金條件與金額。',REVIEW:'請先核對這筆訂位的訂金條件，再確認訂位。',STALE:'訂金資料已更新，請重新核對。',SOURCE:'訂金原收款或可用餘額需要核對。',SHIFT:'現金訂金與退款需要目前開啟的班次。',RECOVERY:'訂金與原收款尚未找回，請先用完整備份核對復原。',MONEY:'訂金金額須為有效整數分，且不可超過原來源。'}[code]||'訂金原紀錄需要核對，請保留原編號。'),{code:'RESERVATION_DEPOSIT_'+code})
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b),bad=()=>{throw depositError('POLICY')}
+const termsFields=['protocol','policyVersion','policyHash','currency','date','slot','partySize','channel','ruleId','basis','unitCents','requiredCents','refund','hash']
 export function depositCents(value,{positive=false}={}){if(!Number.isSafeInteger(value)||value<(positive?1:0)||value>MAX_DEPOSIT_CENTS)throw depositError('MONEY');return value}
 function basis(row){if(!['none','per-booking','per-guest'].includes(row.basis))bad();depositCents(row.amountCents);if(row.basis==='none'?row.amountCents!==0:row.amountCents===0)bad();return {basis:row.basis,amountCents:row.amountCents}}
 export const defaultReservationDepositPolicy=()=>({enabled:false,currency:'TWD',basis:'none',amountCents:0,refund:'full-unused',rules:[]})
@@ -39,6 +40,17 @@ export function quoteReservationDeposit(policy,booking){
  return {...value,hash:privateDraftDigest(value)}
 }
 export function assertReservationDepositTerms(terms,policy){
- draftObject(terms,['protocol','policyVersion','policyHash','currency','date','slot','partySize','channel','ruleId','basis','unitCents','requiredCents','refund','hash'])
+ draftObject(terms,termsFields)
  if(!same(terms,quoteReservationDeposit(policy,terms)))bad();return terms
+}
+// A saved review can be validated without replacing its original policy. The
+// writer still compares it with the actual current authority before admission.
+export function assertReservationDepositQuote(terms){
+ draftObject(terms,termsFields)
+ const {hash,...body}=terms
+ if(terms.protocol!==RESERVATION_DEPOSIT_TERMS||terms.currency!=='TWD'||terms.refund!=='full-unused'||!['phone','walkin','online'].includes(terms.channel)||typeof terms.policyHash!=='string'||!/^[a-f0-9]{64}$/.test(terms.policyHash)||typeof hash!=='string'||!/^[a-f0-9]{64}$/.test(hash)||hash!==privateDraftDigest(body))bad()
+ reservationInteger(terms.policyVersion,1,Number.MAX_SAFE_INTEGER);reservationDate(terms.date);reservationMinutes(terms.slot);reservationInteger(terms.partySize,1,100);if(terms.ruleId!==null)reservationId(terms.ruleId)
+ basis({basis:terms.basis,amountCents:terms.unitCents});depositCents(terms.requiredCents)
+ if(BigInt(terms.unitCents)*BigInt(terms.basis==='per-guest'?terms.partySize:terms.basis==='none'?0:1)!==BigInt(terms.requiredCents))bad()
+ return terms
 }

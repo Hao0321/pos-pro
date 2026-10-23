@@ -72,6 +72,7 @@ export default function App() {
   useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='customer-ledger'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'customers')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
   useEffect(()=>{if(session?.role==='owner'&&store.financialState.kind==='supplier-ledger'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'suppliers')},[session?.userId,store.financialState.kind,store.financialState.phase,setView])
   useEffect(()=>{if(session&&store.financialState.kind==='stocktake'&&store.financialState.phase==='uncertain')setView(current=>current==='recovery'?current:'stocktake')},[session?.userId,store.financialState.kind,store.financialState.phase,store.financialState.id,setView])
+  useEffect(()=>{if(session&&store.financialState.kind==='reservation'&&store.financialState.phase==='uncertain')try{if(['deposit-policy','deposit-receive','deposit-refund'].includes(readPendingFinancial()?.request.action))setView(current=>current==='recovery'?current:'reservations')}catch{}},[session?.userId,store.financialState.kind,store.financialState.phase,store.financialState.id,setView])
   useEffect(()=>{document.documentElement.dataset.largeText=String(largeText);try{localStorage.setItem('pos_large_text_v1',String(largeText))}catch{}},[largeText])
   useEffect(()=>{document.documentElement.dataset.simpleMode=String(simpleMode);try{localStorage.setItem('pos_simple_mode_v1',String(simpleMode))}catch{}},[simpleMode])
   useEffect(()=>{
@@ -184,7 +185,7 @@ export default function App() {
           </div>
         )}
         {/* Quick entry locks its fields while retaining the same-document recovery action. */}
-        <main className="workspace-content" data-view={view} inert={store.checkoutState.phase!=='idle'&&view!=='recovery'||store.financialState.phase!=='idle'&&!['quick','exchange','sales','customers','suppliers','stocktake','refunds','stocksetup','warehouse','recovery','lots'].includes(view)?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+        <main className="workspace-content" data-view={view} inert={store.checkoutState.phase!=='idle'&&view!=='recovery'||store.financialState.phase!=='idle'&&!['quick','exchange','sales','customers','suppliers','stocktake','refunds','stocksetup','warehouse','recovery','lots'].includes(view)&&!(view==='reservations'&&store.financialState.kind==='reservation'&&store.financialState.phase==='uncertain')?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
           <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}>
           {view==='recovery'&&session.role==='owner'&&<RecoveryPage store={store} session={session}/>}
           {view === 'dashboard' && can('pos.use') && (simpleMode?<SimpleHomePage store={store} session={session} area={workspaceArea} onAreaChange={setWorkspaceArea}/>:<DashboardPage store={store} session={session}/>)}

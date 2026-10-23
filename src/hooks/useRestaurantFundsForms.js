@@ -96,6 +96,7 @@ export default function useRestaurantFundsForms({data,session,store,onState,onRe
   if(record.current.value!==original||latest.current.session.userId!==context.session.userId||latest.current.session.role!==context.session.role||restaurantFundsFormKey(restaurantFundsFormScope(fresh,context.session))!==record.current.key)throw Error('店面或帳號已變更，請保留原輸入核對。')
   context.onState?.(fresh)
   const entry=fresh.entries.find(row=>row.id===original.review.entryId),preview=previewRestaurantFundsForm(entry,original,{state:fresh,actor:context.session,shiftId:context.store.openShift?.id||'',reason})
+  if(preview.requiresDepositDecision)throw Error('請選擇訂金要保留，還是已退回客人。')
   if(preview.needsShift&&!context.store.openShift?.id)throw Error('請先到班別交班開班，再登記收款。')
   const operation={id:'restaurant-'+crypto.randomUUID(),time:fresh.now,input:preview.input},staged={...original,operation}
   if(!await persist(staged,false))throw Error('輸入尚未保存，請保留畫面並重試。')
@@ -114,7 +115,8 @@ export default function useRestaurantFundsForms({data,session,store,onState,onRe
   const context=latest.current,fresh=await loadRestaurantState()
   if(record.current.value!==original||latest.current.session.userId!==context.session.userId||latest.current.session.role!==context.session.role||restaurantFundsFormKey(restaurantFundsFormScope(fresh,context.session))!==record.current.key)throw Error('店面或帳號已變更，請保留原輸入核對。')
   const entry=fresh.entries.find(row=>row.id===original.review.entryId);if(!entry?.funds||entry.status==='cancelled')throw Error('餐點已結束，請核對正式原單')
-  const review=restaurantFundsReview(entry),fields=original.mode==='cancel'?{...original.fields,quantities:review.items.map(item=>({id:item.id,qty:original.fields.quantities.find(row=>row.id===item.id)?.qty||'0'}))}:original.fields
+  const review=restaurantFundsReview(entry),fields=original.mode==='cancel'?{...original.fields,quantities:review.items.map(item=>({id:item.id,qty:original.fields.quantities.find(row=>row.id===item.id)?.qty||'0'}))}:{...original.fields}
+  if(original.mode!=='receive'){if(review.paymentSources)fields.depositDisposition=fields.depositDisposition||'';else delete fields.depositDisposition}
   context.onState?.(fresh);await persist({...original,review,fields})
  })}
  async function discard(){

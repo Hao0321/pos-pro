@@ -11,6 +11,7 @@ import {RESERVATION_SERVICE_FENCE} from './reservationService.mjs'
 import {reservationReception,assertReservationReception} from './reservationReception.mjs'
 import {RESERVATION_DEPOSIT_FENCE,depositError} from './reservationDepositPolicy.mjs'
 import {RESERVATION_DEPOSIT_FIELDS,assertReservationDepositShift,reservationDepositCashLog} from './reservationDeposits.mjs'
+import {RESERVATION_DEPOSIT_APPLICATION_FENCE} from './reservationDepositAllocation.mjs'
 
 export function reservationOrderingTables(book){return readRestaurantConfig(readExchangeTextSetting(book.settings||[],'restaurantConfig'),book.products||[]).tableOrdering?.tables||[]}
 export function reservationData(book,scope,now,known=[],options={}){
@@ -22,7 +23,7 @@ export function assertReservationMemberRemoval(before,after,known=[]){const reta
 export function projectReservationBook(book,input,scope,actor,time,known=[],{allowGuest=false,costMode}={}){
  if(input?.action==='guest'&&!allowGuest)throw Error('權限不足')
  if(!allowGuest||input?.action!=='guest')reservationActor(actor,book.users);reservationCommand(input);const now=Date.parse(time),{history,data}=reservationData(book,scope,now,known,{costMode}),existing=history.byId.get(input.id)
- if(['configure','recover','publish','protect','access','deposit-policy','deposit-refund'].includes(input?.action)&&actor.role!=='owner')throw Error('權限不足')
+ if(['configure','recover','publish','protect','access','deposit-policy','deposit-refund','deposit-return'].includes(input?.action)&&actor.role!=='owner')throw Error('權限不足')
  if(existing)return {book,history,receipt:existing,result:reservationResult(input,existing,history,scope,now,data.orderingTables),existing:true}
  if(input.action==='recover'&&history.diningMissing?.length)throw reservationError('DINING_RECOVERY')
  if(input.action==='recover'&&history.depositMissing?.length)throw depositError('RECOVERY')
@@ -36,6 +37,7 @@ export function projectReservationBook(book,input,scope,actor,time,known=[],{all
  if(['guest','publish','protect','access','dine'].includes(input.action)){settings.set(RESERVATION_PUBLIC_FENCE,{key:RESERVATION_PUBLIC_FENCE,value:'1'});next.settings=[...settings.values()]}
  if(['protect','access','dine'].includes(input.action)){settings.set(RESERVATION_SERVICE_FENCE,{key:RESERVATION_SERVICE_FENCE,value:'1'});next.settings=[...settings.values()]}
  if(Object.hasOwn(RESERVATION_DEPOSIT_FIELDS,input.action)){for(const key of [RESERVATION_DEPOSIT_FENCE,RESERVATION_SERVICE_FENCE,RESERVATION_PUBLIC_FENCE])settings.set(key,{key,value:'1'});next.settings=[...settings.values()]}
+ if(planned.event.change.depositApplication||planned.event.change.depositReturn){for(const key of [RESERVATION_DEPOSIT_APPLICATION_FENCE,RESERVATION_DEPOSIT_FENCE,RESERVATION_SERVICE_FENCE,RESERVATION_PUBLIC_FENCE])settings.set(key,{key,value:'1'});next.settings=[...settings.values()]}
  const saved=readReservationBook(next,known)
  if(saved.state.needsRecovery||canonicalSignature(saved.receipts)!==canonicalSignature(all))throw reservationError('HISTORY')
  return {book:next,history:saved,receipt:planned.receipt,event:planned.event,missing:history.missing,activation:!history.recorded.length?(history.activation||makeActivation(planned.receipt)):null,result:reservationResult(input,planned.receipt,saved,scope,now,data.orderingTables),existing:false}
