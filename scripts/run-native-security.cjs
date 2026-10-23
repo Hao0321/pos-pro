@@ -1,5 +1,7 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--opening-cutover-intake-browser-ui':['native-opening-cutover-intake-browser-ui.cjs','POS_OPENING_CUTOVER_INTAKE_BROWSER_PASS',true],
+  '--opening-cutover-intake-ui':['native-opening-cutover-intake-ui.cjs','POS_OPENING_CUTOVER_INTAKE_UI_PASS',true],
   '--reservation-deposit-liability-ui':['native-reservation-deposit-liability-ui.cjs','POS_RESERVATION_DEPOSIT_LIABILITY_UI_PASS',true],
   '--reservation-deposit-reception-ui':['native-reservation-deposit-reception-ui.cjs','POS_RESERVATION_DEPOSIT_RECEPTION_UI_PASS',true],
   '--reservation-deposit-consent-ui':['native-reservation-deposit-consent-ui.cjs','POS_RESERVATION_DEPOSIT_CONSENT_UI_PASS',true],

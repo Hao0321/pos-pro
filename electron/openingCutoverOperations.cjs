@@ -1,14 +1,15 @@
 const {OPENING_CUTOVER_PROTOCOL,OPENING_CUTOVER_FENCE,OPENING_CUTOVER_HEAD,openingActivationRequest}=require('./openingCutoverRules.mjs'),{previewOpeningCutover,verifyOpeningCutover,cutoverCustomerRequest,cutoverEconomicDigest}=require('./openingCutoverModel.mjs'),{openingCutoverMasterRequest}=require('./openingCutoverSource.mjs'),{readOpeningCutoverHistory,openingCutoverAudit}=require('./openingCutoverHistory.mjs'),{makeOpeningCutoverReceipt,cutoverOpeningRows,assertOpeningCutoverResult}=require('./openingCutoverReceipt.mjs'),{openingBootstrap,openingStockEvidence}=require('./openingMigration.mjs'),{readStockOpening}=require('./stockOpeningOperations.cjs'),{stockLedgerDigest}=require('./stockLedgerModel.mjs'),{planCustomerOpeningActivation}=require('./customerLedger.mjs'),{planSupplierOpeningActivation}=require('./supplierLedger.mjs')
 module.exports=function(db,api,stmts,store,openingMasters){
+ const {OPENING_CUTOVER_LOOKUP,lookupOpeningCutover}=require('./openingCutoverLookup.mjs')
  const legacyPreview=api.previewOpeningMigration,legacyApply=api.applyOpeningMigration,readCustomer=require('./tradingState.cjs')(db,stmts),readSupplier=require('./supplierState.cjs')(db,stmts)
- api.previewOpeningMigration=(input,actor)=>input?.protocol===OPENING_CUTOVER_PROTOCOL?db.transaction(()=>{const scope=api.getPrivateDraftContext(actor);return previewOpeningCutover(input,api.exportData(),scope,actor)})():legacyPreview(input,actor)
+ api.previewOpeningMigration=(input,actor)=>input?.protocol===OPENING_CUTOVER_LOOKUP?db.transaction(()=>{const scope=api.getPrivateDraftContext(actor),knownOriginal=!!db.prepare('SELECT 1 FROM recovery_original_ids WHERE method=? AND operation_id=? LIMIT 1').get('applyOpeningMigration',input.id);return lookupOpeningCutover(input,api.exportData(),scope,actor,{knownOriginal})})():input?.protocol===OPENING_CUTOVER_PROTOCOL?db.transaction(()=>{const scope=api.getPrivateDraftContext(actor);return previewOpeningCutover(input,api.exportData(),scope,actor)})():legacyPreview(input,actor)
  api.applyOpeningMigration=(input,actor)=>{
   if(input?.protocol!==OPENING_CUTOVER_PROTOCOL)return legacyApply(input,actor)
   let checked=false,existing=false
   try{return db.transaction(()=>store.scope(()=>{
    const scope=api.getPrivateDraftContext(actor),book=api.exportData(),history=readOpeningCutoverHistory(book);existing=history.byId.has(input.id)
-   const verified=verifyOpeningCutover(input,book,scope,actor);checked=true;if(verified.receipt)return assertOpeningCutoverResult(input,{success:true,receipt:verified.receipt})
-   if(db.prepare('SELECT 1 FROM recovery_original_ids WHERE method=? AND operation_id=? LIMIT 1').get('applyOpeningMigration',input.id))throw Error('原搬家編號曾經保存，請使用復原引導核對，勿重新搬入。')
+   if(!existing){if(db.prepare('SELECT 1 FROM recovery_original_ids WHERE method=? AND operation_id=? LIMIT 1').get('applyOpeningMigration',input.id))throw Error('原搬家編號曾經保存，請使用復原引導核對，勿重新搬入。');checked=true}
+   const verified=verifyOpeningCutover(input,book,scope,actor);if(verified.receipt)return assertOpeningCutoverResult(input,{success:true,receipt:verified.receipt})
    const plan=verified.preview.plan,time=new Date().toISOString(),child=openingCutoverMasterRequest(input);let childSaved=null,masterId=null,bootstrapId=null,stockReceipt=null
    if(child){const view=openingMasters.preview(child,actor);childSaved=openingMasters.apply({...child,review:view.review},actor);if(childSaved?.success!==true)throw Error(childSaved?.error||'主檔尚未保存，整批仍保留。');masterId=childSaved.receipt.id}
    const supplierCreates=[],customerCreates=[]

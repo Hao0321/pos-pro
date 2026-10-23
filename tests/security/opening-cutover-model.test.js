@@ -16,11 +16,35 @@ import {makeStockAccountingReport,stockPeriodDisclosure} from '../../electron/st
 const time='2026-10-19T04:00:00.000Z',actor={userId:'owner',username:'Lot fixture',role:'owner'},book=()=>browserToBook(structuredClone(readPortableBackup(fixture,'browser').book)),scope=b=>privateDraftContext(fixture.storeId,'cutover-model-epoch',actor,b.users),input=(b,s=source)=>makeOpeningCutoverInput(JSON.stringify(s),scope(b),'2026-10-19')
 function prepared(b,s=source){const command=input(b,s),view=previewOpeningCutover(command,b,scope(b),actor);expect(view.ready,JSON.stringify(view.trial||view.plan)).toBe(true);return {command:{...command,review:view.review},view}}
 
+describe('OB6 verified owner identity from actual transport sessions',()=>{
+beforeEach(()=>{vi.useFakeTimers();vi.setSystemTime(new Date(time))})
+afterEach(()=>vi.useRealTimers())
+it('uses the verified owner identity for both activation barriers when the real transport also carries session metadata',()=>{
+ const b=book(),original=prepared(b),session={...actor,token:'owned-session-fixture-only',loginAt:Date.now()-1000,expiresAt:Date.now()+60000},view=previewOpeningCutover(input(b),b,scope(b),session)
+ expect(view.ready,JSON.stringify(view.trial)).toBe(true);expect(view.review).toEqual(original.view.review)
+ const saved=projectOpeningCutoverBook({...input(b),review:view.review},view.plan,b,scope(b),session,time)
+ expect(saved.receipt.actor).toEqual(actor);expect(JSON.stringify(saved.receipt)).not.toContain(session.token)
+ for(const event of [...saved.book.customerEntries,...saved.book.supplierEntries])expect(event.actor).toEqual(actor)
+ expect(saved.views.customer.openingClaims[0].owed).toBe(600);expect(saved.views.supplier.openingClaims[0].owed).toBe(900)
+})
+it('does not let unrelated session metadata override a wrong owner ID, username or actual role',()=>{
+ const b=book();for(const changed of [{userId:'wrong-owner'},{username:'wrong-name'},{role:'staff'}])expect(()=>previewOpeningCutover(input(b),b,scope(b),{...actor,token:'owned-session-fixture-only',...changed})).toThrow()
+})
+})
+
 describe('OB6 shared original source cutover postimage',()=>{
  beforeEach(()=>{vi.useFakeTimers();vi.setSystemTime(new Date(time))})
  afterEach(()=>vi.useRealTimers())
  it('projects the actual combined master, stock and financial postimage before a write',()=>{
   const b=book(),before=canonicalSignature(b),{view}=prepared(b);expect(canonicalSignature(b)).toBe(before);expect(view.trial.status).toBe('projected-not-posted');expect(view.trial.customerClaims[0].owed).toBe(600);expect(view.trial.supplierClaims[0].owed).toBe(900)
+ })
+ it('recomputes the identical guarded browser postimage when the real clock advances between projections',()=>{
+  const b=book(),{command,view}=prepared(b),first=projectOpeningCutoverBook(command,view.plan,b,scope(b),actor,time)
+  vi.setSystemTime(new Date(Date.parse(time)+37))
+  const second=projectOpeningCutoverBook(command,verifyOpeningCutover(command,b,scope(b),actor).preview.plan,b,scope(b),actor,time)
+  expect(second.book).toEqual(first.book);expect(second.receipt).toEqual(first.receipt)
+  const child=first.book.auditLog.find(row=>row.action==='AGENT_MASTER_MIGRATION'),review=JSON.parse(JSON.parse(child.detail).signature).review
+  expect(review.createdAt).toBe(Date.parse(time));expect(readOpeningCutoverHistory(second.book).receipts).toHaveLength(1)
  })
  it('preserves all source roles and returns the same verified receipt on exact retries',()=>{
   const b=book(),{command,view}=prepared(b),verified=verifyOpeningCutover(command,b,scope(b),actor),saved=projectOpeningCutoverBook(command,verified.preview.plan,b,scope(b),actor,time),history=readOpeningCutoverHistory(saved.book)

@@ -68,7 +68,10 @@ export function openingBalanceContextFromCutovers(storeId,batches){
 }
 export function assertOpeningActivation(request,side,data,revision,actor,pendingReceipt=null){
  const batch=pendingReceipt?readOpeningCutoverProof(pendingReceipt,data.storeId).batch:compileContext(data.openingBalanceContext,data.storeId).find(row=>row.batch.id===request.openingBatchId)?.batch
- if(!batch||request.action!==OPENING_ACTIVATION||request.openingBatchId!==batch.id||request.id!==batch[side==='receivable'?'customerBarrierId':'supplierBarrierId']||revision!==batch[sideRevision(side)]||request.sourceDigest!==batch.sourceDigest||request.date!==batch.cutoffDate||request.time!==batch.time||request.epoch!==JSON.parse(batch.signature).scope.epoch||request.reviewed!==true||!same(actor,batch.actor))bad()
+ // Receipts retain the audit identity, while authenticated transports also
+ // carry session tokens and expiry. Those ephemeral fields are not identity.
+ const identity={userId:actor?.userId,username:actor?.username,role:actor?.role}
+ if(!batch||request.action!==OPENING_ACTIVATION||request.openingBatchId!==batch.id||request.id!==batch[side==='receivable'?'customerBarrierId':'supplierBarrierId']||revision!==batch[sideRevision(side)]||request.sourceDigest!==batch.sourceDigest||request.date!==batch.cutoffDate||request.time!==batch.time||request.epoch!==JSON.parse(batch.signature).scope.epoch||request.reviewed!==true||!same(identity,batch.actor))bad()
 }
 // Permanent source-party links are reconstructed from the same validated proof
 // as settlement. Callers cannot supply an unverified mapping dictionary.

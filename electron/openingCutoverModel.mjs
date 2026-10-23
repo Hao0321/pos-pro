@@ -31,7 +31,9 @@ export function projectOpeningCutoverBook(input,plan,book,scope,actor,time,{tria
  readOpeningCutoverInput(input);const history=readOpeningCutoverHistory(book),priorContext=history.context
  let next=structuredClone(book),pendingMaster=null,masterId=null,stockReceipt=null,bootstrapId=null
  const child=openingCutoverMasterRequest(input)
- if(child){const view=previewMasterMigration(child,next,scope,actor),request={...child,review:view.review},saved=appendBrowserMasterMigration(next,request,scope,actor,time,{deferOpeningReceipt:true});next=saved.book;masterId=saved.receipt.id;pendingMaster={request,receipt:saved.receipt}}
+ // The guarded browser writer recomputes this postimage. Bind the internal
+ // child review to the same transaction time so the proof is deterministic.
+ if(child){const view=previewMasterMigration(child,next,scope,actor),request={...child,review:{...view.review,createdAt:Date.parse(time)}},saved=appendBrowserMasterMigration(next,request,scope,actor,time,{deferOpeningReceipt:true});next=saved.book;masterId=saved.receipt.id;pendingMaster={request,receipt:saved.receipt}}
  const supplierCreates=[],customerCreates=[]
  for(const row of plan.parties.creations.filter(row=>row.side==='payable')){if(next.suppliers.some(item=>item.id===row.values.id))bad();next.suppliers.push({contact:'',phone:'',payTerms:'',note:'',catalog:[],...structuredClone(row.values)});supplierCreates.push({sourceKey:row.sourceKey,supplierId:row.values.id,values:structuredClone(row.values)})}
  for(const row of plan.parties.creations.filter(row=>row.side==='receivable')){const request=cutoverCustomerRequest(input,row,next.customerEntries.length,time),saved=planCustomerLedger(request,cutoverLedgerData(next,scope,priorContext),actor);next.customerEntries.push(saved.event);next.customerOperations.push(saved.receipt);customerCreates.push({sourceKey:row.sourceKey,customerId:row.values.id,operationId:request.id,revision:saved.event.revision,profile:structuredClone(saved.event.customer)})}

@@ -1,6 +1,7 @@
 import {tr} from '../i18n'
 import {ArrowRight} from 'lucide-react'
 const issues={
+ 'unhandled-master-field':'原主檔還有未處理的資料，整批仍保留。',
  'ambiguous-column':'多個欄位意思相近，請核對對照','missing-source-id':'缺少原系統編號，請核對','duplicate-source-id':'原系統編號重複，請核對','missing-name':'缺少名稱，請核對','invalid-price':'售價讀不到，請核對原文','invalid-cost':'成本讀不到，請核對原文','missing-price':'請補上商品售價','missing-unit':'缺少基本單位，請核對','duplicate-barcode':'條碼重複，請核對商品','needs-ledger-mapping':'庫存、儲值或帳款需另行對帳','choose-target':'請選擇要對應哪一筆','local-change':'本店資料已修改，請選擇保留哪一份','missing-supplier':'找不到來源供應商編號','missing-target':'原對應資料已不存在，請核對','source-target-changed':'原系統編號已有對應，請保留原對照','invalid-target-choice':'這筆對應不在候選清單','duplicate-target':'多筆來源指向同一筆資料，請核對','unit-change':'原單位已有使用，請先核對單位換算','invalid-text':'文字欄位需要核對','invalid-birthday':'生日請使用正確的西元年月日','needs-currency':'幣別不同或不明，請先核對換算'
 }
 const entityText={products:'商品',suppliers:'供應商',customers:'客戶','opening-stock':'期初庫存','opening-receivables':'未收款','opening-payables':'未付款','history-reference':'歷史參考'}

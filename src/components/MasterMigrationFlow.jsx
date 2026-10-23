@@ -13,14 +13,16 @@ import useArchivedDraft from '../hooks/useArchivedDraft'
 import {emptyMigrationDraft,validMigrationInput,migrationHandoff,readMigrationDraft} from '../utils/migrationDraft.mjs'
 import {makeMasterMigrationInput,readMasterMigrationInput,assertMasterMigrationResult} from '../../electron/masterMigration.mjs'
 import {openingSourceCanRoute} from '../../electron/openingMigrationTables.mjs'
+import {cutoverSourceCanRoute} from '../../electron/migrationSource.mjs'
 import '../styles/agent-migration.css'
 import '../styles/arrival.css'
 const BackupTab=lazy(()=>import('../pages/settings/BackupPanel.jsx').then(module=>({default:module.BackupTab})))
 const options={empty:emptyMigrationDraft,valid:validMigrationInput,maxLength:1500000,prefix:'pos-migration-preview:',fileName:'migration-input.json',archiveName:'migration-input',message:'搬家草稿讀不到，原輸入仍保留'}
 import MigrationReviewRow from './MigrationReviewRow'
 const OpeningMigrationFlow=lazy(()=>import('./OpeningMigrationFlow'))
+const CutoverMigrationFlow=lazy(()=>import('./CutoverMigrationFlow'))
 export default function MasterMigrationFlow({session,store,onClose}){
- const [opening,setOpening]=useState(false),[openingSuppressed,setOpeningSuppressed]=useState(false)
+ const [opening,setOpening]=useState(false),[cutover,setCutover]=useState(false),[openingSuppressed,setOpeningSuppressed]=useState(false)
  const [scope,setScope]=useState(null),[error,setError]=useState(''),[handoff,setHandoff]=useState(''),[preview,setPreview]=useState(null),[backup,setBackup]=useState(false),[paste,setPaste]=useState(false),[busy,setBusy]=useState(false),[receipt,setReceipt]=useState(null),[canRecheck,setCanRecheck]=useState(false),[visible,setVisible]=useState(10)
  const heading=useRef(null),dialog=useRef(null),fileInput=useRef(null),pasteInput=useRef(null),generation=useRef(0),busyRef=useRef(false),mounted=useRef(true)
  const key=scope?'pos_migration_preview_v1:'+JSON.stringify([scope.storeId,scope.epoch,session.userId,session.role]):null,draft=useArchivedDraft(key,options)
@@ -29,7 +31,7 @@ export default function MasterMigrationFlow({session,store,onClose}){
  useEffect(()=>{mounted.current=true;let alive=true;const previous=document.activeElement;loadPrivateDraftContext(session).then(value=>{if(alive)setScope(value)}).catch(cause=>{if(alive)setError(cause.message)});heading.current?.focus();return()=>{alive=false;mounted.current=false;generation.current++;previous?.focus?.()}},[])
  useEffect(()=>{const close=event=>{if(event.key==='Escape')onClose()};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close)},[onClose])
  useEffect(()=>{if(paste)pasteInput.current?.focus()},[paste])
- useEffect(()=>{if(!openingSuppressed&&draft.status.ready&&!pending){try{const raw=JSON.parse(draft.form.text);if(draft.form.workflow==='opening-stock'&&openingSourceCanRoute(draft.form.text)||Array.isArray(raw.tables)&&raw.tables.some(t=>t?.entity==='opening-stock'))setOpening(true)}catch{}}},[draft.status.ready,draft.form.text,draft.form.workflow,openingSuppressed,pending])
+ useEffect(()=>{if(!openingSuppressed&&draft.status.ready&&!pending){if(cutoverSourceCanRoute(draft.form.text)){setCutover(true);return}try{const raw=JSON.parse(draft.form.text);if(draft.form.workflow==='opening-stock'&&openingSourceCanRoute(draft.form.text)||Array.isArray(raw.tables)&&raw.tables.some(t=>t?.entity==='opening-stock'))setOpening(true)}catch{}}},[draft.status.ready,draft.form.text,draft.form.workflow,openingSuppressed,pending])
  function fill(text,workflow=null){if(editingLocked||busyRef.current)return;setOpeningSuppressed(false);generation.current++;setPreview(null);setReceipt(null);setError('');setCanRecheck(false);draft.setForm({text,...(workflow?{workflow}:{})})}
  function setTable(value){const text=JSON.stringify(makeTabularDraft(value.source,value.file,value.plan));if(new TextEncoder().encode(text).length>250000){setError('表格太大，請拆成較小的檔案。');return}fill(text)}
  function setWorkbook(value){const text=JSON.stringify(makeWorkbookDraft(value.source,value.file,value.currency,value.sheets));if(new TextEncoder().encode(text).length>250000){setError('Excel 資料太多，請拆成較小的檔案。');return}fill(text)}
@@ -40,6 +42,7 @@ export default function MasterMigrationFlow({session,store,onClose}){
   const turn=++generation.current
   try{
    if(!text.trimStart().startsWith('{')&&!text.includes('```')&&(detectTableDelimiter(text)||/[\r\n]/.test(text)&&/[,\t;]/.test(text))){openTable(text,'pasted-table.csv');return}
+   if(cutoverSourceCanRoute(text)){draft.setForm({text,workflow:'opening-cutover'});draft.save();setError('');setCutover(true);return}
    if(openingSourceCanRoute(text)){draft.setForm({text,workflow:'opening-stock'});draft.save();setError('');setOpening(true);return}
    readMigrationDraft(text);draft.setForm({text});draft.save();setError('')
    const input=makeMasterMigrationInput(text,scope,choices),value=await previewMasterMigration(input,session)
@@ -71,6 +74,7 @@ export default function MasterMigrationFlow({session,store,onClose}){
  }
  function containFocus(event){if(event.key!=='Tab')return;const controls=[...dialog.current.querySelectorAll('button,input,textarea,select,summary,[tabindex="0"]')].filter(node=>!node.disabled&&node.getClientRects().length&&!node.closest('details:not([open])')||node.tagName==='SUMMARY'&&node.getClientRects().length),first=controls[0],last=controls.at(-1);if(event.shiftKey&&(document.activeElement===first||document.activeElement===heading.current)){event.preventDefault();last?.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}}
  const pendingRows=preview?.rows.filter(row=>row.action==='blocked')||[],unused=[...new Set((preview?.rows||[]).flatMap(row=>row.unused))]
+ if(cutover)return <Suspense fallback={<p role="status">{tr('正在核對整批資料…')}</p>}><CutoverMigrationFlow session={session} store={store} seedText={draft.form.text} onSourceChange={text=>fill(text,'opening-cutover')} onClose={onClose} onBack={()=>{setOpeningSuppressed(true);setCutover(false)}}/></Suspense>
  if(opening)return <Suspense fallback={<p role="status">{tr('正在核對庫存…')}</p>}><OpeningMigrationFlow session={session} store={store} seedText={draft.form.text} onSourceChange={text=>fill(text,'opening-stock')} onClose={onClose} onBack={()=>{setOpeningSuppressed(true);setOpening(false)}}/></Suspense>
  return <div className="arrival-overlay"><section ref={dialog} onKeyDown={containFocus} className="arrival-modal migration-panel" role="dialog" aria-modal="true" aria-labelledby="migration-heading" data-agent-migration><header><h2 id="migration-heading" ref={heading} tabIndex={-1}>{tr('Agent 幫我搬家')}</h2><button className="btn" onClick={onClose}>{tr('關閉')}</button></header>
   {backup?<><Suspense fallback={<p role="status">{tr('正在核對庫存…')}</p>}><BackupTab session={session} store={store}/></Suspense><button className="btn" onClick={()=>setBackup(false)}>{tr('返回修改')}</button></>:<>

@@ -22,6 +22,7 @@ const requestFields=['protocol','id','sourceText','cutoffDate','currency','scope
 const receiptFields=['protocol','success','id','signature','sourceDigest','sequence','previousHash','source','cutoffDate','rows','totalValueCents','clearingAccount','masterId','stockReceipt','bootstrapId','partyMappings','customerCreates','supplierCreates','customerRevision','supplierRevision','customerBarrierId','supplierBarrierId','priorCustomerDigest','priorSupplierDigest','custodyDigest','actor','time','hash']
 const text=(value,max=100)=>{if(typeof value!=='string'||!value.trim()||value.length>max||/[\p{Cc}\p{Cf}]/u.test(value))bad();return value}
 const digest=value=>{if(value!==null&&(typeof value!=='string'||!/^[a-f0-9]{64}$/.test(value)))bad()}
+const totalMessages={receivableInvoices:'客戶未收款合計與原單明細不同，請核對。',receivableCredits:'客戶貸項合計與原單明細不同，請核對。',payableInvoices:'供應商未付款合計與原單明細不同，請核對。',payableCredits:'供應商貸項合計與原單明細不同，請核對。'}
 export const openingCutoverId=(source,scope)=>'opening2-'+privateDraftDigest([scope.storeId,source.source.system,source.source.company,source.id]).slice(0,48)
 export const openingCutoverSourceDigest=input=>privateDraftDigest({...input,review:undefined})
 export const openingBarrierId=(id,side)=>'opening-activation-'+(side==='receivable'?'ar-':'ap-')+privateDraftDigest([id,side]).slice(0,40)
@@ -32,7 +33,13 @@ export function readOpeningCutoverFacts(input){
  if(parsed.otherEntities.length||input.id!==openingCutoverId(parsed.source,input.scope))bad()
  draftObject(input.declaredTotals,['stockValue','receivableInvoices','receivableCredits','payableInvoices','payableCredits'],[])
  const totals={receivableInvoices:parsed.totals.receivable.invoiceCents,receivableCredits:parsed.totals.receivable.creditCents,payableInvoices:parsed.totals.payable.invoiceCents,payableCredits:parsed.totals.payable.creditCents}
- for(const [key,value]of Object.entries(input.declaredTotals)){if(typeof value!=='string')bad();if(value!==''){const cents=decimalUnits(value,2,Number.MAX_SAFE_INTEGER,'原報表合計需要核對。');if(Object.hasOwn(totals,key)&&cents!==totals[key])bad()}}
+ for(const [key,value]of Object.entries(input.declaredTotals)){
+  if(typeof value!=='string')bad()
+  if(value!==''){
+   let cents;try{cents=decimalUnits(value,2,Number.MAX_SAFE_INTEGER,'原報表合計需要核對。')}catch{const error=Error('原報表合計需為非負金額，最多兩位小數。');error.cutoverTotalKey=key;throw error}
+   if(Object.hasOwn(totals,key)&&cents!==totals[key]){const error=Error(totalMessages[key]);error.cutoverTotalKey=key;throw error}
+  }
+ }
  const seen=new Set()
  for(const choice of input.masterChoices){draftObject(choice,['table','row','targetId','resolution'],['table','row','targetId']);const key=choice.table+':'+choice.row;if(!Number.isSafeInteger(choice.table)||!Number.isSafeInteger(choice.row)||!['products','customers','suppliers'].includes(parsed.source.tables[choice.table]?.entity)||!parsed.source.tables[choice.table]?.rows[choice.row]||seen.has(key)||typeof choice.targetId!=='string'||choice.targetId.length>128||choice.resolution!==undefined&&!['keep','source'].includes(choice.resolution))bad();seen.add(key)}
  seen.clear()
