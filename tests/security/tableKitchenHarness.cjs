@@ -58,3 +58,5 @@ module.exports.loseInventory=()=>{inventoryLost=true}
 module.exports.loseSharedInventory=()=>{sharedInventoryLost=true}
 module.exports.loseSettingsConfiguration=()=>{settingsConfigurationLost=true}
 module.exports.loseSharedSettingsConfiguration=()=>{sharedSettingsConfigurationLost=true}
+
+module.exports.ensureQuickSource=async function(w){if(await js(w,'document.querySelector("[data-quick-input]")?.matches(":disabled")||!!document.querySelector("[data-quick-input]")?.closest("[inert]")'))return;const locale=await js(w,'document.documentElement.lang');if(await js(w,'!!document.querySelector("[data-quick-done]")')){await button(w,t('再開一張',locale));await wait(w,'!document.querySelector("[data-quick-done]")&&document.querySelector("[data-quick-source]")?.hidden===false&&document.querySelector("[data-quick-source]")?.open===true','new order preparation acknowledgement');}if(await js(w,'document.querySelector("[data-quick-source]")?.open===false'))await tap(w,'[data-quick-source]>summary')}

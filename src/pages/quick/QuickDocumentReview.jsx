@@ -2,6 +2,7 @@ import {tr,trMessage} from "../../i18n"
 import {procurementLineCents} from '../../../electron/procurementRules.mjs'
 import {RESTAURANT_AGENT_PROTOCOL} from '../../../electron/restaurantAgentDraft.mjs'
 import QuickMenuLine from './QuickMenuLine'
+import QuickPurchaseFacts from './QuickPurchaseFacts'
 
 export const quickButton={minHeight:48,fontSize:18}
 export const quickField={minHeight:48,fontSize:18,width:'100%'}
@@ -15,6 +16,8 @@ export default function QuickDocumentReview({draft,context,preview,issue,questio
     if(question.field==='products')return onProducts()
     if(question.field==='supplier'&&!context.suppliers.length)return onSuppliers()
     const field=sectionRef.current?.querySelector('[data-quick-field="'+question.field+'"]')
+    const disclosure=field?.closest('[data-quick-purchase-edit]')
+    if(disclosure)disclosure.open=true
     field?.focus({preventScroll:true});field?.scrollIntoView?.({block:'start'})
   }
   return <section ref={sectionRef} aria-label={tr("單據草稿")} className="card quick-review">
@@ -29,10 +32,7 @@ export default function QuickDocumentReview({draft,context,preview,issue,questio
           <button className="btn btn-ghost" style={quickButton} disabled={external} onClick={()=>onChange('items',draft.items.filter((_,i)=>i!==index))} aria-label={tr("移除 {0}", {0: product?.name||index})}>{tr("移除")}</button>
         </div>
       })}
-      {draft.kind==='purchase'&&<>
-        <label>{tr("向誰叫貨？")}<select data-quick-field="supplier" aria-label={tr("叫貨供應商")} className="field" style={quickField} value={draft.supplierId||''} onChange={e=>onChange('supplierId',e.target.value)}><option value="">{tr("請選供應商")}</option>{context.suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-        <label>{tr("叫貨日期")}<input data-quick-field="date" aria-label={tr("快速採購日期")} className="field" type="date" style={quickField} value={draft.date||''} onChange={e=>onChange('date',e.target.value)}/></label>
-      </>}
+      {draft.kind==='purchase'&&<QuickPurchaseFacts key={draft.id} draft={draft} context={context} question={question} onChange={onChange}/>}
       {draft.kind==='restaurant'&&<>
         <label>{tr("怎麼交給客人？")}<select data-quick-field="channel" aria-label={tr("交付方式")} className="field" style={quickField} value={draft.channel||''} onChange={e=>onChange('channel',e.target.value)}><option value="" disabled>{tr("請選交付方式")}</option><option value="preorder">{tr("預訂自取")}</option><option value="walkin">{tr("現場")}</option><option value="delivery">{tr("外送")}</option></select></label>
         <label>{tr("取餐日期")}<input data-quick-field="day" aria-label={tr("快速取餐日期")} className="field" type="date" style={quickField} value={draft.day||''} onChange={e=>onChange('day',e.target.value)}/></label>

@@ -1,5 +1,7 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--quick-first-use-ui':['native-quick-first-use-ui.cjs','POS_QUICK_FIRST_USE_UI_PASS',true],
+  '--quick-first-use-browser-ui':['native-quick-first-use-browser-ui.cjs','POS_QUICK_FIRST_USE_BROWSER_UI_PASS',true],
   '--financial-file-browser-ui':['native-financial-file-browser-ui.cjs','POS_FINANCIAL_FILE_BROWSER_UI_PASS',true],
   '--financial-delimited-ui':['native-financial-delimited-ui.cjs','POS_FINANCIAL_DELIMITED_UI_PASS',true],
   '--financial-file-intake-ui':['native-financial-file-intake-ui.cjs','POS_FINANCIAL_FILE_INTAKE_UI_PASS',true],

@@ -18,6 +18,48 @@ beforeEach(async()=>{localStorage.clear();vi.stubGlobal('navigator',{locks:{requ
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()})
 const draft=()=>({protocol:AGENT_PROTOCOL,id:'journey-draft',issuedAt:new Date().toISOString(),storeId:'journey',catalogueRevision:fixture.context.catalogueRevision,kind:'purchase',supplierId:'s',date:'2026-10-15',items:[{productId:'p',qty:2,unitCost:37.5}]})
 const paste=raw=>fireEvent.paste(screen.getByLabelText('建單內容'),{clipboardData:{getData:()=>raw}})
+test('review disclosures preserve the original private price, note and identity through an explicit purchase confirmation',async()=>{
+  const original={...draft(),note:'Private delivery terms stay with this order'}
+  render(<QuickDocumentPage store={store} session={session} incoming={JSON.stringify(original)}/>);await screen.findByText('確認建立採購')
+  const source=document.querySelector('[data-quick-source]'),facts=document.querySelector('[data-quick-purchase-edit]')
+  expect(source.open).toBe(false);expect(facts.open).toBe(false);expect(screen.getByText('合計 NT$ 75.00')).toBeTruthy()
+  expect(document.querySelector('[data-quick-purchase-summary]').textContent).toContain('供應商')
+  fireEvent.click(screen.getByText('修改建單來源'));expect(source.open).toBe(true)
+  fireEvent.click(screen.getByText('修改建單來源'));expect(source.open).toBe(false)
+  fireEvent.click(screen.getByText('修改供應商與日期'));await waitFor(()=>expect(facts.open).toBe(true))
+  fireEvent.change(screen.getByLabelText('快速採購日期'),{target:{value:'2026-10-16'}})
+  expect(facts.open).toBe(true);expect(store.commitInventory).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByText('確認建立採購'));await waitFor(()=>expect(store.commitInventory).toHaveBeenCalledTimes(1))
+  const [kind,input,identity]=store.commitInventory.mock.calls[0]
+  expect(kind).toBe('purchase-create');expect(identity.id).toBe('agent-journey-draft')
+  expect(input.purchase.date).toBe('2026-10-16');expect(input.purchase.note).toBe(original.note)
+  expect(input.purchase.items[0]).toMatchObject({qty:2,unitCost:37.5})
+})
+
+test('missing purchase facts stay open and unknown dates remain blank until the user supplies them',async()=>{
+  render(<QuickDocumentPage store={store} session={session} incoming={JSON.stringify({...draft(),supplierId:'',date:''})}/>);await screen.findByText('下一步：選供應商')
+  const facts=document.querySelector('[data-quick-purchase-edit]');expect(facts.open).toBe(true)
+  expect(screen.getByLabelText('快速採購日期').value).toBe('')
+  fireEvent.click(screen.getByText('下一步：選供應商'));expect(document.activeElement).toBe(screen.getByLabelText('叫貨供應商'))
+  fireEvent.change(screen.getByLabelText('叫貨供應商'),{target:{value:'s'}})
+  fireEvent.click(await screen.findByText('下一步：選叫貨日期'));expect(document.activeElement).toBe(screen.getByLabelText('快速採購日期'))
+  expect(facts.open).toBe(true);expect(store.commitInventory).not.toHaveBeenCalled()
+  fireEvent.change(screen.getByLabelText('快速採購日期'),{target:{value:'2026-10-17'}})
+  expect(facts.open).toBe(true);fireEvent.click(await screen.findByText('確認建立採購'))
+  await waitFor(()=>expect(store.commitInventory).toHaveBeenCalledTimes(1));expect(store.commitInventory.mock.calls[0][1].purchase.date).toBe('2026-10-17')
+})
+
+test('closing missing purchase facts and pressing Next reopens and focuses each required fact without saving',async()=>{
+  render(<QuickDocumentPage store={store} session={session} incoming={JSON.stringify({...draft(),supplierId:'',date:''})}/>);await screen.findByText('下一步：選供應商')
+  const facts=document.querySelector('[data-quick-purchase-edit]'),summary=screen.getByText('修改供應商與日期')
+  fireEvent.click(summary);expect(facts.open).toBe(false)
+  fireEvent.click(screen.getByText('下一步：選供應商'));expect(facts.open).toBe(true);expect(document.activeElement).toBe(screen.getByLabelText('叫貨供應商'))
+  fireEvent.change(screen.getByLabelText('叫貨供應商'),{target:{value:'s'}})
+  fireEvent.click(summary);expect(facts.open).toBe(false)
+  fireEvent.click(await screen.findByText('下一步：選叫貨日期'));expect(facts.open).toBe(true);expect(document.activeElement).toBe(screen.getByLabelText('快速採購日期'))
+  expect(screen.getByLabelText('快速採購日期').value).toBe('');expect(store.commitInventory).not.toHaveBeenCalled()
+})
+
 test('pasting a complete Agent reply opens a priced review without another organize click',async()=>{
   render(<QuickDocumentPage store={store} session={session}/>);await screen.findByLabelText('建單內容');paste(JSON.stringify(draft()))
   await waitFor(()=>expect(screen.getByLabelText('單據草稿')).toBeTruthy());expect(screen.getByText('合計 NT$ 75.00')).toBeTruthy();expect(store.commitInventory).not.toHaveBeenCalled()
