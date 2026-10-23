@@ -183,7 +183,7 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:openShift', (_e, data) => db.openShift(data,ipcSecurity.current()))
   handle('db:closeShift', (_e, id, data) => db.closeShift(id, data,ipcSecurity.current()))
   handle('db:getCashLog', (_e, shiftId) => db.getCashLog(shiftId))
-  handle('db:addCashLog', (_e, data) => db.addCashLog(data))
+  handle('db:addCashLog', (_e, data) => db.addCashLog(data,ipcSecurity.current()))
 
   // ----- Waste -----
   handle('db:getWasteLog', () => db.getWasteLog())

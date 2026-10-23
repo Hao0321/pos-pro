@@ -9,6 +9,8 @@ import {emptyCashCount,countedCash,countedDifference} from '../utils/cashCount.m
 import {readinessTaskFor} from '../utils/openingGuide.mjs'
 import useShiftCountDraft from '../hooks/useShiftCountDraft'
 import ShiftCountDraftNotice,{ShiftCountDraftOptions} from '../components/ShiftCountDraftNotice'
+import useCashMovementDraft from '../hooks/useCashMovementDraft'
+import CashMovementDraftNotice from '../components/CashMovementDraftNotice'
 
 export default function ShiftPage({ store, session }) {
   const { openShift, startShift, endShift, logCash, orders,topups } = store
@@ -32,10 +34,12 @@ export default function ShiftPage({ store, session }) {
   const loadSequence=useRef(0),hasLoaded=useRef(false),pageLive=useRef(true),pageActor=useRef('');pageActor.current=session.userId+':'+session.role
   const guideSeen=useRef(null),openedGuide=useRef(null),openingTask=readinessTaskFor(store.readinessTask,session,'shifts')?store.readinessTask:null
   const countDraft=useShiftCountDraft({session,onFacts:setCountBook,activeKind:showOpen?'open':showClose?'close':null,openingCash,closingCash,closeNote,onResume:value=>{setActionError('');setShowOpen(value.kind==='open');setShowClose(value.kind==='close');if(value.kind==='open')setOpeningCash(value.cash);else{setClosingCash(value.cash);setCloseNote(value.note);setCloseTarget(value.target)}},onReset:()=>{setShowOpen(false);setShowClose(false);setOpeningCash(emptyCashCount());setClosingCash(emptyCashCount());setCloseNote('');setCloseTarget(null)},onSaved:async(kind,row,metadata)=>{const origin=openedGuide.current;await store.reloadOpenShift?.();if(!metadata.isCurrent())return;setShowOpen(false);setShowClose(false);setOpeningCash(emptyCashCount());setClosingCash(emptyCashCount());setCloseNote('');setCloseTarget(null);setCountBook(null);setActionMessage(kind==='open'?'開班已保存。':`交班已保存。預期現金 NT$ ${row.expectedCash.toLocaleString()}；實際現金 NT$ ${row.closeCash.toLocaleString()}；差額 NT$ ${row.diff.toLocaleString()}。`);await reload();if(metadata.isCurrent()&&kind==='open'&&origin)store.finishReadinessTask?.(origin.id)}})
+  const cashDraft=useCashMovementDraft({session,active:showCash,type:cashType,amount:cashAmount,reason:cashReason,onResume:value=>{setShowCash(true);setCashType(value.type);setCashAmount(value.amount);setCashReason(value.reason)},onReset:()=>{setShowCash(false);setCashAmount('');setCashReason('');setCashType('in')},onSaved:async(_row,metadata)=>{await store.reloadOpenShift?.();if(!metadata.isCurrent())return;setShowCash(false);setCashAmount('');setCashReason('');setCashType('in');setActionMessage('現金流水已保存。');await reload()}})
 
   useEffect(()=>{pageLive.current=true;return()=>{pageLive.current=false;loadSequence.current++}},[])
   useEffect(() => { reload() }, [openShift?.id,session.userId,session.role])
   useEffect(()=>{setOpeningCash(emptyCashCount());setClosingCash(emptyCashCount());setCloseTarget(null);setShowOpen(false);setShowClose(false);setCountBook(null);setActionMessage('');setActionError('');guideSeen.current=null;openedGuide.current=null},[session?.userId,session?.role])
+  useEffect(()=>{setShowCash(false);setCashAmount('');setCashReason('');setCashType('in')},[session.userId,session.role])
   useEffect(()=>{const handler=()=>reload();window.addEventListener('pos-cash-operation',handler);window.addEventListener('pos-data-refreshed',handler);return()=>{window.removeEventListener('pos-cash-operation',handler);window.removeEventListener('pos-data-refreshed',handler)}},[openShift?.id])
   useEffect(()=>{if(!loading&&!loadError&&!showOpen&&!countDraft.blocked&&openingTask?.kind==='open-shift'&&!openShift&&guideSeen.current!==openingTask.id){guideSeen.current=openingTask.id;openedGuide.current=openingTask;runAction(()=>countDraft.start('open'))}},[loading,loadError,openingTask?.id,openShift?.id,showOpen,countDraft.blocked])
 
@@ -87,10 +91,11 @@ export default function ShiftPage({ store, session }) {
 
   async function handleCash() {
     await runAction(async()=>{
-      const amt=Number(cashAmount)
-      if(!amt||!cashReason.trim())throw Error('請填金額與現金進出原因。')
-      await logCash(cashType,amt,cashReason,session?.username||'')
-      setShowCash(false);setCashAmount('');setCashReason('');setCashType('in');setActionMessage('現金流水已保存。');await reload()
+      if(cashDraft.pending&&!cashDraft.retryAllowed){await cashDraft.lookup();return}
+      const draft=await cashDraft.prepare();if(draft.alreadySaved)return
+      const input=draft.request
+      try{await logCash(input.type,input.amount,input.reason,input.cashier,draft)}catch(error){if(error.cashDraftRejected)await cashDraft.rejected();throw error}
+      await cashDraft.confirm()
     })
   }
   async function runAction(work){if(actionBusy.current)return;actionBusy.current=true;setSaving(true);setActionError('');setActionMessage('');try{await work()}catch(e){setActionError(e.message||'保存尚未確認，請核對原紀錄。')}finally{actionBusy.current=false;setSaving(false)}}
@@ -111,13 +116,15 @@ export default function ShiftPage({ store, session }) {
             <LogIn size={16}/>{tr(" 開班")}</button>
         ) : (
           <div style={{display:'flex', gap:8}}>
-            <button className="btn btn-ghost" onClick={()=>setShowCash(true)} style={{display:'flex',alignItems:'center',gap:6}}>
+            <button className="btn btn-ghost" data-cash-movement-start disabled={saving||cashDraft.blocked} onClick={()=>runAction(()=>cashDraft.start(openShift.id))} style={{display:'flex',alignItems:'center',gap:6,minHeight:48}}>
               <Plus size={16}/>{tr(" 現金流水")}</button>
             <button className="btn btn-primary" data-shift-close disabled={saving||countDraft.blocked} onClick={()=>runAction(()=>countDraft.start('close',openShift.id))} style={{display:'flex',alignItems:'center',gap:6,minHeight:48}}>
               <LogOut size={16}/>{tr(" 交班")}</button>
           </div>
         )}
       </div>
+
+      {!showCash&&<CashMovementDraftNotice draft={cashDraft} saving={saving} error={actionError} run={runAction}/>}
 
       {openShift ? (
         <div style={sh.card}>
@@ -241,10 +248,11 @@ export default function ShiftPage({ store, session }) {
 
       {showCash && (
         <Modal title={tr("現金進出")} saving={saving} error={actionError} onClose={()=>setShowCash(false)}>
+          <fieldset className="cash-movement-fields" disabled={saving||cashDraft.locked}>
           <Field label={tr("類型")}>
             <div style={{display:'flex', gap:8}}>
               {[['in','現金進'],['out','現金出']].map(([k,l]) => (
-                <button key={k} onClick={()=>setCashType(k)} style={{
+                <button key={k} type="button" data-cash-movement-type={k} aria-pressed={cashType===k} onClick={()=>setCashType(k)} style={{
                   flex:1, padding:10, borderRadius:8, fontSize:13,
                   background: cashType===k?'var(--gold)':'var(--bg-overlay)',
                   color: cashType===k?'#fff':'var(--text-secondary)',
@@ -254,12 +262,15 @@ export default function ShiftPage({ store, session }) {
             </div>
           </Field>
           <Field label={tr("金額")}>
-            <input className="field" type="number" value={cashAmount} onChange={e=>setCashAmount(e.target.value)} autoFocus/>
+            <input className="field" data-cash-movement-amount aria-label={tr('金額')} type="text" inputMode="decimal" value={cashAmount} onChange={e=>setCashAmount(e.target.value)} autoFocus/>
           </Field>
           <Field label={tr("說明")}>
-            <input className="field" value={cashReason} onChange={e=>setCashReason(e.target.value)} placeholder={tr("補零、付水電、貨款...")}/>
+            <input className="field" data-cash-movement-reason aria-label={tr('說明')} value={cashReason} onChange={e=>setCashReason(e.target.value)} placeholder={tr("補零、付水電、貨款...")}/>
           </Field>
-          <button disabled={saving} className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleCash}>{saving?tr("保存中…"):tr("記錄")}</button>
+          </fieldset>
+          {cashAmount.trim()&&Number.isFinite(Number(cashAmount))&&Number(cashAmount)>0&&<p className="cash-movement-summary" data-cash-movement-summary>{tr(cashType==='in'?'放入抽屜 NT$ {0}':'從抽屜取出 NT$ {0}',{0:cashText(Number(cashAmount))})}</p>}
+          <CashMovementDraftNotice draft={cashDraft} active saving={saving} error={actionError} run={runAction}/>
+          <button data-cash-movement-save disabled={saving||cashDraft.blocked||!cashDraft.pending&&(cashDraft.stale||!cashAmount.trim()||!Number.isFinite(Number(cashAmount))||Number(cashAmount)<=0||!cashReason.trim())} className="btn btn-primary" style={{width:'100%',minHeight:48,fontSize:18,whiteSpace:'normal',marginTop:12}} onClick={handleCash}>{tr(saving?'保存中…':cashDraft.pending?cashDraft.retryAllowed?'再次確認這一筆':'核對這筆現金':cashType==='in'?'確認放入':'確認取出')}</button>
         </Modal>
       )}
     </div>

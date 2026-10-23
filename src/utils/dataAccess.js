@@ -5,6 +5,7 @@ import {browserStorage, writeRecords, readRecords, withSalesLock,writeBusinessSe
 import { commitBrowserSale, browserReceipt, commitBrowserRefund } from './browserSales'
 import { summarizeShift } from '../../electron/shiftReconciliation.mjs'
 import {isShiftCountRequest,admitShiftCount,shiftCountResult,shiftCountRejection} from '../../electron/shiftCountDraft.mjs'
+import {isCashMovementDraft,admitCashMovement,cashMovementOriginal,cashMovementRejection} from '../../electron/cashMovementDraft.mjs'
 import {moneyValue,quantityValue,operationHeader,sameCommand} from '../../electron/operationRules.mjs'
 import {commitBrowserInventory,getBrowserStocktakeState} from './browserInventory'
 import {commitBrowserRestaurant,browserRestaurantState,browserCustomerIntakeContext,browserRestaurantMenuQuote,browserRestaurantMenuSetupPreview,browserRestaurantAgentPreview} from './browserRestaurant'
@@ -388,18 +389,21 @@ export async function loadCashLog(shiftId) {
   if (isElectron) return window.electronAPI.db.getCashLog(shiftId)
   return loadLS('pos2_cash_log', []).filter(c => !shiftId || c.shiftId === shiftId)
 }
-export async function addCashLog(data) {
+export async function addCashLog(data,actor) {
   if (isElectron) return window.electronAPI.db.addCashLog(data)
   return withSalesLock(()=>{
+    const source=data,guarded=isCashMovementDraft(source);let writing=false,beforeRaw=null
     try{
       operationHeader(data);const current=readRecords(),records=current.data,old=records.pos2_cash_log.find(l=>l.id===data.id)
+      if(guarded){const raw=records.pos_business_settings.find(row=>row.key==='sharedStoreId')?.value,context=privateDraftContext(raw===undefined?'':JSON.parse(raw),current.salesEpoch,actor,records.pos_users),checked=admitCashMovement(source,context,{shifts:records.pos2_shifts,cashLog:records.pos2_cash_log});if(checked.original)return {success:true,cashLog:checked.original,alreadySaved:true};data=checked.data}
       assertOriginalOperationAvailable('addCashLog',data.id,current,data)
       if(old){if(!sameCommand(old,data,['shiftId','time','type','amount','reason','cashier']))throw Error('現金流水編號內容不一致');return {success:true,cashLog:old}}
       moneyValue(data.amount,'現金流水',.01)
       if(!['in','out'].includes(data.type)||records.pos2_shifts.find(s=>s.id===data.shiftId)?.status!=='open')throw Error('現金異動或班別不正確')
+      beforeRaw=localStorage.getItem('pos_atomic_records_v1');writing=true
       writeRecords({pos2_cash_log:[data,...records.pos2_cash_log]},current.revision)
       return {success:true,cashLog:data}
-    }catch(error){return {success:false,committed:error.historyUncertain?null:false,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
+    }catch(error){if(guarded){if(writing&&localStorage.getItem('pos_atomic_records_v1')!==beforeRaw){try{const row=cashMovementOriginal(data,readRecords().data.pos2_cash_log);if(row)return {success:true,cashLog:row}}catch{}return {success:false,committed:null,error:'現金流水回覆不完整，請保留原輸入。'}}if(error.historyUncertain)return {success:false,committed:null,error:error.message};return cashMovementRejection(source,error)}return {success:false,committed:error.historyUncertain?null:false,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
   })
 }
 

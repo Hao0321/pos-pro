@@ -15,6 +15,10 @@ beforeEach(()=>{
 })
 afterEach(()=>{cleanup();vi.unstubAllGlobals()})
 async function store(){const hook=renderHook(()=>useStore({userId:'owner',username:'店主',role:'owner'}));await waitFor(()=>expect(hook.result.current.ready).toBe(true));return hook}
+test('draft-backed cash recording uses captured original fields and records money once without a second global journal',async()=>{
+ const h=await store(),actor={userId:'owner',username:'店主',role:'owner'},context=await (await import('../../src/utils/browserPrivateDrafts')).getBrowserPrivateDraftContext(actor),request={id:'cash-'+crypto.randomUUID(),time:new Date().toISOString(),shiftId:'s',type:'in',amount:12.5,reason:'  補零  ',cashier:'原收銀員'},draft={request,draftContext:context};let row
+ await act(async()=>{row=await h.result.current.logCash('out',999,'changed','changed',draft)});expect(row).toEqual(request);const before=JSON.stringify(readRecords());await act(async()=>h.result.current.logCash('out',999,'changed','changed',draft));expect(JSON.stringify(readRecords())).toBe(before);expect(readRecords().data.pos2_cash_log).toHaveLength(1);expect(localStorage.getItem('pos_pending_financial_v1')).toBeNull()
+})
 test('opening guide navigation binds the current task and never writes business completion flags',async()=>{
  const {result}=await store(),before=JSON.stringify(readRecords());let first;act(()=>{first=result.current.startReadinessTask('add-product')});expect(result.current.view).toBe('inventory');expect(result.current.readinessTask.id).toBe(first);let second;act(()=>{second=result.current.startReadinessTask('open-shift')});act(()=>expect(result.current.finishReadinessTask(first)).toBe(false));expect(result.current.view).toBe('shifts');act(()=>expect(result.current.finishReadinessTask(second)).toBe(true));expect(result.current.view).toBe('readiness');expect(result.current.readinessTask).toBeNull();expect(JSON.stringify(readRecords())).toBe(before)
 })

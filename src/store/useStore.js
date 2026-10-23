@@ -1,4 +1,5 @@
 import {isPurchaseCreate} from '../../electron/procurementRules.mjs'
+import {isCashMovementRejection} from '../../electron/cashMovementDraft.mjs'
 import {finalizePurchaseDraft} from '../utils/purchaseDraftReceipt.mjs'
 import { settledOrders, netSale, orderCost } from '../utils/orderLedger'
 import {finalizeReceiptLotDraft} from '../utils/receiptLotDraftReceipt.mjs'
@@ -341,7 +342,8 @@ export function useStore(session){
     return r
   }, [openShift])
 
-  const logCash = useCallback(async (type, amount, reason, cashier='') => {
+  const logCash = useCallback(async (type, amount, reason, cashier='',draft=null) => {
+    if(draft){const input={...draft.request,draftContext:draft.draftContext},result=await addCashLog(input,sessionRef.current);if(isCashMovementRejection(result,input))throw Object.assign(Error(result.error),{cashDraftRejected:true});acknowledge(result);return result.cashLog}
     const data = {
       shiftId: openShift?.id || '',
       type, amount, reason, cashier,
