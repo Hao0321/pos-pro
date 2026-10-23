@@ -3,6 +3,7 @@ import {useEffect,useRef,useState,lazy,Suspense} from 'react'
 import {ArrowRight,Search,ShoppingCart,Sparkles,ClipboardList,Truck,Clock,Package,Users,Briefcase} from 'lucide-react'
 import {WORKSPACE_AREAS,workspaceTasks,workspaceReminders} from '../utils/workspaceTasks'
 import {isElectron,isSharedStore} from '../utils/dataAccess'
+import '../styles/opening-guide.css'
 
 const icons={sale:ShoppingCart,quick:Sparkles,restaurant:ClipboardList,purchase:Truck,shifts:Clock,inventory:Package}
 const AgentMigrationPanel=lazy(()=>import('../components/AgentMigrationPanel.jsx'))
@@ -15,6 +16,7 @@ export default function SimpleHomePage({store,session,area='all',onAreaChange}){
   function chooseArea(id){setQuery('');setShowAll(false);onAreaChange(id)}
   return <div className="easy-home"><div className="easy-home-inner">
     <header><div className="easy-heading-copy"><p className="easy-eyebrow">{tr("所有店家・全部功能免費")}</p><h1>{tr("現在要做什麼？")}</h1><p>{tr("選一件事，跟著畫面就能完成。")}</p></div><div className="easy-poster" aria-hidden="true"><span>ERP</span><span>CRM</span><i/></div></header>
+    {!store.openShift&&area==='all'&&<button type="button" className="btn btn-primary opening-home-start" data-opening-guide-entry onClick={()=>store.setView('readiness')}><span><strong>{tr('帶我開始營業')}</strong><small>{tr('商品、找零金與備份，一步一步來。')}</small></span><ArrowRight size={24} aria-hidden="true"/></button>}
     <section className="easy-areas" aria-label={tr("選擇工作區")}><h2 ref={areaHeading} tabIndex={-1}>{tr("先選工作區")}</h2><p>{tr("同一間店，資料共用。切換不用重新建資料。")}</p><div className="easy-area-grid">{WORKSPACE_AREAS.filter(a=>workspaceTasks(session,'',a.id).length).map(a=>{const Icon=a.id==='crm'?Users:Briefcase;return <button key={a.id} className="easy-area" aria-label={tr(a.title)+'（'+a.code+'）'} aria-describedby={'area-detail-'+a.id} aria-pressed={area===a.id} onClick={()=>chooseArea(a.id)}><div className="easy-area-top"><Icon size={25} aria-hidden="true"/><span className="easy-area-code">{a.code}</span></div><strong>{tr(a.title)}</strong><span className="easy-area-intro">{tr(a.intro)}</span><span id={'area-detail-'+a.id}>{tr(a.detail)}</span><span className="easy-area-enter">{tr("進入工作區 ")}<ArrowRight size={18} aria-hidden="true"/></span></button>})}</div></section>
     <div className="easy-direct"><button className="btn btn-primary" onClick={()=>store.setView('pos')}>{tr("直接收銀")}</button><button className="btn btn-ghost" onClick={()=>store.setView('quick')}>{tr("Agent 幫我建單")}</button>{session.role==='owner'&&<button className="btn btn-ghost" data-open-agent-migration onClick={()=>setMigration(true)}>{tr('Agent 幫我搬家')}</button>}</div>
     <div className="easy-summary" aria-label={tr("今天的店面狀態")}><span>{store.openShift?tr("營業中"):tr("尚未開班")}</span><span>{tr("今天 {0} 筆",{0:store.todayBusinessCount??store.todayOrders.length})}</span><strong>NT$ {store.todayRevenue.toLocaleString('zh-TW')}</strong></div>

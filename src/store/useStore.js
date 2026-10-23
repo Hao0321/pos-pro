@@ -42,6 +42,7 @@ import { fireWebhook, payloadFromOrder, payloadFromLowStock, payloadFromShift, p
 import { getReorderList, getExpiringProducts } from '../utils/analytics'
 import {validateManualEntry} from '../../electron/manualJournalRules.mjs'
 import {defaultRestaurantConfig} from '../../electron/restaurantRules.mjs'
+import {createReadinessTask,readinessTaskFor} from '../utils/openingGuide.mjs'
 import {prepareRestaurantCommand} from '../utils/restaurantCommand.mjs'
 
 function loadLS(k,fb){const v=browserStorage.getItem(k);return v?JSON.parse(v):fb}
@@ -68,6 +69,10 @@ export function useStore(session){
   const [manualEntries, setManualEntries] = useState([])
   const [cart,          setCart]          = useState([])
   const [view,          setView]          = useState('dashboard')
+  const [readinessTask,setReadinessTask]=useState(null),readinessTaskRef=useRef(null)
+  const startReadinessTask=useCallback((kind,productId='')=>{const task=createReadinessTask(kind,productId,sessionRef.current);readinessTaskRef.current=task;setReadinessTask(task);setView(task.view);return task.id},[])
+  const finishReadinessTask=useCallback(id=>{const task=readinessTaskRef.current;if(!task||task.id!==id||!readinessTaskFor(task,sessionRef.current,task.view))return false;readinessTaskRef.current=null;setReadinessTask(null);setView('readiness');return true},[])
+  useEffect(()=>{const task=readinessTaskRef.current;if(task&&(view!==task.view||!readinessTaskFor(task,sessionRef.current,task.view))){readinessTaskRef.current=null;setReadinessTask(null)}},[view,session?.userId,session?.role])
   const [settingsTarget,setSettingsTarget]=useState(null)
   const [activeMember,  setActiveMember]  = useState(null)
   const [ready,         setReady]         = useState(false)
@@ -619,6 +624,7 @@ export function useStore(session){
   const todayProfit= Math.round((todayOrders.reduce((sum,o)=>sum+netSale(o)-orderCost(o,products),0)+todaySales.profit)*100)/100
 
   return {
+    readinessTask,startReadinessTask,finishReadinessTask,
     settingsTarget,openHardwareSettings:()=>{setSettingsTarget({tab:'hardware'});setView('settings')},consumeSettingsTarget:()=>setSettingsTarget(null),
     stockSetupEnabled,commitStockSetup,commitWarehouse,commitLot,
     supplierState,supplierTarget,openSupplierLedger:(supplierId='',purchaseId='')=>{setSupplierTarget({supplierId,purchaseId});setView('suppliers')},consumeSupplierTarget:()=>setSupplierTarget(null),purchaseTarget,openPurchaseSuppliers:()=>{setPurchaseTarget({tab:'suppliers'});setView('purchase')},openPurchaseDocument:id=>{setPurchaseTarget({id});setView('purchase')},consumePurchaseTarget:()=>setPurchaseTarget(null),commitSupplierLedger,refreshSuppliers,

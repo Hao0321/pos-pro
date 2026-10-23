@@ -2,7 +2,10 @@ import {tr,trMessage,getLocale} from "../i18n"
 import { useState, useRef, useEffect, useMemo, lazy, Suspense } from 'react'
 import { Plus, Pencil, Trash2, X, Check, AlertTriangle, ChevronUp, ChevronDown, Barcode, Printer, Tag, Truck, Camera, Upload, Download, FileText, Search, MoreHorizontal, CheckSquare } from 'lucide-react'
 import JsBarcode from 'jsbarcode'
-import { loadSuppliers, loadPurchases, getAgentContext } from '../utils/dataAccess'
+import { loadSuppliers, loadPurchases, getAgentContext,loadProducts } from '../utils/dataAccess'
+import {readinessTaskFor,assertReadinessProduct} from '../utils/openingGuide.mjs'
+import {moneyValue,quantityValue} from '../../electron/operationRules.mjs'
+import '../styles/opening-guide.css'
 import {costDraftKey} from '../utils/costPricingDraft'
 import { DEFAULT_CATEGORIES, CATEGORY_META, mergeCategories, groupByCategory } from '../utils/categories'
 import { getExpiringProducts, getProductHistory } from '../utils/analytics'
@@ -63,6 +66,18 @@ export default function InventoryPage({ store,session }) {
   const csvFileRef = useRef(null)
   const savingRef=useRef(false)
   const pricingInputRef=useRef(null),pricingAppliedRef=useRef(null)
+  const [guideId,setGuideId]=useState(''),[editorGuide,setEditorGuide]=useState(null),[guideMore,setGuideMore]=useState(false),[guideSaving,setGuideSaving]=useState(false),[guideError,setGuideError]=useState('')
+  const editingRef=useRef(editing),actorRef=useRef(''),alive=useRef(true),saveSequence=useRef(0)
+  const actorKey=session?.userId+':'+session?.role,task=readinessTaskFor(store.readinessTask,session,'inventory')?store.readinessTask:null
+  const guided=readinessTaskFor(editorGuide,session,'inventory')&&guideId===editorGuide.id;editingRef.current=editing;actorRef.current=actorKey
+  useEffect(()=>{alive.current=true;return()=>{alive.current=false;saveSequence.current++}},[])
+  useEffect(()=>{saveSequence.current++;savingRef.current=false;setGuideSaving(false);setGuideId('');setEditorGuide(null);setGuideError('');setEditing(null);setForm(EMPTY)},[actorKey])
+  useEffect(()=>{let active=true;if(!task||editing!==null||guideId===task.id)return
+    if(task.kind==='add-product'){setGuideId(task.id);setEditorGuide(task);setGuideMore(false);setGuideError('');startNew()}
+    else if(task.kind==='review-product'&&task.productId){const captured=actorKey;loadProducts().then(rows=>{if(!active||actorRef.current!==captured||editingRef.current!==null)return;const row=Array.isArray(rows)&&rows.find(p=>p.id===task.productId);if(!row)throw Error('找不到要核對的商品，請回到營業前檢查。');setGuideId(task.id);setEditorGuide(task);setGuideMore(false);setGuideError('');startEdit(row)}).catch(error=>{if(active&&actorRef.current===captured)setGuideError(error.message)})}
+    return()=>{active=false}
+  },[task?.id,editing,guideId,actorKey])
+  const guidedCanSave=(()=>{if(!guided)return true;if(!form.name?.trim()||['price','cost','stock'].some(key=>form[key]===''||form[key]===null||form[key]===undefined))return false;try{moneyValue(Number(form.price),'售價');moneyValue(Number(form.cost),'成本');quantityValue(Number(form.stock),'數量');return true}catch{return false}})()
 
   useEffect(() => { loadSuppliers([]).then(s => setSuppliers(Array.isArray(s) ? s : [])) }, [])
   useEffect(() => { loadPurchases([]).then(p => setPurchases(Array.isArray(p) ? p : [])) }, [])
@@ -311,10 +326,15 @@ export default function InventoryPage({ store,session }) {
     }
     // A price/cost edit must not resend an unchanged quantity from an old form.
     if(editing!=='new'&&Number(form.stock)===form._expectedStock){delete data.stock;delete data._expectedStock}
-    savingRef.current=true
-    try{if (editing === 'new') await addProduct(data)
+    if(guided&&!guidedCanSave)return
+    savingRef.current=true;const ticket=++saveSequence.current,capturedActor=actorKey,origin=guided?editorGuide:null;let savedId=editing
+    if(origin)setGuideSaving(true)
+    try{if (editing === 'new'){const result=await addProduct(data);savedId=result?.id||data._creationId}
     else await updateProduct(editing, data)
-    setEditing(null)}catch(e){alert(tr("商品未確認保存，請保留內容並核對：{0}", {0: trMessage(e.message)}))}finally{savingRef.current=false}
+    if(origin){const rows=await loadProducts();assertReadinessProduct(rows,savedId,data,session?.role==='owner')}
+    if(!alive.current||ticket!==saveSequence.current||actorRef.current!==capturedActor)return
+    setEditing(null);if(origin)store.finishReadinessTask?.(origin.id)
+    }catch(e){if(alive.current&&ticket===saveSequence.current&&actorRef.current===capturedActor)alert(tr("商品未確認保存，請保留內容並核對：{0}", {0: trMessage(e.message)}))}finally{if(ticket===saveSequence.current){savingRef.current=false;if(alive.current)setGuideSaving(false)}}
   }
 
   async function handleDelete(id) {
@@ -356,6 +376,7 @@ export default function InventoryPage({ store,session }) {
 
   return (
     <div style={iv.root}>
+      {guideError&&<p role="alert">{trMessage(guideError)}</p>}
       <div style={iv.header}>
         <div>
           <h2 className="page-title" style={iv.title}>{tr("庫存管理")}</h2>
@@ -571,15 +592,16 @@ export default function InventoryPage({ store,session }) {
       {/* Edit drawer */}
       {editing && (
         <div style={iv.overlay}>
-          <div style={iv.drawer} className="animate-scale">
+          <div style={iv.drawer} role="dialog" aria-modal="true" aria-labelledby="product-editor-title" data-product-editor className={'animate-scale'+(guided?' product-editor-guided'+(guideMore?' product-editor-advanced':''):'')}>
             <div style={iv.drawerHeader}>
-              <span style={{fontWeight:600, fontSize:15}}>{editing==='new'?tr("新增商品"):tr("編輯商品")}</span>
-              <button className="btn-icon" data-product-editor-close aria-label={tr('關閉')} onClick={()=>setEditing(null)}><X size={16}/></button>
+              <span id="product-editor-title" style={{fontWeight:600, fontSize:guided?22:15}}>{editing==='new'?tr("新增商品"):tr("編輯商品")}</span>
+              <button className="btn-icon" disabled={guideSaving} data-product-editor-close aria-label={tr('關閉')} onClick={()=>setEditing(null)}><X size={16}/></button>
             </div>
-            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14}}>
-              <div style={{gridColumn:'1/-1'}}>
+            {guided&&<p className="opening-product-hint">{tr('先填商品、單位、售價、成本與實際數量，其餘可展開補充。')}</p>}
+            <fieldset disabled={guideSaving} style={{border:0,padding:0,margin:0,minWidth:0}}><div className="product-fields" style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14}}>
+              <div data-product-core="name" style={{gridColumn:'1/-1'}}>
                 <FieldLabel>{tr("商品名稱 *")}</FieldLabel>
-                <input className="field" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder={tr("例：花生糖")}/>
+                <input className="field" aria-label={tr('商品名稱')} autoFocus={guided} value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder={tr("例：花生糖")}/>
               </div>
               <div>
                 <FieldLabel>{tr("分類")}</FieldLabel>
@@ -604,25 +626,25 @@ export default function InventoryPage({ store,session }) {
                   ))}
                 </div>
               </div>
-              <div>
+              <div data-product-core="unit">
                 <FieldLabel>{tr("單位")}</FieldLabel>
-                <input className="field" value={form.unit} onChange={e=>{if(pricingAppliedRef.current)pricingAppliedRef.current.stale=true;setForm(f=>({...f,unit:e.target.value}))}} placeholder={tr("包 / 瓶 / kg")}/>
+                <input className="field" aria-label={tr('單位')} value={form.unit} onChange={e=>{if(pricingAppliedRef.current)pricingAppliedRef.current.stale=true;setForm(f=>({...f,unit:e.target.value}))}} placeholder={tr("包 / 瓶 / kg")}/>
               </div>
-              <div>
+              <div data-product-core="price">
                 <FieldLabel>{tr("售價 (NT$) *")}</FieldLabel>
                 <input className="field" type="number" name="productPrice" aria-label={tr('售價')} value={form.price} onChange={e=>{pricingAppliedRef.current=null;setForm(f=>({...f,price:e.target.value}))}} placeholder="0"/>
               </div>
-              <div>
+              <div data-product-core="cost">
                 <FieldLabel>{tr("成本 (NT$)")}</FieldLabel>
                 <input className="field" type="number" name="productCost" aria-label={tr('成本')} value={form.cost} onChange={e=>{pricingAppliedRef.current=null;setForm(f=>({...f,cost:e.target.value}))}} placeholder="0"/>
               </div>
-              <div style={{gridColumn:'1/-1'}}>
-                <button type="button" className="btn btn-ghost" data-cost-pricing-open style={{minHeight:46,width:'100%',whiteSpace:'normal'}} aria-expanded={pricingOpen} onClick={()=>setPricingOpen(value=>!value)}>{tr('自動算成本與售價')}</button>
+              <div data-product-core="pricing" style={{gridColumn:'1/-1'}}>
+                <button type="button" className="btn btn-ghost" data-cost-pricing-open style={{minHeight:48,width:'100%',whiteSpace:'normal'}} aria-expanded={pricingOpen} onClick={()=>setPricingOpen(value=>!value)}>{tr('自動算成本與售價')}</button>
                 {pricingOpen&&(pricingContext.ready?<Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><CostPricingPanel key={editing==='new'?form._creationId||'new':editing} unit={form.unit} cacheKey={costDraftKey(pricingContext.context,session,editing==='new'?form._creationId:editing)} currentInputRef={pricingInputRef} onDraftEdited={()=>{if(pricingAppliedRef.current)pricingAppliedRef.current.stale=true}} onApply={(values,signature)=>{pricingAppliedRef.current={signature,unit:form.unit,stale:false};setForm(old=>({...old,...values}))}}/></Suspense>:<p role="status">{tr('正在載入…')}</p>)}
               </div>
-              <div>
+              <div data-product-core="stock">
                 <FieldLabel>{tr("庫存數量")}</FieldLabel>
-                <input className="field" type="number" value={form.stock} onChange={e=>setForm(f=>({...f,stock:e.target.value}))} placeholder="0"/>
+                <input className="field" aria-label={tr('庫存數量')} type="number" value={form.stock} onChange={e=>setForm(f=>({...f,stock:e.target.value}))} placeholder="0"/>
               </div>
               <div>
                 <FieldLabel>{tr("安全庫存（低於此值提醒補貨）")}</FieldLabel>
@@ -728,9 +750,11 @@ export default function InventoryPage({ store,session }) {
               </div>
             )}
 
-            <div style={{display:'flex', gap:10}}>
-              <button className="btn btn-primary" style={{flex:1}} onClick={save}><Check size={15}/>{tr("儲存")}</button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setEditing(null)}>{tr("取消")}</button>
+            </fieldset>
+            {guided&&<button type="button" className="btn btn-ghost opening-product-more" aria-expanded={guideMore} data-opening-product-more onClick={()=>setGuideMore(value=>!value)}>{tr(guideMore?'先看必要資料':'補充分類、條碼等資料')}</button>}
+            <div className={guided?'opening-product-actions':undefined} style={{display:'flex', gap:10}}>
+              <button disabled={guideSaving||guided&&!guidedCanSave} className="btn btn-primary" data-opening-product-save={guided?'':undefined} style={{flex:1}} onClick={save}><Check size={15}/>{tr(guideSaving?'保存中…':"儲存")}</button>
+              <button disabled={guideSaving} className="btn btn-ghost" style={{flex:1}} onClick={()=>setEditing(null)}>{tr("取消")}</button>
             </div>
           </div>
         </div>
@@ -957,7 +981,7 @@ export default function InventoryPage({ store,session }) {
 }
 
 function FieldLabel({ children }) {
-  return <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:5, letterSpacing:'.03em'}}>{children}</div>
+  return <div style={{fontSize:'var(--product-label-size,11px)', color:'var(--text-tertiary)', marginBottom:5, letterSpacing:'.03em'}}>{children}</div>
 }
 
 const iv = {

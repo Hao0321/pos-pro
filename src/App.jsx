@@ -8,6 +8,7 @@ import LoginScreen from './pages/LoginScreen'
 import Sidebar from './components/Sidebar'
 import DisplayPreferences from './components/DisplayPreferences'
 import PendingTransactionNotice from './components/PendingTransactionNotice'
+import ReadinessReturnBar from './components/ReadinessReturnBar'
 import {readRecoveryCommand} from './utils/recoveryClient'
 const POSPage=lazy(()=>import('./pages/POSPage'))
 const InventoryPage=lazy(()=>import('./pages/InventoryPage'))
@@ -183,6 +184,7 @@ export default function App() {
         )}
         {/* Quick entry locks its fields while retaining the same-document recovery action. */}
         <main className="workspace-content" data-view={view} inert={store.checkoutState.phase!=='idle'&&view!=='recovery'||store.financialState.phase!=='idle'&&!['quick','exchange','sales','customers','suppliers','stocktake','refunds','stocksetup','warehouse','recovery','lots'].includes(view)&&!(view==='reservations'&&store.financialState.kind==='reservation'&&store.financialState.phase==='uncertain')?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+          <ReadinessReturnBar store={store} session={session} view={view}/>
           <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}>
           {view==='recovery'&&session.role==='owner'&&<RecoveryPage store={store} session={session}/>}
           {view === 'dashboard' && can('pos.use') && (simpleMode?<SimpleHomePage store={store} session={session} area={workspaceArea} onAreaChange={setWorkspaceArea}/>:<DashboardPage store={store} session={session}/>)}

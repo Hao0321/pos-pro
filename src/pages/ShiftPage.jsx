@@ -6,6 +6,7 @@ import { summarizeShift } from '../../electron/shiftReconciliation.mjs'
 import useVisibleViewport from '../hooks/useVisibleViewport'
 import CashCountInput,{cashText,CashCountSummary} from '../components/CashCountInput'
 import {emptyCashCount,countedCash,countedDifference} from '../utils/cashCount.mjs'
+import {readinessTaskFor} from '../utils/openingGuide.mjs'
 
 export default function ShiftPage({ store, session }) {
   const { openShift, startShift, endShift, logCash, orders,topups } = store
@@ -25,10 +26,12 @@ export default function ShiftPage({ store, session }) {
   const [loadError,setLoadError]=useState('')
   const [saving,setSaving]=useState(false),[actionError,setActionError]=useState(''),[actionMessage,setActionMessage]=useState('')
   const actionBusy=useRef(false)
+  const guideSeen=useRef(null),openedGuide=useRef(null),openingTask=readinessTaskFor(store.readinessTask,session,'shifts')?store.readinessTask:null
 
   useEffect(() => { reload() }, [openShift?.id])
   useEffect(()=>{setOpeningCash(emptyCashCount());setClosingCash(emptyCashCount());setCloseTarget(null);setShowOpen(false);setShowClose(false)},[session?.userId,session?.role])
   useEffect(()=>{const handler=()=>reload();window.addEventListener('pos-cash-operation',handler);window.addEventListener('pos-data-refreshed',handler);return()=>{window.removeEventListener('pos-cash-operation',handler);window.removeEventListener('pos-data-refreshed',handler)}},[openShift?.id])
+  useEffect(()=>{if(!loading&&!loadError&&!showOpen&&openingTask?.kind==='open-shift'&&!openShift&&guideSeen.current!==openingTask.id){guideSeen.current=openingTask.id;openedGuide.current=openingTask;setActionError('');setShowOpen(true)}},[loading,loadError,openingTask?.id,openShift?.id,showOpen])
 
   async function reload() {
     setLoading(true);setLoadError('')
@@ -57,6 +60,7 @@ export default function ShiftPage({ store, session }) {
       const result=await startShift(session?.username||'',openingTotal.amount,session?.id||'')
       if(!result?.id||result.openCash!==openingTotal.amount)throw Error('開班保存尚未確認，請核對原班別。')
       setShowOpen(false);setOpeningCash(emptyCashCount());setActionMessage('開班已保存。')
+      if(openedGuide.current)store.finishReadinessTask?.(openedGuide.current.id)
     })
   }
 

@@ -15,6 +15,9 @@ beforeEach(()=>{
 })
 afterEach(()=>{cleanup();vi.unstubAllGlobals()})
 async function store(){const hook=renderHook(()=>useStore({userId:'owner',username:'店主',role:'owner'}));await waitFor(()=>expect(hook.result.current.ready).toBe(true));return hook}
+test('opening guide navigation binds the current task and never writes business completion flags',async()=>{
+ const {result}=await store(),before=JSON.stringify(readRecords());let first;act(()=>{first=result.current.startReadinessTask('add-product')});expect(result.current.view).toBe('inventory');expect(result.current.readinessTask.id).toBe(first);let second;act(()=>{second=result.current.startReadinessTask('open-shift')});act(()=>expect(result.current.finishReadinessTask(first)).toBe(false));expect(result.current.view).toBe('shifts');act(()=>expect(result.current.finishReadinessTask(second)).toBe(true));expect(result.current.view).toBe('readiness');expect(result.current.readinessTask).toBeNull();expect(JSON.stringify(readRecords())).toBe(before)
+})
 test('real store commits a sale, updates canonical stock and clears the cart only after acknowledgement',async()=>{
   const {result}=await store();act(()=>result.current.addToCart(result.current.products[0],2))
   let order;await act(async()=>{order=await result.current.checkout('cash',100)})
