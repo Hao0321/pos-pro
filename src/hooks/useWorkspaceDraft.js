@@ -84,7 +84,7 @@ export default function useWorkspaceDraft({kind,session,state,hasContent,validat
  function assertScope(scope){const current=lease.current;if(!current?.ready||scope.storeId!==current.scope.context.storeId||scope.epoch!==current.scope.context.epoch||current.scope.context.userId!==latest.current.session.userId||current.scope.context.role!==latest.current.session.role)throw Error('店面或帳號已變更，請保留原輸入核對。');return current.scope.context}
  async function adopt(state){
   const current=lease.current;if(!current?.ready||current.original||readPendingFinancial())throw Error('請先核對上一筆異動')
-  begin();const saved=writeWorkspaceDraft(localStorage,current.scope,{documentId:documentId.current,state,original:null},current.raw,latest.current.validate);current.raw=saved.raw;current.sourceState=state;current.ready=false;current.phase='adopting';setStatus(old=>({...old,ready:false}))
+  begin();const saved=writeWorkspaceDraft(localStorage,current.scope,{documentId:documentId.current,state,original:null},current.raw,latest.current.validate);current.raw=saved.raw;current.sourceState=state;latest.current={...latest.current,state,hasContent:true};current.ready=false;current.phase='adopting';setStatus(old=>({...old,ready:false}))
   const isCurrent=()=>lease.current===current&&!current.controller.signal.aborted&&latest.current.session.userId===current.scope.context.userId&&latest.current.session.role===current.scope.context.role
   const guard=()=>{if(!isCurrent())throw Error('店面或帳號已變更，請保留原輸入核對。')}
   try{

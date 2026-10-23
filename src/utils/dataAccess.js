@@ -4,6 +4,7 @@ import {privateDraftContext,privateDraftMappingInput} from '../../electron/priva
 import {browserStorage, writeRecords, readRecords, withSalesLock,writeBusinessSettings,assertOriginalOperationAvailable} from './browserStorage'
 import { commitBrowserSale, browserReceipt, commitBrowserRefund } from './browserSales'
 import { summarizeShift } from '../../electron/shiftReconciliation.mjs'
+import {isShiftCountRequest,admitShiftCount,shiftCountResult,shiftCountRejection} from '../../electron/shiftCountDraft.mjs'
 import {moneyValue,quantityValue,operationHeader,sameCommand} from '../../electron/operationRules.mjs'
 import {commitBrowserInventory,getBrowserStocktakeState} from './browserInventory'
 import {commitBrowserRestaurant,browserRestaurantState,browserCustomerIntakeContext,browserRestaurantMenuQuote,browserRestaurantMenuSetupPreview,browserRestaurantAgentPreview} from './browserRestaurant'
@@ -349,8 +350,14 @@ export async function getOpenShift() {
   const all = loadLS('pos2_shifts', [])
   return all.find(s => s.status === 'open') || null
 }
-export async function openShift(data) {
+export async function openShift(data,actor) {
   if (isElectron) return window.electronAPI.db.openShift(data)
+  if(isShiftCountRequest(data))return withSalesLock(()=>{
+    const current=readRecords(),raw=current.data.pos_business_settings.find(row=>row.key==='sharedStoreId')?.value,context=privateDraftContext(raw===undefined?'':JSON.parse(raw),current.salesEpoch,actor,current.data.pos_users);let checked
+    try{checked=admitShiftCount('open',data.id,data,context,{shifts:current.data.pos2_shifts},actor)}catch(error){return shiftCountRejection('open',data.id,data,error)}
+    if(checked.original)return shiftCountResult('open',checked.original,true)
+    const row={...checked.data,status:'open'};writeRecords({pos2_shifts:[row,...current.data.pos2_shifts]},current.revision);return shiftCountResult('open',row)
+  })
   if(typeof data.openCash!=='number'||!Number.isFinite(data.openCash)||data.openCash<0||data.openCash>1e9)throw new Error('開班現金不正確')
   const arr = loadLS('pos2_shifts', [])
   if(arr.some(s=>s.status==='open'))throw new Error('已有開啟中的班別')
@@ -358,11 +365,13 @@ export async function openShift(data) {
   saveLS('pos2_shifts', arr)
   return { success: true, id: data.id }
 }
-export async function closeShift(id, data) {
+export async function closeShift(id, data,actor) {
   if (isElectron) return window.electronAPI.db.closeShift(id, data)
   if(typeof data.closeCash!=='number'||!Number.isFinite(data.closeCash)||data.closeCash<0||data.closeCash>1e9)throw new Error('交班現金不正確')
   return withSalesLock(()=>{
     const current=readRecords(),arr=current.data.pos2_shifts,shift=arr.find(s=>s.id===id)
+    const guarded=isShiftCountRequest(data)
+    if(guarded){const raw=current.data.pos_business_settings.find(row=>row.key==='sharedStoreId')?.value,context=privateDraftContext(raw===undefined?'':JSON.parse(raw),current.salesEpoch,actor,current.data.pos_users);let checked;try{checked=admitShiftCount('close',id,data,context,{shifts:arr,orders:current.data.pos2_orders,cashLog:current.data.pos2_cash_log,topups:current.data.pos2_topups},actor)}catch(error){return shiftCountRejection('close',id,data,error)}if(checked.original)return shiftCountResult('close',checked.original,true);data=checked.data}
     if(!shift)throw new Error('班別不存在')
     if(shift.status==='closed'){
       if(shift.closeCash!==data.closeCash || shift.note!==(data.note||''))throw new Error('已交班內容不同，請核對原交班紀錄')
@@ -372,7 +381,7 @@ export async function closeShift(id, data) {
     const stats=summarizeShift(shift,current.data.pos2_orders,current.data.pos2_cash_log,current.data.pos2_topups)
     const closed={...shift,status:'closed',closeTime:new Date().toISOString(),closeCash:data.closeCash,note:data.note||'',expectedCash:stats.expected,diff:Math.round((data.closeCash-stats.expected)*100)/100,cashSales:stats.cash,cardSales:stats.card,orderCount:stats.orderCount,refundCount:stats.refundCount,refundAmount:stats.refundAmt}
     writeRecords({pos2_shifts:arr.map(s=>s.id===id?closed:s)},current.revision)
-    return {success:true,expected:closed.expectedCash,diff:closed.diff}
+    return guarded?shiftCountResult('close',closed):{success:true,expected:closed.expectedCash,diff:closed.diff}
   })
 }
 export async function loadCashLog(shiftId) {

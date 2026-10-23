@@ -43,6 +43,7 @@ import { getReorderList, getExpiringProducts } from '../utils/analytics'
 import {validateManualEntry} from '../../electron/manualJournalRules.mjs'
 import {defaultRestaurantConfig} from '../../electron/restaurantRules.mjs'
 import {createReadinessTask,readinessTaskFor} from '../utils/openingGuide.mjs'
+import {isShiftCountRejection} from '../../electron/shiftCountDraft.mjs'
 import {prepareRestaurantCommand} from '../utils/restaurantCommand.mjs'
 
 function loadLS(k,fb){const v=browserStorage.getItem(k);return v?JSON.parse(v):fb}
@@ -316,26 +317,26 @@ export function useStore(session){
   }, [])
 
   // 班別
-  const startShift = useCallback(async (cashier, openCash, cashierId='') => {
+  const startShift = useCallback(async (cashier, openCash, cashierId='',draft=null) => {
     const data = {
-      id: 'S' + Date.now(),
-      cashier, cashierId, openCash,
-      openTime: new Date().toISOString(),
+      id: draft?.id||'S' + Date.now(),
+      cashier, cashierId:draft?.draftContext?.userId||cashierId, openCash,
+      openTime: draft?.time||new Date().toISOString(),
     }
     // 記住這次的零用金 → 明天開班自動帶入，不用每天重打
     try { browserStorage.setItem('pos_last_open_cash', String(openCash || 0)) } catch {}
-    const result=await apiOpenShift(data)
-    if (result?.success!==true) throw new Error(result?.error||'開班保存失敗')
-    setOpenShiftState({ ...data, status: 'open' })
-    fireWebhook('shift_open', payloadFromShift(data, 'open')).catch(()=>{})
-    return data
+    const input={...data,...(draft?{draftContext:draft.draftContext,draftBasis:draft.draftBasis}:{})},result=await apiOpenShift(input,sessionRef.current)
+    if (result?.success!==true) throw Object.assign(new Error(result?.error||'開班保存失敗'),{shiftDraftRejected:!!draft&&isShiftCountRejection(result,'open',data.id,input)})
+    const saved=result.shift||{...data,status:'open'};setOpenShiftState(saved.status==='open'?saved:null)
+    if(!result.alreadySaved)fireWebhook('shift_open', payloadFromShift(saved, 'open')).catch(()=>{})
+    return saved
   }, [])
 
-  const endShift = useCallback(async (closeCash, note='') => {
+  const endShift = useCallback(async (closeCash, note='',draft=null) => {
     if (!openShift) return null
-    const r = await apiCloseShift(openShift.id, { closeCash, note })
-    if (r?.success!==true) throw new Error(r?.error||'交班保存失敗')
-    fireWebhook('shift_close', payloadFromShift(openShift, 'close', { ...r, closeCash })).catch(()=>{})
+    const input={closeCash,note,...(draft?{draftContext:draft.draftContext,draftBasis:draft.draftBasis}:{})},r=await apiCloseShift(openShift.id,input,sessionRef.current)
+    if (r?.success!==true) throw Object.assign(new Error(r?.error||'交班保存失敗'),{shiftDraftRejected:!!draft&&isShiftCountRejection(r,'close',openShift.id,input)})
+    if(!r.alreadySaved)fireWebhook('shift_close', payloadFromShift(openShift, 'close', { ...r, closeCash })).catch(()=>{})
     setOpenShiftState(null)
     return r
   }, [openShift])
@@ -348,6 +349,7 @@ export function useStore(session){
     const result=await executeFinancial('cashlog',data,addCashLog,setFinancialState)
     return result.cashLog
   }, [openShift])
+  const reloadOpenShift=useCallback(async()=>{const who=sessionRef.current,value=await getOpenShift();if(who?.userId===sessionRef.current?.userId&&who?.role===sessionRef.current?.role)setOpenShiftState(value||null);return value},[])
 
   // 損耗
   const recordWaste = useCallback(async (data) => {
@@ -642,7 +644,7 @@ export function useStore(session){
     // v2.1
     heldOrders, holdCart, recallHeld, removeHeld,
     wasteLog, recordWaste, removeWaste,
-    openShift, startShift, endShift, logCash,
+    openShift, startShift, endShift, logCash,reloadOpenShift,
     topupMember,
     pointsRule, updatePointsRule,
     birthdayBonus, updateBirthdayBonus,

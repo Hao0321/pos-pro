@@ -128,6 +128,8 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(name==='refundOrder')return db.refundOrder(args[0],args[1],actor)
     if(['addProduct','addWaste','deleteProduct','addManualEntry','deleteManualEntry'].includes(name))return db[name](args[0],actor)
     if(['updateProduct','updateOrderStatus'].includes(name))return db[name](args[0],args[1],actor)
+    if(name==='openShift')return db.openShift(args[0],actor)
+    if(name==='closeShift')return db.closeShift(args[0],args[1],actor)
     return db[name](...args)
   }
   async function handle(req,res){

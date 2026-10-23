@@ -180,8 +180,8 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   // ----- Shifts -----
   handle('db:getShifts', () => db.getShifts())
   handle('db:getOpenShift', () => db.getOpenShift())
-  handle('db:openShift', (_e, data) => db.openShift(data))
-  handle('db:closeShift', (_e, id, data) => db.closeShift(id, data))
+  handle('db:openShift', (_e, data) => db.openShift(data,ipcSecurity.current()))
+  handle('db:closeShift', (_e, id, data) => db.closeShift(id, data,ipcSecurity.current()))
   handle('db:getCashLog', (_e, shiftId) => db.getCashLog(shiftId))
   handle('db:addCashLog', (_e, data) => db.addCashLog(data))
 
