@@ -6,9 +6,10 @@ import {privateDraftDigest} from './privateDrafts.mjs'
 import {WORKBOOK_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_FENCE} from './workbookMigration.mjs'
 import {TABULAR_MIGRATION_PROTOCOL,TABULAR_MIGRATION_FENCE} from './tabularMigration.mjs'
 import {OPENING_MASTER_PROTOCOL} from './openingMigrationSource.mjs'
+import {isOpeningCutoverMaster} from './openingCutoverRules.mjs'
 
 export function appendBrowserMasterMigration(book,input,scope,actor,time,{deferOpeningReceipt=false}={}){
-  if(deferOpeningReceipt){if(![OPENING_MASTER_PROTOCOL,'pos-opening-master-migration/v2'].includes(input?.protocol))throw Error('期初主檔只能與原期初批次一起保存。')}
+  if(deferOpeningReceipt){if(input?.protocol!==OPENING_MASTER_PROTOCOL&&!isOpeningCutoverMaster(input?.protocol))throw Error('期初主檔只能與原期初批次一起保存。')}
   else assertPublicMasterMigration(input)
   const {preview,receipt}=verifyMasterMigration(input,book,scope,actor)
   if(receipt)return {book,receipt}

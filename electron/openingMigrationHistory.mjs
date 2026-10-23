@@ -3,6 +3,7 @@ import {privateDraftDigest,draftObject} from './privateDrafts.mjs'
 import {readMasterMigrationHistory,masterSourceKey} from './masterMigration.mjs'
 import {readOpeningMigrationInput,openingMasterRequest,OPENING_MASTER_PROTOCOL,OPENING_MIGRATION_ACTION,OPENING_MIGRATION_METHOD,OPENING_MIGRATION_FENCE,OPENING_MIGRATION_HEAD,OPENING_CLEARING_ACCOUNT} from './openingMigrationSource.mjs'
 import {readOpeningCutoverHistory} from './openingCutoverHistory.mjs'
+import {isOpeningCutoverProtocol} from './openingCutoverRules.mjs'
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b),bad=()=>{throw Error('期初搬家回執需要核對，請保留原編號與原資料。')}
 const setting=(book,key)=>{const rows=(book.settings||[]).filter(r=>r.key===key);if(rows.length>1)bad();return rows[0]?.value}
 export const openingSourceProductKey=(source,id)=>masterSourceKey(source,'products',id)
@@ -24,7 +25,7 @@ export function readOpeningMigrationHistory(book){
   }
   const stored=setting(book,OPENING_MIGRATION_HEAD);if((stored===undefined?null:JSON.parse(stored))!==head||receipts.length&&setting(book,OPENING_MIGRATION_FENCE)!=='1')bad()
   // A surviving cost event is not a substitute for the owner source receipt.
-  for(const event of book.stockCostEntries||[])if(event.method===OPENING_MIGRATION_METHOD&&event.input.protocol!=='pos-opening-migration/v2'&&!byId.has(event.input.id))bad()
+  for(const event of book.stockCostEntries||[])if(event.method===OPENING_MIGRATION_METHOD&&!isOpeningCutoverProtocol(event.input.protocol)&&!byId.has(event.input.id))bad()
   for(const child of masters.receipts)if(JSON.parse(child.signature).protocol===OPENING_MASTER_PROTOCOL&&!children.has(child.id))bad()
   const cutovers=readOpeningCutoverHistory(book,masters)
   for(const [key,row]of cutovers.byProduct){if(byProduct.has(key))bad();byProduct.set(key,row)}

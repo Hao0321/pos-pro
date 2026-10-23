@@ -1,5 +1,9 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--financial-file-browser-ui':['native-financial-file-browser-ui.cjs','POS_FINANCIAL_FILE_BROWSER_UI_PASS',true],
+  '--financial-delimited-ui':['native-financial-delimited-ui.cjs','POS_FINANCIAL_DELIMITED_UI_PASS',true],
+  '--financial-file-intake-ui':['native-financial-file-intake-ui.cjs','POS_FINANCIAL_FILE_INTAKE_UI_PASS',true],
+  '--financial-file-migration':['native-financial-file-migration.cjs','POS_FINANCIAL_FILE_NATIVE_PASS',false],
   '--opening-cutover-intake-browser-ui':['native-opening-cutover-intake-browser-ui.cjs','POS_OPENING_CUTOVER_INTAKE_BROWSER_PASS',true],
   '--opening-cutover-intake-ui':['native-opening-cutover-intake-ui.cjs','POS_OPENING_CUTOVER_INTAKE_UI_PASS',true],
   '--reservation-deposit-liability-ui':['native-reservation-deposit-liability-ui.cjs','POS_RESERVATION_DEPOSIT_LIABILITY_UI_PASS',true],

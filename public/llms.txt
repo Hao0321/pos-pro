@@ -6,6 +6,7 @@ Discovery: /.well-known/pos-agent.json → /agent/manifest.json. In desktop file
 - Sale / restaurant / legacy purchase / cross-company quote: /agent/guides/legacy-documents.txt (pos-document-draft/v1, business-document/v1; authenticated getAgentContext; human review).
 - Package purchase: /agent/guides/purchase-units.txt (pos-purchase-units-draft/v1; owner task packet; raw quantities and original prices; paste/file/code fence/drop).
 - Move from another ERP/CRM: /agent/guides/migration.txt (pos-migration-draft/v1; source facts and owner-confirmed product/supplier/customer import; direct XLSX/CSV/TSV).
+- Original invoices/credits: /agent/guides/opening-balances.txt; original CSV/TSV/XLSX: /agent/guides/financial-files.txt (same owner review, retained raw bytes, v3 / format20; canonical JSON v2 / format14 remains supported).
 - Original inventory: /agent/guides/opening-stock.txt (same source draft; original quantities/carrying values, report cut-off, owner-reviewed trial and one atomic stock opening; AR/AP and complete switching remain pending).
 - Customer receipt / supplier payment: schemas in /agent/manifest.json and /.well-known/pos-agent.json; existing authenticated owner workflow and actual-receipt/payment confirmation.
 

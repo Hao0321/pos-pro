@@ -5,7 +5,7 @@ import {TABULAR_MIGRATION_PROTOCOL,projectTabularDraft} from './tabularMigration
 export {MIGRATION_PROTOCOL,migrationEntities}
 const invalid=()=>Error('搬家草稿讀不到，原輸入仍保留')
 export const emptyMigrationDraft=()=>({text:''})
-export function cutoverSourceCanRoute(text){try{const value=parseAgentDocument(text,{maxBytes:250000});return value?.protocol==='pos-migration-draft/v1'&&Array.isArray(value.tables)&&value.tables.some(row=>['opening-receivables','opening-payables'].includes(row?.entity))}catch{return false}}
+export function cutoverSourceCanRoute(text){try{const value=parseAgentDocument(text,{maxBytes:250000});return value?.protocol==='pos-financial-file-migration/v1'&&Array.isArray(value.files)||value?.protocol==='pos-migration-draft/v1'&&Array.isArray(value.tables)&&value.tables.some(row=>['opening-receivables','opening-payables'].includes(row?.entity))}catch{return false}}
 export const validMigrationInput=form=>form&&Object.keys(form).every(key=>['text','attempted','workflow'].includes(key))&&typeof form.text==='string'&&form.text.length<=250000&&(!Object.hasOwn(form,'workflow')||['opening-stock','opening-cutover'].includes(form.workflow))&&(!Object.hasOwn(form,'attempted')||form.attempted?.protocol==='pos-master-migration/v1'&&form.attempted.sourceText===form.text)
 export function migrationHandoff(){return {
  protocol:'pos-migration-handoff/v1',draftProtocol:MIGRATION_PROTOCOL,schema:'/agent/migration-draft-v1.schema.json',guide:'/agent/guides/migration.txt',stage:'owner-master-review',businessCommit:false,

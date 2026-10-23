@@ -130,6 +130,24 @@
       },
       "legacyXls": false,
       "externalAiUpload": false
+    },
+    "financialFiles": {
+      "protocol": "pos-financial-file-migration/v1",
+      "guide": "/agent/guides/financial-files.txt",
+      "sourceFormats": [
+        "csv",
+        "tsv",
+        "xlsx"
+      ],
+      "requestProtocol": "pos-opening-migration/v3",
+      "receiptProtocol": "pos-opening-migration-receipt/v3",
+      "protectionVersion": 20,
+      "humanReviewRequired": true,
+      "originalFilesPreserved": true,
+      "externalAiUpload": false,
+      "externalAgentWriteApi": false,
+      "fullMigrationComplete": false,
+      "installerUpdated": false
     }
   }
 }

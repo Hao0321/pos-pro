@@ -2,6 +2,9 @@ import {draftObject,assertPrivateDraftContext,privateDraftDigest} from './privat
 import {openingTablesFromSource} from './openingMigrationTables.mjs'
 import {projectOpeningStockTables,openingDate} from './openingMigrationSource.mjs'
 import {projectOpeningBalanceTables,openingBalancePartyKey} from './openingBalanceSource.mjs'
+import {parseAgentDocument} from './agentHandoff.mjs'
+import {FINANCIAL_FILES_PROTOCOL} from './financialFileDraft.mjs'
+import {readFinancialFileSource} from './financialFileSource.mjs'
 
 export const OPENING_SOURCE_PLAN='pos-opening-source-plan/v1'
 const fail=message=>{throw Error(message||'整份搬家來源需要重新核對，原輸入仍保留。')}
@@ -11,7 +14,7 @@ export function readOpeningSourceData(input){
  if(input.protocol!==OPENING_SOURCE_PLAN||!['','TWD'].includes(input.currency)||!Array.isArray(input.masterChoices)||input.masterChoices.length>5000||!Array.isArray(input.partyChoices)||input.partyChoices.length>5000)fail()
  draftObject(input.declaredTotals,['stockValue','receivableInvoices','receivableCredits','payableInvoices','payableCredits'],[])
  for(const value of Object.values(input.declaredTotals))if(typeof value!=='string')fail()
- const projected=openingTablesFromSource(input.sourceText,input.currency)
+ const root=parseAgentDocument(input.sourceText,{maxBytes:250000}),projected=root.protocol===FINANCIAL_FILES_PROTOCOL?readFinancialFileSource(input.sourceText,input.currency):openingTablesFromSource(input.sourceText,input.currency)
  if(!projected)fail('請先核對原始檔案的欄位用途。')
  if(projected.source.tables.some(table=>table.entity==='history-reference'))fail('來源還有歷史資料，整批尚未完成；請保留原檔核對歷史搬入。')
  const stock=projectOpeningStockTables(projected,input.cutoffDate,{combined:true}),finance=projectOpeningBalanceTables(projected,input.cutoffDate,{allowEmpty:true})

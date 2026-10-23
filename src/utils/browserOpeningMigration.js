@@ -3,7 +3,7 @@ import {getBrowserPrivateDraftContext} from './browserPrivateDrafts'
 import {browserToBook,bookToBrowser} from '../../electron/recoveryRules.mjs'
 import {previewOpeningMigration,verifyOpeningMigration,projectOpeningMigrationBook} from '../../electron/openingMigration.mjs'
 import {readOpeningMigrationHistory,assertOpeningMigrationResult} from '../../electron/openingMigrationHistory.mjs'
-import {OPENING_CUTOVER_PROTOCOL} from '../../electron/openingCutoverRules.mjs'
+import {isOpeningCutoverProtocol} from '../../electron/openingCutoverRules.mjs'
 import {previewOpeningCutover,verifyOpeningCutover,projectOpeningCutoverBook} from '../../electron/openingCutoverModel.mjs'
 import {readOpeningCutoverHistory} from '../../electron/openingCutoverHistory.mjs'
 import {assertOpeningCutoverResult} from '../../electron/openingCutoverReceipt.mjs'
@@ -11,10 +11,10 @@ import {OPENING_CUTOVER_LOOKUP,lookupOpeningCutover} from '../../electron/openin
 import {privateDraftContext} from '../../electron/privateDrafts.mjs'
 import {readExchangeTextSetting} from '../../electron/businessExchange.mjs'
 
-export async function previewBrowserOpeningMigration(input,actor){await getBrowserPrivateDraftContext(actor);return withSalesLock(()=>{const record=readRecords(),book=browserToBook(record.data),scope=privateDraftContext(readExchangeTextSetting(book.settings,'sharedStoreId'),record.salesEpoch,actor,book.users);if(input?.protocol===OPENING_CUTOVER_LOOKUP){const value=lookupOpeningCutover(input,book,scope,actor);if(!value.found)assertOriginalOperationAvailable('applyOpeningMigration',input.id,record,input);return value}return (input?.protocol===OPENING_CUTOVER_PROTOCOL?previewOpeningCutover:previewOpeningMigration)(input,book,scope,actor)})}
+export async function previewBrowserOpeningMigration(input,actor){await getBrowserPrivateDraftContext(actor);return withSalesLock(()=>{const record=readRecords(),book=browserToBook(record.data),scope=privateDraftContext(readExchangeTextSetting(book.settings,'sharedStoreId'),record.salesEpoch,actor,book.users);if(input?.protocol===OPENING_CUTOVER_LOOKUP){const value=lookupOpeningCutover(input,book,scope,actor);if(!value.found)assertOriginalOperationAvailable('applyOpeningMigration',input.id,record,input);return value}return (isOpeningCutoverProtocol(input?.protocol)?previewOpeningCutover:previewOpeningMigration)(input,book,scope,actor)})}
 export async function commitBrowserOpeningMigration(input,actor){
  const scope=await getBrowserPrivateDraftContext(actor)
- const combined=input?.protocol===OPENING_CUTOVER_PROTOCOL,history=combined?readOpeningCutoverHistory:readOpeningMigrationHistory,verify=combined?verifyOpeningCutover:verifyOpeningMigration,assertResult=combined?assertOpeningCutoverResult:assertOpeningMigrationResult
+ const combined=isOpeningCutoverProtocol(input?.protocol),history=combined?readOpeningCutoverHistory:readOpeningMigrationHistory,verify=combined?verifyOpeningCutover:verifyOpeningMigration,assertResult=combined?assertOpeningCutoverResult:assertOpeningMigrationResult
  return withSalesLock(()=>{
   let writing=false,before=null,checked=false,existing=false
   try{

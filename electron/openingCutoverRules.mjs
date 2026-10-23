@@ -1,12 +1,13 @@
 import {draftObject,privateDraftDigest,assertPrivateDraftContext} from './privateDrafts.mjs'
 import {canonicalSignature} from './operationRules.mjs'
 import {businessId} from './businessExchange.mjs'
-import {projectOpeningBalanceSource} from './openingBalanceSource.mjs'
+import {projectOpeningBalanceSource,projectOpeningBalanceTables} from './openingBalanceSource.mjs'
+import {readFinancialFileSource} from './financialFileSource.mjs'
 import {decimalUnits} from './decimalUnits.mjs'
 
-// Lean source/receipt proof. Settlement does not import a workbook reader or
-// treat this proof as a stock/master write authority. The full book also checks
-// the linked master, cost and activation records before exposing the context.
+// Source/receipt proof. Raw v3 sources are re-read through the same bounded
+// decoder. This is not a write authority; the full book also checks linked
+// master, cost and activation records before exposing the context.
 export const OPENING_CUTOVER_PROTOCOL='pos-opening-migration/v2'
 export const OPENING_CUTOVER_RECEIPT='pos-opening-migration-receipt/v2'
 export const OPENING_CUTOVER_FEATURE='opening-cutover-v1'
@@ -14,6 +15,11 @@ export const OPENING_CUTOVER_FENCE='openingCutoverVersionFence'
 export const OPENING_CUTOVER_HEAD='openingCutoverHead'
 export const OPENING_CUTOVER_ACTION='AGENT_OPENING_CUTOVER'
 export const OPENING_CUTOVER_MASTER='pos-opening-master-migration/v2'
+export const OPENING_RAW_CUTOVER_PROTOCOL='pos-opening-migration/v3'
+export const OPENING_RAW_CUTOVER_RECEIPT='pos-opening-migration-receipt/v3'
+export const OPENING_RAW_CUTOVER_MASTER='pos-opening-master-migration/v3'
+export const isOpeningCutoverProtocol=protocol=>[OPENING_CUTOVER_PROTOCOL,OPENING_RAW_CUTOVER_PROTOCOL].includes(protocol)
+export const isOpeningCutoverMaster=protocol=>[OPENING_CUTOVER_MASTER,OPENING_RAW_CUTOVER_MASTER].includes(protocol)
 export const OPENING_CUTOVER_CONTEXT='pos-opening-balance-context/v2'
 export const OPENING_ACTIVATION='opening-import'
 export const cutoverError=()=>Error('整批搬家來源、帳款或保存回執需要核對，請保留原編號。')
@@ -28,8 +34,8 @@ export const openingCutoverSourceDigest=input=>privateDraftDigest({...input,revi
 export const openingBarrierId=(id,side)=>'opening-activation-'+(side==='receivable'?'ar-':'ap-')+privateDraftDigest([id,side]).slice(0,40)
 export function readOpeningCutoverFacts(input){
  draftObject(input,requestFields,requestFields.filter(key=>key!=='review'));assertPrivateDraftContext(input.scope)
- if(input.protocol!==OPENING_CUTOVER_PROTOCOL||!['','TWD'].includes(input.currency)||input.scope.role!=='owner'||!Array.isArray(input.masterChoices)||input.masterChoices.length>5000||!Array.isArray(input.partyChoices)||input.partyChoices.length>5000)bad()
- const parsed=projectOpeningBalanceSource(input.sourceText,input.cutoffDate)
+ if(!isOpeningCutoverProtocol(input.protocol)||!['','TWD'].includes(input.currency)||input.scope.role!=='owner'||!Array.isArray(input.masterChoices)||input.masterChoices.length>5000||!Array.isArray(input.partyChoices)||input.partyChoices.length>5000)bad()
+ const parsed=input.protocol===OPENING_RAW_CUTOVER_PROTOCOL?projectOpeningBalanceTables(readFinancialFileSource(input.sourceText,input.currency),input.cutoffDate):projectOpeningBalanceSource(input.sourceText,input.cutoffDate)
  if(parsed.otherEntities.length||input.id!==openingCutoverId(parsed.source,input.scope))bad()
  draftObject(input.declaredTotals,['stockValue','receivableInvoices','receivableCredits','payableInvoices','payableCredits'],[])
  const totals={receivableInvoices:parsed.totals.receivable.invoiceCents,receivableCredits:parsed.totals.receivable.creditCents,payableInvoices:parsed.totals.payable.invoiceCents,payableCredits:parsed.totals.payable.creditCents}
@@ -49,7 +55,7 @@ export function readOpeningCutoverFacts(input){
 export function readOpeningCutoverProof(receipt,storeId){
  draftObject(receipt,receiptFields)
  const {hash,...body}=receipt,input=JSON.parse(receipt.signature),parsed=readOpeningCutoverFacts(input)
- if(receipt.protocol!==OPENING_CUTOVER_RECEIPT||receipt.success!==true||hash!==privateDraftDigest(body)||receipt.id!==input.id||receipt.signature!==canonicalSignature(input)||receipt.sourceDigest!==openingCutoverSourceDigest(input)||storeId!==input.scope.storeId||receipt.actor?.role!=='owner'||receipt.actor.userId!==input.scope.userId||!same(receipt.source,parsed.source.source)||receipt.cutoffDate!==input.cutoffDate||receipt.clearingAccount!=='3902')bad()
+ if(receipt.protocol!==(input.protocol===OPENING_RAW_CUTOVER_PROTOCOL?OPENING_RAW_CUTOVER_RECEIPT:OPENING_CUTOVER_RECEIPT)||receipt.success!==true||hash!==privateDraftDigest(body)||receipt.id!==input.id||receipt.signature!==canonicalSignature(input)||receipt.sourceDigest!==openingCutoverSourceDigest(input)||storeId!==input.scope.storeId||receipt.actor?.role!=='owner'||receipt.actor.userId!==input.scope.userId||!same(receipt.source,parsed.source.source)||receipt.cutoffDate!==input.cutoffDate||receipt.clearingAccount!=='3902')bad()
  draftObject(receipt.actor,['userId','username','role']);businessId(receipt.actor.userId);text(receipt.actor.username)
  if(!Number.isSafeInteger(receipt.sequence)||receipt.sequence<1||!Number.isSafeInteger(receipt.customerRevision)||receipt.customerRevision<1||!Number.isSafeInteger(receipt.supplierRevision)||receipt.supplierRevision<1||!Array.isArray(receipt.rows)||receipt.rows.length>5000||!Number.isSafeInteger(receipt.totalValueCents)||receipt.totalValueCents<0)bad()
  for(const value of [receipt.previousHash,receipt.priorCustomerDigest,receipt.priorSupplierDigest])digest(value)

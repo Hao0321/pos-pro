@@ -1,3 +1,4 @@
+import {normalizeOpeningColumn,openingBalanceColumnAliases} from './openingBalanceColumns.mjs'
 import {readCanonicalMigrationDraft} from './migrationDraftSource.mjs'
 import {parseAgentDocument} from './agentHandoff.mjs'
 import {decimalUnits} from './decimalUnits.mjs'
@@ -10,21 +11,7 @@ import {canonicalSignature} from './operationRules.mjs'
 export const OPENING_BALANCE_CONTEXT='pos-opening-balance-context/v1'
 const fail=message=>{throw Error(message||'原單帳款需要核對，原輸入仍保留。')}
 const openingDate=value=>{try{return validateSalesDay(value)}catch{fail('請填寫確定的原單、到期或切換日期。')}}
-const normalize=value=>value.trim().toLowerCase().replace(/[\s_-]/g,'')
-const aliases={
- party:['partyexternalid','customerexternalid','supplierexternalid','客戶原編號','供應商原編號','往來原編號'],
- name:['partyname','customername','suppliername','客戶名稱','供應商名稱','往來名稱'],
- number:['invoicenumber','invoiceno','documentnumber','documentno','原單號','單據號碼','發票號碼'],
- type:['documenttype','invoicetype','單據種類','單據類型'],
- date:['invoicedate','documentdate','postingdate','原單日期','單據日期'],
- due:['duedate','到期日','付款到期日'],
- outstanding:['outstanding','outstandingamount','remaining','remainingamount','未結清金額','未收金額','未付金額'],
- currency:['currency','currencycode','幣別','貨幣'],
- cutoff:['cutoffdate','asofdate','切換日','截止日期'],
- total:['originalamount','originaltotal','原單總額','原始金額'],
- paid:['paidamount','previouslypaid','先前已付','以前已付金額'],
- note:['note','reference','備註','參考資料'],
-}
+const normalize=normalizeOpeningColumn,aliases=openingBalanceColumnAliases
 function text(value,label,max=128){if(typeof value!=='string'||!value.trim()||value!==value.trim()||value.length>max||/[\p{Cc}\p{Cf}]/u.test(value)||value.normalize('NFC')!==value)fail(label);return value}
 function columns(table){
  const result={}

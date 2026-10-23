@@ -7,7 +7,7 @@ import {WORKBOOK_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_FENCE} from './workbookMi
 import {TABULAR_MIGRATION_PROTOCOL,TABULAR_MIGRATION_FENCE} from './tabularMigration.mjs'
 import {OPENING_MASTER_PROTOCOL,OPENING_MASTER_SOURCE,projectOpeningMigrationSource,openingMigrationId} from './openingMigrationSource.mjs'
 import {assertNoUnhandledOpeningValue} from './openingMigrationTables.mjs'
-import {OPENING_CUTOVER_MASTER} from './openingCutoverRules.mjs'
+import {isOpeningCutoverMaster} from './openingCutoverRules.mjs'
 import {readOpeningCutoverMaster} from './openingCutoverSource.mjs'
 
 export const MASTER_MIGRATION_METHOD='applyMasterMigration'
@@ -73,7 +73,7 @@ function inspectMasterMigrationHistory(book){
   return {receipts,byId,mappings,head,tabular,workbook}
 }
 export function readMasterMigrationInput(input){
-  const combined=input?.protocol===OPENING_CUTOVER_MASTER,opening=input?.protocol===OPENING_MASTER_PROTOCOL||combined
+  const combined=isOpeningCutoverMaster(input?.protocol),opening=input?.protocol===OPENING_MASTER_PROTOCOL||combined
   draftObject(input,opening?['protocol','id','sourceText','choices','scope','review','parentId','cutoffDate','currency']:['protocol','id','sourceText','choices','scope','review'],opening?['protocol','id','sourceText','choices','scope','parentId','cutoffDate','currency']:['protocol','id','sourceText','choices','scope'])
   if(!opening&&input.protocol!=='pos-master-migration/v1'||typeof input.sourceText!=='string'||!Array.isArray(input.choices)||input.choices.length>5000)fail()
   assertPrivateDraftContext(input.scope)
@@ -176,7 +176,7 @@ export function previewMasterMigration(input,book,scope,actor){
   if(!same(input.scope,scope))fail('店面或帳號已變更，請保留原輸入核對。')
   const history=readMasterMigrationHistory(book),prior=history.byId.get(input.id)
   if(prior){if(prior.signature!==canonicalSignature(input)&&prior.signature!==canonicalSignature({...input,review:JSON.parse(prior.signature).review}))fail('同一搬家編號的內容不同，請保留原資料核對。');return {protocol:'pos-master-migration-preview/v1',id:input.id,saved:prior,ready:false,rows:[],counts:prior.counts,source:source.source}}
-  if(![OPENING_MASTER_PROTOCOL,OPENING_CUTOVER_MASTER].includes(input.protocol))assertNoUnhandledOpeningValue(input.sourceText)
+  if(input.protocol!==OPENING_MASTER_PROTOCOL&&!isOpeningCutoverMaster(input.protocol))assertNoUnhandledOpeningValue(input.sourceText)
   const {rows,counts}=projectMasterMigrationRows(source,book,scope,choices,history)
   const review={protocol:'pos-master-migration-review/v1',createdAt:Date.now(),scope:structuredClone(scope),dataDigest:digest(book),inputDigest:digest({...input,review:undefined}),rowsDigest:digest(rows),counts}
   return {protocol:'pos-master-migration-preview/v1',id:input.id,source:source.source,rows,counts,ready:counts.blocked===0,review}

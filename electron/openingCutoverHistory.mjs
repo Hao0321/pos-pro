@@ -3,7 +3,7 @@ import {privateDraftDigest,draftObject} from './privateDrafts.mjs'
 import {readExchangeTextSetting} from './businessExchange.mjs'
 import {readMasterMigrationHistory,masterSourceKey} from './masterMigration.mjs'
 import {readOpeningCutoverInput,openingCutoverMasterRequest} from './openingCutoverSource.mjs'
-import {OPENING_CUTOVER_ACTION,OPENING_CUTOVER_MASTER,OPENING_CUTOVER_FENCE,OPENING_CUTOVER_HEAD,OPENING_ACTIVATION,readOpeningCutoverProof,openingActivationRequest,cutoverError} from './openingCutoverRules.mjs'
+import {OPENING_CUTOVER_ACTION,OPENING_RAW_CUTOVER_RECEIPT,isOpeningCutoverMaster,isOpeningCutoverProtocol,OPENING_CUTOVER_FENCE,OPENING_CUTOVER_HEAD,OPENING_ACTIVATION,readOpeningCutoverProof,openingActivationRequest,cutoverError} from './openingCutoverRules.mjs'
 import {openingBalanceContextFromCutovers} from './openingBalanceLedger.mjs'
 import {openingBalanceSourceProfile,openingFinancialCustomerId,openingFinancialSupplierId} from './openingBalanceParties.mjs'
 
@@ -25,7 +25,7 @@ function inspect(book,masterHistory){
   if(audit.action!==OPENING_CUTOVER_ACTION||audit.id!=='opening-cutover:'+receipt.id||audit.timestamp!==receipt.time||audit.userId!==receipt.actor?.userId||audit.username!==receipt.actor?.username||audit.role!=='owner')bad()
   return receipt
  }).sort((a,b)=>a.sequence-b.sequence),byId=new Map(),byProduct=new Map(),byRow=new Map(),children=new Set(),barriers=new Set(),partyTargets=new Map(),storeId=readExchangeTextSetting(book.settings||[],'sharedStoreId')
- const flag=setting(book,OPENING_CUTOVER_FENCE);if(flag!==undefined&&flag!=='1')bad()
+ const flag=setting(book,OPENING_CUTOVER_FENCE),rawFlag=setting(book,'financialFileMigrationVersionFence');if(flag!==undefined&&flag!=='1'||rawFlag!==undefined&&rawFlag!=='1'||receipts.some(row=>row.protocol===OPENING_RAW_CUTOVER_RECEIPT)&&rawFlag!=='1')bad()
  const masters=masterHistory||readMasterMigrationHistory(book);let head=null
  const oldProducts=new Set(),oldRows=new Set()
  for(const audit of book.auditLog||[])if(audit.action==='AGENT_OPENING_MIGRATION'){const saved=typeof audit.detail==='string'?JSON.parse(audit.detail):audit.detail;for(const row of saved.rows||[]){oldProducts.add(row.sourceProductKey);oldRows.add(row.sourceRowKey)}}
@@ -81,9 +81,9 @@ function inspect(book,masterHistory){
   byId.set(r.id,r);head=r.hash
  }
  const stored=setting(book,OPENING_CUTOVER_HEAD);if((stored===undefined?null:JSON.parse(stored))!==head)bad()
- for(const child of masters.receipts)if(JSON.parse(child.signature).protocol===OPENING_CUTOVER_MASTER&&!children.has(child.id))bad()
+ for(const child of masters.receipts)if(isOpeningCutoverMaster(JSON.parse(child.signature).protocol)&&!children.has(child.id))bad()
  for(const entry of [...(book.customerEntries||[]),...(book.supplierEntries||[])])if(entry.action===OPENING_ACTIVATION&&!barriers.has(entry.id))bad()
- for(const entry of book.stockCostEntries||[])if(entry.method==='applyOpeningMigration'&&entry.input?.protocol==='pos-opening-migration/v2'&&!byId.has(entry.input.id))bad()
+ for(const entry of book.stockCostEntries||[])if(entry.method==='applyOpeningMigration'&&isOpeningCutoverProtocol(entry.input?.protocol)&&!byId.has(entry.input.id))bad()
  const context=openingBalanceContextFromCutovers(storeId,receipts)
  return {receipts,byId,byProduct,byRow,head,context}
 }

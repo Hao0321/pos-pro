@@ -1,5 +1,6 @@
 import {readOpeningMigrationInput,projectOpeningStockTables,OPENING_MIGRATION_METHOD,OPENING_CLEARING_ACCOUNT} from './openingMigrationSource.mjs'
-import {OPENING_CUTOVER_PROTOCOL,readOpeningCutoverFacts} from './openingCutoverRules.mjs'
+import {OPENING_RAW_CUTOVER_PROTOCOL,isOpeningCutoverProtocol,readOpeningCutoverFacts} from './openingCutoverRules.mjs'
+import {readFinancialFileSource} from './financialFileSource.mjs'
 import {canonicalSignature} from './operationRules.mjs'
 import {stockLedgerError} from './stockOpeningPlan.mjs'
 import {masterSourceKey} from './masterMigration.mjs'
@@ -7,7 +8,7 @@ import {masterSourceKey} from './masterMigration.mjs'
 // Stock source creation is shared by the real cutover and the review projection.
 // It is an opening asset, never a purchase, sale, tender or ordinary surplus.
 export function planOpeningMigrationStock(c){
- const {input,evidence,previous}=c,{opening,source}=input.protocol===OPENING_CUTOVER_PROTOCOL?projectOpeningStockTables({source:readOpeningCutoverFacts(input).source,origins:new Map()},input.cutoffDate,{combined:true}):readOpeningMigrationInput(input)
+ const {input,evidence,previous}=c,{opening,source}=isOpeningCutoverProtocol(input.protocol)?projectOpeningStockTables(input.protocol===OPENING_RAW_CUTOVER_PROTOCOL?readFinancialFileSource(input.sourceText,input.currency):{source:readOpeningCutoverFacts(input).source,origins:new Map()},input.cutoffDate,{combined:true}):readOpeningMigrationInput(input)
  if(c.postingDate!==input.cutoffDate||previous.journals.some(row=>row.date>input.cutoffDate))throw stockLedgerError('HISTORY')
  if(!Array.isArray(evidence.opening)||evidence.opening.length!==opening.length||evidence.products.length!==opening.length)throw stockLedgerError('HISTORY')
  if(previous.business?.some(row=>row.method===OPENING_MIGRATION_METHOD&&row.id===input.id))throw stockLedgerError('HISTORY')
