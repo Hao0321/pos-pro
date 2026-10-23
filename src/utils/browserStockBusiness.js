@@ -9,6 +9,7 @@ import {supplierInventoryReceipt} from '../../electron/supplierInventory.mjs'
 import {assertProductPricingUnchanged} from '../../electron/costPricing.mjs'
 import {refundSignature} from './refundSafety.mjs'
 import {expireBrowserLotsLocked} from './browserLots'
+import {privateDraftContext,privateDraftMappingInput} from '../../electron/privateDrafts.mjs'
 
 export const hasBrowserStockCost=record=>record.data.pos_stock_cost_entries.length>0
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b)
@@ -76,6 +77,7 @@ export function commitBrowserStockBusiness(method,request,actor,record){
 }
 export function commitBrowserProduct(method,request,actor){return withSalesLock(()=>{
   const record=readRecords()
+  if(method==='addProduct'&&Object.hasOwn(request||{},'draftContext')){const raw=record.data.pos_business_settings.find(row=>row.key==='sharedStoreId')?.value;request=privateDraftMappingInput(request,privateDraftContext(raw===undefined?'':JSON.parse(raw),record.salesEpoch,actor,record.data.pos_users))}
   if(hasBrowserStockCost(record))return commitBrowserStockBusiness(method,request,actor,record)
   const products=record.data.pos2_products
   let next

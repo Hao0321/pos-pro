@@ -759,5 +759,7 @@ module.exports = function initDatabase(dbPath) {
   api.applyInventoryOperation=function(request,actor){if(require('./privateDrafts.mjs').assertPrivateDraftCaller(request,actor))this.getPrivateDraftContext(actor);return inventoryWithStock.call(this,request,actor)}
   require('./reservationOperations.cjs')(db,api,stmts,stockStore,kitchenRuntime)
   lotRuntime.installGuards()
+  const productWithStock=api.addProduct
+  api.addProduct=function(input,actor){if(!Object.hasOwn(input||{},'draftContext'))return productWithStock.call(this,input,actor);return db.transaction(()=>productWithStock.call(this,require('./privateDrafts.mjs').privateDraftMappingInput(input,this.getPrivateDraftContext(actor)),actor))()}
   return api
 }

@@ -1,5 +1,6 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--new-product-drafts-ui':['native-new-product-drafts-ui.cjs','POS_NEW_PRODUCT_DRAFTS_UI_PASS',true],
   '--opening-guide-ui':['native-opening-guide-ui.cjs','POS_OPENING_GUIDE_UI_PASS',true],
   '--opening-guide-browser-ui':['native-opening-guide-browser-ui.cjs','POS_OPENING_GUIDE_BROWSER_UI_PASS',true],
   '--cash-count-ui':['native-cash-count-ui.cjs','POS_CASH_COUNT_UI_PASS',true],

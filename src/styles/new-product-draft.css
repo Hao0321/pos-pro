@@ -1,0 +1,2 @@
+.new-product-draft{font-size:16px;line-height:1.5;overflow-wrap:anywhere}.new-product-draft:empty{display:none}.new-product-draft p{margin:8px 0}.new-product-draft>.btn,.new-product-draft details>.btn,.new-product-draft summary{min-height:48px;font-size:18px;white-space:normal}.new-product-draft summary{padding:12px 0;cursor:pointer}.new-product-draft details{margin:8px 0}.new-product-draft>.btn{width:100%;margin:8px 0}
+.new-product-draft>summary{min-height:48px;padding:12px 0}.new-product-draft>details{margin:0}

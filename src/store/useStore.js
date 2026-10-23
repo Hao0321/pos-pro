@@ -538,7 +538,7 @@ export function useStore(session){
   const addProduct = useCallback(async p=>{
     // id 加亂數後綴：到貨自動建檔會在迴圈連續建多筆，純 Date.now() 同毫秒會撞號互蓋
     const n={...p,id:p._creationId||'p'+crypto.randomUUID()};delete n._creationId;delete n._expectedStock;delete n._expectedPricing
-    const result=acknowledge(await dbAddProduct(n,sessionRef.current)),saved=result?.product||n
+    const result=acknowledge(await dbAddProduct(n,sessionRef.current)),{draftContext,...localProduct}=n,saved=result?.product||localProduct
     setProducts(x=>[...x.filter(p=>p.id!==saved.id),saved])
     return saved
   },[])
