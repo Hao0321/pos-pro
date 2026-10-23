@@ -1,10 +1,11 @@
 import {tr,trMessage,getLocale} from "../i18n"
-import { browserStorage } from '../utils/browserStorage'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useId } from 'react'
 import { Clock, Plus, Minus, LogIn, LogOut, FileText, AlertCircle } from 'lucide-react'
 import { loadShifts, loadCashLog } from '../utils/dataAccess'
 import { summarizeShift } from '../../electron/shiftReconciliation.mjs'
 import useVisibleViewport from '../hooks/useVisibleViewport'
+import CashCountInput,{cashText,CashCountSummary} from '../components/CashCountInput'
+import {emptyCashCount,countedCash,countedDifference} from '../utils/cashCount.mjs'
 
 export default function ShiftPage({ store, session }) {
   const { openShift, startShift, endShift, logCash, orders,topups } = store
@@ -13,8 +14,9 @@ export default function ShiftPage({ store, session }) {
   const [showOpen, setShowOpen] = useState(false)
   const [showClose, setShowClose] = useState(false)
   const [showCash, setShowCash] = useState(false)
-  const [openCash, setOpenCash] = useState('')
-  const [closeCash, setCloseCash] = useState('')
+  const [openingCash, setOpeningCash] = useState(emptyCashCount)
+  const [closingCash, setClosingCash] = useState(emptyCashCount)
+  const [closeTarget,setCloseTarget] = useState(null)
   const [closeNote, setCloseNote] = useState('')
   const [cashAmount, setCashAmount] = useState('')
   const [cashType, setCashType] = useState('in')
@@ -25,6 +27,7 @@ export default function ShiftPage({ store, session }) {
   const actionBusy=useRef(false)
 
   useEffect(() => { reload() }, [openShift?.id])
+  useEffect(()=>{setOpeningCash(emptyCashCount());setClosingCash(emptyCashCount());setCloseTarget(null);setShowOpen(false);setShowClose(false)},[session?.userId,session?.role])
   useEffect(()=>{const handler=()=>reload();window.addEventListener('pos-cash-operation',handler);window.addEventListener('pos-data-refreshed',handler);return()=>{window.removeEventListener('pos-cash-operation',handler);window.removeEventListener('pos-data-refreshed',handler)}},[openShift?.id])
 
   async function reload() {
@@ -42,24 +45,28 @@ export default function ShiftPage({ store, session }) {
     try { return summarizeShift(openShift, orders, cashLog,topups) }
     catch(error) { return {error:error.message} }
   })()
+  const openingTotal=countedCash(openingCash),closingTotal=countedCash(closingCash),closeDifference=countedDifference(closingCash,shiftStats?.expected)
+  const sameClosingShift=!!openShift&&closeTarget===openShift.id
 
   if(loading)return <div role="status" style={{padding:24}}>{tr("讀取班別與現金流水…")}</div>
   if(loadError||shiftStats?.error)return <div role="alert" style={{padding:24}}><h2 className="page-title">{tr("交班紀錄需要核對")}</h2><p>{loadError||shiftStats.error}</p><button className="btn" onClick={reload}>{tr("重新讀取")}</button></div>
 
   async function handleOpen() {
     await runAction(async()=>{
-      const cash=Number(openCash)
-      await startShift(session?.username||'',cash,session?.id||'')
-      setShowOpen(false);setOpenCash('');setActionMessage('開班已保存。')
+      if(!openingTotal.valid)throw Error('請先數好現金，再確認開班。')
+      const result=await startShift(session?.username||'',openingTotal.amount,session?.id||'')
+      if(!result?.id||result.openCash!==openingTotal.amount)throw Error('開班保存尚未確認，請核對原班別。')
+      setShowOpen(false);setOpeningCash(emptyCashCount());setActionMessage('開班已保存。')
     })
   }
 
   async function handleClose() {
     await runAction(async()=>{
-      if(closeCash.trim()==='')throw Error('請先點算並填寫實際現金。')
-      const cash=Number(closeCash),r=await endShift(cash,closeNote)
+      if(!sameClosingShift)throw Error('這一班已變更，請關閉後重新點算。')
+      if(!closingTotal.valid||closeDifference===null)throw Error('請先點算並填寫實際現金。')
+      const cash=closingTotal.amount,r=await endShift(cash,closeNote)
       if(!r)throw Error('交班保存尚未確認，請核對原班別。')
-      setShowClose(false);setCloseCash('');setCloseNote('')
+      setShowClose(false);setClosingCash(emptyCashCount());setCloseNote('');setCloseTarget(null)
       setActionMessage(`交班已保存。預期現金 NT$ ${r.expected.toLocaleString()}；實際現金 NT$ ${cash.toLocaleString()}；差額 NT$ ${r.diff.toLocaleString()}。`)
       await reload()
     })
@@ -85,13 +92,13 @@ export default function ShiftPage({ store, session }) {
           <div style={{fontSize:13, color:'var(--text-tertiary)', marginTop:4}}>{tr("開班 / 交班 / 現金流水")}</div>
         </div>
         {!openShift ? (
-          <button className="btn btn-primary" onClick={()=>{ setShowOpen(true); try { setOpenCash(browserStorage.getItem('pos_last_open_cash') || '') } catch {} }} style={{display:'flex',alignItems:'center',gap:6}}>
+          <button className="btn btn-primary" data-shift-open onClick={()=>{setActionError('');setShowOpen(true)}} style={{display:'flex',alignItems:'center',gap:6,minHeight:48}}>
             <LogIn size={16}/>{tr(" 開班")}</button>
         ) : (
           <div style={{display:'flex', gap:8}}>
             <button className="btn btn-ghost" onClick={()=>setShowCash(true)} style={{display:'flex',alignItems:'center',gap:6}}>
               <Plus size={16}/>{tr(" 現金流水")}</button>
-            <button className="btn btn-primary" onClick={()=>{setShowClose(true);setCloseCash(String(shiftStats?.expected||0))}} style={{display:'flex',alignItems:'center',gap:6}}>
+            <button className="btn btn-primary" data-shift-close onClick={()=>{if(closeTarget!==openShift.id){setClosingCash(emptyCashCount());setCloseNote('')}setCloseTarget(openShift.id);setActionError('');setShowClose(true)}} style={{display:'flex',alignItems:'center',gap:6,minHeight:48}}>
               <LogOut size={16}/>{tr(" 交班")}</button>
           </div>
         )}
@@ -126,7 +133,7 @@ export default function ShiftPage({ store, session }) {
           {cashLog.length > 0 && (
             <>
               <div style={{fontWeight:600, fontSize:14, margin:'20px 0 10px'}}>{tr("現金流水")}</div>
-              <table style={sh.table}>
+              <div style={{overflowX:'auto'}}><table style={sh.table}>
                 <thead>
                   <tr>
                     <th>{tr("時間")}</th><th>{tr("類型")}</th><th style={{textAlign:'right'}}>{tr("金額")}</th><th>{tr("說明")}</th>
@@ -146,7 +153,7 @@ export default function ShiftPage({ store, session }) {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </>
           )}
         </div>
@@ -163,7 +170,7 @@ export default function ShiftPage({ store, session }) {
         {shifts.length === 0 ? (
           <div style={{textAlign:'center', color:'var(--text-tertiary)', padding:'20px 0', fontSize:13}}>{tr("無紀錄")}</div>
         ) : (
-          <table style={sh.table}>
+          <div style={{overflowX:'auto'}}><table style={sh.table}>
             <thead>
               <tr>
                 <th>{tr("收銀員")}</th><th>{tr("開班")}</th><th>{tr("交班")}</th>
@@ -190,43 +197,30 @@ export default function ShiftPage({ store, session }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 
       {showOpen && (
-        <Modal title={tr("開班")} saving={saving} error={actionError} onClose={()=>setShowOpen(false)}>
-          <Field label={tr("收銀員")}><div style={{padding:'10px 14px', fontSize:14}}>{session?.username}</div></Field>
-          <Field label={tr("開班零用金")}>
-            <input className="field" type="number" value={openCash} onChange={e=>setOpenCash(e.target.value)} placeholder="0" autoFocus/>
-          </Field>
-          <button disabled={saving} className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleOpen}>{saving?tr("保存中…"):tr("確認開班")}</button>
+        <Modal kind="open" title={tr("開班")} saving={saving} error={actionError} onClose={()=>setShowOpen(false)}>
+          <CashCountInput value={openingCash} onChange={setOpeningCash} label="開班零用金" disabled={saving}/>
+          <div className="shift-save-action"><CashCountSummary value={openingCash}/><button data-shift-save="open" disabled={saving||!openingTotal.valid} className="btn btn-primary" style={{width:'100%'}} onClick={handleOpen}>{saving?tr("保存中…"):tr("確認開班")}</button></div>
         </Modal>
       )}
 
       {showClose && (
-        <Modal title={tr("交班")} saving={saving} error={actionError} onClose={()=>setShowClose(false)}>
-          <div style={{background:'var(--bg-overlay)', padding:'12px 14px', borderRadius:8, marginBottom:12}}>
-            <div style={{display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4}}>
-              <span style={{color:'var(--text-secondary)'}}>{tr("預期現金")}</span>
-              <span style={{fontFamily:'var(--font-mono)', fontWeight:600}}>NT$ {(shiftStats?.expected||0).toLocaleString()}</span>
-            </div>
+        <Modal kind="close" title={tr("交班")} saving={saving} error={actionError} onClose={()=>setShowClose(false)}>
+          <CashCountInput value={closingCash} onChange={setClosingCash} label="實際交班現金" disabled={saving}/>
+          <details className="shift-cash-note"><summary>{tr('要補充說明嗎？')}</summary><Field label={tr("備註")}>
+            <input className="field" disabled={saving} value={closeNote} onChange={e=>setCloseNote(e.target.value)} placeholder={tr("差額原因...")}/>
+          </Field></details>
+          <div className="shift-save-action"><CashCountSummary value={closingCash}/>
+            {!sameClosingShift?<p role="alert">{tr('這一班已變更，請關閉後重新點算。')}</p>:closeDifference!==null&&<div className="shift-cash-comparison" data-cash-difference={closeDifference}>
+              <p>{tr('帳上應有')} NT$ {cashText(shiftStats.expected)}</p>
+              <strong style={{color:closeDifference===0?'var(--green)':'var(--amber)'}}>{tr(closeDifference===0?'現金剛好相符':closeDifference<0?'比帳上少 NT$ {0}':'比帳上多 NT$ {0}',{0:cashText(Math.abs(closeDifference)/100)})}</strong>
+            </div>}
+            <button data-shift-save="close" disabled={saving||!sameClosingShift||!closingTotal.valid||closeDifference===null} className="btn btn-primary" style={{width:'100%'}} onClick={handleClose}>{saving?tr("保存中…"):tr("確認交班")}</button>
           </div>
-          <Field label={tr("實際現金")}>
-            <input aria-label={tr("實際交班現金")} className="field" type="number" min="0" step="0.01" value={closeCash} onChange={e=>setCloseCash(e.target.value)} autoFocus/>
-          </Field>
-          {closeCash !== '' && (
-            <div style={{padding:'8px 14px', borderRadius:8,
-              background: parseFloat(closeCash) - (shiftStats?.expected||0) >= 0 ? 'var(--green-dim)' : 'var(--red-dim)',
-              color: parseFloat(closeCash) - (shiftStats?.expected||0) >= 0 ? 'var(--green)' : 'var(--red)',
-              fontSize:13, marginBottom:12}}>{tr("差額：")}{parseFloat(closeCash) - (shiftStats?.expected||0) >= 0 ? '+' : ''}
-              NT$ {(parseFloat(closeCash) - (shiftStats?.expected||0)).toLocaleString()}
-            </div>
-          )}
-          <Field label={tr("備註")}>
-            <input className="field" value={closeNote} onChange={e=>setCloseNote(e.target.value)} placeholder={tr("差額原因...")}/>
-          </Field>
-          <button disabled={saving} className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleClose}>{saving?tr("保存中…"):tr("確認交班")}</button>
         </Modal>
       )}
 
@@ -275,15 +269,17 @@ function Field({ label, children }) {
   )
 }
 
-function Modal({ title, onClose, children, saving, error }) {
+function Modal({ title, onClose, children, saving, error,kind='cash' }) {
   const viewport=useVisibleViewport()
+  const box=useRef(null),busy=useRef(saving),titleId=useId();busy.current=saving
+  useEffect(()=>{const previous=document.activeElement,controls=()=>[...box.current?.querySelectorAll('button,input,select,textarea,summary')||[]].filter(node=>!node.disabled&&!node.closest('fieldset:disabled')&&node.checkVisibility?.()!==false);(box.current?.querySelector('input:not(:disabled)')||controls()[0])?.focus();function keys(event){if(event.key==='Escape'){event.preventDefault();if(!busy.current)onClose()}if(event.key==='Tab'){const nodes=controls(),first=nodes[0],last=nodes.at(-1);if(!first){event.preventDefault();return}if(!box.current.contains(document.activeElement)){event.preventDefault();(event.shiftKey?last:first).focus()}else if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}}}window.addEventListener('keydown',keys);return()=>{window.removeEventListener('keydown',keys);if(previous?.isConnected)previous.focus()}},[])
   return (
     <>
       <div style={mod.overlay} onClick={()=>!saving&&onClose()}/>
-      <div style={{...mod.box,top:viewport.top+viewport.height/2,maxHeight:viewport.height*.9}}>
+      <div ref={box} className="shift-counted-modal" data-shift-modal={kind} role="dialog" aria-modal="true" aria-labelledby={titleId} style={{...mod.box,top:viewport.top+viewport.height/2,maxHeight:viewport.height*.9}}>
         <div style={mod.head}>
-          <span style={{fontSize:15, fontWeight:600}}>{tr(title)}</span>
-          <button disabled={saving} onClick={onClose} style={{padding:10,minWidth:44,minHeight:44}}>✕</button>
+          <span id={titleId} style={{fontSize:22, fontWeight:600}}>{tr(title)}</span>
+          <button type="button" data-shift-dismiss aria-label={tr('關閉視窗')} disabled={saving} onClick={onClose} style={{padding:10,minWidth:48,minHeight:48}}>✕</button>
         </div>
         <div style={{padding:'16px 18px'}}>{error&&<p role="alert" style={{color:'var(--red)',marginBottom:10}}>{trMessage(error)}</p>}{children}</div>
       </div>
@@ -292,7 +288,7 @@ function Modal({ title, onClose, children, saving, error }) {
 }
 
 const sh = {
-  root: { flex:1, overflowY:'auto', padding:'20px 24px', background:'var(--bg-base)' },
+  root: { flex:1, minWidth:0, overflowY:'auto', padding:'20px 24px', background:'var(--bg-base)' },
   header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16,flexWrap:'wrap',gap:12 },
   card: {
     background:'var(--bg-raised)', border:'1px solid var(--border-dim)',

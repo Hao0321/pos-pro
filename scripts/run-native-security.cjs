@@ -1,5 +1,7 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--cash-count-ui':['native-cash-count-ui.cjs','POS_CASH_COUNT_UI_PASS',true],
+  '--cash-count-browser-ui':['native-cash-count-browser-ui.cjs','POS_CASH_COUNT_BROWSER_UI_PASS',true],
   '--original-result-ui':['native-original-result-ui.cjs','POS_ORIGINAL_RESULT_UI_PASS',true],
   '--original-result-browser-ui':['native-original-result-browser-ui.cjs','POS_ORIGINAL_RESULT_BROWSER_UI_PASS',true],
   '--quick-first-use-ui':['native-quick-first-use-ui.cjs','POS_QUICK_FIRST_USE_UI_PASS',true],
