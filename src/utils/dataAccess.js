@@ -6,6 +6,8 @@ import { commitBrowserSale, browserReceipt, commitBrowserRefund } from './browse
 import { summarizeShift } from '../../electron/shiftReconciliation.mjs'
 import {isShiftCountRequest,admitShiftCount,shiftCountResult,shiftCountRejection} from '../../electron/shiftCountDraft.mjs'
 import {isCashMovementDraft,admitCashMovement,cashMovementOriginal,cashMovementRejection} from '../../electron/cashMovementDraft.mjs'
+import {isProductEdit,PRODUCT_EDIT_JOURNAL} from '../../electron/productEditDraft.mjs'
+import {commitBrowserProductEdit} from './browserProductEdit'
 import {moneyValue,quantityValue,operationHeader,sameCommand} from '../../electron/operationRules.mjs'
 import {commitBrowserInventory,getBrowserStocktakeState} from './browserInventory'
 import {commitBrowserRestaurant,browserRestaurantState,browserCustomerIntakeContext,browserRestaurantMenuQuote,browserRestaurantMenuSetupPreview,browserRestaurantAgentPreview} from './browserRestaurant'
@@ -93,6 +95,7 @@ export async function dbAddProduct(data,actor) {
 }
 export async function dbUpdateProduct(id, data,actor) {
   if (isElectron) return window.electronAPI.db.updateProduct(id, data)
+  if(isProductEdit(data))return commitBrowserProductEdit(id,data,actor)
   return commitBrowserProduct('updateProduct',{id,data},actor)
 }
 export async function dbDeleteProduct(id,actor) {
@@ -267,11 +270,12 @@ export async function getSetting(key) {
   return loadLS('pos_settings_' + key, null)
 }
 export async function setSetting(key, value) {
+  if(key===PRODUCT_EDIT_JOURNAL)throw Error('商品保存紀錄由正式保存與完整備份流程管理。')
   if(key==='businessExchangeV1')throw Error('報價歷史只能由正式報價或還原流程保存')
   if (isElectron) return window.electronAPI.settings.set(key, value)
   saveLS('pos_settings_' + key, value)
 }
-export async function setSettings(values){if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');if(isElectron)return window.electronAPI.settings.setMany(values);writeBusinessSettings(Object.fromEntries(Object.entries(values).map(([k,v])=>[k,JSON.stringify(v)])));return {success:true}}
+export async function setSettings(values){if(Object.hasOwn(values,PRODUCT_EDIT_JOURNAL))throw Error('商品保存紀錄由正式保存與完整備份流程管理。');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');if(isElectron)return window.electronAPI.settings.setMany(values);writeBusinessSettings(Object.fromEntries(Object.entries(values).map(([k,v])=>[k,JSON.stringify(v)])));return {success:true}}
 export async function getAllSettings() {
   if (isElectron) return window.electronAPI.settings.getAll()
   return {}

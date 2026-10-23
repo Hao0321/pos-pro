@@ -1,5 +1,6 @@
 import {isPurchaseCreate} from '../../electron/procurementRules.mjs'
 import {isCashMovementRejection} from '../../electron/cashMovementDraft.mjs'
+import {isProductEdit,isProductEditRejection} from '../../electron/productEditDraft.mjs'
 import {finalizePurchaseDraft} from '../utils/purchaseDraftReceipt.mjs'
 import { settledOrders, netSale, orderCost } from '../utils/orderLedger'
 import {finalizeReceiptLotDraft} from '../utils/receiptLotDraftReceipt.mjs'
@@ -547,11 +548,12 @@ export function useStore(session){
     return saved
   },[])
   const updateProduct = useCallback(async(id,u)=>{
-    const input={...u},clean={...u};delete clean._expectedStock;delete clean._expectedPricing;delete clean._creationId
-    if(Object.hasOwn(input,'stock')&&!Object.hasOwn(input,'_expectedStock'))input._expectedStock=products.find(p=>p.id===id)?.stock
-    acknowledge(await dbUpdateProduct(id,input,sessionRef.current))
-    setProducts(p=>p.map(x=>x.id===id?{...x,...clean}:x))
+    const input={...u},clean={...u};for(const key of ['_expectedStock','_expectedPricing','_creationId','_productEdit','draftContext'])delete clean[key]
+    if(!isProductEdit(input)&&Object.hasOwn(input,'stock')&&!Object.hasOwn(input,'_expectedStock'))input._expectedStock=products.find(p=>p.id===id)?.stock
+    const result=await dbUpdateProduct(id,input,sessionRef.current);if(isProductEditRejection(result,id,input))throw Object.assign(Error(result.error),{editDraftRejected:true});acknowledge(result)
+    setProducts(p=>p.map(x=>x.id===id?result.product||{...x,...clean}:x));return result
   },[products])
+  const reloadProducts=useCallback(async()=>{const who=sessionRef.current,rows=await loadProducts([]);if(who?.userId===sessionRef.current?.userId&&who?.role===sessionRef.current?.role)setProducts(rows);return rows},[])
   const deleteProduct = useCallback(async id=>{
     acknowledge(await dbDeleteProduct(id,sessionRef.current))
     setProducts(p=>p.filter(x=>x.id!==id))
@@ -637,7 +639,7 @@ export function useStore(session){
     activeMember,setActiveMember:value=>{ensureCartEditable();setActiveMember(value)},
     addToCart,removeFromCart,updateCartQty,updateCartItemPrice,clearCart,stageQuickSale,
     cartSubtotal,cartCount,checkout,refund,
-    addProduct,updateProduct,deleteProduct,findByBarcode,
+    addProduct,updateProduct,deleteProduct,findByBarcode,reloadProducts,
     addMember,updateMember,deleteMember,findMember,
     categories,todayOrders,todayRevenue,lowStockCount,todayProfit,todaySales,todayBusinessCount:todayOrders.length+todaySales.deliveries,
     allJournal,autoJournal,manualEntries,reservationEntries,restaurantEntries,

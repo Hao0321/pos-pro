@@ -50,7 +50,7 @@ export function assertDraftLookup(input,current){
   return
  }
  draftObject(input,['context','id','digest','family'],['context','id','digest']);assertPrivateDraftContext(input.context);identifier(input.id)
- if(Object.hasOwn(input,'family')&&(!['quick-purchase','quick-restaurant'].includes(input.family)||!/^agent-[A-Za-z0-9_-]{8,80}$/.test(input.id)||input.family==='quick-purchase'&&current.role!=='owner'))throw Error('權限不足')
+ if(Object.hasOwn(input,'family')&&(input.family==='product-edit'?!/^product-edit-[-a-f0-9]{36}$/.test(input.id):!['quick-purchase','quick-restaurant'].includes(input.family)||!/^agent-[A-Za-z0-9_-]{8,80}$/.test(input.id)||input.family==='quick-purchase'&&current.role!=='owner'))throw Error('權限不足')
  if(typeof input.digest!=='string'||!/^[a-f0-9]{64}$/.test(input.digest)||canonicalSignature(input.context)!==canonicalSignature(current))throw Error('店面或帳號已變更，請保留原輸入核對。')
 }
 export function privateQuickOriginal(input,receipt,sourceActor,actor){

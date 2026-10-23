@@ -763,5 +763,6 @@ module.exports = function initDatabase(dbPath) {
   api.addProduct=function(input,actor){if(!Object.hasOwn(input||{},'draftContext'))return productWithStock.call(this,input,actor);return db.transaction(()=>productWithStock.call(this,require('./privateDrafts.mjs').privateDraftMappingInput(input,this.getPrivateDraftContext(actor)),actor))()}
   require('./shiftCountOperations.cjs')(db,api)
   require('./cashMovementOperations.cjs')(db,api)
+  require('./productEditOperations.cjs')(db,api)
   return api
 }
