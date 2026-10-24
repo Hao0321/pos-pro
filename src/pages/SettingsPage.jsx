@@ -1,5 +1,5 @@
 import {tr} from "../i18n"
-import { useState } from "react"
+import { useState,useEffect,lazy,Suspense } from "react"
 import { Shield, Users, Database, FileText, Printer, Wifi, Settings as Cog, Gift, Cloud } from "lucide-react"
 import { ROLES } from "../utils/security"
 import { isSharedStore } from "../utils/dataAccess"
@@ -9,7 +9,7 @@ import { HardwareTab } from "./settings/HardwareTab.jsx"
 import { SecurityTab, BackupTab } from "./settings/RecoveryTabs.jsx"
 import { AuditTab } from "./settings/AuditTab.jsx"
 import { WebhookTab } from "./settings/WebhookTab.jsx"
-import { CloudSyncTab } from "./settings/CloudSyncTab.jsx"
+const CloudSyncTab=lazy(()=>import("./settings/CloudSyncTab.jsx").then(module=>({default:module.CloudSyncTab})))
 import { ss } from "./settings/controls.jsx"
 
 export const TABS = [
@@ -26,6 +26,8 @@ export const TABS = [
 
 export default function SettingsPage({ session, onLogout, store }) {
   const [tab, setTab] = useState('general')
+  useEffect(()=>{if(store?.settingsTarget?.tab==='business'&&session.role==='owner'){setTab('business');store.consumeSettingsTarget()}},[store?.settingsTarget,session.role])
+  useEffect(()=>{if(store?.settingsTarget?.tab==='hardware'&&!isSharedStore){setTab('hardware');store.consumeSettingsTarget()}},[store?.settingsTarget])
 
   return (
     <div style={ss.root}>
@@ -40,7 +42,7 @@ export default function SettingsPage({ session, onLogout, store }) {
       </div>
 
       <div style={ss.tabBar}>
-        {TABS.filter(t=>!isSharedStore||['general','business','audit'].includes(t.key)).map(({key,label,Icon})=>(
+        {TABS.filter(t=>!isSharedStore||['general','business','audit'].includes(t.key)||t.key==='backup'&&session.role==='owner').map(({key,label,Icon})=>(
           <button key={key} onClick={()=>setTab(key)} style={{
             ...ss.tab,
             background: tab===key?'var(--bg-active)':'transparent',
@@ -59,7 +61,7 @@ export default function SettingsPage({ session, onLogout, store }) {
         {tab==='hardware' && <HardwareTab session={session}/>}
         {tab==='security' && <SecurityTab session={session}/>}
         {tab==='backup'   && <BackupTab   session={session} store={store}/>}
-        {tab==='cloud'    && <CloudSyncTab session={session}/>}
+        {tab==='cloud'    && <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}><CloudSyncTab session={session}/></Suspense>}
         {tab==='webhook'  && <WebhookTab  session={session}/>}
         {tab==='audit'    && <AuditTab    session={session}/>}
       </div>

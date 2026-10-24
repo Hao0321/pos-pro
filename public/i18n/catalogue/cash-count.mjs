@@ -1,0 +1,25 @@
+const rows={
+ '直接填總額':['Enter total','合計を入力','直接填总额'],
+ '幫我數現金':['Count notes and coins','お札・硬貨を数える','帮我数现金'],
+ '填數好的總額':['Enter the amount counted','数えた合計を入力','填数好的总额'],
+ '填有的面額，系統幫你加總。':['Enter quantities; we will add them up.','ある金種の枚数を入れると合計します。','填有的面额，系统帮你加总。'],
+ '其他面額':['Other denominations','ほかの金種','其他面额'],
+ '減少 {0} 元的數量':['Decrease NT$ {0} quantity','NT$ {0} の枚数を減らす','减少 {0} 元的数量'],
+ '增加 {0} 元的數量':['Increase NT$ {0} quantity','NT$ {0} の枚数を増やす','增加 {0} 元的数量'],
+ '{0} 元的數量':['NT$ {0} quantity','NT$ {0} の枚数','{0} 元的数量'],
+ '沒有現金（0 元）':['No cash (NT$ 0)','現金なし（NT$ 0）','没有现金（0 元）'],
+ '現金合計':['Cash total','現金の合計','现金合计'],
+ '請先填實際數好的現金。':['Enter the cash you actually counted.','実際に数えた現金を入力してください。','请先填实际数好的现金。'],
+ '數量請填 0 或正整數。':['Use zero or a whole positive quantity.','枚数は0か正の整数で入力してください。','数量请填 0 或正整数。'],
+ '請填有效金額，最多兩位小數。':['Enter a valid amount with up to two decimal places.','金額は小数点以下2桁まで入力してください。','请填有效金额，最多两位小数。'],
+ '請先數好現金，再確認開班。':['Count your cash before opening the shift.','現金を数えてから営業を開始してください。','请先数好现金，再确认开班。'],
+ '開班保存尚未確認，請核對原班別。':['The opening result is unconfirmed. Check the original shift.','営業開始の結果をまだ確認できません。元のシフトを確認してください。','开班保存尚未确认，请核对原班别。'],
+ '這一班已變更，請關閉後重新點算。':['The shift changed. Close this form and count again.','シフトが変わりました。この画面を閉じて数え直してください。','这一班已变更，请关闭后重新点算。'],
+ '帳上應有':['Expected cash','帳簿上の現金','账上应有'],
+ '現金剛好相符':['Cash matches','現金が一致しています','现金刚好相符'],
+ '比帳上少 NT$ {0}':['NT$ {0} less than expected','帳簿より NT$ {0} 不足','比账上少 NT$ {0}'],
+ '比帳上多 NT$ {0}':['NT$ {0} more than expected','帳簿より NT$ {0} 多い','比账上多 NT$ {0}'],
+ '要補充說明嗎？':['Add a note?','メモを追加しますか？','要补充说明吗？'],
+ '關閉視窗':['Close dialog','画面を閉じる','关闭视窗']
+}
+export default Object.fromEntries(Object.entries(rows).map(([key,value],index)=>[key,[...value,38300+index]]))

@@ -4,7 +4,7 @@ export const supplierApprovalStatus=status=>tr({pending:'等待另一帳號核�
 export function SupplierProposalDetails({purchase,approval,proposal}){
  const original=approval?.material||purchase
  return <div className="supplier-proposal-details">
-  {proposal?<><strong>{salesMoney(proposal.amount)} · {tr(proposal.method==='cash'?'現金':'銀行付款')}</strong>{proposal.note&&<p>{proposal.note}</p>}{proposal.reference&&<p>{tr('參考編號')}：{proposal.reference}</p>}</>:original&&<><strong>{salesMoney(original.total)}</strong><p className="customer-id">{original.id}</p><ul>{original.items.map((row,index)=><li key={index}>{row.name} · {row.qty} {row.unit} · {salesMoney(row.unitCost)}</li>)}</ul>{original.note&&<p>{original.note}</p>}</>}
+  {proposal?<><strong>{salesMoney(proposal.amount)} · {tr(proposal.method==='cash'?'現金':'銀行付款')}</strong>{proposal.note&&<p>{proposal.note}</p>}{proposal.reference&&<p>{tr('參考編號')}：{proposal.reference}</p>}</>:original&&<><strong>{salesMoney(original.total)}</strong><p className="customer-id">{original.id}</p><ul>{original.items.map((row,index)=><li key={index}>{row.name} · {row.costBasis?<>{row.costBasis.purchasedQuantity} {row.costBasis.purchasedUnit} · {salesMoney(Number(row.costBasis.purchasedUnitPrice))} / {row.costBasis.purchasedUnit} · {tr('換成 {0} {1}',{0:row.qty,1:row.unit})}</>:<>{row.qty} {row.unit} · {salesMoney(row.unitCost)}</>}</li>)}</ul>{original.note&&<p>{original.note}</p>}</>}
   {(approval||proposal)&&<p>{tr('送審帳號：{0}',{0:(approval||proposal).submittedBy.username})}</p>}
  </div>
 }

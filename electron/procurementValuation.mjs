@@ -1,4 +1,5 @@
-import {amount,amountUnits,cents,units,procurementLineCents,allocateCents} from './procurementAmounts.mjs'
+import {amount,amountUnits,cents,units,allocateCents} from './procurementAmounts.mjs'
+import {purchaseLineCents} from './purchaseUnitPricing.mjs'
 
 export function beginProcurementValuation(po){
   const p=po.procurement
@@ -28,14 +29,14 @@ export function valuationState(po){
     if(!Array.isArray(qs)||qs.length!==size||!qs.some(q=>q>0))throw Error('採購文件數量不正確')
     let values
     if(group==='receipts'){
-      values=qs.map((q,i)=>{const total=units(gross[i])+units(q);if(total>units(po.items[i].qty))throw Error('採購收貨超額');const value=procurementLineCents(amountUnits(total),po.items[i].unitCost)-procurementLineCents(gross[i],po.items[i].unitCost);gross[i]=amountUnits(total);unbilled.qty[i]=amountUnits(units(unbilled.qty[i])+units(q));unbilled.value[i]+=value;return value})
+      values=qs.map((q,i)=>{const total=units(gross[i])+units(q);if(total>units(po.items[i].qty))throw Error('採購收貨超額');const value=purchaseLineCents(po.items[i],amountUnits(total))-purchaseLineCents(po.items[i],gross[i]);gross[i]=amountUnits(total);unbilled.qty[i]=amountUnits(units(unbilled.qty[i])+units(q));unbilled.value[i]+=value;return value})
     }else{
       const bucket=group==='bills'||!r.invoiceId?unbilled:bills.get(r.invoiceId)
       if(!bucket)throw Error('退貨缺少原請款單')
       values=allocationFor(bucket,qs)
       if(position<v.legacyCount){
         if(group!=='bills')throw Error('歷史分配不可包含退貨')
-        values=qs.map((q,i)=>{const total=amountUnits(units(legacyBilled[i])+units(q)),value=procurementLineCents(total,po.items[i].unitCost)-procurementLineCents(legacyBilled[i],po.items[i].unitCost);legacyBilled[i]=total;return value})
+        values=qs.map((q,i)=>{const total=amountUnits(units(legacyBilled[i])+units(q)),value=purchaseLineCents(po.items[i],total)-purchaseLineCents(po.items[i],legacyBilled[i]);legacyBilled[i]=total;return value})
       }
       values.forEach((value,i)=>{if(value>bucket.value[i])throw Error('採購成本分配超額');bucket.qty[i]=amountUnits(units(bucket.qty[i])-units(qs[i]));bucket.value[i]-=value})
       if(group==='bills')bills.set(id,{qty:[...qs],value:[...values]})

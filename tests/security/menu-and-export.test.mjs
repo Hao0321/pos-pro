@@ -4,23 +4,35 @@ import { JSDOM } from 'jsdom'
 import { exportXLS, exportMultiSheetXLS } from '../../src/utils/exportXLS.js'
 import {tr,trMessage} from '../../public/i18n/core.mjs'
 import {getDisplayPreferences,setDisplayPreferences,subscribeDisplayPreferences,initDisplayPreferences} from '../../public/i18n/preferences.mjs'
+import * as customerJournal from '../../public/menu/orderJournal.mjs'
+import * as menuProtocol from '../../public/menu/menuProtocol.mjs'
+import * as cartContext from '../../public/menu/cartContext.mjs'
+import {createMenuPicker} from '../../public/menu/menuPicker.mjs'
 
 test('actual menu renders special identifiers as data and keeps search and cart actions working', async () => {
   const dom = new JSDOM(fs.readFileSync('public/menu/index.html', 'utf8'), { url: 'https://store.invalid/menu/', runScripts: 'outside-only' })
   const malicious = 'p" data-action="resetApp"><img src=x onerror="alert(1)">', name = '<script>bad()</script> & 商品'
   const window = dom.window
   window.setInterval = vi.fn()
-  window.fetch = vi.fn(async () => ({ json: async () => ({ success: true, storeName: '店家', categories: ['餐點'],
+  window.fetch = vi.fn(async () => ({ json: async () => ({ success: true, storeId:'fixture-store',cartContext:{protocol:cartContext.CUSTOMER_CART_CONTEXT,scopeId:'a'.repeat(64),revision:'b'.repeat(64),mode:'ordinary'},storeName: '店家', categories: ['餐點'],
     products: [{ id: malicious, name, price: 10, stock: 5, unit: '個', category: '餐點' }],
   }) }))
   try {
     // JSDOM outside-only has no ESM loader. Bind the real imported modules;
     // native-display-ui.cjs separately verifies browser module loading over HTTP.
     vi.stubGlobal('document',window.document)
-    Object.assign(window,{tr,trMessage,getDisplayPreferences,setDisplayPreferences,subscribeDisplayPreferences,initDisplayPreferences})
+    // This test isolates escaped DOM/action rendering. Real IndexedDB writer,
+    // reload and handoff behavior is exercised by native-customer-drafts-ui.
+    const createGuestDraftUI=options=>({locked:false,originalReady:true,start:async()=>options.onLock(false),save:()=>{},render:()=>{}})
+    Object.assign(window,{tr,trMessage,getDisplayPreferences,setDisplayPreferences,subscribeDisplayPreferences,initDisplayPreferences,createMenuPicker,createGuestDraftUI,structuredClone:globalThis.structuredClone},customerJournal,menuProtocol,cartContext)
     const source=fs.readFileSync('public/menu/app.js','utf8')
       .replace(/^import \{tr,trMessage\} from '\.\.\/i18n\/core\.mjs'\r?\n/m,'')
       .replace(/^import \{getDisplayPreferences,setDisplayPreferences,subscribeDisplayPreferences,initDisplayPreferences\} from '\.\.\/i18n\/preferences\.mjs'\r?\n/m,'')
+      .replace(/^import \{[^\n]+\} from '\.\/orderJournal\.mjs'\r?\n/m,'')
+      .replace(/^import \{[^\n]+\} from '\.\/menuProtocol\.mjs'\r?\n/m,'')
+      .replace(/^import \{createMenuPicker\} from '\.\/menuPicker\.mjs'\r?\n/m,'')
+      .replace(/^import \{[^\n]+\} from '\.\/cartContext\.mjs'\r?\n/m,'')
+      .replace(/^import \{[^\n]+\} from '\.\/guestDraftUI\.mjs'\r?\n/m,'')
     window.eval(source)
     await new Promise(resolve => setTimeout(resolve, 0))
     const document = window.document, button = document.querySelector('.add-btn')

@@ -1,0 +1,423 @@
+{
+  "format": "pos-complete-backup/v1",
+  "storage": "sqlite",
+  "storeId": "native-reservations",
+  "features": [
+    "agent-master-migration-v1",
+    "agent-tabular-migration-v1",
+    "agent-workbook-migration-v1",
+    "cross-storage-v1",
+    "kitchen-print-v1",
+    "opening-cutover-v1",
+    "private-quick-drafts-v1",
+    "record-shapes-v1",
+    "reservation-capacity-v1",
+    "restaurant-funds-v1",
+    "restaurant-intake-v1",
+    "restaurant-menu-v1",
+    "restaurant-public-menu-v1",
+    "stock-opening-migration-v1"
+  ],
+  "book": {
+    "products": [],
+    "members": [],
+    "orders": [],
+    "suppliers": [],
+    "purchases": [],
+    "promotions": [],
+    "users": [
+      {
+        "id": "owner",
+        "username": "Lot fixture",
+        "password": "{\"salt\":[31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31],\"iter\":1000,\"hash\":[18,98,43,90,63,111,124,212,130,232,67,7,160,193,142,28,86,57,165,172,5,60,52,78,99,86,231,52,136,150,176,165]}",
+        "role": "owner"
+      },
+      {
+        "id": "staff",
+        "username": "Lot staff",
+        "password": "{\"salt\":[31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31],\"iter\":1000,\"hash\":[18,98,43,90,63,111,124,212,130,232,67,7,160,193,142,28,86,57,165,172,5,60,52,78,99,86,231,52,136,150,176,165]}",
+        "role": "staff"
+      }
+    ],
+    "manualJournal": [],
+    "heldOrders": [],
+    "shifts": [],
+    "cashLog": [],
+    "wasteLog": [],
+    "memberTopups": [],
+    "auditLog": [
+      {
+        "id": "reservation:254a9d68-aac7-4966-9474-7499c6a2044c",
+        "timestamp": "2026-10-19T12:13:29.246Z",
+        "action": "RESERVATION_OPERATION",
+        "level": "info",
+        "label": "訂位操作紀錄",
+        "userId": "owner",
+        "username": "Lot fixture",
+        "role": "owner",
+        "detail": "{\"protocol\":\"pos-reservation-receipt/v1\",\"success\":true,\"id\":\"254a9d68-aac7-4966-9474-7499c6a2044c\",\"signature\":\"{\\\"action\\\":\\\"promote\\\",\\\"bookingId\\\":\\\"booking-a79d9e23012897b70672621da08de0511e71f354f0bf4de7\\\",\\\"date\\\":\\\"2026-10-20\\\",\\\"epoch\\\":\\\"4b9e892d-72f3-41ba-b8b7-a51239e2b138\\\",\\\"expectedBookingRevision\\\":1,\\\"expectedRevision\\\":4,\\\"id\\\":\\\"254a9d68-aac7-4966-9474-7499c6a2044c\\\",\\\"partySize\\\":2,\\\"protocol\\\":\\\"pos-reservation/v1\\\",\\\"reason\\\":\\\"空桌已釋出\\\",\\\"reviewed\\\":true,\\\"slot\\\":\\\"12:00\\\",\\\"storeId\\\":\\\"native-reservations\\\",\\\"tableIds\\\":[],\\\"time\\\":\\\"2026-10-19T12:13:29.233Z\\\"}\",\"revision\":5,\"event\":{\"protocol\":\"pos-reservation-event/v1\",\"id\":\"254a9d68-aac7-4966-9474-7499c6a2044c\",\"sequence\":5,\"previousHash\":\"e9390699c8914206558127507abddedcc9b3f7aa1022bed9fc44b1cb8469cf38\",\"storeId\":\"native-reservations\",\"input\":{\"protocol\":\"pos-reservation/v1\",\"id\":\"254a9d68-aac7-4966-9474-7499c6a2044c\",\"storeId\":\"native-reservations\",\"epoch\":\"4b9e892d-72f3-41ba-b8b7-a51239e2b138\",\"expectedRevision\":4,\"time\":\"2026-10-19T12:13:29.233Z\",\"action\":\"promote\",\"reviewed\":true,\"bookingId\":\"booking-a79d9e23012897b70672621da08de0511e71f354f0bf4de7\",\"expectedBookingRevision\":1,\"date\":\"2026-10-20\",\"slot\":\"12:00\",\"partySize\":2,\"tableIds\":[],\"reason\":\"空桌已釋出\"},\"actor\":{\"userId\":\"owner\",\"username\":\"Lot fixture\",\"role\":\"owner\"},\"time\":\"2026-10-19T12:13:29.246Z\",\"change\":{\"booking\":{\"id\":\"booking-a79d9e23012897b70672621da08de0511e71f354f0bf4de7\",\"revision\":2,\"storeId\":\"native-reservations\",\"status\":\"confirmed\",\"customer\":{\"name\":\"客人\",\"contact\":\"0900000000\"},\"channel\":\"phone\",\"partySize\":2,\"tableIds\":[\"t1\"],\"date\":\"2026-10-20\",\"slot\":\"12:00\",\"timeZone\":\"Asia/Taipei\",\"startMs\":1792468800000,\"endMs\":1792474200000,\"busyUntilMs\":1792475100000,\"durationMinutes\":90,\"bufferMinutes\":15,\"configVersion\":1,\"note\":\"\",\"createdAt\":\"2026-10-19T12:13:29.048Z\",\"updatedAt\":\"2026-10-19T12:13:29.246Z\"},\"reason\":\"空桌已釋出\"},\"hash\":\"461c9215ba0ac137c6b202fd571f94b816bacb10b697a8ce2dd423b3841a3ad5\"}}"
+      },
+      {
+        "id": "reservation:690b784c-d26a-4fa4-bd1d-0a90cac33b59",
+        "timestamp": "2026-10-19T12:13:29.164Z",
+        "action": "RESERVATION_OPERATION",
+        "level": "info",
+        "label": "訂位操作紀錄",
+        "userId": "owner",
+        "username": "Lot fixture",
+        "role": "owner",
+        "detail": "{\"protocol\":\"pos-reservation-receipt/v1\",\"success\":true,\"id\":\"690b784c-d26a-4fa4-bd1d-0a90cac33b59\",\"signature\":\"{\\\"action\\\":\\\"status\\\",\\\"bookingId\\\":\\\"booking-115b70da3b10fc717f48f285599c108c80bbabab008519cc\\\",\\\"epoch\\\":\\\"4b9e892d-72f3-41ba-b8b7-a51239e2b138\\\",\\\"expectedBookingRevision\\\":1,\\\"expectedRevision\\\":3,\\\"id\\\":\\\"690b784c-d26a-4fa4-bd1d-0a90cac33b59\\\",\\\"protocol\\\":\\\"pos-reservation/v1\\\",\\\"reason\\\":\\\"客人取消\\\",\\\"reviewed\\\":true,\\\"status\\\":\\\"cancelled\\\",\\\"storeId\\\":\\\"native-reservations\\\",\\\"time\\\":\\\"2026-10-19T12:13:29.152Z\\\"}\",\"revision\":4,\"event\":{\"protocol\":\"pos-reservation-event/v1\",\"id\":\"690b784c-d26a-4fa4-bd1d-0a90cac33b59\",\"sequence\":4,\"previousHash\":\"9602019d816bcd2e3bc3031c0fc05939a7744ddf190ccd49471212a8cb1b705f\",\"storeId\":\"native-reservations\",\"input\":{\"protocol\":\"pos-reservation/v1\",\"id\":\"690b784c-d26a-4fa4-bd1d-0a90cac33b59\",\"storeId\":\"native-reservations\",\"epoch\":\"4b9e892d-72f3-41ba-b8b7-a51239e2b138\",\"expectedRevision\":3,\"time\":\"2026-10-19T12:13:29.152Z\",\"action\":\"status\",\"reviewed\":true,\"bookingId\":\"booking-115b70da3b10fc717f48f285599c108c80bbabab008519cc\",\"expectedBookingRevision\":1,\"status\":\"cancelled\",\"reason\":\"客人取消\"},\"actor\":{\"userId\":\"owner\",\"username\":\"Lot fixture\",\"role\":\"owner\"},\"time\":\"2026-10-19T12:13:29.164Z\",\"change\":{\"booking\":{\"id\":\"booking-115b70da3b10fc717f48f285599c108c80bbabab008519cc\",\"revision\":2,\"storeId\":\"native-reservations\",\"status\":\"cancelled\",\"customer\":{\"name\":\"客人\",\"contact\":\"0900000000\"},\"channel\":\"phone\",\"partySize\":2,\"tableIds\":[\"t1\"],\"date\":\"2026-10-20\",\"slot\":\"12:00\",\"timeZone\":\"Asia/Taipei\",\"startMs\":1792468800000,\"endMs\":1792474200000,\"busyUntilMs\":1792475100000,\"durationMinutes\":90,\"bufferMinutes\":15,\"configVersion\":1,\"note\":\"\",\"createdAt\":\"2026-10-19T12:13:28.637Z\",\"updatedAt\":\"2026-10-19T12:13:29.164Z\",\"closedAt\":\"2026-10-19T12:13:29.164Z\"},\"reason\":\"客人取消\"},\"hash\":\"e9390699c8914206558127507abddedcc9b3f7aa1022bed9fc44b1cb8469cf38\"}}"
+      },
+      {
+        "id": "reservation:9a114ed5-6bc5-4e1f-bce7-c662cfeba1bd",
+        "timestamp": "2026-10-19T12:13:29.048Z",
+        "action": "RESERVATION_OPERATION",
+        "level": "info",
+        "label": "訂位操作紀錄",
+        "userId": "owner",
+        "username": "Lot fixture",
+        "role": "owner",
+        "detail": "{\"protocol\":\"pos-reservation-receipt/v1\",\"success\":true,\"id\":\"9a114ed5-6bc5-4e1f-bce7-c662cfeba1bd\",\"signature\":\"{\\\"action\\\":\\\"waitlist\\\",\\\"channel\\\":\\\"phone\\\",\\\"customer\\\":{\\\"contact\\\":\\\"0900000000\\\",\\\"name\\\":\\\"客人\\\"},\\\"date\\\":\\\"2026-10-20\\\",\\\"epoch\\\":\\\"4b9e892d-72f3-41ba-b8b7-a51239e2b138\\\",\\\"expectedRevision\\\":2,\\\"id\\\":\\\"9a114ed5-6bc5-4e1f-bce7-c662cfeba1bd\\\",\\\"note\\\":\\\"\\\",\\\"partySize\\\":2,\\\"protocol\\\":\\\"pos-reservation/v1\\\",\\\"reviewed\\\":true,\\\"slot\\\":\\\"12:00\\\",\\\"storeId\\\":\\\"native-reservations\\\",\\\"tableIds\\\":[],\\\"time\\\":\\\"2026-10-19T12:13:29.040Z\\\"}\",\"revision\":3,\"event\":{\"protocol\":\"pos-reservation-event/v1\",\"id\":\"9a114ed5-6bc5-4e1f-bce7-c662cfeba1bd\",\"sequence\":3,\"previousHash\":\"321cb97bddf39bb83ac103117346a91c3188803cd97565e5a42d539a5a00b41f\",\"storeId\":\"native-reservations\",\"input\":{\"protocol\":\"pos-reservation/v1\",\"id\":\"9a114ed5-6bc5-4e1f-bce7-c662cfeba1bd\",\"storeId\":\"native-reservations\",\"epoch\":\"4b9e892d-72f3-41ba-b8b7-a51239e2b138\",\"expectedRevision\":2,\"time\":\"2026-10-19T12:13:29.040Z\",\"action\":\"waitlist\",\"reviewed\":true,\"date\":\"2026-10-20\",\"slot\":\"12:00\",\"partySize\":2,\"customer\":{\"name\":\"客人\",\"contact\":\"0900000000\"},\"channel\":\"phone\",\"tableIds\":[],\"note\":\"\"},\"actor\":{\"userId\":\"owner\",\"username\":\"Lot fixture\",\"role\":\"owner\"},\"time\":\"2026-10-19T12:13:29.048Z\",\"change\":{\"booking\":{\"id\":\"booking-a79d9e23012897b70672621da08de0511e71f354f0bf4de7\",\"revision\":1,\"storeId\":\"native-reservations\",\"status\":\"waiting\",\"customer\":{\"name\":\"客人\",\"contact\":\"0900000000\"},\"channel\":\"phone\",\"partySize\":2,\"tableIds\":[],\"date\":\"2026-10-20\",\"slot\":\"12:00\",\"timeZone\":\"Asia/Taipei\",\"startMs\":1792468800000,\"endMs\":1792474200000,\"busyUntilMs\":1792475100000,\"durationMinutes\":90,\"bufferMinutes\":15,\"configVersion\":1,\"note\":\"\",\"createdAt\":\"2026-10-19T12:13:29.048Z\",\"updatedAt\":\"2026-10-19T12:13:29.048Z\"}},\"hash\":\"9602019d816bcd2e3bc3031c0fc05939a7744ddf190ccd49471212a8cb1b705f\"}}"
+      },
+      {
+        "id": "reservation:a6807456-e9c7-41c1-81af-9398c55ec611",
+        "timestamp": "2026-10-19T12:13:28.607Z",
+        "action": "RESERVATION_OPERATION",
+        "level": "info",
+        "label": "訂位操作紀錄",
+        "userId": "owner",
+        "username": "Lot fixture",
+        "role": "owner",
+        "detail": "{\"protocol\":\"pos-reservation-receipt/v1\",\"success\":true,\"id\":\"a6807456-e9c7-41c1-81af-9398c55ec611\",\"signature\":\"{\\\"action\\\":\\\"configure\\\",\\\"config\\\":{\\\"bufferMinutes\\\":15,\\\"combinations\\\":[],\\\"durationMinutes\\\":90,\\\"enabled\\\":true,\\\"exceptions\\\":[],\\\"horizonDays\\\":60,\\\"noticeMinutes\\\":30,\\\"slotMinutes\\\":15,\\\"tables\\\":[{\\\"id\\\":\\\"t1\\\",\\\"name\\\":\\\"1\\\",\\\"online\\\":true,\\\"seats\\\":2}],\\\"timeZone\\\":\\\"Asia/Taipei\\\",\\\"weekly\\\":[{\\\"day\\\":1,\\\"windows\\\":[{\\\"end\\\":\\\"14:00\\\",\\\"start\\\":\\\"11:00\\\"},{\\\"end\\\":\\\"21:00\\\",\\\"start\\\":\\\"17:00\\\"}]},{\\\"day\\\":2,\\\"windows\\\":[{\\\"end\\\":\\\"14:00\\\",\\\"start\\\":\\\"11:00\\\"},{\\\"end\\\":\\\"21:00\\\",\\\"start\\\":\\\"17:00\\\"}]},{\\\"day\\\":3,\\\"windows\\\":[{\\\"end\\\":\\\"14:00\\\",\\\"start\\\":\\\"11:00\\\"},{\\\"end\\\":\\\"21:00\\\",\\\"start\\\":\\\"17:00\\\"}]},{\\\"day\\\":4,\\\"windows\\\":[{\\\"end\\\":\\\"14:00\\\",\\\"start\\\":\\\"11:00\\\"},{\\\"end\\\":\\\"21:00\\\",\\\"start\\\":\\\"17:00\\\"}]},{\\\"day\\\":5,\\\"windows\\\":[{\\\"end\\\":\\\"14:00\\\",\\\"start\\\":\\\"11:00\\\"},{\\\"end\\\":\\\"21:00\\\",\\\"start\\\":\\\"17:00\\\"}]},{\\\"day\\\":6,\\\"windows\\\":[{\\\"end\\\":\\\"14:00\\\",\\\"start\\\":\\\"11:00\\\"},{\\\"end\\\":\\\"21:00\\\",\\\"start\\\":\\\"17:00\\\"}]},{\\\"day\\\":0,\\\"windows\\\":[{\\\"end\\\":\\\"14:00\\\",\\\"start\\\":\\\"11:00\\\"},{\\\"end\\\":\\\"21:00\\\",\\\"start\\\":\\\"17:00\\\"}]}]},\\\"epoch\\\":\\\"4b9e892d-72f3-41ba-b8b7-a51239e2b138\\\",\\\"expectedRevision\\\":0,\\\"id\\\":\\\"a6807456-e9c7-41c1-81af-9398c55ec611\\\",\\\"protocol\\\":\\\"pos-reservation/v1\\\",\\\"reviewed\\\":true,\\\"storeId\\\":\\\"native-reservations\\\",\\\"time\\\":\\\"2026-10-19T12:13:28.565Z\\\"}\",\"revision\":1,\"event\":{\"protocol\":\"pos-reservation-event/v1\",\"id\":\"a6807456-e9c7-41c1-81af-9398c55ec611\",\"sequence\":1,\"previousHash\":null,\"storeId\":\"native-reservations\",\"input\":{\"protocol\":\"pos-reservation/v1\",\"id\":\"a6807456-e9c7-41c1-81af-9398c55ec611\",\"storeId\":\"native-reservations\",\"epoch\":\"4b9e892d-72f3-41ba-b8b7-a51239e2b138\",\"expectedRevision\":0,\"time\":\"2026-10-19T12:13:28.565Z\",\"action\":\"configure\",\"reviewed\":true,\"config\":{\"enabled\":true,\"timeZone\":\"Asia/Taipei\",\"durationMinutes\":90,\"bufferMinutes\":15,\"slotMinutes\":15,\"noticeMinutes\":30,\"horizonDays\":60,\"tables\":[{\"id\":\"t1\",\"name\":\"1\",\"seats\":2,\"online\":true}],\"combinations\":[],\"weekly\":[{\"day\":1,\"windows\":[{\"start\":\"11:00\",\"end\":\"14:00\"},{\"start\":\"17:00\",\"end\":\"21:00\"}]},{\"day\":2,\"windows\":[{\"start\":\"11:00\",\"end\":\"14:00\"},{\"start\":\"17:00\",\"end\":\"21:00\"}]},{\"day\":3,\"windows\":[{\"start\":\"11:00\",\"end\":\"14:00\"},{\"start\":\"17:00\",\"end\":\"21:00\"}]},{\"day\":4,\"windows\":[{\"start\":\"11:00\",\"end\":\"14:00\"},{\"start\":\"17:00\",\"end\":\"21:00\"}]},{\"day\":5,\"windows\":[{\"start\":\"11:00\",\"end\":\"14:00\"},{\"start\":\"17:00\",\"end\":\"21:00\"}]},{\"day\":6,\"windows\":[{\"start\":\"11:00\",\"end\":\"14:00\"},{\"start\":\"17:00\",\"end\":\"21:00\"}]},{\"day\":0,\"windows\":[{\"start\":\"11:00\",\"end\":\"14:00\"},{\"start\":\"17:00\",\"end\":\"21:00\"}]}],\"exceptions\":[]}},\"actor\":{\"userId\":\"owner\",\"username\":\"Lot fixture\",\"role\":\"owner\"},\"time\":\"2026-10-19T12:13:28.607Z\",\"change\":{\"config\":{\"enabled\":true,\"timeZone\":\"Asia/Taipei\",\"durationMinutes\":90,\"bufferMinutes\":15,\"slotMinutes\":15,\"noticeMinutes\":30,\"horizonDays\":60,\"tables\":[{\"id\":\"t1\",\"name\":\"1\",\"seats\":2,\"online\":true}],\"combinations\":[],\"weekly\":[{\"day\":0,\"windows\":[{\"start\":\"11:00\",\"end\":\"14:00\"},{\"start\":\"17:00\",\"end\":\"21:00\"}]},{\"day\":1,\"windows\":[{\"start\":\"11:00\",\"end\":\"14:00\"},{\"start\":\"17:00\",\"end\":\"21:00\"}]},{\"day\":2,\"windows\":[{\"start\":\"11:00\",\"end\":\"14:00\"},{\"start\":\"17:00\",\"end\":\"21:00\"}]},{\"day\":3,\"windows\":[{\"start\":\"11:00\",\"end\":\"14:00\"},{\"start\":\"17:00\",\"end\":\"21:00\"}]},{\"day\":4,\"windows\":[{\"start\":\"11:00\",\"end\":\"14:00\"},{\"start\":\"17:00\",\"end\":\"21:00\"}]},{\"day\":5,\"windows\":[{\"start\":\"11:00\",\"end\":\"14:00\"},{\"start\":\"17:00\",\"end\":\"21:00\"}]},{\"day\":6,\"windows\":[{\"start\":\"11:00\",\"end\":\"14:00\"},{\"start\":\"17:00\",\"end\":\"21:00\"}]}],\"exceptions\":[]}},\"hash\":\"489b69af3b2fe010b01a2788a7d884f3c62d9c75e159184c389affc005e092fb\"}}"
+      },
+      {
+        "id": "reservation:b91a93c6-1377-40fd-b34d-ac4e50f52a4e",
+        "timestamp": "2026-10-19T12:13:28.637Z",
+        "action": "RESERVATION_OPERATION",
+        "level": "info",
+        "label": "訂位操作紀錄",
+        "userId": "owner",
+        "username": "Lot fixture",
+        "role": "owner",
+        "detail": "{\"protocol\":\"pos-reservation-receipt/v1\",\"success\":true,\"id\":\"b91a93c6-1377-40fd-b34d-ac4e50f52a4e\",\"signature\":\"{\\\"action\\\":\\\"book\\\",\\\"channel\\\":\\\"phone\\\",\\\"customer\\\":{\\\"contact\\\":\\\"0900000000\\\",\\\"name\\\":\\\"客人\\\"},\\\"date\\\":\\\"2026-10-20\\\",\\\"epoch\\\":\\\"4b9e892d-72f3-41ba-b8b7-a51239e2b138\\\",\\\"expectedRevision\\\":1,\\\"id\\\":\\\"b91a93c6-1377-40fd-b34d-ac4e50f52a4e\\\",\\\"note\\\":\\\"\\\",\\\"partySize\\\":2,\\\"protocol\\\":\\\"pos-reservation/v1\\\",\\\"reviewed\\\":true,\\\"slot\\\":\\\"12:00\\\",\\\"storeId\\\":\\\"native-reservations\\\",\\\"tableIds\\\":[],\\\"time\\\":\\\"2026-10-19T12:13:28.633Z\\\"}\",\"revision\":2,\"event\":{\"protocol\":\"pos-reservation-event/v1\",\"id\":\"b91a93c6-1377-40fd-b34d-ac4e50f52a4e\",\"sequence\":2,\"previousHash\":\"489b69af3b2fe010b01a2788a7d884f3c62d9c75e159184c389affc005e092fb\",\"storeId\":\"native-reservations\",\"input\":{\"protocol\":\"pos-reservation/v1\",\"id\":\"b91a93c6-1377-40fd-b34d-ac4e50f52a4e\",\"storeId\":\"native-reservations\",\"epoch\":\"4b9e892d-72f3-41ba-b8b7-a51239e2b138\",\"expectedRevision\":1,\"time\":\"2026-10-19T12:13:28.633Z\",\"action\":\"book\",\"reviewed\":true,\"date\":\"2026-10-20\",\"slot\":\"12:00\",\"partySize\":2,\"customer\":{\"name\":\"客人\",\"contact\":\"0900000000\"},\"channel\":\"phone\",\"tableIds\":[],\"note\":\"\"},\"actor\":{\"userId\":\"owner\",\"username\":\"Lot fixture\",\"role\":\"owner\"},\"time\":\"2026-10-19T12:13:28.637Z\",\"change\":{\"booking\":{\"id\":\"booking-115b70da3b10fc717f48f285599c108c80bbabab008519cc\",\"revision\":1,\"storeId\":\"native-reservations\",\"status\":\"confirmed\",\"customer\":{\"name\":\"客人\",\"contact\":\"0900000000\"},\"channel\":\"phone\",\"partySize\":2,\"tableIds\":[\"t1\"],\"date\":\"2026-10-20\",\"slot\":\"12:00\",\"timeZone\":\"Asia/Taipei\",\"startMs\":1792468800000,\"endMs\":1792474200000,\"busyUntilMs\":1792475100000,\"durationMinutes\":90,\"bufferMinutes\":15,\"configVersion\":1,\"note\":\"\",\"createdAt\":\"2026-10-19T12:13:28.637Z\",\"updatedAt\":\"2026-10-19T12:13:28.637Z\"}},\"hash\":\"321cb97bddf39bb83ac103117346a91c3188803cd97565e5a42d539a5a00b41f\"}}"
+      }
+    ],
+    "settings": [
+      {
+        "key": "agentMasterMigrationVersionFence",
+        "value": "1"
+      },
+      {
+        "key": "agentTabularMigrationVersionFence",
+        "value": "1"
+      },
+      {
+        "key": "agentWorkbookMigrationVersionFence",
+        "value": "1"
+      },
+      {
+        "key": "openingCutoverVersionFence",
+        "value": "1"
+      },
+      {
+        "key": "reservationBookHead",
+        "value": "\"461c9215ba0ac137c6b202fd571f94b816bacb10b697a8ce2dd423b3841a3ad5\""
+      },
+      {
+        "key": "reservationVersionFence",
+        "value": "1"
+      },
+      {
+        "key": "sharedStoreId",
+        "value": "native-reservations"
+      },
+      {
+        "key": "stockOpeningMigrationVersionFence",
+        "value": "1"
+      }
+    ],
+    "restaurantOrders": [],
+    "restaurantOperations": [
+      {
+        "id": "reservation-barrier-c6140b0da1cd8cca7aa757aa161a91a074e05853",
+        "kind": "reservation-read-barrier/v1",
+        "action": "reservation-activate",
+        "signature": "{\"id\":\"reservation-barrier-c6140b0da1cd8cca7aa757aa161a91a074e05853\",\"protocol\":\"reservation-read-barrier/v1\",\"sourceHash\":\"489b69af3b2fe010b01a2788a7d884f3c62d9c75e159184c389affc005e092fb\",\"sourceId\":\"a6807456-e9c7-41c1-81af-9398c55ec611\",\"time\":\"2026-10-19T12:13:28.607Z\"}",
+        "source": {
+          "protocol": "pos-reservation-receipt/v1",
+          "success": true,
+          "id": "a6807456-e9c7-41c1-81af-9398c55ec611",
+          "signature": "{\"action\":\"configure\",\"config\":{\"bufferMinutes\":15,\"combinations\":[],\"durationMinutes\":90,\"enabled\":true,\"exceptions\":[],\"horizonDays\":60,\"noticeMinutes\":30,\"slotMinutes\":15,\"tables\":[{\"id\":\"t1\",\"name\":\"1\",\"online\":true,\"seats\":2}],\"timeZone\":\"Asia/Taipei\",\"weekly\":[{\"day\":1,\"windows\":[{\"end\":\"14:00\",\"start\":\"11:00\"},{\"end\":\"21:00\",\"start\":\"17:00\"}]},{\"day\":2,\"windows\":[{\"end\":\"14:00\",\"start\":\"11:00\"},{\"end\":\"21:00\",\"start\":\"17:00\"}]},{\"day\":3,\"windows\":[{\"end\":\"14:00\",\"start\":\"11:00\"},{\"end\":\"21:00\",\"start\":\"17:00\"}]},{\"day\":4,\"windows\":[{\"end\":\"14:00\",\"start\":\"11:00\"},{\"end\":\"21:00\",\"start\":\"17:00\"}]},{\"day\":5,\"windows\":[{\"end\":\"14:00\",\"start\":\"11:00\"},{\"end\":\"21:00\",\"start\":\"17:00\"}]},{\"day\":6,\"windows\":[{\"end\":\"14:00\",\"start\":\"11:00\"},{\"end\":\"21:00\",\"start\":\"17:00\"}]},{\"day\":0,\"windows\":[{\"end\":\"14:00\",\"start\":\"11:00\"},{\"end\":\"21:00\",\"start\":\"17:00\"}]}]},\"epoch\":\"4b9e892d-72f3-41ba-b8b7-a51239e2b138\",\"expectedRevision\":0,\"id\":\"a6807456-e9c7-41c1-81af-9398c55ec611\",\"protocol\":\"pos-reservation/v1\",\"reviewed\":true,\"storeId\":\"native-reservations\",\"time\":\"2026-10-19T12:13:28.565Z\"}",
+          "revision": 1,
+          "event": {
+            "protocol": "pos-reservation-event/v1",
+            "id": "a6807456-e9c7-41c1-81af-9398c55ec611",
+            "sequence": 1,
+            "previousHash": null,
+            "storeId": "native-reservations",
+            "input": {
+              "protocol": "pos-reservation/v1",
+              "id": "a6807456-e9c7-41c1-81af-9398c55ec611",
+              "storeId": "native-reservations",
+              "epoch": "4b9e892d-72f3-41ba-b8b7-a51239e2b138",
+              "expectedRevision": 0,
+              "time": "2026-10-19T12:13:28.565Z",
+              "action": "configure",
+              "reviewed": true,
+              "config": {
+                "enabled": true,
+                "timeZone": "Asia/Taipei",
+                "durationMinutes": 90,
+                "bufferMinutes": 15,
+                "slotMinutes": 15,
+                "noticeMinutes": 30,
+                "horizonDays": 60,
+                "tables": [
+                  {
+                    "id": "t1",
+                    "name": "1",
+                    "seats": 2,
+                    "online": true
+                  }
+                ],
+                "combinations": [],
+                "weekly": [
+                  {
+                    "day": 1,
+                    "windows": [
+                      {
+                        "start": "11:00",
+                        "end": "14:00"
+                      },
+                      {
+                        "start": "17:00",
+                        "end": "21:00"
+                      }
+                    ]
+                  },
+                  {
+                    "day": 2,
+                    "windows": [
+                      {
+                        "start": "11:00",
+                        "end": "14:00"
+                      },
+                      {
+                        "start": "17:00",
+                        "end": "21:00"
+                      }
+                    ]
+                  },
+                  {
+                    "day": 3,
+                    "windows": [
+                      {
+                        "start": "11:00",
+                        "end": "14:00"
+                      },
+                      {
+                        "start": "17:00",
+                        "end": "21:00"
+                      }
+                    ]
+                  },
+                  {
+                    "day": 4,
+                    "windows": [
+                      {
+                        "start": "11:00",
+                        "end": "14:00"
+                      },
+                      {
+                        "start": "17:00",
+                        "end": "21:00"
+                      }
+                    ]
+                  },
+                  {
+                    "day": 5,
+                    "windows": [
+                      {
+                        "start": "11:00",
+                        "end": "14:00"
+                      },
+                      {
+                        "start": "17:00",
+                        "end": "21:00"
+                      }
+                    ]
+                  },
+                  {
+                    "day": 6,
+                    "windows": [
+                      {
+                        "start": "11:00",
+                        "end": "14:00"
+                      },
+                      {
+                        "start": "17:00",
+                        "end": "21:00"
+                      }
+                    ]
+                  },
+                  {
+                    "day": 0,
+                    "windows": [
+                      {
+                        "start": "11:00",
+                        "end": "14:00"
+                      },
+                      {
+                        "start": "17:00",
+                        "end": "21:00"
+                      }
+                    ]
+                  }
+                ],
+                "exceptions": []
+              }
+            },
+            "actor": {
+              "userId": "owner",
+              "username": "Lot fixture",
+              "role": "owner"
+            },
+            "time": "2026-10-19T12:13:28.607Z",
+            "change": {
+              "config": {
+                "enabled": true,
+                "timeZone": "Asia/Taipei",
+                "durationMinutes": 90,
+                "bufferMinutes": 15,
+                "slotMinutes": 15,
+                "noticeMinutes": 30,
+                "horizonDays": 60,
+                "tables": [
+                  {
+                    "id": "t1",
+                    "name": "1",
+                    "seats": 2,
+                    "online": true
+                  }
+                ],
+                "combinations": [],
+                "weekly": [
+                  {
+                    "day": 0,
+                    "windows": [
+                      {
+                        "start": "11:00",
+                        "end": "14:00"
+                      },
+                      {
+                        "start": "17:00",
+                        "end": "21:00"
+                      }
+                    ]
+                  },
+                  {
+                    "day": 1,
+                    "windows": [
+                      {
+                        "start": "11:00",
+                        "end": "14:00"
+                      },
+                      {
+                        "start": "17:00",
+                        "end": "21:00"
+                      }
+                    ]
+                  },
+                  {
+                    "day": 2,
+                    "windows": [
+                      {
+                        "start": "11:00",
+                        "end": "14:00"
+                      },
+                      {
+                        "start": "17:00",
+                        "end": "21:00"
+                      }
+                    ]
+                  },
+                  {
+                    "day": 3,
+                    "windows": [
+                      {
+                        "start": "11:00",
+                        "end": "14:00"
+                      },
+                      {
+                        "start": "17:00",
+                        "end": "21:00"
+                      }
+                    ]
+                  },
+                  {
+                    "day": 4,
+                    "windows": [
+                      {
+                        "start": "11:00",
+                        "end": "14:00"
+                      },
+                      {
+                        "start": "17:00",
+                        "end": "21:00"
+                      }
+                    ]
+                  },
+                  {
+                    "day": 5,
+                    "windows": [
+                      {
+                        "start": "11:00",
+                        "end": "14:00"
+                      },
+                      {
+                        "start": "17:00",
+                        "end": "21:00"
+                      }
+                    ]
+                  },
+                  {
+                    "day": 6,
+                    "windows": [
+                      {
+                        "start": "11:00",
+                        "end": "14:00"
+                      },
+                      {
+                        "start": "17:00",
+                        "end": "21:00"
+                      }
+                    ]
+                  }
+                ],
+                "exceptions": []
+              }
+            },
+            "hash": "489b69af3b2fe010b01a2788a7d884f3c62d9c75e159184c389affc005e092fb"
+          }
+        }
+      }
+    ],
+    "salesDocuments": [],
+    "salesOperations": [],
+    "customerEntries": [],
+    "customerOperations": [],
+    "supplierEntries": [],
+    "supplierOperations": [],
+    "stockCostEntries": [],
+    "stockCostOperations": [],
+    "_revision": "488b430c604d2a1f5a00953b567586a7735e5abc1b9e261887886a783e5cd0c7"
+  },
+  "protection": {
+    "version": 15,
+    "books": [],
+    "snapshots": [],
+    "originalIds": [],
+    "events": []
+  },
+  "checksum": "sha256:fc4c701a5f0ecb77be3da0c3c0854648fe26280d0b4aa27bb2f3e5e6b79c0610"
+}

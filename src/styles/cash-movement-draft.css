@@ -1,0 +1,3 @@
+.cash-movement-draft{font-size:16px;line-height:1.5;overflow-wrap:anywhere}.cash-movement-draft:empty{display:none}.cash-movement-draft p{margin:8px 0}.cash-movement-draft button,.cash-movement-draft summary{min-height:48px;font-size:18px;white-space:normal}.cash-movement-draft button{width:100%;margin:8px 0}.cash-movement-draft summary{padding:12px 0;cursor:pointer}.cash-movement-fields{border:0;padding:0;margin:0;min-width:0}.cash-movement-fields input{min-height:48px;font-size:18px}.cash-movement-fields button{min-height:48px}.cash-movement-summary{font-size:20px;line-height:1.5;margin:12px 0;overflow-wrap:anywhere}
+
+.cash-movement-fields>div>div:first-child{font-size:16px!important}

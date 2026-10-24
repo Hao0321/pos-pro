@@ -1,0 +1,1809 @@
+{
+  "provenance": {
+    "source": "actual isolated native SQLite fixture, synthetic users/products only",
+    "command": "node scripts/run-native-security.cjs --lots",
+    "marker": "POS_LOTS_NATIVE_PASS",
+    "targetSha256": "c459b67f739a8dbec7f53e7d95c40da87de929e4d77a39f5fac9351ccdf229af",
+    "physicalDevices": false,
+    "productionMerchantData": false
+  },
+  "before": {
+    "products": [
+      {
+        "id": "rice",
+        "name": "Rice",
+        "category": "",
+        "price": 10,
+        "cost": 1.01,
+        "stock": 6,
+        "barcode": "",
+        "unit": "公斤",
+        "noBarcode": false,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0,
+        "createdAt": "2026-10-17 14:43:33",
+        "updatedAt": "2026-10-17 14:43:33"
+      }
+    ],
+    "members": [],
+    "orders": [],
+    "suppliers": [
+      {
+        "id": "supplier",
+        "name": "Fixture supplier",
+        "contact": "",
+        "phone": "",
+        "payTerms": "",
+        "note": "",
+        "catalog": []
+      }
+    ],
+    "purchases": [
+      {
+        "id": "purchase",
+        "supplierId": "supplier",
+        "supplierName": "Fixture supplier",
+        "status": "received",
+        "date": "2026-10-17",
+        "receivedDate": "2026-10-17",
+        "paidDate": "",
+        "note": "",
+        "total": 6.06,
+        "items": [
+          {
+            "productId": "rice",
+            "catalogId": null,
+            "name": "Rice",
+            "unit": "公斤",
+            "qty": 3,
+            "unitCost": 2.02,
+            "received": 3
+          }
+        ],
+        "procurement": {
+          "version": 1,
+          "revision": 2,
+          "createdOperationId": "purchase-create",
+          "createdAt": "2026-10-17T15:55:00.000Z",
+          "receipts": [
+            {
+              "id": "receipt",
+              "time": "2026-10-17T15:55:00.000Z",
+              "date": "2026-10-17",
+              "quantities": [
+                3
+              ],
+              "amount": 6.06
+            }
+          ],
+          "bills": [],
+          "payments": [],
+          "reversals": [],
+          "cancel": null
+        }
+      }
+    ],
+    "promotions": [],
+    "users": [
+      {
+        "id": "owner",
+        "username": "Lot fixture",
+        "password": "{\"salt\":[31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31],\"iter\":1000,\"hash\":[18,98,43,90,63,111,124,212,130,232,67,7,160,193,142,28,86,57,165,172,5,60,52,78,99,86,231,52,136,150,176,165]}",
+        "role": "owner"
+      },
+      {
+        "id": "staff",
+        "username": "Lot staff",
+        "password": "{\"salt\":[31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31],\"iter\":1000,\"hash\":[18,98,43,90,63,111,124,212,130,232,67,7,160,193,142,28,86,57,165,172,5,60,52,78,99,86,231,52,136,150,176,165]}",
+        "role": "staff"
+      }
+    ],
+    "manualJournal": [],
+    "heldOrders": [],
+    "shifts": [
+      {
+        "id": "shift",
+        "cashier": "Lot fixture",
+        "cashierId": "",
+        "openTime": "2026-10-17T15:55:00.000Z",
+        "closeTime": "",
+        "openCash": 100,
+        "closeCash": 0,
+        "expectedCash": 0,
+        "diff": 0,
+        "cashSales": 0,
+        "cardSales": 0,
+        "orderCount": 0,
+        "refundCount": 0,
+        "refundAmount": 0,
+        "note": "",
+        "status": "open"
+      }
+    ],
+    "cashLog": [],
+    "wasteLog": [],
+    "memberTopups": [],
+    "auditLog": [
+      {
+        "id": "stock-operation:purchase-create",
+        "timestamp": "2026-10-17T15:55:00.000Z",
+        "action": "INVENTORY_OPERATION",
+        "level": "info",
+        "label": "庫存盤點",
+        "userId": "owner",
+        "username": "Lot fixture",
+        "role": "owner",
+        "detail": "{\"id\":\"purchase-create\",\"kind\":\"purchase-create\",\"signature\":\"{\\\"id\\\":\\\"purchase-create\\\",\\\"kind\\\":\\\"purchase-create\\\",\\\"purchase\\\":{\\\"date\\\":\\\"2026-10-17\\\",\\\"id\\\":\\\"purchase\\\",\\\"items\\\":[{\\\"name\\\":\\\"Rice\\\",\\\"productId\\\":\\\"rice\\\",\\\"qty\\\":3,\\\"received\\\":0,\\\"unit\\\":\\\"公斤\\\",\\\"unitCost\\\":2.02}],\\\"supplierId\\\":\\\"supplier\\\"},\\\"time\\\":\\\"2026-10-17T15:55:00.000Z\\\"}\",\"productIds\":[],\"purchaseId\":\"purchase\",\"supplierId\":null,\"time\":\"2026-10-17T15:55:00.000Z\",\"purchaseVersion\":1,\"document\":{\"collection\":\"purchase-create\",\"id\":\"purchase-create\",\"signature\":\"{\\\"id\\\":\\\"purchase-create\\\",\\\"time\\\":\\\"2026-10-17T15:55:00.000Z\\\"}\"}}"
+      },
+      {
+        "id": "stock-operation:receipt",
+        "timestamp": "2026-10-17T15:55:00.000Z",
+        "action": "INVENTORY_OPERATION",
+        "level": "info",
+        "label": "進貨到貨",
+        "userId": "owner",
+        "username": "Lot fixture",
+        "role": "owner",
+        "detail": "{\"id\":\"receipt\",\"kind\":\"receive\",\"signature\":\"{\\\"expectedPurchase\\\":\\\"{\\\\\\\"date\\\\\\\":\\\\\\\"2026-10-17\\\\\\\",\\\\\\\"id\\\\\\\":\\\\\\\"purchase\\\\\\\",\\\\\\\"items\\\\\\\":[{\\\\\\\"catalogId\\\\\\\":null,\\\\\\\"name\\\\\\\":\\\\\\\"Rice\\\\\\\",\\\\\\\"productId\\\\\\\":\\\\\\\"rice\\\\\\\",\\\\\\\"qty\\\\\\\":3,\\\\\\\"received\\\\\\\":0,\\\\\\\"unit\\\\\\\":\\\\\\\"公斤\\\\\\\",\\\\\\\"unitCost\\\\\\\":2.02}],\\\\\\\"note\\\\\\\":\\\\\\\"\\\\\\\",\\\\\\\"paidDate\\\\\\\":\\\\\\\"\\\\\\\",\\\\\\\"procurement\\\\\\\":{\\\\\\\"bills\\\\\\\":[],\\\\\\\"cancel\\\\\\\":null,\\\\\\\"createdAt\\\\\\\":\\\\\\\"2026-10-17T15:55:00.000Z\\\\\\\",\\\\\\\"createdOperationId\\\\\\\":\\\\\\\"purchase-create\\\\\\\",\\\\\\\"payments\\\\\\\":[],\\\\\\\"receipts\\\\\\\":[],\\\\\\\"reversals\\\\\\\":[],\\\\\\\"revision\\\\\\\":1,\\\\\\\"version\\\\\\\":1},\\\\\\\"receivedDate\\\\\\\":\\\\\\\"\\\\\\\",\\\\\\\"status\\\\\\\":\\\\\\\"ordered\\\\\\\",\\\\\\\"supplierId\\\\\\\":\\\\\\\"supplier\\\\\\\",\\\\\\\"supplierName\\\\\\\":\\\\\\\"Fixture supplier\\\\\\\",\\\\\\\"total\\\\\\\":6.06}\\\",\\\"id\\\":\\\"receipt\\\",\\\"kind\\\":\\\"receive\\\",\\\"purchaseId\\\":\\\"purchase\\\",\\\"quantities\\\":[3],\\\"time\\\":\\\"2026-10-17T15:55:00.000Z\\\"}\",\"productIds\":[\"rice\"],\"purchaseId\":\"purchase\",\"supplierId\":null,\"time\":\"2026-10-17T15:55:00.000Z\",\"purchaseVersion\":2,\"document\":{\"collection\":\"receipts\",\"id\":\"receipt\",\"signature\":\"{\\\"amount\\\":6.06,\\\"date\\\":\\\"2026-10-17\\\",\\\"id\\\":\\\"receipt\\\",\\\"quantities\\\":[3],\\\"time\\\":\\\"2026-10-17T15:55:00.000Z\\\"}\"}}"
+      }
+    ],
+    "settings": [
+      {
+        "key": "sharedStoreId",
+        "value": "lot-fixture"
+      },
+      {
+        "key": "stockCostBookHead",
+        "value": "\"sha256:6105ce4daee671ce83b132ca19f2e2f9627c6495bf0a0d5cab25a13044296cf0\""
+      },
+      {
+        "key": "stockCostVersionFence",
+        "value": "1"
+      }
+    ],
+    "restaurantOrders": [],
+    "restaurantOperations": [],
+    "salesDocuments": [],
+    "salesOperations": [],
+    "customerEntries": [],
+    "customerOperations": [],
+    "supplierEntries": [],
+    "supplierOperations": [],
+    "stockCostEntries": [
+      {
+        "actor": {
+          "role": "owner",
+          "userId": "owner",
+          "username": "Lot fixture"
+        },
+        "afterDigest": "sha256:162470cdd3ae6f5e9291e4c47f8ee6204c4c81ca3f9c005a09ad40cbae177744",
+        "beforeDigest": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        "date": "2026-10-17",
+        "hash": "sha256:1e6898e0e1c86bf76629a14628e34d438444e9d7d1b2880b076b3f8132c2be2f",
+        "id": "stock-87a050e2-2aa0-46f4-ae50-adeb1fe14982",
+        "input": {
+          "action": "open",
+          "epoch": "e12b0374-e9fa-40c6-a12b-1dcd1e896443",
+          "id": "opening",
+          "overrides": [],
+          "protocol": "pos-stock-cost/v1",
+          "reviewed": true,
+          "snapshotDigest": "sha256:9e399a76a2b79d48dcda4905bd3f9cdd87296b2071fe3e7ec4e1362a71bc1b6d",
+          "storeId": "lot-fixture",
+          "time": "2026-10-17T15:55:00.000Z"
+        },
+        "openingMaterial": "{\"inventoryRows\":[],\"legacyJournal\":[],\"legacyOperationIds\":{\"addProduct\":[\"rice\"],\"addWaste\":[],\"applyInventoryOperation\":[],\"applyRestaurantOperation\":[],\"applySalesOperation\":[],\"checkout\":[],\"refundOrder\":[]},\"preview\":{\"authoritativeValuation\":false,\"currency\":\"TWD\",\"epoch\":\"e12b0374-e9fa-40c6-a12b-1dcd1e896443\",\"legacyCostReviews\":[],\"paidLegacyReservations\":[],\"products\":[{\"availableUnits\":3000,\"name\":\"Rice\",\"productId\":\"rice\",\"referenceUnitCostCents\":101,\"referenceValueCents\":303,\"unit\":\"公斤\",\"zeroCostNeedsReview\":false}],\"referenceAvailableValueCents\":303,\"referenceInventoryBalanceCents\":0,\"referenceOwnedValueCents\":303,\"referenceReservedValueCents\":0,\"reviewFlags\":[\"inventory-reference-reconciliation-needed\"],\"status\":\"reference-only-not-activated\",\"storeId\":\"lot-fixture\",\"unpaidReservations\":[],\"version\":1},\"profile\":\"pos-stock-opening-preview/v1\"}",
+        "previousHash": null,
+        "sequence": 1,
+        "time": "2026-10-17T15:55:00.000Z"
+      },
+      {
+        "actor": {
+          "role": "owner",
+          "userId": "owner",
+          "username": "Lot fixture"
+        },
+        "afterDigest": "sha256:b09b15bcf4a39f5d63066038cc65541bd2ca6b0a08e9be9c27d3391814528635",
+        "beforeDigest": "sha256:162470cdd3ae6f5e9291e4c47f8ee6204c4c81ca3f9c005a09ad40cbae177744",
+        "date": "2026-10-17",
+        "evidence": {
+          "inventory": {
+            "beforeReceived": [
+              0
+            ],
+            "creditCents": 0,
+            "event": {
+              "amount": 6.06,
+              "date": "2026-10-17",
+              "id": "receipt",
+              "quantities": [
+                3
+              ],
+              "time": "2026-10-17T15:55:00.000Z"
+            },
+            "items": [
+              {
+                "catalogId": null,
+                "name": "Rice",
+                "productId": "rice",
+                "qty": 3,
+                "received": 3,
+                "unit": "公斤",
+                "unitCost": 2.02
+              }
+            ],
+            "kind": "receive",
+            "modern": true,
+            "purchaseId": "purchase"
+          },
+          "products": [
+            {
+              "afterUnits": 6000,
+              "beforeUnits": 3000,
+              "id": "rice",
+              "referenceUnitCostCents": 101,
+              "unit": "公斤"
+            }
+          ]
+        },
+        "hash": "sha256:6105ce4daee671ce83b132ca19f2e2f9627c6495bf0a0d5cab25a13044296cf0",
+        "id": "stock-aead7bb2-9802-44d9-bfe4-3795229ffff6",
+        "input": {
+          "expectedPurchase": "{\"date\":\"2026-10-17\",\"id\":\"purchase\",\"items\":[{\"catalogId\":null,\"name\":\"Rice\",\"productId\":\"rice\",\"qty\":3,\"received\":0,\"unit\":\"公斤\",\"unitCost\":2.02}],\"note\":\"\",\"paidDate\":\"\",\"procurement\":{\"bills\":[],\"cancel\":null,\"createdAt\":\"2026-10-17T15:55:00.000Z\",\"createdOperationId\":\"purchase-create\",\"payments\":[],\"receipts\":[],\"reversals\":[],\"revision\":1,\"version\":1},\"receivedDate\":\"\",\"status\":\"ordered\",\"supplierId\":\"supplier\",\"supplierName\":\"Fixture supplier\",\"total\":6.06}",
+          "id": "receipt",
+          "kind": "receive",
+          "purchaseId": "purchase",
+          "quantities": [
+            3
+          ],
+          "time": "2026-10-17T15:55:00.000Z"
+        },
+        "method": "applyInventoryOperation",
+        "openingMaterial": null,
+        "previousHash": "sha256:1e6898e0e1c86bf76629a14628e34d438444e9d7d1b2880b076b3f8132c2be2f",
+        "sequence": 2,
+        "time": "2026-10-17T15:55:00.000Z"
+      }
+    ],
+    "stockCostOperations": [
+      {
+        "actorId": "owner",
+        "id": "[\"applyInventoryOperation\",\"receipt\"]",
+        "method": "applyInventoryOperation",
+        "operationId": "receipt",
+        "receipt": {
+          "eventHash": "sha256:6105ce4daee671ce83b132ca19f2e2f9627c6495bf0a0d5cab25a13044296cf0",
+          "eventId": "stock-aead7bb2-9802-44d9-bfe4-3795229ffff6",
+          "id": "receipt",
+          "protocol": "pos-stock-cost/v1",
+          "sequence": 2,
+          "sourceMethod": "applyInventoryOperation",
+          "stateDigest": "sha256:b09b15bcf4a39f5d63066038cc65541bd2ca6b0a08e9be9c27d3391814528635",
+          "success": true
+        },
+        "signature": "{\"expectedPurchase\":\"{\\\"date\\\":\\\"2026-10-17\\\",\\\"id\\\":\\\"purchase\\\",\\\"items\\\":[{\\\"catalogId\\\":null,\\\"name\\\":\\\"Rice\\\",\\\"productId\\\":\\\"rice\\\",\\\"qty\\\":3,\\\"received\\\":0,\\\"unit\\\":\\\"公斤\\\",\\\"unitCost\\\":2.02}],\\\"note\\\":\\\"\\\",\\\"paidDate\\\":\\\"\\\",\\\"procurement\\\":{\\\"bills\\\":[],\\\"cancel\\\":null,\\\"createdAt\\\":\\\"2026-10-17T15:55:00.000Z\\\",\\\"createdOperationId\\\":\\\"purchase-create\\\",\\\"payments\\\":[],\\\"receipts\\\":[],\\\"reversals\\\":[],\\\"revision\\\":1,\\\"version\\\":1},\\\"receivedDate\\\":\\\"\\\",\\\"status\\\":\\\"ordered\\\",\\\"supplierId\\\":\\\"supplier\\\",\\\"supplierName\\\":\\\"Fixture supplier\\\",\\\"total\\\":6.06}\",\"id\":\"receipt\",\"kind\":\"receive\",\"purchaseId\":\"purchase\",\"quantities\":[3],\"time\":\"2026-10-17T15:55:00.000Z\"}"
+      },
+      {
+        "actorId": "owner",
+        "id": "[\"applyStockCostOperation\",\"opening\"]",
+        "method": "applyStockCostOperation",
+        "operationId": "opening",
+        "receipt": {
+          "eventHash": "sha256:1e6898e0e1c86bf76629a14628e34d438444e9d7d1b2880b076b3f8132c2be2f",
+          "eventId": "stock-87a050e2-2aa0-46f4-ae50-adeb1fe14982",
+          "id": "opening",
+          "protocol": "pos-stock-cost/v1",
+          "sequence": 1,
+          "stateDigest": "sha256:162470cdd3ae6f5e9291e4c47f8ee6204c4c81ca3f9c005a09ad40cbae177744",
+          "success": true,
+          "valuation": {
+            "categories": {
+              "available": {
+                "complete": true,
+                "knownValueCents": 303,
+                "unvalued": [],
+                "valueCents": 303
+              },
+              "consumed": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              },
+              "reserved": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              },
+              "supplierReturned": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              },
+              "wasted": {
+                "complete": true,
+                "knownValueCents": 0,
+                "unvalued": [],
+                "valueCents": 0
+              }
+            },
+            "complete": true,
+            "knownSourceValueCents": 303,
+            "ownedKnownValueCents": 303,
+            "ownedValueCents": 303,
+            "totalSourceValueCents": 303
+          }
+        },
+        "signature": "{\"action\":\"open\",\"epoch\":\"e12b0374-e9fa-40c6-a12b-1dcd1e896443\",\"id\":\"opening\",\"overrides\":[],\"protocol\":\"pos-stock-cost/v1\",\"reviewed\":true,\"snapshotDigest\":\"sha256:9e399a76a2b79d48dcda4905bd3f9cdd87296b2071fe3e7ec4e1362a71bc1b6d\",\"storeId\":\"lot-fixture\",\"time\":\"2026-10-17T15:55:00.000Z\"}"
+      }
+    ],
+    "_revision": "4beb5cf7a1964fa6ac8ed3761c01575326ac981331cb2592ddfa3320fd75516a"
+  },
+  "packet": {
+    "format": "pos-complete-backup/v1",
+    "storage": "sqlite",
+    "storeId": "lot-fixture",
+    "features": [
+      "stock-cost-v1",
+      "stock-lots-v1"
+    ],
+    "book": {
+      "products": [
+        {
+          "id": "rice",
+          "name": "Rice",
+          "category": "",
+          "price": 10,
+          "cost": 0.5,
+          "stock": 3,
+          "barcode": "",
+          "unit": "公斤",
+          "noBarcode": false,
+          "imageUrl": "",
+          "expiryDate": "",
+          "supplierId": "",
+          "reorderLevel": 0,
+          "createdAt": "2026-10-17 14:43:33",
+          "updatedAt": "2026-10-17 14:43:34"
+        }
+      ],
+      "members": [],
+      "orders": [
+        {
+          "id": "refund",
+          "subtotal": -10,
+          "discount": 0,
+          "manualDiscount": 0,
+          "balanceUsed": 0,
+          "total": -10,
+          "payMethod": "cash",
+          "paid": -10,
+          "change_amount": 0,
+          "payments": [
+            {
+              "method": "cash",
+              "amount": -10
+            }
+          ],
+          "memberId": null,
+          "pointsUsed": 0,
+          "pointsEarned": 0,
+          "time": "2026-10-18T16:01:00.000Z",
+          "source": "pos",
+          "status": "completed",
+          "tableNum": "",
+          "note": "Original return",
+          "taxId": "",
+          "shiftId": "shift",
+          "refundOf": "sale",
+          "cashier": "Lot fixture",
+          "fullRefund": true,
+          "itemCosts": {
+            "rice": 1.01
+          },
+          "trackingTokenHash": "",
+          "requestSignature": "{\"refundOf\":\"sale\",\"items\":[{\"id\":\"rice\",\"qty\":1}],\"reason\":\"Original return\",\"cashier\":\"Lot fixture\",\"shiftId\":\"shift\"}",
+          "change": 0,
+          "items": [
+            {
+              "id": "rice",
+              "name": "Rice",
+              "price": 10,
+              "qty": -1
+            }
+          ]
+        },
+        {
+          "id": "sale",
+          "subtotal": 10,
+          "discount": 0,
+          "manualDiscount": 0,
+          "balanceUsed": 0,
+          "total": 10,
+          "payMethod": "cash",
+          "paid": 10,
+          "change_amount": 0,
+          "payments": [
+            {
+              "method": "cash",
+              "amount": 10
+            }
+          ],
+          "memberId": null,
+          "pointsUsed": 0,
+          "pointsEarned": 0,
+          "time": "2026-10-17T16:05:00.000Z",
+          "source": "pos",
+          "status": "refunded",
+          "tableNum": "",
+          "note": "",
+          "taxId": "",
+          "shiftId": "shift",
+          "refundOf": "",
+          "cashier": "Lot fixture",
+          "fullRefund": false,
+          "itemCosts": {
+            "rice": 1.01
+          },
+          "trackingTokenHash": "",
+          "requestSignature": "",
+          "change": 0,
+          "items": [
+            {
+              "id": "rice",
+              "name": "Rice",
+              "price": 10,
+              "qty": 1
+            }
+          ]
+        }
+      ],
+      "suppliers": [
+        {
+          "id": "supplier",
+          "name": "Fixture supplier",
+          "contact": "",
+          "phone": "",
+          "payTerms": "",
+          "note": "",
+          "catalog": []
+        }
+      ],
+      "purchases": [
+        {
+          "id": "purchase",
+          "supplierId": "supplier",
+          "supplierName": "Fixture supplier",
+          "status": "received",
+          "date": "2026-10-17",
+          "receivedDate": "2026-10-17",
+          "paidDate": "",
+          "note": "",
+          "total": 6.06,
+          "items": [
+            {
+              "productId": "rice",
+              "catalogId": null,
+              "name": "Rice",
+              "unit": "公斤",
+              "qty": 3,
+              "unitCost": 2.02,
+              "received": 3
+            }
+          ],
+          "procurement": {
+            "version": 1,
+            "revision": 2,
+            "createdOperationId": "purchase-create",
+            "createdAt": "2026-10-17T15:55:00.000Z",
+            "receipts": [
+              {
+                "id": "receipt",
+                "time": "2026-10-17T15:55:00.000Z",
+                "date": "2026-10-17",
+                "quantities": [
+                  3
+                ],
+                "amount": 6.06
+              }
+            ],
+            "bills": [],
+            "payments": [],
+            "reversals": [],
+            "cancel": null
+          }
+        }
+      ],
+      "promotions": [],
+      "users": [
+        {
+          "id": "owner",
+          "username": "Lot fixture",
+          "password": "{\"salt\":[31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31],\"iter\":1000,\"hash\":[18,98,43,90,63,111,124,212,130,232,67,7,160,193,142,28,86,57,165,172,5,60,52,78,99,86,231,52,136,150,176,165]}",
+          "role": "owner"
+        },
+        {
+          "id": "staff",
+          "username": "Lot staff",
+          "password": "{\"salt\":[31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31],\"iter\":1000,\"hash\":[18,98,43,90,63,111,124,212,130,232,67,7,160,193,142,28,86,57,165,172,5,60,52,78,99,86,231,52,136,150,176,165]}",
+          "role": "staff"
+        }
+      ],
+      "manualJournal": [],
+      "heldOrders": [],
+      "shifts": [
+        {
+          "id": "shift",
+          "cashier": "Lot fixture",
+          "cashierId": "",
+          "openTime": "2026-10-17T15:55:00.000Z",
+          "closeTime": "",
+          "openCash": 100,
+          "closeCash": 0,
+          "expectedCash": 0,
+          "diff": 0,
+          "cashSales": 0,
+          "cardSales": 0,
+          "orderCount": 0,
+          "refundCount": 0,
+          "refundAmount": 0,
+          "note": "",
+          "status": "open"
+        }
+      ],
+      "cashLog": [],
+      "wasteLog": [
+        {
+          "id": "lot-waste-lot-fixture-10",
+          "productId": "rice",
+          "productName": "Rice",
+          "qty": 1,
+          "reason": "Checked and discarded expired package",
+          "cost": 0.5,
+          "time": "2026-10-18T16:01:00.000Z",
+          "cashier": "Lot staff"
+        }
+      ],
+      "memberTopups": [],
+      "auditLog": [
+        {
+          "id": "stock-operation:purchase-create",
+          "timestamp": "2026-10-17T15:55:00.000Z",
+          "action": "INVENTORY_OPERATION",
+          "level": "info",
+          "label": "庫存盤點",
+          "userId": "owner",
+          "username": "Lot fixture",
+          "role": "owner",
+          "detail": "{\"id\":\"purchase-create\",\"kind\":\"purchase-create\",\"signature\":\"{\\\"id\\\":\\\"purchase-create\\\",\\\"kind\\\":\\\"purchase-create\\\",\\\"purchase\\\":{\\\"date\\\":\\\"2026-10-17\\\",\\\"id\\\":\\\"purchase\\\",\\\"items\\\":[{\\\"name\\\":\\\"Rice\\\",\\\"productId\\\":\\\"rice\\\",\\\"qty\\\":3,\\\"received\\\":0,\\\"unit\\\":\\\"公斤\\\",\\\"unitCost\\\":2.02}],\\\"supplierId\\\":\\\"supplier\\\"},\\\"time\\\":\\\"2026-10-17T15:55:00.000Z\\\"}\",\"productIds\":[],\"purchaseId\":\"purchase\",\"supplierId\":null,\"time\":\"2026-10-17T15:55:00.000Z\",\"purchaseVersion\":1,\"document\":{\"collection\":\"purchase-create\",\"id\":\"purchase-create\",\"signature\":\"{\\\"id\\\":\\\"purchase-create\\\",\\\"time\\\":\\\"2026-10-17T15:55:00.000Z\\\"}\"}}"
+        },
+        {
+          "id": "stock-operation:receipt",
+          "timestamp": "2026-10-17T15:55:00.000Z",
+          "action": "INVENTORY_OPERATION",
+          "level": "info",
+          "label": "進貨到貨",
+          "userId": "owner",
+          "username": "Lot fixture",
+          "role": "owner",
+          "detail": "{\"id\":\"receipt\",\"kind\":\"receive\",\"signature\":\"{\\\"expectedPurchase\\\":\\\"{\\\\\\\"date\\\\\\\":\\\\\\\"2026-10-17\\\\\\\",\\\\\\\"id\\\\\\\":\\\\\\\"purchase\\\\\\\",\\\\\\\"items\\\\\\\":[{\\\\\\\"catalogId\\\\\\\":null,\\\\\\\"name\\\\\\\":\\\\\\\"Rice\\\\\\\",\\\\\\\"productId\\\\\\\":\\\\\\\"rice\\\\\\\",\\\\\\\"qty\\\\\\\":3,\\\\\\\"received\\\\\\\":0,\\\\\\\"unit\\\\\\\":\\\\\\\"公斤\\\\\\\",\\\\\\\"unitCost\\\\\\\":2.02}],\\\\\\\"note\\\\\\\":\\\\\\\"\\\\\\\",\\\\\\\"paidDate\\\\\\\":\\\\\\\"\\\\\\\",\\\\\\\"procurement\\\\\\\":{\\\\\\\"bills\\\\\\\":[],\\\\\\\"cancel\\\\\\\":null,\\\\\\\"createdAt\\\\\\\":\\\\\\\"2026-10-17T15:55:00.000Z\\\\\\\",\\\\\\\"createdOperationId\\\\\\\":\\\\\\\"purchase-create\\\\\\\",\\\\\\\"payments\\\\\\\":[],\\\\\\\"receipts\\\\\\\":[],\\\\\\\"reversals\\\\\\\":[],\\\\\\\"revision\\\\\\\":1,\\\\\\\"version\\\\\\\":1},\\\\\\\"receivedDate\\\\\\\":\\\\\\\"\\\\\\\",\\\\\\\"status\\\\\\\":\\\\\\\"ordered\\\\\\\",\\\\\\\"supplierId\\\\\\\":\\\\\\\"supplier\\\\\\\",\\\\\\\"supplierName\\\\\\\":\\\\\\\"Fixture supplier\\\\\\\",\\\\\\\"total\\\\\\\":6.06}\\\",\\\"id\\\":\\\"receipt\\\",\\\"kind\\\":\\\"receive\\\",\\\"purchaseId\\\":\\\"purchase\\\",\\\"quantities\\\":[3],\\\"time\\\":\\\"2026-10-17T15:55:00.000Z\\\"}\",\"productIds\":[\"rice\"],\"purchaseId\":\"purchase\",\"supplierId\":null,\"time\":\"2026-10-17T15:55:00.000Z\",\"purchaseVersion\":2,\"document\":{\"collection\":\"receipts\",\"id\":\"receipt\",\"signature\":\"{\\\"amount\\\":6.06,\\\"date\\\":\\\"2026-10-17\\\",\\\"id\\\":\\\"receipt\\\",\\\"quantities\\\":[3],\\\"time\\\":\\\"2026-10-17T15:55:00.000Z\\\"}\"}}"
+        }
+      ],
+      "settings": [
+        {
+          "key": "restaurantConfig",
+          "value": "{\"enabled\":true,\"dailyCapacity\":30,\"slotCapacity\":5,\"recipes\":{}}"
+        },
+        {
+          "key": "sharedStoreId",
+          "value": "lot-fixture"
+        },
+        {
+          "key": "stockCostBookHead",
+          "value": "\"sha256:4b61c7c37951932efbe08fe8772992bab7649f5ff3b63198e50f800cec0c76c6\""
+        },
+        {
+          "key": "stockCostVersionFence",
+          "value": "1"
+        },
+        {
+          "key": "stockLotVersionFence",
+          "value": "1"
+        }
+      ],
+      "restaurantOrders": [
+        {
+          "id": "restaurant-7",
+          "version": 2,
+          "channel": "walkin",
+          "day": "2026-10-18",
+          "slot": "12:00",
+          "customer": "Fixture",
+          "contact": "",
+          "note": "",
+          "items": [
+            {
+              "id": "rice",
+              "name": "Rice",
+              "price": 10,
+              "qty": 1,
+              "cost": 1.01
+            }
+          ],
+          "allocations": [
+            {
+              "id": "rice",
+              "name": "Rice",
+              "qty": 1,
+              "unitCost": 1.01
+            }
+          ],
+          "quantity": 1,
+          "total": 10,
+          "status": "cancelled",
+          "createdAt": "2026-10-17T16:05:00.000Z",
+          "startedAt": "",
+          "saleId": "",
+          "refundId": "",
+          "pickupNumber": 1,
+          "cancelReason": "Unused expired batch"
+        }
+      ],
+      "restaurantOperations": [
+        {
+          "id": "restaurant-6",
+          "kind": "restaurant",
+          "action": "configure",
+          "signature": "{\"action\":\"configure\",\"config\":{\"dailyCapacity\":30,\"enabled\":true,\"recipes\":{},\"slotCapacity\":5},\"expectedConfig\":\"{\\\"dailyCapacity\\\":30,\\\"enabled\\\":false,\\\"recipes\\\":{},\\\"slotCapacity\\\":5}\",\"id\":\"restaurant-6\",\"kind\":\"restaurant\",\"time\":\"2026-10-17T15:55:00.000Z\"}",
+          "entityId": "",
+          "entityVersion": 0,
+          "productIds": [],
+          "saleId": "",
+          "refundId": "",
+          "time": "2026-10-17T15:55:00.000Z",
+          "actor": {
+            "userId": "owner",
+            "username": "Lot fixture",
+            "role": "owner"
+          }
+        },
+        {
+          "id": "restaurant-7",
+          "kind": "restaurant",
+          "action": "create",
+          "signature": "{\"action\":\"create\",\"channel\":\"walkin\",\"contact\":\"\",\"customer\":\"Fixture\",\"day\":\"2026-10-18\",\"id\":\"restaurant-7\",\"items\":[{\"id\":\"rice\",\"price\":10,\"qty\":1}],\"kind\":\"restaurant\",\"note\":\"\",\"slot\":\"12:00\",\"time\":\"2026-10-17T16:05:00.000Z\"}",
+          "entityId": "restaurant-7",
+          "entityVersion": 1,
+          "productIds": [
+            "rice"
+          ],
+          "saleId": "",
+          "refundId": "",
+          "time": "2026-10-17T16:05:00.000Z",
+          "actor": {
+            "userId": "owner",
+            "username": "Lot fixture",
+            "role": "owner"
+          }
+        },
+        {
+          "id": "restaurant-9",
+          "kind": "restaurant",
+          "action": "cancel",
+          "signature": "{\"action\":\"cancel\",\"entryId\":\"restaurant-7\",\"expectedVersion\":1,\"id\":\"restaurant-9\",\"kind\":\"restaurant\",\"reason\":\"Unused expired batch\",\"time\":\"2026-10-18T16:01:00.000Z\"}",
+          "entityId": "restaurant-7",
+          "entityVersion": 2,
+          "productIds": [
+            "rice"
+          ],
+          "saleId": "",
+          "refundId": "",
+          "time": "2026-10-18T16:01:00.000Z",
+          "actor": {
+            "userId": "owner",
+            "username": "Lot fixture",
+            "role": "owner"
+          }
+        }
+      ],
+      "salesDocuments": [],
+      "salesOperations": [],
+      "customerEntries": [],
+      "customerOperations": [],
+      "supplierEntries": [],
+      "supplierOperations": [],
+      "stockCostEntries": [
+        {
+          "actor": {
+            "role": "system",
+            "userId": "system:lot-expiry",
+            "username": "系統"
+          },
+          "afterDigest": "sha256:2f2b47a2e1201c0c9fc2880358817e675f0f2d4457b2cb19c9a332d6343d477e",
+          "beforeDigest": "sha256:692e91b3e5feff8c3f10326a210e8315576d5acc0c608dd2c0c9ece4fc10fe7b",
+          "date": "2026-10-18",
+          "evidence": {
+            "products": [
+              {
+                "beforeUnits": 6000,
+                "id": "rice",
+                "name": "Rice",
+                "referenceUnitCostCents": 101,
+                "unit": "公斤"
+              }
+            ]
+          },
+          "hash": "sha256:61269a7e0777eff060c056ebe6d06712060ce873e2ede3cc2177b035e9e6d65b",
+          "id": "stock-10da5fcb-3e22-4d00-9d52-2388eee5285d",
+          "input": {
+            "action": "expire",
+            "day": "2026-10-18",
+            "epoch": "e12b0374-e9fa-40c6-a12b-1dcd1e896443",
+            "expectedStateDigest": "sha256:692e91b3e5feff8c3f10326a210e8315576d5acc0c608dd2c0c9ece4fc10fe7b",
+            "id": "lot-expire-2026-10-18-692e91b3e5feff8c3f10326a",
+            "protocol": "pos-stock-lots/v1",
+            "storeId": "lot-fixture",
+            "time": "2026-10-17T16:05:00.000Z"
+          },
+          "method": "applyLotOperation",
+          "openingMaterial": null,
+          "previousHash": "sha256:d6c5141255f18530d8ee8940a40233d24ea25fd97c090baf694f6c6e89879c1b",
+          "sequence": 7,
+          "time": "2026-10-17T16:05:00.000Z"
+        },
+        {
+          "actor": {
+            "role": "owner",
+            "userId": "owner",
+            "username": "Lot fixture"
+          },
+          "afterDigest": "sha256:604d180882dca65147c87dbb29612525126349d578e8634ed10c1687c4c81882",
+          "beforeDigest": "sha256:f5814308d50eedf567be194934af12b5726a8a4ce3a637165d382b43c213e68e",
+          "date": "2026-10-17",
+          "evidence": {
+            "products": [
+              {
+                "beforeUnits": 6000,
+                "id": "rice",
+                "name": "Rice",
+                "referenceUnitCostCents": 101,
+                "unit": "公斤"
+              }
+            ]
+          },
+          "hash": "sha256:12772ec75a355c355e671cd2bc4f28471706575dae4cc7c3e72f9d4a2eef2ac9",
+          "id": "stock-1dfb209b-54b4-4b2a-a540-9ac8af349f93",
+          "input": {
+            "action": "label",
+            "code": "soon",
+            "epoch": "e12b0374-e9fa-40c6-a12b-1dcd1e896443",
+            "expectedStateDigest": "sha256:f5814308d50eedf567be194934af12b5726a8a4ce3a637165d382b43c213e68e",
+            "expiryDate": "2026-10-18",
+            "id": "lot-fixture-4",
+            "protocol": "pos-stock-lots/v1",
+            "quantityUnits": 3000,
+            "receivedAt": null,
+            "sourceId": "business:stock-aead7bb2-9802-44d9-bfe4-3795229ffff6:0",
+            "storeId": "lot-fixture",
+            "time": "2026-10-17T15:55:00.000Z"
+          },
+          "method": "applyLotOperation",
+          "openingMaterial": null,
+          "previousHash": "sha256:2c40a0a9f34d5cca3de9d0c4ca1084c415348af9400f69762dfc57b721d2aace",
+          "sequence": 5,
+          "time": "2026-10-17T15:55:00.000Z"
+        },
+        {
+          "actor": {
+            "role": "owner",
+            "userId": "owner",
+            "username": "Lot fixture"
+          },
+          "afterDigest": "sha256:692e91b3e5feff8c3f10326a210e8315576d5acc0c608dd2c0c9ece4fc10fe7b",
+          "beforeDigest": "sha256:604d180882dca65147c87dbb29612525126349d578e8634ed10c1687c4c81882",
+          "date": "2026-10-17",
+          "evidence": {
+            "products": [
+              {
+                "beforeUnits": 6000,
+                "id": "rice",
+                "name": "Rice",
+                "referenceUnitCostCents": 101,
+                "unit": "公斤"
+              }
+            ]
+          },
+          "hash": "sha256:d6c5141255f18530d8ee8940a40233d24ea25fd97c090baf694f6c6e89879c1b",
+          "id": "stock-43bcfb31-ac13-45c7-b13e-b02902310a09",
+          "input": {
+            "action": "track",
+            "epoch": "e12b0374-e9fa-40c6-a12b-1dcd1e896443",
+            "expectedStateDigest": "sha256:604d180882dca65147c87dbb29612525126349d578e8634ed10c1687c4c81882",
+            "id": "lot-fixture-5",
+            "productId": "rice",
+            "protocol": "pos-stock-lots/v1",
+            "required": true,
+            "storeId": "lot-fixture",
+            "time": "2026-10-17T15:55:00.000Z"
+          },
+          "method": "applyLotOperation",
+          "openingMaterial": null,
+          "previousHash": "sha256:12772ec75a355c355e671cd2bc4f28471706575dae4cc7c3e72f9d4a2eef2ac9",
+          "sequence": 6,
+          "time": "2026-10-17T15:55:00.000Z"
+        },
+        {
+          "actor": {
+            "role": "staff",
+            "userId": "staff",
+            "username": "Lot staff"
+          },
+          "afterDigest": "sha256:bd1a5b930148fec038c4ff242d9724dcba9874905f6945da05f5a7cc551b58e1",
+          "beforeDigest": "sha256:3dcc912874c09af700ae1e3b20859cf613f2796ad8f0c3f1b13784eb217a2dca",
+          "date": "2026-10-19",
+          "evidence": {
+            "products": [
+              {
+                "beforeUnits": 3000,
+                "id": "rice",
+                "name": "Rice",
+                "referenceUnitCostCents": 50,
+                "unit": "公斤"
+              }
+            ],
+            "waste": {
+              "cashier": "Lot staff",
+              "cost": 0.5,
+              "id": "lot-waste-lot-fixture-10",
+              "productId": "rice",
+              "productName": "Rice",
+              "qty": 1,
+              "reason": "Checked and discarded expired package",
+              "time": "2026-10-18T16:01:00.000Z"
+            }
+          },
+          "hash": "sha256:4b61c7c37951932efbe08fe8772992bab7649f5ff3b63198e50f800cec0c76c6",
+          "id": "stock-670910a8-2b5a-434c-9cf1-b233dd2bf48f",
+          "input": {
+            "action": "dispose",
+            "epoch": "e12b0374-e9fa-40c6-a12b-1dcd1e896443",
+            "expectedStateDigest": "sha256:3dcc912874c09af700ae1e3b20859cf613f2796ad8f0c3f1b13784eb217a2dca",
+            "id": "lot-fixture-10",
+            "locationId": "main",
+            "lotId": "lot-stock-1dfb209b-54b4-4b2a-a540-9ac8af349f93",
+            "protocol": "pos-stock-lots/v1",
+            "quantityUnits": 1000,
+            "reason": "Checked and discarded expired package",
+            "storeId": "lot-fixture",
+            "time": "2026-10-18T16:01:00.000Z"
+          },
+          "method": "applyLotOperation",
+          "openingMaterial": null,
+          "previousHash": "sha256:1623e342ff4afc9e7f764db1d8121bd3b780d0547a0804cafe14914543986eb6",
+          "sequence": 13,
+          "time": "2026-10-18T16:01:00.000Z"
+        },
+        {
+          "actor": {
+            "role": "owner",
+            "userId": "owner",
+            "username": "Lot fixture"
+          },
+          "afterDigest": "sha256:f5814308d50eedf567be194934af12b5726a8a4ce3a637165d382b43c213e68e",
+          "beforeDigest": "sha256:b3c2f992ac52cf066cd58f06da6b3cae8e179d4dcd1543079370a0c609fa2920",
+          "date": "2026-10-17",
+          "evidence": {
+            "products": [
+              {
+                "beforeUnits": 6000,
+                "id": "rice",
+                "name": "Rice",
+                "referenceUnitCostCents": 101,
+                "unit": "公斤"
+              }
+            ]
+          },
+          "hash": "sha256:2c40a0a9f34d5cca3de9d0c4ca1084c415348af9400f69762dfc57b721d2aace",
+          "id": "stock-7f90bb9a-8258-49ad-b663-6bdd3b261ddc",
+          "input": {
+            "action": "label",
+            "code": "later",
+            "epoch": "e12b0374-e9fa-40c6-a12b-1dcd1e896443",
+            "expectedStateDigest": "sha256:b3c2f992ac52cf066cd58f06da6b3cae8e179d4dcd1543079370a0c609fa2920",
+            "expiryDate": "2026-10-19",
+            "id": "lot-fixture-3",
+            "protocol": "pos-stock-lots/v1",
+            "quantityUnits": 3000,
+            "receivedAt": null,
+            "sourceId": "opening:opening:0",
+            "storeId": "lot-fixture",
+            "time": "2026-10-17T15:55:00.000Z"
+          },
+          "method": "applyLotOperation",
+          "openingMaterial": null,
+          "previousHash": "sha256:d9f423c38a74cf16877d735942c0c8fce654e4ee81e47fcd00c12808c43c424e",
+          "sequence": 4,
+          "time": "2026-10-17T15:55:00.000Z"
+        },
+        {
+          "actor": {
+            "role": "owner",
+            "userId": "owner",
+            "username": "Lot fixture"
+          },
+          "afterDigest": "sha256:162470cdd3ae6f5e9291e4c47f8ee6204c4c81ca3f9c005a09ad40cbae177744",
+          "beforeDigest": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+          "date": "2026-10-17",
+          "hash": "sha256:1e6898e0e1c86bf76629a14628e34d438444e9d7d1b2880b076b3f8132c2be2f",
+          "id": "stock-87a050e2-2aa0-46f4-ae50-adeb1fe14982",
+          "input": {
+            "action": "open",
+            "epoch": "e12b0374-e9fa-40c6-a12b-1dcd1e896443",
+            "id": "opening",
+            "overrides": [],
+            "protocol": "pos-stock-cost/v1",
+            "reviewed": true,
+            "snapshotDigest": "sha256:9e399a76a2b79d48dcda4905bd3f9cdd87296b2071fe3e7ec4e1362a71bc1b6d",
+            "storeId": "lot-fixture",
+            "time": "2026-10-17T15:55:00.000Z"
+          },
+          "openingMaterial": "{\"inventoryRows\":[],\"legacyJournal\":[],\"legacyOperationIds\":{\"addProduct\":[\"rice\"],\"addWaste\":[],\"applyInventoryOperation\":[],\"applyRestaurantOperation\":[],\"applySalesOperation\":[],\"checkout\":[],\"refundOrder\":[]},\"preview\":{\"authoritativeValuation\":false,\"currency\":\"TWD\",\"epoch\":\"e12b0374-e9fa-40c6-a12b-1dcd1e896443\",\"legacyCostReviews\":[],\"paidLegacyReservations\":[],\"products\":[{\"availableUnits\":3000,\"name\":\"Rice\",\"productId\":\"rice\",\"referenceUnitCostCents\":101,\"referenceValueCents\":303,\"unit\":\"公斤\",\"zeroCostNeedsReview\":false}],\"referenceAvailableValueCents\":303,\"referenceInventoryBalanceCents\":0,\"referenceOwnedValueCents\":303,\"referenceReservedValueCents\":0,\"reviewFlags\":[\"inventory-reference-reconciliation-needed\"],\"status\":\"reference-only-not-activated\",\"storeId\":\"lot-fixture\",\"unpaidReservations\":[],\"version\":1},\"profile\":\"pos-stock-opening-preview/v1\"}",
+          "previousHash": null,
+          "sequence": 1,
+          "time": "2026-10-17T15:55:00.000Z"
+        },
+        {
+          "actor": {
+            "role": "owner",
+            "userId": "owner",
+            "username": "Lot fixture"
+          },
+          "afterDigest": "sha256:3dcc912874c09af700ae1e3b20859cf613f2796ad8f0c3f1b13784eb217a2dca",
+          "beforeDigest": "sha256:ff9e9e51c6365332229e9ebf8ed3ef284547ac74eb099977cacb0e804fce12cd",
+          "date": "2026-10-19",
+          "evidence": {
+            "beforeEntry": {
+              "allocations": [
+                {
+                  "id": "rice",
+                  "name": "Rice",
+                  "qty": 1,
+                  "unitCost": 1.01
+                }
+              ],
+              "channel": "walkin",
+              "contact": "",
+              "createdAt": "2026-10-17T16:05:00.000Z",
+              "customer": "Fixture",
+              "day": "2026-10-18",
+              "id": "restaurant-7",
+              "items": [
+                {
+                  "cost": 1.01,
+                  "id": "rice",
+                  "name": "Rice",
+                  "price": 10,
+                  "qty": 1
+                }
+              ],
+              "note": "",
+              "pickupNumber": 1,
+              "quantity": 1,
+              "refundId": "",
+              "saleId": "",
+              "slot": "12:00",
+              "startedAt": "",
+              "status": "reserved",
+              "total": 10,
+              "version": 1
+            },
+            "entry": {
+              "allocations": [
+                {
+                  "id": "rice",
+                  "name": "Rice",
+                  "qty": 1,
+                  "unitCost": 1.01
+                }
+              ],
+              "cancelReason": "Unused expired batch",
+              "channel": "walkin",
+              "contact": "",
+              "createdAt": "2026-10-17T16:05:00.000Z",
+              "customer": "Fixture",
+              "day": "2026-10-18",
+              "id": "restaurant-7",
+              "items": [
+                {
+                  "cost": 1.01,
+                  "id": "rice",
+                  "name": "Rice",
+                  "price": 10,
+                  "qty": 1
+                }
+              ],
+              "note": "",
+              "pickupNumber": 1,
+              "quantity": 1,
+              "refundId": "",
+              "saleId": "",
+              "slot": "12:00",
+              "startedAt": "",
+              "status": "cancelled",
+              "total": 10,
+              "version": 2
+            },
+            "products": [
+              {
+                "afterUnits": 4000,
+                "beforeUnits": 3000,
+                "id": "rice",
+                "referenceUnitCostCents": 101,
+                "unit": "公斤"
+              }
+            ]
+          },
+          "hash": "sha256:1623e342ff4afc9e7f764db1d8121bd3b780d0547a0804cafe14914543986eb6",
+          "id": "stock-8a79de8c-e7e8-42de-b4ff-3d53e4f96e9a",
+          "input": {
+            "action": "cancel",
+            "entryId": "restaurant-7",
+            "expectedVersion": 1,
+            "id": "restaurant-9",
+            "kind": "restaurant",
+            "reason": "Unused expired batch",
+            "time": "2026-10-18T16:01:00.000Z"
+          },
+          "method": "applyRestaurantOperation",
+          "openingMaterial": null,
+          "previousHash": "sha256:8d3d3b14354d7f97ea05d41560a5f4caf36ec6f0f577d2a2940e8a915dd7df94",
+          "sequence": 12,
+          "time": "2026-10-18T16:01:00.000Z"
+        },
+        {
+          "actor": {
+            "role": "owner",
+            "userId": "owner",
+            "username": "Lot fixture"
+          },
+          "afterDigest": "sha256:ade26298a9b92b2bb7ed370856beeab48135ea2420ed37cd921588bc15fd23ea",
+          "beforeDigest": "sha256:f085385743292f07a595511fc7c676368905089f5e8d2d5e7b65a68778a09fb4",
+          "date": "2026-10-18",
+          "evidence": {
+            "beforeEntry": null,
+            "costBasis": {
+              "materials": [
+                {
+                  "outputs": [
+                    {
+                      "productId": "rice",
+                      "quantityUnits": "1000"
+                    }
+                  ],
+                  "productId": "rice",
+                  "totalUnits": "1000"
+                }
+              ],
+              "policy": "recipe-share-prefix/v1",
+              "version": 1
+            },
+            "entry": {
+              "allocations": [
+                {
+                  "id": "rice",
+                  "name": "Rice",
+                  "qty": 1,
+                  "unitCost": 1.01
+                }
+              ],
+              "channel": "walkin",
+              "contact": "",
+              "createdAt": "2026-10-17T16:05:00.000Z",
+              "customer": "Fixture",
+              "day": "2026-10-18",
+              "id": "restaurant-7",
+              "items": [
+                {
+                  "cost": 1.01,
+                  "id": "rice",
+                  "name": "Rice",
+                  "price": 10,
+                  "qty": 1
+                }
+              ],
+              "note": "",
+              "pickupNumber": 1,
+              "quantity": 1,
+              "refundId": "",
+              "saleId": "",
+              "slot": "12:00",
+              "startedAt": "",
+              "status": "reserved",
+              "total": 10,
+              "version": 1
+            },
+            "products": [
+              {
+                "afterUnits": 4000,
+                "beforeUnits": 5000,
+                "id": "rice",
+                "referenceUnitCostCents": 101,
+                "unit": "公斤"
+              }
+            ]
+          },
+          "hash": "sha256:690dc5a89258be8870dc3f1be9af961546efaa8fffb6b4b07612e0d0c43bfc47",
+          "id": "stock-957b70bb-3894-427e-96e7-af54d8a920e0",
+          "input": {
+            "action": "create",
+            "channel": "walkin",
+            "contact": "",
+            "customer": "Fixture",
+            "day": "2026-10-18",
+            "id": "restaurant-7",
+            "items": [
+              {
+                "id": "rice",
+                "price": 10,
+                "qty": 1
+              }
+            ],
+            "kind": "restaurant",
+            "note": "",
+            "slot": "12:00",
+            "time": "2026-10-17T16:05:00.000Z"
+          },
+          "method": "applyRestaurantOperation",
+          "openingMaterial": null,
+          "previousHash": "sha256:142d883d6fde081ab5664acf2ce47c9d815bbe11f1132b08c5909e209b4a1d04",
+          "sequence": 9,
+          "time": "2026-10-17T16:05:00.000Z"
+        },
+        {
+          "actor": {
+            "role": "owner",
+            "userId": "owner",
+            "username": "Lot fixture"
+          },
+          "afterDigest": "sha256:ff9e9e51c6365332229e9ebf8ed3ef284547ac74eb099977cacb0e804fce12cd",
+          "beforeDigest": "sha256:b5941d22663f830e4e9f3555ad95fc67c7fa090d9793586602d5cb9982c9077c",
+          "date": "2026-10-19",
+          "evidence": {
+            "order": {
+              "balanceUsed": 0,
+              "cashier": "Lot fixture",
+              "change": 0,
+              "change_amount": 0,
+              "discount": 0,
+              "fullRefund": true,
+              "id": "refund",
+              "itemCosts": {
+                "rice": 1.01
+              },
+              "items": [
+                {
+                  "id": "rice",
+                  "name": "Rice",
+                  "price": 10,
+                  "qty": -1
+                }
+              ],
+              "manualDiscount": 0,
+              "memberId": null,
+              "note": "Original return",
+              "paid": -10,
+              "payMethod": "cash",
+              "payments": [
+                {
+                  "amount": -10,
+                  "method": "cash"
+                }
+              ],
+              "pointsEarned": 0,
+              "pointsUsed": 0,
+              "refundOf": "sale",
+              "requestSignature": "{\"refundOf\":\"sale\",\"items\":[{\"id\":\"rice\",\"qty\":1}],\"reason\":\"Original return\",\"cashier\":\"Lot fixture\",\"shiftId\":\"shift\"}",
+              "shiftId": "shift",
+              "source": "pos",
+              "status": "completed",
+              "subtotal": -10,
+              "tableNum": "",
+              "taxId": "",
+              "time": "2026-10-18T16:01:00.000Z",
+              "total": -10,
+              "trackingTokenHash": ""
+            },
+            "original": {
+              "balanceUsed": 0,
+              "cashier": "Lot fixture",
+              "change": 0,
+              "change_amount": 0,
+              "discount": 0,
+              "fullRefund": false,
+              "id": "sale",
+              "itemCosts": {
+                "rice": 1.01
+              },
+              "items": [
+                {
+                  "id": "rice",
+                  "name": "Rice",
+                  "price": 10,
+                  "qty": 1
+                }
+              ],
+              "manualDiscount": 0,
+              "memberId": null,
+              "note": "",
+              "paid": 10,
+              "payMethod": "cash",
+              "payments": [
+                {
+                  "amount": 10,
+                  "method": "cash"
+                }
+              ],
+              "pointsEarned": 0,
+              "pointsUsed": 0,
+              "refundOf": "",
+              "requestSignature": "",
+              "shiftId": "shift",
+              "source": "pos",
+              "status": "completed",
+              "subtotal": 10,
+              "tableNum": "",
+              "taxId": "",
+              "time": "2026-10-17T16:05:00.000Z",
+              "total": 10,
+              "trackingTokenHash": ""
+            },
+            "previousRefunds": [],
+            "products": [
+              {
+                "afterUnits": 4000,
+                "beforeUnits": 3000,
+                "id": "rice",
+                "referenceUnitCostCents": 101,
+                "unit": "公斤"
+              }
+            ]
+          },
+          "hash": "sha256:8d3d3b14354d7f97ea05d41560a5f4caf36ec6f0f577d2a2940e8a915dd7df94",
+          "id": "stock-9f533d41-1170-40a9-bd65-8f616533f4fb",
+          "input": {
+            "cashier": "Lot fixture",
+            "id": "refund",
+            "items": [
+              {
+                "id": "rice",
+                "qty": 1
+              }
+            ],
+            "reason": "Original return",
+            "refundOf": "sale",
+            "shiftId": "shift",
+            "time": "2026-10-18T16:01:00.000Z"
+          },
+          "method": "refundOrder",
+          "openingMaterial": null,
+          "previousHash": "sha256:ca6b17914cd9cca38486c555f8167c35d09d485b30dad76b2566493cbe3f80a5",
+          "sequence": 11,
+          "time": "2026-10-18T16:01:00.000Z"
+        },
+        {
+          "actor": {
+            "role": "owner",
+            "userId": "owner",
+            "username": "Lot fixture"
+          },
+          "afterDigest": "sha256:b09b15bcf4a39f5d63066038cc65541bd2ca6b0a08e9be9c27d3391814528635",
+          "beforeDigest": "sha256:162470cdd3ae6f5e9291e4c47f8ee6204c4c81ca3f9c005a09ad40cbae177744",
+          "date": "2026-10-17",
+          "evidence": {
+            "inventory": {
+              "beforeReceived": [
+                0
+              ],
+              "creditCents": 0,
+              "event": {
+                "amount": 6.06,
+                "date": "2026-10-17",
+                "id": "receipt",
+                "quantities": [
+                  3
+                ],
+                "time": "2026-10-17T15:55:00.000Z"
+              },
+              "items": [
+                {
+                  "catalogId": null,
+                  "name": "Rice",
+                  "productId": "rice",
+                  "qty": 3,
+                  "received": 3,
+                  "unit": "公斤",
+                  "unitCost": 2.02
+                }
+              ],
+              "kind": "receive",
+              "modern": true,
+              "purchaseId": "purchase"
+            },
+            "products": [
+              {
+                "afterUnits": 6000,
+                "beforeUnits": 3000,
+                "id": "rice",
+                "referenceUnitCostCents": 101,
+                "unit": "公斤"
+              }
+            ]
+          },
+          "hash": "sha256:6105ce4daee671ce83b132ca19f2e2f9627c6495bf0a0d5cab25a13044296cf0",
+          "id": "stock-aead7bb2-9802-44d9-bfe4-3795229ffff6",
+          "input": {
+            "expectedPurchase": "{\"date\":\"2026-10-17\",\"id\":\"purchase\",\"items\":[{\"catalogId\":null,\"name\":\"Rice\",\"productId\":\"rice\",\"qty\":3,\"received\":0,\"unit\":\"公斤\",\"unitCost\":2.02}],\"note\":\"\",\"paidDate\":\"\",\"procurement\":{\"bills\":[],\"cancel\":null,\"createdAt\":\"2026-10-17T15:55:00.000Z\",\"createdOperationId\":\"purchase-create\",\"payments\":[],\"receipts\":[],\"reversals\":[],\"revision\":1,\"version\":1},\"receivedDate\":\"\",\"status\":\"ordered\",\"supplierId\":\"supplier\",\"supplierName\":\"Fixture supplier\",\"total\":6.06}",
+            "id": "receipt",
+            "kind": "receive",
+            "purchaseId": "purchase",
+            "quantities": [
+              3
+            ],
+            "time": "2026-10-17T15:55:00.000Z"
+          },
+          "method": "applyInventoryOperation",
+          "openingMaterial": null,
+          "previousHash": "sha256:1e6898e0e1c86bf76629a14628e34d438444e9d7d1b2880b076b3f8132c2be2f",
+          "sequence": 2,
+          "time": "2026-10-17T15:55:00.000Z"
+        },
+        {
+          "actor": {
+            "role": "owner",
+            "userId": "owner",
+            "username": "Lot fixture"
+          },
+          "afterDigest": "sha256:f085385743292f07a595511fc7c676368905089f5e8d2d5e7b65a68778a09fb4",
+          "beforeDigest": "sha256:2f2b47a2e1201c0c9fc2880358817e675f0f2d4457b2cb19c9a332d6343d477e",
+          "date": "2026-10-18",
+          "evidence": {
+            "order": {
+              "balanceUsed": 0,
+              "cashier": "Lot fixture",
+              "change": 0,
+              "change_amount": 0,
+              "discount": 0,
+              "fullRefund": false,
+              "id": "sale",
+              "itemCosts": {
+                "rice": 1.01
+              },
+              "items": [
+                {
+                  "id": "rice",
+                  "name": "Rice",
+                  "price": 10,
+                  "qty": 1
+                }
+              ],
+              "manualDiscount": 0,
+              "memberId": null,
+              "note": "",
+              "paid": 10,
+              "payMethod": "cash",
+              "payments": [
+                {
+                  "amount": 10,
+                  "method": "cash"
+                }
+              ],
+              "pointsEarned": 0,
+              "pointsUsed": 0,
+              "refundOf": "",
+              "requestSignature": "",
+              "shiftId": "shift",
+              "source": "pos",
+              "status": "completed",
+              "subtotal": 10,
+              "tableNum": "",
+              "taxId": "",
+              "time": "2026-10-17T16:05:00.000Z",
+              "total": 10,
+              "trackingTokenHash": ""
+            },
+            "products": [
+              {
+                "afterUnits": 5000,
+                "beforeUnits": 6000,
+                "id": "rice",
+                "referenceUnitCostCents": 101,
+                "unit": "公斤"
+              }
+            ]
+          },
+          "hash": "sha256:142d883d6fde081ab5664acf2ce47c9d815bbe11f1132b08c5909e209b4a1d04",
+          "id": "stock-b96f2c3a-b2d1-4039-9e7f-2ddc81ea1f57",
+          "input": {
+            "balanceUsed": 0,
+            "cashier": "Lot fixture",
+            "change": 0,
+            "discount": 0,
+            "id": "sale",
+            "items": [
+              {
+                "id": "rice",
+                "name": "Rice",
+                "price": 10,
+                "qty": 1
+              }
+            ],
+            "manualDiscount": 0,
+            "memberId": "",
+            "paid": 10,
+            "payMethod": "cash",
+            "payments": [
+              {
+                "amount": 10,
+                "method": "cash"
+              }
+            ],
+            "pointsEarned": 0,
+            "pointsUsed": 0,
+            "shiftId": "shift",
+            "subtotal": 10,
+            "taxId": "",
+            "time": "2026-10-17T16:05:00.000Z",
+            "total": 10
+          },
+          "method": "checkout",
+          "openingMaterial": null,
+          "previousHash": "sha256:61269a7e0777eff060c056ebe6d06712060ce873e2ede3cc2177b035e9e6d65b",
+          "sequence": 8,
+          "time": "2026-10-17T16:05:00.000Z"
+        },
+        {
+          "actor": {
+            "role": "system",
+            "userId": "system:lot-expiry",
+            "username": "系統"
+          },
+          "afterDigest": "sha256:b5941d22663f830e4e9f3555ad95fc67c7fa090d9793586602d5cb9982c9077c",
+          "beforeDigest": "sha256:ade26298a9b92b2bb7ed370856beeab48135ea2420ed37cd921588bc15fd23ea",
+          "date": "2026-10-19",
+          "evidence": {
+            "products": [
+              {
+                "beforeUnits": 4000,
+                "id": "rice",
+                "name": "Rice",
+                "referenceUnitCostCents": 101,
+                "unit": "公斤"
+              }
+            ]
+          },
+          "hash": "sha256:ca6b17914cd9cca38486c555f8167c35d09d485b30dad76b2566493cbe3f80a5",
+          "id": "stock-c93b8c69-e2aa-4064-a86d-0ddf92ceea45",
+          "input": {
+            "action": "expire",
+            "day": "2026-10-19",
+            "epoch": "e12b0374-e9fa-40c6-a12b-1dcd1e896443",
+            "expectedStateDigest": "sha256:ade26298a9b92b2bb7ed370856beeab48135ea2420ed37cd921588bc15fd23ea",
+            "id": "lot-expire-2026-10-19-ade26298a9b92b2bb7ed3708",
+            "protocol": "pos-stock-lots/v1",
+            "storeId": "lot-fixture",
+            "time": "2026-10-18T16:01:00.000Z"
+          },
+          "method": "applyLotOperation",
+          "openingMaterial": null,
+          "previousHash": "sha256:690dc5a89258be8870dc3f1be9af961546efaa8fffb6b4b07612e0d0c43bfc47",
+          "sequence": 10,
+          "time": "2026-10-18T16:01:00.000Z"
+        },
+        {
+          "actor": {
+            "role": "owner",
+            "userId": "owner",
+            "username": "Lot fixture"
+          },
+          "afterDigest": "sha256:b3c2f992ac52cf066cd58f06da6b3cae8e179d4dcd1543079370a0c609fa2920",
+          "beforeDigest": "sha256:b09b15bcf4a39f5d63066038cc65541bd2ca6b0a08e9be9c27d3391814528635",
+          "date": "2026-10-17",
+          "evidence": {
+            "products": []
+          },
+          "hash": "sha256:d9f423c38a74cf16877d735942c0c8fce654e4ee81e47fcd00c12808c43c424e",
+          "id": "stock-d2165331-b291-4678-bb71-8f9a7b7c356d",
+          "input": {
+            "action": "activate",
+            "epoch": "e12b0374-e9fa-40c6-a12b-1dcd1e896443",
+            "expectedStateDigest": "sha256:b09b15bcf4a39f5d63066038cc65541bd2ca6b0a08e9be9c27d3391814528635",
+            "id": "lot-fixture-1",
+            "protocol": "pos-stock-lots/v1",
+            "storeId": "lot-fixture",
+            "time": "2026-10-17T15:55:00.000Z",
+            "timeZone": "Asia/Taipei"
+          },
+          "method": "applyLotOperation",
+          "openingMaterial": null,
+          "previousHash": "sha256:6105ce4daee671ce83b132ca19f2e2f9627c6495bf0a0d5cab25a13044296cf0",
+          "sequence": 3,
+          "time": "2026-10-17T15:55:00.000Z"
+        }
+      ],
+      "stockCostOperations": [
+        {
+          "actorId": "owner",
+          "id": "[\"applyInventoryOperation\",\"receipt\"]",
+          "method": "applyInventoryOperation",
+          "operationId": "receipt",
+          "receipt": {
+            "eventHash": "sha256:6105ce4daee671ce83b132ca19f2e2f9627c6495bf0a0d5cab25a13044296cf0",
+            "eventId": "stock-aead7bb2-9802-44d9-bfe4-3795229ffff6",
+            "id": "receipt",
+            "protocol": "pos-stock-cost/v1",
+            "sequence": 2,
+            "sourceMethod": "applyInventoryOperation",
+            "stateDigest": "sha256:b09b15bcf4a39f5d63066038cc65541bd2ca6b0a08e9be9c27d3391814528635",
+            "success": true
+          },
+          "signature": "{\"expectedPurchase\":\"{\\\"date\\\":\\\"2026-10-17\\\",\\\"id\\\":\\\"purchase\\\",\\\"items\\\":[{\\\"catalogId\\\":null,\\\"name\\\":\\\"Rice\\\",\\\"productId\\\":\\\"rice\\\",\\\"qty\\\":3,\\\"received\\\":0,\\\"unit\\\":\\\"公斤\\\",\\\"unitCost\\\":2.02}],\\\"note\\\":\\\"\\\",\\\"paidDate\\\":\\\"\\\",\\\"procurement\\\":{\\\"bills\\\":[],\\\"cancel\\\":null,\\\"createdAt\\\":\\\"2026-10-17T15:55:00.000Z\\\",\\\"createdOperationId\\\":\\\"purchase-create\\\",\\\"payments\\\":[],\\\"receipts\\\":[],\\\"reversals\\\":[],\\\"revision\\\":1,\\\"version\\\":1},\\\"receivedDate\\\":\\\"\\\",\\\"status\\\":\\\"ordered\\\",\\\"supplierId\\\":\\\"supplier\\\",\\\"supplierName\\\":\\\"Fixture supplier\\\",\\\"total\\\":6.06}\",\"id\":\"receipt\",\"kind\":\"receive\",\"purchaseId\":\"purchase\",\"quantities\":[3],\"time\":\"2026-10-17T15:55:00.000Z\"}"
+        },
+        {
+          "actorId": "system:lot-expiry",
+          "id": "[\"applyLotOperation\",\"lot-expire-2026-10-18-692e91b3e5feff8c3f10326a\"]",
+          "method": "applyLotOperation",
+          "operationId": "lot-expire-2026-10-18-692e91b3e5feff8c3f10326a",
+          "receipt": {
+            "eventHash": "sha256:61269a7e0777eff060c056ebe6d06712060ce873e2ede3cc2177b035e9e6d65b",
+            "eventId": "stock-10da5fcb-3e22-4d00-9d52-2388eee5285d",
+            "id": "lot-expire-2026-10-18-692e91b3e5feff8c3f10326a",
+            "protocol": "pos-stock-cost/v1",
+            "sequence": 7,
+            "sourceMethod": "applyLotOperation",
+            "stateDigest": "sha256:2f2b47a2e1201c0c9fc2880358817e675f0f2d4457b2cb19c9a332d6343d477e",
+            "success": true
+          },
+          "signature": "{\"action\":\"expire\",\"day\":\"2026-10-18\",\"epoch\":\"e12b0374-e9fa-40c6-a12b-1dcd1e896443\",\"expectedStateDigest\":\"sha256:692e91b3e5feff8c3f10326a210e8315576d5acc0c608dd2c0c9ece4fc10fe7b\",\"id\":\"lot-expire-2026-10-18-692e91b3e5feff8c3f10326a\",\"protocol\":\"pos-stock-lots/v1\",\"storeId\":\"lot-fixture\",\"time\":\"2026-10-17T16:05:00.000Z\"}"
+        },
+        {
+          "actorId": "system:lot-expiry",
+          "id": "[\"applyLotOperation\",\"lot-expire-2026-10-19-ade26298a9b92b2bb7ed3708\"]",
+          "method": "applyLotOperation",
+          "operationId": "lot-expire-2026-10-19-ade26298a9b92b2bb7ed3708",
+          "receipt": {
+            "eventHash": "sha256:ca6b17914cd9cca38486c555f8167c35d09d485b30dad76b2566493cbe3f80a5",
+            "eventId": "stock-c93b8c69-e2aa-4064-a86d-0ddf92ceea45",
+            "id": "lot-expire-2026-10-19-ade26298a9b92b2bb7ed3708",
+            "protocol": "pos-stock-cost/v1",
+            "sequence": 10,
+            "sourceMethod": "applyLotOperation",
+            "stateDigest": "sha256:b5941d22663f830e4e9f3555ad95fc67c7fa090d9793586602d5cb9982c9077c",
+            "success": true
+          },
+          "signature": "{\"action\":\"expire\",\"day\":\"2026-10-19\",\"epoch\":\"e12b0374-e9fa-40c6-a12b-1dcd1e896443\",\"expectedStateDigest\":\"sha256:ade26298a9b92b2bb7ed370856beeab48135ea2420ed37cd921588bc15fd23ea\",\"id\":\"lot-expire-2026-10-19-ade26298a9b92b2bb7ed3708\",\"protocol\":\"pos-stock-lots/v1\",\"storeId\":\"lot-fixture\",\"time\":\"2026-10-18T16:01:00.000Z\"}"
+        },
+        {
+          "actorId": "owner",
+          "id": "[\"applyLotOperation\",\"lot-fixture-1\"]",
+          "method": "applyLotOperation",
+          "operationId": "lot-fixture-1",
+          "receipt": {
+            "eventHash": "sha256:d9f423c38a74cf16877d735942c0c8fce654e4ee81e47fcd00c12808c43c424e",
+            "eventId": "stock-d2165331-b291-4678-bb71-8f9a7b7c356d",
+            "id": "lot-fixture-1",
+            "protocol": "pos-stock-cost/v1",
+            "sequence": 3,
+            "sourceMethod": "applyLotOperation",
+            "stateDigest": "sha256:b3c2f992ac52cf066cd58f06da6b3cae8e179d4dcd1543079370a0c609fa2920",
+            "success": true
+          },
+          "signature": "{\"action\":\"activate\",\"epoch\":\"e12b0374-e9fa-40c6-a12b-1dcd1e896443\",\"expectedStateDigest\":\"sha256:b09b15bcf4a39f5d63066038cc65541bd2ca6b0a08e9be9c27d3391814528635\",\"id\":\"lot-fixture-1\",\"protocol\":\"pos-stock-lots/v1\",\"storeId\":\"lot-fixture\",\"time\":\"2026-10-17T15:55:00.000Z\",\"timeZone\":\"Asia/Taipei\"}"
+        },
+        {
+          "actorId": "staff",
+          "id": "[\"applyLotOperation\",\"lot-fixture-10\"]",
+          "method": "applyLotOperation",
+          "operationId": "lot-fixture-10",
+          "receipt": {
+            "eventHash": "sha256:4b61c7c37951932efbe08fe8772992bab7649f5ff3b63198e50f800cec0c76c6",
+            "eventId": "stock-670910a8-2b5a-434c-9cf1-b233dd2bf48f",
+            "id": "lot-fixture-10",
+            "protocol": "pos-stock-cost/v1",
+            "sequence": 13,
+            "sourceMethod": "applyLotOperation",
+            "stateDigest": "sha256:bd1a5b930148fec038c4ff242d9724dcba9874905f6945da05f5a7cc551b58e1",
+            "success": true
+          },
+          "signature": "{\"action\":\"dispose\",\"epoch\":\"e12b0374-e9fa-40c6-a12b-1dcd1e896443\",\"expectedStateDigest\":\"sha256:3dcc912874c09af700ae1e3b20859cf613f2796ad8f0c3f1b13784eb217a2dca\",\"id\":\"lot-fixture-10\",\"locationId\":\"main\",\"lotId\":\"lot-stock-1dfb209b-54b4-4b2a-a540-9ac8af349f93\",\"protocol\":\"pos-stock-lots/v1\",\"quantityUnits\":1000,\"reason\":\"Checked and discarded expired package\",\"storeId\":\"lot-fixture\",\"time\":\"2026-10-18T16:01:00.000Z\"}"
+        },
+        {
+          "actorId": "owner",
+          "id": "[\"applyLotOperation\",\"lot-fixture-3\"]",
+          "method": "applyLotOperation",
+          "operationId": "lot-fixture-3",
+          "receipt": {
+            "eventHash": "sha256:2c40a0a9f34d5cca3de9d0c4ca1084c415348af9400f69762dfc57b721d2aace",
+            "eventId": "stock-7f90bb9a-8258-49ad-b663-6bdd3b261ddc",
+            "id": "lot-fixture-3",
+            "protocol": "pos-stock-cost/v1",
+            "sequence": 4,
+            "sourceMethod": "applyLotOperation",
+            "stateDigest": "sha256:f5814308d50eedf567be194934af12b5726a8a4ce3a637165d382b43c213e68e",
+            "success": true
+          },
+          "signature": "{\"action\":\"label\",\"code\":\"later\",\"epoch\":\"e12b0374-e9fa-40c6-a12b-1dcd1e896443\",\"expectedStateDigest\":\"sha256:b3c2f992ac52cf066cd58f06da6b3cae8e179d4dcd1543079370a0c609fa2920\",\"expiryDate\":\"2026-10-19\",\"id\":\"lot-fixture-3\",\"protocol\":\"pos-stock-lots/v1\",\"quantityUnits\":3000,\"receivedAt\":null,\"sourceId\":\"opening:opening:0\",\"storeId\":\"lot-fixture\",\"time\":\"2026-10-17T15:55:00.000Z\"}"
+        },
+        {
+          "actorId": "owner",
+          "id": "[\"applyLotOperation\",\"lot-fixture-4\"]",
+          "method": "applyLotOperation",
+          "operationId": "lot-fixture-4",
+          "receipt": {
+            "eventHash": "sha256:12772ec75a355c355e671cd2bc4f28471706575dae4cc7c3e72f9d4a2eef2ac9",
+            "eventId": "stock-1dfb209b-54b4-4b2a-a540-9ac8af349f93",
+            "id": "lot-fixture-4",
+            "protocol": "pos-stock-cost/v1",
+            "sequence": 5,
+            "sourceMethod": "applyLotOperation",
+            "stateDigest": "sha256:604d180882dca65147c87dbb29612525126349d578e8634ed10c1687c4c81882",
+            "success": true
+          },
+          "signature": "{\"action\":\"label\",\"code\":\"soon\",\"epoch\":\"e12b0374-e9fa-40c6-a12b-1dcd1e896443\",\"expectedStateDigest\":\"sha256:f5814308d50eedf567be194934af12b5726a8a4ce3a637165d382b43c213e68e\",\"expiryDate\":\"2026-10-18\",\"id\":\"lot-fixture-4\",\"protocol\":\"pos-stock-lots/v1\",\"quantityUnits\":3000,\"receivedAt\":null,\"sourceId\":\"business:stock-aead7bb2-9802-44d9-bfe4-3795229ffff6:0\",\"storeId\":\"lot-fixture\",\"time\":\"2026-10-17T15:55:00.000Z\"}"
+        },
+        {
+          "actorId": "owner",
+          "id": "[\"applyLotOperation\",\"lot-fixture-5\"]",
+          "method": "applyLotOperation",
+          "operationId": "lot-fixture-5",
+          "receipt": {
+            "eventHash": "sha256:d6c5141255f18530d8ee8940a40233d24ea25fd97c090baf694f6c6e89879c1b",
+            "eventId": "stock-43bcfb31-ac13-45c7-b13e-b02902310a09",
+            "id": "lot-fixture-5",
+            "protocol": "pos-stock-cost/v1",
+            "sequence": 6,
+            "sourceMethod": "applyLotOperation",
+            "stateDigest": "sha256:692e91b3e5feff8c3f10326a210e8315576d5acc0c608dd2c0c9ece4fc10fe7b",
+            "success": true
+          },
+          "signature": "{\"action\":\"track\",\"epoch\":\"e12b0374-e9fa-40c6-a12b-1dcd1e896443\",\"expectedStateDigest\":\"sha256:604d180882dca65147c87dbb29612525126349d578e8634ed10c1687c4c81882\",\"id\":\"lot-fixture-5\",\"productId\":\"rice\",\"protocol\":\"pos-stock-lots/v1\",\"required\":true,\"storeId\":\"lot-fixture\",\"time\":\"2026-10-17T15:55:00.000Z\"}"
+        },
+        {
+          "actorId": "owner",
+          "id": "[\"applyRestaurantOperation\",\"restaurant-7\"]",
+          "method": "applyRestaurantOperation",
+          "operationId": "restaurant-7",
+          "receipt": {
+            "eventHash": "sha256:690dc5a89258be8870dc3f1be9af961546efaa8fffb6b4b07612e0d0c43bfc47",
+            "eventId": "stock-957b70bb-3894-427e-96e7-af54d8a920e0",
+            "id": "restaurant-7",
+            "protocol": "pos-stock-cost/v1",
+            "sequence": 9,
+            "sourceMethod": "applyRestaurantOperation",
+            "stateDigest": "sha256:ade26298a9b92b2bb7ed370856beeab48135ea2420ed37cd921588bc15fd23ea",
+            "success": true
+          },
+          "signature": "{\"action\":\"create\",\"channel\":\"walkin\",\"contact\":\"\",\"customer\":\"Fixture\",\"day\":\"2026-10-18\",\"id\":\"restaurant-7\",\"items\":[{\"id\":\"rice\",\"price\":10,\"qty\":1}],\"kind\":\"restaurant\",\"note\":\"\",\"slot\":\"12:00\",\"time\":\"2026-10-17T16:05:00.000Z\"}"
+        },
+        {
+          "actorId": "owner",
+          "id": "[\"applyRestaurantOperation\",\"restaurant-9\"]",
+          "method": "applyRestaurantOperation",
+          "operationId": "restaurant-9",
+          "receipt": {
+            "eventHash": "sha256:1623e342ff4afc9e7f764db1d8121bd3b780d0547a0804cafe14914543986eb6",
+            "eventId": "stock-8a79de8c-e7e8-42de-b4ff-3d53e4f96e9a",
+            "id": "restaurant-9",
+            "protocol": "pos-stock-cost/v1",
+            "sequence": 12,
+            "sourceMethod": "applyRestaurantOperation",
+            "stateDigest": "sha256:3dcc912874c09af700ae1e3b20859cf613f2796ad8f0c3f1b13784eb217a2dca",
+            "success": true
+          },
+          "signature": "{\"action\":\"cancel\",\"entryId\":\"restaurant-7\",\"expectedVersion\":1,\"id\":\"restaurant-9\",\"kind\":\"restaurant\",\"reason\":\"Unused expired batch\",\"time\":\"2026-10-18T16:01:00.000Z\"}"
+        },
+        {
+          "actorId": "owner",
+          "id": "[\"applyStockCostOperation\",\"opening\"]",
+          "method": "applyStockCostOperation",
+          "operationId": "opening",
+          "receipt": {
+            "eventHash": "sha256:1e6898e0e1c86bf76629a14628e34d438444e9d7d1b2880b076b3f8132c2be2f",
+            "eventId": "stock-87a050e2-2aa0-46f4-ae50-adeb1fe14982",
+            "id": "opening",
+            "protocol": "pos-stock-cost/v1",
+            "sequence": 1,
+            "stateDigest": "sha256:162470cdd3ae6f5e9291e4c47f8ee6204c4c81ca3f9c005a09ad40cbae177744",
+            "success": true,
+            "valuation": {
+              "categories": {
+                "available": {
+                  "complete": true,
+                  "knownValueCents": 303,
+                  "unvalued": [],
+                  "valueCents": 303
+                },
+                "consumed": {
+                  "complete": true,
+                  "knownValueCents": 0,
+                  "unvalued": [],
+                  "valueCents": 0
+                },
+                "reserved": {
+                  "complete": true,
+                  "knownValueCents": 0,
+                  "unvalued": [],
+                  "valueCents": 0
+                },
+                "supplierReturned": {
+                  "complete": true,
+                  "knownValueCents": 0,
+                  "unvalued": [],
+                  "valueCents": 0
+                },
+                "wasted": {
+                  "complete": true,
+                  "knownValueCents": 0,
+                  "unvalued": [],
+                  "valueCents": 0
+                }
+              },
+              "complete": true,
+              "knownSourceValueCents": 303,
+              "ownedKnownValueCents": 303,
+              "ownedValueCents": 303,
+              "totalSourceValueCents": 303
+            }
+          },
+          "signature": "{\"action\":\"open\",\"epoch\":\"e12b0374-e9fa-40c6-a12b-1dcd1e896443\",\"id\":\"opening\",\"overrides\":[],\"protocol\":\"pos-stock-cost/v1\",\"reviewed\":true,\"snapshotDigest\":\"sha256:9e399a76a2b79d48dcda4905bd3f9cdd87296b2071fe3e7ec4e1362a71bc1b6d\",\"storeId\":\"lot-fixture\",\"time\":\"2026-10-17T15:55:00.000Z\"}"
+        },
+        {
+          "actorId": "owner",
+          "id": "[\"checkout\",\"sale\"]",
+          "method": "checkout",
+          "operationId": "sale",
+          "receipt": {
+            "eventHash": "sha256:142d883d6fde081ab5664acf2ce47c9d815bbe11f1132b08c5909e209b4a1d04",
+            "eventId": "stock-b96f2c3a-b2d1-4039-9e7f-2ddc81ea1f57",
+            "id": "sale",
+            "protocol": "pos-stock-cost/v1",
+            "sequence": 8,
+            "sourceMethod": "checkout",
+            "stateDigest": "sha256:f085385743292f07a595511fc7c676368905089f5e8d2d5e7b65a68778a09fb4",
+            "success": true
+          },
+          "signature": "{\"balanceUsed\":0,\"cashier\":\"Lot fixture\",\"change\":0,\"discount\":0,\"id\":\"sale\",\"items\":[{\"id\":\"rice\",\"name\":\"Rice\",\"price\":10,\"qty\":1}],\"manualDiscount\":0,\"memberId\":\"\",\"paid\":10,\"payMethod\":\"cash\",\"payments\":[{\"amount\":10,\"method\":\"cash\"}],\"pointsEarned\":0,\"pointsUsed\":0,\"shiftId\":\"shift\",\"subtotal\":10,\"taxId\":\"\",\"time\":\"2026-10-17T16:05:00.000Z\",\"total\":10}"
+        },
+        {
+          "actorId": "owner",
+          "id": "[\"refundOrder\",\"refund\"]",
+          "method": "refundOrder",
+          "operationId": "refund",
+          "receipt": {
+            "eventHash": "sha256:8d3d3b14354d7f97ea05d41560a5f4caf36ec6f0f577d2a2940e8a915dd7df94",
+            "eventId": "stock-9f533d41-1170-40a9-bd65-8f616533f4fb",
+            "id": "refund",
+            "protocol": "pos-stock-cost/v1",
+            "sequence": 11,
+            "sourceMethod": "refundOrder",
+            "stateDigest": "sha256:ff9e9e51c6365332229e9ebf8ed3ef284547ac74eb099977cacb0e804fce12cd",
+            "success": true
+          },
+          "signature": "{\"cashier\":\"Lot fixture\",\"id\":\"refund\",\"items\":[{\"id\":\"rice\",\"qty\":1}],\"reason\":\"Original return\",\"refundOf\":\"sale\",\"shiftId\":\"shift\",\"time\":\"2026-10-18T16:01:00.000Z\"}"
+        }
+      ],
+      "_revision": "2bcfc43c24d85939aa12bcaeedbe68681a6eea13e926ee2aa19fd2d3dedc8025"
+    },
+    "protection": {
+      "version": 1,
+      "books": [],
+      "snapshots": [],
+      "originalIds": [],
+      "events": []
+    },
+    "checksum": "sha256:57f455853a4bffe69046a7bfd1c5cf99702549138d2fc0696752fb7cb46eefed"
+  }
+}

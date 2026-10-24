@@ -1,0 +1,20 @@
+{
+  "protocol": "pos-migration-draft/v1",
+  "id": "original-whole-cutover-20261018",
+  "source": {"system": "原系統匯出", "company": "原商家"},
+  "tables": [
+    {"entity": "customers", "columns": ["name", "phone"], "rows": [{"externalId": "C0001", "values": ["原客戶", "0900000000"]}]},
+    {"entity": "suppliers", "columns": ["name"], "rows": [{"externalId": "S0001", "values": ["原供應商"]}]},
+    {"entity": "opening-receivables", "columns": ["customerExternalId", "invoiceNumber", "documentType", "invoiceDate", "dueDate", "outstanding", "currency", "originalAmount", "paidAmount"], "rows": [
+      {"externalId": "AR0001", "values": ["C0001", "AR-ORIGINAL-001", "invoice", "2026-10-01", "2026-10-31", "600.00", "TWD", "1000.00", "400.00"]},
+      {"externalId": "CR0001", "values": ["C0001", "AR-CREDIT-001", "credit", "2026-10-02", "", "-100.00", "TWD", "100.00", "0.00"]},
+      {"externalId": "AR0000", "values": ["C0001", "AR-SETTLED-001", "invoice", "2026-10-01", "2026-10-31", "0.00", "TWD", "10.00", "10.00"]}
+    ]},
+    {"entity": "products", "columns": ["name", "price", "unit", "supplier_id", "stock"], "rows": [{"externalId": "P0001", "values": ["原商品", "150", "份", "S0001", "12.5"]}]},
+    {"entity": "opening-stock", "columns": ["productExternalId", "quantity", "value", "unit", "currency"], "rows": [{"externalId": "ST0001", "values": ["P0001", "12.5", "250.01", "份", "TWD"]}]},
+    {"entity": "opening-payables", "columns": ["supplierExternalId", "invoiceNumber", "documentType", "invoiceDate", "dueDate", "outstanding", "currency", "originalAmount", "paidAmount"], "rows": [
+      {"externalId": "AP0001", "values": ["S0001", "AP-ORIGINAL-001", "invoice", "2026-10-03", "2026-11-01", "900.00", "TWD", "1200.00", "300.00"]},
+      {"externalId": "SC0001", "values": ["S0001", "AP-CREDIT-001", "credit", "2026-10-04", "", "200.00", "TWD", "200.00", "0.00"]}
+    ]}
+  ]
+}

@@ -1,0 +1,149 @@
+{
+  "book": {
+    "products": [
+      {
+        "id": "migr-p-a2a41112dacc0117b2bf822f501083f4bb7a97b2",
+        "name": "Linked product",
+        "category": "",
+        "price": 120,
+        "cost": 0,
+        "stock": 0,
+        "barcode": "",
+        "unit": "piece",
+        "noBarcode": false,
+        "imageUrl": "",
+        "expiryDate": "",
+        "supplierId": "",
+        "reorderLevel": 0
+      }
+    ],
+    "members": [],
+    "suppliers": [
+      {
+        "name": "Source vendor",
+        "contact": "",
+        "phone": "",
+        "payTerms": "",
+        "note": "",
+        "catalog": [],
+        "id": "migr-s-82fb3426fed0e1f3c10a67e8516f6d8b90e70500"
+      }
+    ],
+    "auditLog": [
+      {
+        "id": "master-migration:migration-65eb7514519428516184fdacd41225a760b6bbca9b8e9ef0",
+        "action": "AGENT_MASTER_MIGRATION",
+        "level": "info",
+        "label": "Agent 主檔搬入",
+        "userId": "owner",
+        "username": "Owner",
+        "role": "owner",
+        "timestamp": "2026-10-18T00:00:00.000Z",
+        "detail": "{\"protocol\":\"pos-master-migration-receipt/v1\",\"success\":true,\"id\":\"migration-65eb7514519428516184fdacd41225a760b6bbca9b8e9ef0\",\"signature\":\"{\\\"choices\\\":[],\\\"id\\\":\\\"migration-65eb7514519428516184fdacd41225a760b6bbca9b8e9ef0\\\",\\\"protocol\\\":\\\"pos-master-migration/v1\\\",\\\"review\\\":{\\\"counts\\\":{\\\"blocked\\\":0,\\\"create\\\":1,\\\"keep\\\":0,\\\"unchanged\\\":0,\\\"update\\\":0},\\\"createdAt\\\":1792321363160,\\\"dataDigest\\\":\\\"9527e6d62194190471a3903df0880eac0214ca288241f74cca1b95a7465d5c10\\\",\\\"inputDigest\\\":\\\"2c067a59402cb4330df45ab30682d0b194f66067f567635df83f4d9ecb6ec29c\\\",\\\"protocol\\\":\\\"pos-master-migration-review/v1\\\",\\\"rowsDigest\\\":\\\"916ad55ca0874384fff57f7b9401a1a32ff077641a1cb2d02223b3968ca03099\\\",\\\"scope\\\":{\\\"epoch\\\":\\\"epoch\\\",\\\"protocol\\\":\\\"pos-private-draft-context/v1\\\",\\\"role\\\":\\\"owner\\\",\\\"storeId\\\":\\\"link-probe\\\",\\\"userId\\\":\\\"owner\\\"}},\\\"scope\\\":{\\\"epoch\\\":\\\"epoch\\\",\\\"protocol\\\":\\\"pos-private-draft-context/v1\\\",\\\"role\\\":\\\"owner\\\",\\\"storeId\\\":\\\"link-probe\\\",\\\"userId\\\":\\\"owner\\\"},\\\"sourceText\\\":\\\"{\\\\\\\"protocol\\\\\\\":\\\\\\\"pos-tabular-migration/v1\\\\\\\",\\\\\\\"source\\\\\\\":{\\\\\\\"system\\\\\\\":\\\\\\\"Old export\\\\\\\",\\\\\\\"company\\\\\\\":\\\\\\\"Company\\\\\\\"},\\\\\\\"file\\\\\\\":{\\\\\\\"name\\\\\\\":\\\\\\\"suppliers.csv\\\\\\\",\\\\\\\"text\\\\\\\":\\\\\\\"Supplier Code,Name\\\\\\\\nS0001,Source vendor\\\\\\\\n\\\\\\\",\\\\\\\"delimiter\\\\\\\":\\\\\\\",\\\\\\\"},\\\\\\\"plan\\\\\\\":{\\\\\\\"entity\\\\\\\":\\\\\\\"suppliers\\\\\\\",\\\\\\\"externalId\\\\\\\":0,\\\\\\\"mapping\\\\\\\":[\\\\\\\"\\\\\\\",\\\\\\\"name\\\\\\\"],\\\\\\\"unit\\\\\\\":\\\\\\\"\\\\\\\",\\\\\\\"repairs\\\\\\\":[]},\\\\\\\"id\\\\\\\":\\\\\\\"table-e18054686a1837db100a13cad90f2f01918f38a3203334b3\\\\\\\"}\\\"}\",\"sequence\":1,\"previousHash\":null,\"source\":{\"system\":\"Old export\",\"company\":\"Company\"},\"counts\":{\"create\":1,\"update\":0,\"keep\":0,\"unchanged\":0,\"blocked\":0},\"rows\":[{\"table\":0,\"row\":0,\"entity\":\"suppliers\",\"externalId\":\"S0001\",\"key\":\"[\\\"Old export\\\",\\\"Company\\\",\\\"suppliers\\\",\\\"S0001\\\"]\",\"sourceDigest\":\"c02f78ba98974253cc93f9a8fd3351cc0a80b40d8a33e6a05ed938e6ee94f848\",\"targetId\":\"migr-s-82fb3426fed0e1f3c10a67e8516f6d8b90e70500\",\"action\":\"create\",\"applied\":{\"name\":\"Source vendor\",\"contact\":\"\",\"phone\":\"\",\"payTerms\":\"\",\"note\":\"\"},\"sourceValues\":{\"name\":\"Source vendor\"}}],\"actor\":{\"userId\":\"owner\",\"username\":\"Owner\",\"role\":\"owner\"},\"time\":\"2026-10-18T00:00:00.000Z\",\"hash\":\"12ee84eb39e8ae6e1c9771820e0821eb8000b5e02b7c6e1ff1315cbe7a32a52c\"}"
+      },
+      {
+        "id": "master-migration:migration-888810dcd982c3eb43d1e6d9f01e4b34281f397a76d6e331",
+        "action": "AGENT_MASTER_MIGRATION",
+        "level": "info",
+        "label": "Agent 主檔搬入",
+        "userId": "owner",
+        "username": "Owner",
+        "role": "owner",
+        "timestamp": "2026-10-18T00:00:00.000Z",
+        "detail": "{\"protocol\":\"pos-master-migration-receipt/v1\",\"success\":true,\"id\":\"migration-888810dcd982c3eb43d1e6d9f01e4b34281f397a76d6e331\",\"signature\":\"{\\\"choices\\\":[],\\\"id\\\":\\\"migration-888810dcd982c3eb43d1e6d9f01e4b34281f397a76d6e331\\\",\\\"protocol\\\":\\\"pos-master-migration/v1\\\",\\\"review\\\":{\\\"counts\\\":{\\\"blocked\\\":0,\\\"create\\\":1,\\\"keep\\\":0,\\\"unchanged\\\":0,\\\"update\\\":0},\\\"createdAt\\\":1792321363166,\\\"dataDigest\\\":\\\"d10e997426f41e9e7f3f97a55624a2645feb30ce33d4c93d052a0ad26a0cfdca\\\",\\\"inputDigest\\\":\\\"41c466c1a87088b582b8d53429e20b598b97cadcbd9c3feb4ea22b91375e3257\\\",\\\"protocol\\\":\\\"pos-master-migration-review/v1\\\",\\\"rowsDigest\\\":\\\"5de4abd72b5c6d0e54ffa33489568ee85e810237d50a87ebc656954b42544800\\\",\\\"scope\\\":{\\\"epoch\\\":\\\"epoch\\\",\\\"protocol\\\":\\\"pos-private-draft-context/v1\\\",\\\"role\\\":\\\"owner\\\",\\\"storeId\\\":\\\"link-probe\\\",\\\"userId\\\":\\\"owner\\\"}},\\\"scope\\\":{\\\"epoch\\\":\\\"epoch\\\",\\\"protocol\\\":\\\"pos-private-draft-context/v1\\\",\\\"role\\\":\\\"owner\\\",\\\"storeId\\\":\\\"link-probe\\\",\\\"userId\\\":\\\"owner\\\"},\\\"sourceText\\\":\\\"{\\\\\\\"protocol\\\\\\\":\\\\\\\"pos-tabular-migration/v1\\\\\\\",\\\\\\\"source\\\\\\\":{\\\\\\\"system\\\\\\\":\\\\\\\"Old export\\\\\\\",\\\\\\\"company\\\\\\\":\\\\\\\"Company\\\\\\\"},\\\\\\\"file\\\\\\\":{\\\\\\\"name\\\\\\\":\\\\\\\"products.csv\\\\\\\",\\\\\\\"text\\\\\\\":\\\\\\\"Product Code,Name,Unit,Price,Supplier Code\\\\\\\\nP0001,Linked product,piece,120,S0001\\\\\\\\n\\\\\\\",\\\\\\\"delimiter\\\\\\\":\\\\\\\",\\\\\\\"},\\\\\\\"plan\\\\\\\":{\\\\\\\"entity\\\\\\\":\\\\\\\"products\\\\\\\",\\\\\\\"externalId\\\\\\\":0,\\\\\\\"mapping\\\\\\\":[\\\\\\\"\\\\\\\",\\\\\\\"name\\\\\\\",\\\\\\\"unit\\\\\\\",\\\\\\\"price\\\\\\\",\\\\\\\"supplier\\\\\\\"],\\\\\\\"unit\\\\\\\":\\\\\\\"\\\\\\\",\\\\\\\"repairs\\\\\\\":[]},\\\\\\\"id\\\\\\\":\\\\\\\"table-4e8625dc312caeb2cadabacdbb54c1bbff4c656d100e4698\\\\\\\"}\\\"}\",\"sequence\":2,\"previousHash\":\"12ee84eb39e8ae6e1c9771820e0821eb8000b5e02b7c6e1ff1315cbe7a32a52c\",\"source\":{\"system\":\"Old export\",\"company\":\"Company\"},\"counts\":{\"create\":1,\"update\":0,\"keep\":0,\"unchanged\":0,\"blocked\":0},\"rows\":[{\"table\":0,\"row\":0,\"entity\":\"products\",\"externalId\":\"P0001\",\"key\":\"[\\\"Old export\\\",\\\"Company\\\",\\\"products\\\",\\\"P0001\\\"]\",\"sourceDigest\":\"aad97ce86603d5c6eee96cf5c569664bb2f4b6cbab929448b824571d9248e71f\",\"targetId\":\"migr-p-a2a41112dacc0117b2bf822f501083f4bb7a97b2\",\"action\":\"create\",\"applied\":{\"name\":\"Linked product\",\"barcode\":\"\",\"unit\":\"piece\",\"price\":120,\"cost\":0,\"category\":\"\",\"supplierId\":\"\"},\"sourceValues\":{\"name\":\"Linked product\",\"unit\":\"piece\",\"price\":120}}],\"actor\":{\"userId\":\"owner\",\"username\":\"Owner\",\"role\":\"owner\"},\"time\":\"2026-10-18T00:00:00.000Z\",\"hash\":\"c0cf6ed3723a9d5047d6e0b86dfa6763e4b319af9c437c3f774dcd69b660dca8\"}"
+      }
+    ],
+    "settings": [
+      {
+        "key": "agentMasterMigrationVersionFence",
+        "value": "1"
+      },
+      {
+        "key": "agentMasterMigrationHead",
+        "value": "\"c0cf6ed3723a9d5047d6e0b86dfa6763e4b319af9c437c3f774dcd69b660dca8\""
+      },
+      {
+        "key": "agentTabularMigrationVersionFence",
+        "value": "1"
+      }
+    ],
+    "users": [
+      {
+        "id": "owner",
+        "username": "Owner",
+        "role": "owner"
+      }
+    ],
+    "stockCostEntries": [],
+    "stockCostOperations": []
+  },
+  "source": {
+    "system": "Old export",
+    "company": "Company"
+  },
+  "scope": {
+    "protocol": "pos-private-draft-context/v1",
+    "storeId": "link-probe",
+    "epoch": "epoch",
+    "userId": "owner",
+    "role": "owner"
+  },
+  "actor": {
+    "userId": "owner",
+    "username": "Owner",
+    "role": "owner"
+  },
+  "originalProduct": {
+    "protocol": "pos-tabular-migration/v1",
+    "source": {
+      "system": "Old export",
+      "company": "Company"
+    },
+    "file": {
+      "name": "products.csv",
+      "text": "Product Code,Name,Unit,Price,Supplier Code\nP0001,Linked product,piece,120,S0001\n",
+      "delimiter": ","
+    },
+    "plan": {
+      "entity": "products",
+      "externalId": 0,
+      "mapping": [
+        "",
+        "name",
+        "unit",
+        "price",
+        "supplier"
+      ],
+      "unit": "",
+      "repairs": []
+    },
+    "id": "table-4e8625dc312caeb2cadabacdbb54c1bbff4c656d100e4698"
+  },
+  "again": {
+    "protocol": "pos-tabular-migration/v1",
+    "source": {
+      "system": "Old export",
+      "company": "Company"
+    },
+    "file": {
+      "name": "products-again.csv",
+      "text": "Product Code,Name,Unit,Price,Supplier Code\nP0001,Linked product,piece,120,S0001\n",
+      "delimiter": ","
+    },
+    "plan": {
+      "entity": "products",
+      "externalId": 0,
+      "mapping": [
+        "",
+        "name",
+        "unit",
+        "price",
+        "supplier"
+      ],
+      "unit": "",
+      "repairs": []
+    },
+    "id": "table-d2daba32b56ca893e56708596d6cbe24627e781a514dea30"
+  },
+  "supplierId": "migr-s-82fb3426fed0e1f3c10a67e8516f6d8b90e70500"
+}

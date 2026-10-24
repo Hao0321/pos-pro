@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "productVersion": "2.16.0",
-  "objective": "把 ERP 全部完成，讓老人、小孩會使用；建單協議與全系統操作極簡、一鍵自動",
+  "objective": "好繼續規劃並持續完成！要老人、小孩都會使用！！還有建單協議做到極致傻瓜化！然後整個系統做成傻瓜、一鍵自動之類的！！！",
   "completionScope": "public",
   "allFeaturesFree": true,
   "requiredIds": [
@@ -35,7 +35,15 @@
     "delivery.installation",
     "update.client-check",
     "update.release-channel",
-    "operations.scale"
+    "operations.scale",
+    "migration.switching",
+    "reservations.capacity",
+    "reservations.journey",
+    "reservations.deposits",
+    "loyalty.programs",
+    "loyalty.entitlements",
+    "loyalty.customer-experience",
+    "integration.community-stores"
   ],
   "capabilities": [
     {
@@ -43,14 +51,14 @@
       "name": "預設簡易首頁、白話搜尋、常用工作入口",
       "status": "unmeasured",
       "implementation": "available",
-      "nextExperiment": "原生與配對手機實際完成搜尋、導覽、重啟與 360px 觸控驗收"
+      "nextExperiment": "M25的Agent第一屏建單與M28逐步開店引導已有原始碼及自動流程證據，保留為已完成的開發階段。接續處理尚未完成的日常工作、全系統閱讀負擔、實體裝置及老人小孩首次使用；只有可重現新問題、未達驗收條件或使用者指定才重開已通過範圍。自動流程與截圖不等於真人已會使用。 M34：公開目錄可直接匯入、選數量、自動試算並核對採購；四語兩風格360px與至少48px控制已有實際畫面。這條流程已驗證，不代表所有流程或長者／兒童真人驗收完成。"
     },
     {
       "id": "ux.all-workflows",
       "name": "全系統表單、引導、自動帶入與可恢復操作",
       "status": "unmeasured",
       "implementation": "partial",
-      "nextExperiment": "逐頁檢查從開始、保存、失敗恢復到查詢的完整流程，包含仍使用舊表單的模組"
+      "nextExperiment": "M29新增商品、M30開／交班點算、M31現金進出及M32既有商品修改已接上私人草稿。商品修改保留原文、只保存真正改動欄位，避免蓋回別台新分類或庫存；同欄衝突先比較再明確選擇，回覆不明用固定原編號核對保存紀錄。已有原生、HTTPS配對、獨立瀏覽器與雙視窗自動實測證據，手機商品卡片也能直接編輯。其他日常表單仍待完成；本項保持partial及unmeasured，不代表全系統、真人或實體裝置驗收完成。"
     },
     {
       "id": "ux.human-acceptance",
@@ -64,7 +72,7 @@
       "name": "一鍵 Agent 資料包、跨公司文件、未知品項對照與確認建單",
       "status": "unmeasured",
       "implementation": "available",
-      "nextExperiment": "同一份外部文件通過資料包、檔案、JSON 區塊、配對手機及原編號重試"
+      "nextExperiment": "同一份外部文件通過資料包、檔案、JSON 區塊、配對手機及原編號重試 M34：新增 business-catalogue-order/v1 與公開Schema／指南，直接選品轉成本店採購，完整保留來源與原編號。外部Agent與供應商實際互通仍待驗收。"
     },
     {
       "id": "agent.interoperability",
@@ -85,7 +93,7 @@
       "name": "預訂、現場、外送登記、原料預留、收款與交付",
       "status": "unmeasured",
       "implementation": "available",
-      "nextExperiment": "目前版本回歸並在實店演練預訂至交付、取消、日結"
+      "nextExperiment": "開發分支接通簽章桌碼、顧客原單與正式備餐／收款／交付；已測實際 HTTP、SQLite、配對 HTTPS、最後一份、重開及跨格式原單。接續驗收精確新安裝檔、真人、實體手機、廚房紙本出單與長時間營業，完整範圍仍未驗收。"
     },
     {
       "id": "restaurant.deposits-modifiers",
@@ -113,7 +121,7 @@
       "name": "採購、部分收貨、核對請款、分次付款與分錄",
       "status": "unmeasured",
       "implementation": "available",
-      "nextExperiment": "目前版本重跑原生、UI、共用手機、備份及現金核對"
+      "nextExperiment": "目前版本重跑原生、UI、共用手機、備份及現金核對 M34：公開目錄參考價選品、公司範圍SKU對照、原子來源保存、真正回覆遺失、同單重匯、雙店主審批與FIFO收貨已經實際檢查；尚未代表供應商接單、收貨或付款自動完成。"
     },
     {
       "id": "procurement.returns",
@@ -140,15 +148,15 @@
       "id": "inventory.warehouses-lots",
       "name": "多倉、調撥、批次、效期及 FEFO",
       "status": "planned",
-      "implementation": "not-started",
-      "nextExperiment": "以兩倉、兩批、到期隔離和原單退貨驗證可售與保留數量"
+      "implementation": "partial",
+      "nextExperiment": "開發分支接通調撥、包裝換算、原來源批次／效期、FEFO、隔離及按地點逐批實盤；接續到貨批次引導、隔離品退供應商、在途及完整多地點營業驗收，公開完成狀態仍未量測。"
     },
     {
       "id": "inventory.units-counting",
       "name": "單位換算、盤點差異與追溯",
       "status": "planned",
       "implementation": "partial",
-      "nextExperiment": "明確商品換算比例、盤點核准及差異流水，不從品名猜測"
+      "nextExperiment": "明確商品換算比例、逐批實盤與成本差異已有開發流程；接續完整單位、盤點核准及長時間營業驗收，不從品名猜測。"
     },
     {
       "id": "accounting.ledger",
@@ -204,7 +212,7 @@
       "name": "LINE、外送、電商及供應商整合",
       "status": "planned",
       "implementation": "partial",
-      "nextExperiment": "以各服務正式沙盒驗證認證、重播、退款及訂單對應"
+      "nextExperiment": "桌碼接入正式備餐不等於外送平台串接；Uber Eats／foodpanda、LINE 及電商仍須以各服務正式沙盒驗證認證、重播、退款及訂單對應。"
     },
     {
       "id": "security.authority",
@@ -218,7 +226,7 @@
       "name": "完整備份、升級、損壞還原與災難演練",
       "status": "unmeasured",
       "implementation": "available",
-      "nextExperiment": "本版跨版本副本升級與完整資料恢復；不覆寫正式店面"
+      "nextExperiment": "開發分支已接通電腦／瀏覽器雙向完整搬移與店主配對手機還原，保留原始副本、原單、設定型別及目前憑證；接續驗證精確新安裝檔、更多舊版、實體裝置、真人與災難復原，公開完成狀態仍未量測。 M34：採購格式3、瀏覽器記錄格式2與catalogue-purchase-v1保留完整目錄來源；完整還原、原單核對及真正上一版拒絕新資料讀寫已驗證。完整備份與正式還原範圍繼續保持原要求。"
     },
     {
       "id": "delivery.devices",
@@ -254,11 +262,67 @@
       "nextExperiment": "與本地更新器共同驗證正式來源的獨立讀回"
     },
     {
+      "id": "migration.switching",
+      "name": "Agent 一鍵搬家、來源對照、試搬、核對與可追溯切換",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "M24開發中：同一個Agent搬家入口可交標準JSON或原始財務CSV／TSV／XLSX，核對主檔、庫存、原應收付與貸項並同批保存。原始檔、欄位格式、缺漏補填與來源證據保留；同組完整原檔可跨配對店主查原紀錄，無需重填舊補填值。新原始檔使用格式20並拒絕舊版寫入；既有JSON格式14仍支援。接續完成受控更正、預收預付、現金銀行、儲值點數、其他期初與歷史的整體切換對帳；真實廠牌、外部Agent、跨裝置草稿、真人與實體裝置驗收仍保留。全部39項業務義務與至少45項能力範圍不變。"
+    },
+    {
+      "id": "reservations.capacity",
+      "name": "訂位餐期、桌位容量、併桌與衝突防護",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "桌位容量、候位與網站共用權威已有開發實作及競搶檢查；持續依 RESERVATIONS_LOYALTY_SPEC.md 驗證完整到店、點餐、實際營業容量與真實使用情境"
+    },
+    {
+      "id": "reservations.journey",
+      "name": "手機訂位、候位、改期、到店與點餐整合",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "免登入網站、電腦與配對手機共用店面已有私人原單、改期取消、候位入座及原訂位點餐的隔離情境檢查。公開部署、可信憑證、外部服務通知、完整營業容量、實體手機與首次使用者驗收仍待完成。"
+    },
+    {
+      "id": "reservations.deposits",
+      "name": "訂位訂金、取消政策、原款退款與提醒",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "M22開發中：桌面、獨立瀏覽器及配對店面的四語訂金政策、店主確認的實際現金／銀行收款、原款退款、餐點抵款與退回、客人政策核對、原單重試及格式19保護已有實際檢查。跨日未用訂金仍可處理；不得把手動實收紀錄稱作外部金流串接。正式金流、通知回執、公開營運、實體裝置及真人驗收仍待完成。"
+    },
+    {
+      "id": "loyalty.programs",
+      "name": "店家自訂點數活動、會員分級與福利範本",
+      "status": "planned",
+      "implementation": "partial",
+      "nextExperiment": "M33 開發中：集點範本、自動金額範例、店主確認啟用、受保護的方案紀錄與既有點值保護。核對實際生日加點、折抵、退款及中斷恢復；完成後仍需補點數批次、升等條件、兌換券、到期與客戶福利入口，不能視為完整會員福利系統。"
+    },
+    {
+      "id": "loyalty.entitlements",
+      "name": "點數批次、兌換券、到期、核銷與退款",
+      "status": "planned",
+      "implementation": "not-implemented",
+      "nextExperiment": "驗證發放、領取、原子核銷、相同 ID 重試、雙機兌換、原期限退回與訂單折扣分攤；券與點數不能繞過原交易保存"
+    },
+    {
+      "id": "loyalty.customer-experience",
+      "name": "顧客會員權益頁、個資隔離與福利資料搬家",
+      "status": "planned",
+      "implementation": "not-implemented",
+      "nextExperiment": "驗證會員身分與個人券夾權限、手機無痛查詢、活動版本與剩餘權益匯出入；同場景測量後才能主張超越 Ocard"
+    },
+    {
       "id": "operations.scale",
       "name": "資料量、並行、效能與長時間營業",
       "status": "unmeasured",
       "implementation": "partial",
       "nextExperiment": "凍結大資料集與並行工作量，測量延遲、資源、重啟及尖峰最後庫存"
+    },
+    {
+      "id": "integration.community-stores",
+      "name": "自由工坊夥伴開店串接、每店隔離與所有人獨立免費使用",
+      "status": "planned",
+      "implementation": "proposal-only",
+      "nextExperiment": "PR991僅為自由工坊串接提案。沿平台既有tenant／instance與中央契約完成店主綁定、共同訂單與唯一庫存寫入、原單重送、收付售後、可攜切換及真實首次使用；獨立ERP不要求加入社群。未接通公開服務，不以提案或原始碼公開宣稱功能上線。"
     }
   ]
 }

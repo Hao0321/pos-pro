@@ -1,0 +1,18 @@
+{
+  "protocol": "pos-migration-draft/v1",
+  "id": "original-opening-fixture-v1",
+  "source": {"system": "Original ERP export", "company": "Original fixture shop"},
+  "tables": [
+    {"entity": "suppliers", "columns": ["name"], "rows": [{"externalId": "S0001", "values": ["原始供應商"]}]},
+    {"entity": "products", "columns": ["name", "price", "unit", "supplier_id"], "rows": [
+      {"externalId": "00007", "values": ["原始米飯", "150", "份", "S0001"]},
+      {"externalId": "00008", "values": ["零庫存商品", "100", "份", "S0001"]},
+      {"externalId": "00009", "values": ["原始香料", "10", "公斤", "S0001"]}
+    ]},
+    {"entity": "opening-stock", "columns": ["productExternalId", "quantity", "value", "unit", "currency"], "rows": [
+      {"externalId": "OPEN-00007", "values": ["00007", "12.5", "250.01", "份", "TWD"]},
+      {"externalId": "OPEN-00008", "values": ["00008", "0", "0", "份", "TWD"]},
+      {"externalId": "OPEN-00009", "values": ["00009", "1.001", "0.01", "公斤", "TWD"]}
+    ]}
+  ]
+}

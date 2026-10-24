@@ -1,0 +1,20 @@
+const rows={
+ '顯示更多':['Show more','さらに表示','显示更多'],
+ '保留原單號，安心核對':['Keep the original order ID for review','元の伝票番号で確認します','保留原单号，安心核对'],
+ '會先保存目前資料。':['Your current data will be saved first.','現在のデータを先に保存します。','会先保存当前数据。'],
+ '我確認要還原這份資料':['I want to restore this copy','このデータを復元します','我确认要还原这份数据'],
+ '另有 {0} 項變動':['{0} more changes','ほかに {0} 項目の変更','另有 {0} 项变动'],
+ '下載完整備份':['Download full backup','完全なバックアップをダウンロード','下载完整备份'],
+ '還原前的副本':['Copies before restore','復元前のコピー','还原前的副本'],
+ '找回這份資料':['Recover this copy','このコピーを復元','找回这份资料'],
+ '一併帶回 {0} 份保護副本':['Includes {0} protected copies','{0} 件の保護コピーも復元します','一并带回 {0} 份保护副本'],
+ '舊備份：不含完整保護紀錄，原裝置的紀錄仍會保留。':['Older backup: protected history is incomplete. History on this device is kept.','旧形式のバックアップには完全な保護履歴がありません。この端末の履歴は保持されます。','旧备份：不含完整保护记录，原设备的记录仍会保留。'],
+ '備份保護紀錄不完整或內容不同，請保留原檔核對':['Backup history is incomplete or has changed. Keep the original file for review.','バックアップの保護記録が不完全、または内容が異なります。元のファイルを保管して確認してください。','备份保护记录不完整或内容不同，请保留原文件核对'],
+ '來自電腦版':['From the desktop app','デスクトップ版から','来自电脑版'],
+ '來自瀏覽器版':['From the browser app','ブラウザー版から','来自浏览器版'],
+ '已自動核對格式':['Format checked automatically','形式を自動確認しました','已自动核对格式'],
+ '備份設定格式需要核對，請保留原檔':['Backup settings need review. Keep the original file.','バックアップ設定を確認してください。元のファイルは保管してください。','备份设置格式需要核对，请保留原文件'],
+ '備份來源格式需要核對，請保留原檔':['Backup source needs review. Keep the original file.','バックアップ元の形式を確認してください。元のファイルは保管してください。','备份来源格式需要核对，请保留原文件'],
+ '保護紀錄請使用完整備份搬移，不能部分同步；手機共用店面可照常使用。':['Use a full backup to keep protected history. Partial sync is unavailable; paired devices still work.','保護履歴は完全なバックアップで移してください。部分同期は使えませんが、ペアリングした端末は引き続き使えます。','保护记录请使用完整备份搬移，不能部分同步；手机共用店面可照常使用。'],
+}
+export default Object.fromEntries(Object.entries(rows).map(([key,row],index)=>[key,[...row,15000+index]]))

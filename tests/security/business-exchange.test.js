@@ -72,10 +72,14 @@ test('routine audit retention preserves historical quote and stock receipts beyo
   expect(readRecords().data.pos2_products[0].stock).toBe(101)
 })
 test('two recipients retain separate prices and one exported quote never carries the other pricebook',()=>{
+  vi.useFakeTimers();vi.setSystemTime(new Date('2026-10-18T09:51:52.180Z'))
+  try{
   const a=issue(),b=issue(request({id:'quote-other-0002',recipient:other,expectedRevision:1,items:[{...request().items[0],unitPrice:170}],note:'乙店專屬條件'}),a.state)
   expect(b.state.pricebooks.map(p=>p.prices[0].unitPrice)).toEqual([180,170])
-  expect(b.quote.recipient).toEqual(other);expect(JSON.stringify(b.quote)).not.toContain('甲店');expect(JSON.stringify(b.quote)).not.toContain('180')
+  expect(b.quote.recipient).toEqual(other);expect(JSON.stringify(b.quote)).not.toContain('甲店');expect(b.quote.items.map(item=>item.unitPrice)).toEqual([170]);expect(b.quote).not.toHaveProperty('pricebooks')
+  expect(b.quote.createdAt).toContain('.180Z');expect(()=>validateQuote({...b.quote,pricebooks:b.state.pricebooks})).toThrow();expect(()=>validateQuote({...b.quote,items:b.quote.items.map(item=>({...item,unitPrice:180}))})).toThrow()
   expect(a.quote.total).toBe(202.5);expect(b.quote.total).toBe(191.25)
+  }finally{vi.useRealTimers()}
 })
 test('revisions preserve the exact earlier quote and price changes never rewrite it',()=>{
   const a=issue(),snapshot=structuredClone(a.quote),r=request({id:'revision-operation-02',quoteId:a.quote.id,expectedQuoteRevision:1,expectedRevision:1,items:[{...request().items[0],unitPrice:175}]})

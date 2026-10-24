@@ -1,0 +1,24 @@
+import {useRef,useState} from 'react'
+import {tr,trMessage} from '../../i18n'
+import useReservationDraft,{reservationDraftFields} from '../../hooks/useReservationDraft'
+import {getReservationState} from '../../utils/dataAccess'
+import {readPendingFinancial} from '../../utils/financialCommand'
+import {hashGuestCapability} from '../../../electron/reservationService.mjs'
+import {assertReservationResult} from '../../../electron/reservationHistory.mjs'
+import {canonicalSignature} from '../../../electron/operationRules.mjs'
+
+function initial(booking){const token=[...crypto.getRandomValues(new Uint8Array(32))].map(value=>value.toString(16).padStart(2,'0')).join('');return {id:'reservation-'+crypto.randomUUID(),action:'access',bookingId:booking.id,bookingRevision:booking.revision,token,reason:'店家重發私人訂位連結'}}
+export default function ReservationLinkControl({booking,state,session,store,hostURL,onSaved,onClose}){
+ const [value,setValue]=useState(()=>initial(booking)),[result,setResult]=useState(null),[error,setError]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),lock=useRef(false)
+ function accepted(saved,source=value){const current=saved.state.bookings.find(row=>row.id===source.bookingId),hash=hashGuestCapability(source.token);if(saved.receipt.event.change.booking?.guestAccess?.hash!==hash||current?.guestAccess?.hash!==hash)throw Error('私人訂位連結已變更，請重新核對。');setValue(source);setResult(saved);setError('');onSaved(saved)}
+ async function recovered(saved,source){const pending=readPendingFinancial();if(pending?.request.id===source.id){const original=await store.retryFinancial();if(original?.receipt.id!==saved.receipt.id)throw Error('私人訂位連結已變更，請重新核對。');accepted(original,source)}else accepted(saved,source)}
+ const draft=useReservationDraft({kind:'reservation-access',session,value,hasContent:!result,onRestore:source=>setValue(source||initial(booking)),onSaved:(saved,source)=>recovered(saved,source||value)})
+ const pending=readPendingFinancial(),ownPending=pending?.kind==='reservation'&&pending.request.id===value.id,disabled=busy||draft.blocked||!!pending||state.needsRecovery||!hostURL
+ async function save(){if(lock.current)return;lock.current=true;setBusy(true);setError('');try{draft.persist();const current=await getReservationState(session);draft.assertScope(current);if(!current.guestLinkPolicy)throw Error('請先啟用私人連結保護。');const receipt=current.entries.find(row=>row.id===value.id),fields=reservationDraftFields(value);if(receipt){if(receipt.event.actor.userId!==session.userId||receipt.event.input.action!=='access'||Object.keys(fields).some(key=>canonicalSignature(fields[key])!==canonicalSignature(receipt.event.input[key])))throw Error('私人訂位連結已變更，請重新核對。');accepted(assertReservationResult(receipt.event.input,{success:true,storeId:current.storeId,epoch:current.epoch,receipt,state:current}));draft.complete();return}const saved=await store.commitReservation({protocol:'pos-reservation/v1',storeId:current.storeId,epoch:current.epoch,expectedRevision:current.revision,action:'access',reviewed:true,...fields},{id:value.id,time:current.now});accepted(saved);draft.complete()}catch(error){setError(error.message)}finally{lock.current=false;setBusy(false)}}
+ async function retry(){if(lock.current)return;lock.current=true;setBusy(true);setError('');try{const saved=await store.retryFinancial();accepted(saved);draft.complete()}catch(error){setError(error.message)}finally{lock.current=false;setBusy(false)}}
+ const person=state.bookings.find(row=>row.id===value.bookingId)||booking,linkCurrent=person.guestAccess?.hash===hashGuestCapability(value.token),url=result&&linkCurrent&&hostURL?hostURL+'#'+new URLSearchParams({booking:value.bookingId,token:value.token}):''
+ return <section className="card reservation-action" data-reservation-link-control role="dialog" aria-label={tr('重發私人訂位連結')}><h2>{person.customer.name} · {tr('重發私人訂位連結')}</h2><p>{tr('舊連結會停用，訂位仍保留。')}</p>{(error||draft.error||draft.warning)&&<p role="alert">{trMessage(error||draft.error||draft.warning)}</p>}{message&&<p role="status">{tr(message)}</p>}
+  {url?<><label>{tr('只把這個私人連結交給這位客人')}<input className="field" data-reservation-private-link readOnly value={url} onFocus={event=>event.target.select()}/></label><button className="btn btn-primary" data-reservation-private-copy type="button" onClick={async()=>{try{await navigator.clipboard.writeText(url);setMessage('已複製')}catch{setMessage('請選取並複製連結。')}}}>{tr('複製私人連結')}</button></>:result?<p role="status">{tr('私人訂位連結已變更，請重新核對。')}</p>:ownPending?<button className="btn btn-primary" data-reservation-access-retry disabled={busy} onClick={retry}>{tr('確認原來的新連結')}</button>:<button className="btn btn-primary" data-reservation-access-save disabled={disabled} onClick={save}>{tr('確認重發新連結')}</button>}
+  {!hostURL&&<p>{tr('請先啟動訂位網站，再取得連結。')}</p>}<button className="btn btn-ghost" data-reservation-access-close disabled={busy} onClick={onClose}>{tr('關閉')}</button>
+ </section>
+}

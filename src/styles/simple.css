@@ -55,7 +55,7 @@ html:lang(zh-CN){--font-sans:'Microsoft YaHei','PingFang SC','Noto Sans SC',syst
 [data-ui-style="simple"] :is(.easy-task,.easy-reminder,.easy-search,.quick-review,.quick-progress li){border-color:#dce4ef;border-radius:12px;background:#fff}
 [data-ui-style="simple"] .easy-task-primary{background:#ebf2ff;border-color:#c5d7fa}
 [data-ui-style="simple"] .quick-progress li[aria-current]{background:#235dcc;color:#fff;border-color:#235dcc}
-[data-ui-style="simple"] .quick-progress li[aria-current] span{color:#174fae}
+[data-ui-style="simple"] .quick-progress li[aria-current] span{background:#fff;color:#174fae}
 [data-ui-style="simple"] .workspace-content .page-title{font-size:clamp(24px,2.2vw,30px)!important;font-weight:700!important;letter-spacing:-.025em}
 [data-ui-style="simple"] .workspace-content .page-title::before{display:none}
 [data-ui-style="simple"] .login-screen{background:#f5f8fc}

@@ -96,14 +96,17 @@ export default function MembersPage({ store, session }) {
   return (
     <div style={ms.root} className={'members-page'+(selectedLive?' has-member-detail':'')}>
       <div style={ms.left} className="member-list-panel">
-        <div style={ms.header}>
+        <div style={{...ms.header,flexWrap:'wrap',gap:8}}>
           <div>
             <h2 className="page-title" style={ms.title}>{tr("會員管理")}</h2>
             <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
               {members.length}{tr(" 位會員")}</div>
           </div>
-          <button className="btn btn-primary btn-sm" onClick={startNew}>
-            <Plus size={15}/>{tr("新增會員")}</button>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {session?.role==='owner'&&<button className="btn btn-ghost" style={{minHeight:48,fontSize:16}} data-loyalty-settings-entry onClick={store.openLoyaltySettings}>{tr('設定會員福利')}</button>}
+            <button className="btn btn-primary btn-sm" onClick={startNew}>
+              <Plus size={15}/>{tr("新增會員")}</button>
+          </div>
         </div>
 
         <div style={ms.toolbar}>
@@ -250,7 +253,7 @@ export default function MembersPage({ store, session }) {
                     <span style={{fontFamily:'var(--font-mono)', fontSize:13, fontWeight:500, color: o.total < 0 ? 'var(--red)' : 'inherit'}}>
                       NT$ {o.total.toLocaleString()}
                     </span>
-                    {!isRefund && !isRefunded && (
+                    {!isRefund && !isRefunded && session?.role==='owner' && (
                       <button onClick={()=>setRefundOrder(o)} style={{padding:4, color:'var(--text-tertiary)'}} title={tr("退貨")}>
                         <RotateCcw size={13}/>
                       </button>
@@ -264,7 +267,7 @@ export default function MembersPage({ store, session }) {
       )}
 
       {refundOrder && (
-        <RefundModal order={refundOrder} session={session}
+        <RefundModal order={orders.find(row=>row.id===refundOrder.id)||refundOrder} session={session} products={store.products} retryFinancial={store.retryFinancial} onRecovery={()=>store.setView('recovery')}
           priorRefunds={orders.filter(o => o.refundOf === refundOrder.id)}
           onClose={()=>setRefundOrder(null)}
           onRefund={handleRefund}/>

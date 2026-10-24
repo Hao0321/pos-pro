@@ -1,6 +1,6 @@
 # POS Pro｜ERP・點餐・CRM
 
-主名保留 POS Pro，定位是 ERP 日常營運、顧客點餐與會員 CRM 整合。所有店家、全部功能免費。完整 ERP、企業客戶及商機管理仍在擴充，能力界線見 [清單](../product-capabilities.json)。
+目前顯示名稱暫為 POS Pro，新品牌尚未定案。名稱與圖標須親切、容易記住，不使用個人名字或個人名字縮寫；定位涵蓋 ERP 日常營運、顧客點餐、CRM 與 Agent。所有店家、全部功能免費。完整 ERP、企業客戶及商機管理仍在擴充，能力界線見 [清單](../product-capabilities.json)。
 
 ## 視覺規格
 

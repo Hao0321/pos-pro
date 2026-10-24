@@ -1,8 +1,9 @@
 module.exports=function initializeSchema(db){
+  db.exec('CREATE TABLE IF NOT EXISTS kitchen_print_jobs (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS kitchen_print_operations (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS kitchen_print_runtime (id TEXT PRIMARY KEY,value TEXT NOT NULL);')
   db.exec('CREATE TABLE IF NOT EXISTS supplier_entries (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS supplier_operations (id TEXT PRIMARY KEY,data TEXT NOT NULL);')
   db.exec('CREATE TABLE IF NOT EXISTS customer_entries (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS customer_operations (id TEXT PRIMARY KEY,data TEXT NOT NULL);')
   db.exec('CREATE TABLE IF NOT EXISTS sales_documents (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS sales_operations (id TEXT PRIMARY KEY,data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS sales_runtime (id TEXT PRIMARY KEY,value TEXT NOT NULL);')
-  db.prepare('INSERT OR IGNORE INTO sales_runtime (id,value) VALUES (?,?)').run('epoch',require('node:crypto').randomUUID())
+  if(!db.prepare('SELECT 1 FROM sales_runtime WHERE id=?').get('epoch'))db.prepare('INSERT INTO sales_runtime (id,value) VALUES (?,?)').run('epoch',require('node:crypto').randomUUID())
   db.exec(`CREATE TABLE IF NOT EXISTS restaurant_orders (id TEXT PRIMARY KEY, data TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS restaurant_operations (id TEXT PRIMARY KEY, data TEXT NOT NULL);`)
   // ===== Schema =====
@@ -240,6 +241,10 @@ module.exports=function initializeSchema(db){
     ensureColumn('orders', 'itemCosts', "TEXT DEFAULT '{}'")
     ensureColumn('orders', 'trackingTokenHash', "TEXT DEFAULT ''")
     ensureColumn('orders', 'requestSignature', "TEXT DEFAULT ''")
+    ensureColumn('orders', 'table_id', "TEXT DEFAULT ''")
+    ensureColumn('orders', 'table_signature', "TEXT DEFAULT ''")
+    ensureColumn('orders', 'tracking_proof', "TEXT DEFAULT ''")
+    ensureColumn('orders', 'customer_menu', "TEXT DEFAULT ''")
     ensureColumn('orders', 'taxId', "TEXT DEFAULT ''")
     ensureColumn('orders', 'shiftId', "TEXT DEFAULT ''")
     ensureColumn('orders', 'refundOf', "TEXT DEFAULT ''")
@@ -255,6 +260,8 @@ module.exports=function initializeSchema(db){
     ensureColumn('purchases', 'paidDate', "TEXT DEFAULT ''")
     ensureColumn('purchases', 'procurement', 'TEXT DEFAULT NULL')
     ensureColumn('promotions','note',"TEXT DEFAULT ''")
+    ensureColumn('settings','value_encoding','INTEGER NOT NULL DEFAULT 0')
+    ensureColumn('settings','row_id','TEXT DEFAULT NULL')
   } catch(e){db.close();throw new Error('資料庫結構更新未完成，已保留原始資料：'+e.message)}
 
   // ===== Prepared Statements =====

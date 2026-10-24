@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:pos-pro:migration-draft:v1",
+  "title": "Migration source facts; preview only, no business-write command",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "protocol": {
+      "const": "pos-migration-draft/v1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "system": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "company": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "system",
+        "company"
+      ]
+    },
+    "tables": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entity": {
+            "enum": [
+              "products",
+              "suppliers",
+              "customers",
+              "opening-stock",
+              "opening-receivables",
+              "opening-payables",
+              "history-reference"
+            ]
+          },
+          "columns": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "rows": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5000,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "externalId": {
+                  "type": "string",
+                  "minLength": 0,
+                  "maxLength": 128
+                },
+                "values": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 100,
+                  "items": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 2048
+                  }
+                }
+              },
+              "required": [
+                "externalId",
+                "values"
+              ]
+            }
+          }
+        },
+        "required": [
+          "entity",
+          "columns",
+          "rows"
+        ]
+      }
+    }
+  },
+  "required": [
+    "protocol",
+    "id",
+    "source",
+    "tables"
+  ],
+  "description": "Preserve all raw source strings and original IDs. Rows must align exactly with columns. Unsupported facts remain pending. This schema does not authorize writes, monetary movement or confirmation."
+}

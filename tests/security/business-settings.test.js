@@ -3,7 +3,7 @@ import {DATA_KEYS,RECORD_KEY,readRecords,browserStorage,writeBusinessSettings,wr
 import {setSettings,getSetting} from '../../src/utils/dataAccess'
 import {validateManualEntry} from '../../electron/manualJournalRules.mjs'
 let values
-beforeEach(()=>{values=new Map();vi.stubGlobal('localStorage',{getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,String(v)),removeItem:k=>values.delete(k)})})
+beforeEach(()=>{values=new Map();vi.stubGlobal('localStorage',{getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,String(v)),removeItem:k=>values.delete(k)});vi.stubGlobal('navigator',{locks:{request:async(_key,options,work)=>(typeof options==='function'?options:work)({})}})})
 afterEach(()=>vi.unstubAllGlobals())
 test('legacy fourteen-collection records retain an explicitly disabled birthday bonus',async()=>{const data=Object.fromEntries(DATA_KEYS.filter(k=>k!=='pos_business_settings').map(k=>[k,[]]));values.set(RECORD_KEY,JSON.stringify({version:1,revision:1,data}));values.set('pos_settings_birthdayBonus',JSON.stringify('0'));expect(await getSetting('birthdayBonus')).toBe('0');expect(readRecords().data.pos_business_settings).toEqual([{key:'birthdayBonus',value:'"0"'}])})
 test('browser business rules save atomically and restore zero from the same backup record',async()=>{await setSettings({pointsEarnRate:'20',pointsRedeemRate:'2',birthdayBonus:'0'});const backup=structuredClone(readRecords().data);await setSettings({birthdayBonus:'100'});writeRecords(backup);expect(await getSetting('birthdayBonus')).toBe('0');expect(await getSetting('pointsEarnRate')).toBe('20')})

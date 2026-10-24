@@ -3,16 +3,22 @@ import {isProcurement,procurementSummary} from '../../electron/procurementRules.
 import {tr} from '../../public/i18n/core.mjs'
 
 export const WORKSPACE_TASKS=[
+  {id:'stocksetup',title:'核對庫存成本',detail:'看庫存、填成本，系統自動計算。',view:'stocksetup',perm:'inventory.cost',needsStockSetup:true,words:'期初 開帳 補成本 單價 整批 Agent cost opening'},
   {id:'sale',title:'賣東西、收款',detail:'點商品，確認金額，再收款。',view:'pos',perm:'pos.use',words:'收銀 結帳 現場'},
   {id:'quick',title:'幫我建單',detail:'點商品、貼內容，或交給 Agent。',view:'quick',perm:'pos.use',words:'開單 匯入 agent AI'},
   {id:'restaurant',title:'接預訂、準備出餐',detail:'預訂、現場與外送放在一起看。',view:'restaurant',perm:'pos.use',words:'丼飯 餐飲 交付 取餐'},
+  {id:'reservations',title:'訂位與候位',detail:'選日期、看空桌、安心接待。',view:'reservations',perm:'pos.use',words:'桌位 排桌 訂位 候位 用餐 reservation booking waitlist'},
   {id:'purchase',title:'進貨、退貨、付款',detail:'從叫貨到收到貨、付清款項。',view:'purchase',perm:'purchase.view',words:'供應商 請款 應付 退款'},
   {id:'exchange',title:'報價給客戶、分享價目表',detail:'選客戶與商品，保存報價，再交給對方。',view:'exchange',perm:'purchase.edit',words:'客戶價格 公開目錄 供應商 agent catalogue quote pricing'},
   {id:'shifts',title:'開始營業、收攤',detail:'確認零用金與這班實際現金。',view:'shifts',perm:'pos.use',words:'開班 交班 日結 關店'},
   {id:'inventory',title:'商品、庫存',detail:'新增商品，查看剩多少。',view:'inventory',perm:'inventory.view',words:'品項 售價 成本 缺貨'},
+  {id:'warehouse',title:'搬貨、存放地點',detail:'選地點與數量，系統自動換算。',view:'warehouse',perm:'inventory.view',words:'倉庫 調撥 移貨 備貨 包裝 箱 單位 transfer warehouse'},
+  {id:'lots',title:'批次與效期',detail:'快到期的先用，過期的先停賣。',view:'lots',perm:'inventory.view',words:'批號 到期 過期 暫停 報廢 lot expiry FEFO'},
+  {id:'stockhistory',title:'庫存去哪了',detail:'看剩多少、用在哪裡，找到原單。',view:'stockhistory',perm:'inventory.cost',words:'進出 入庫 出庫 來源 歷史 追蹤 FIFO cost history'},
   {id:'readiness',title:'營業前檢查、備份',detail:'確認資料保存與手機連線。',view:'readiness',perm:'pos.use',words:'下載 安全 還原 離線'},
   {id:'devices',title:'手機和電腦一起用',detail:'配對手機，共用同一間店資料。',view:'devices',perm:'settings.edit',words:'同步 共用 連線 QR'},
   {id:'members',title:'找客人、會員',detail:'查詢客戶、點數與儲值。',view:'members',perm:'members.view',words:'顧客 CRM 聯絡'},
+  {id:'refunds',title:'退貨、退款',detail:'找原單，核對金額後退貨。',view:'refunds',perm:'pos.refund',words:'退費 現金 刷卡 儲值 return refund'},
   {id:'reports',title:'今天賣得怎麼樣',detail:'查銷售紀錄與營業報表。',view:'reports',perm:'reports.view',words:'退款 報表 業績 銷售'},
   {id:'accounting',title:'查看帳務',detail:'收入、支出、應付與分錄。',view:'accounting',perm:'accounting.view',words:'會計 財務 利潤'},
   {id:'stocktake',title:'實際點一下庫存',detail:'輸入點到的數量，核對差異。',view:'stocktake',perm:'stocktake.view',words:'盤點 數量'},
@@ -20,19 +26,20 @@ export const WORKSPACE_TASKS=[
   {id:'promotions',title:'促銷活動',detail:'管理活動條件與期間。',view:'promotions',perm:'promotions.view',words:'折扣 優惠'},
   {id:'orders',title:'查看顧客點餐',detail:'查看點餐入口送來的訂單。',view:'orders',perm:'pos.use',words:'網路 點單'},
   {id:'settings',title:'設定、備份還原',detail:'店面、帳號、設備與資料管理。',view:'settings',perm:'settings.view',words:'印表機 密碼 權限 設備'},
+  {id:'recovery',title:'資料復原',detail:'保留原單號，安心核對',view:'recovery',perm:'settings.view',words:'復原 找回 資料不見 原單 舊紀錄 recovery recover restore'},
   {id:'scenarios',title:'套用情境模板',detail:'先在演練空間試跑，再設定店面。',view:'scenarios',perm:'settings.edit',words:'丼飯 新手 試賣'},
   {id:'sales',title:'接客戶訂單、收欠款',detail:'從客戶同意報價，到交貨、收款與退貨。',view:'sales',perm:'purchase.edit',words:'銷售 應收 請款 交付 退款 sales receivables'},
   {id:'customers',title:'管理客戶、預收與抵付',detail:'客戶建一次，收到的錢可抵付多張帳單。',view:'customers',perm:'purchase.edit',words:'客戶 預收 餘額 抵付 退款 customer advance deposit allocation'},
   {id:'suppliers',title:'供應商訂金、抵付與退回款',detail:'記錄已付訂金，再分配到已核對的請款。',view:'suppliers',perm:'purchase.edit',words:'供應商 預付 訂金 核准 審核 抵付 退款 supplier prepayment advance approval deposit'},
 ]
 export const WORKSPACE_AREAS=[
-  {id:'crm',title:'顧客與點餐',code:'CRM',intro:'幫你照顧客人',detail:'會員、點數、儲值、點餐與預訂。',description:'會員、點數、儲值、點餐和預訂，讓接單與經營回頭客更方便。',taskIds:['customers','sales','members','orders','restaurant','exchange','quick','sale','promotions','reports']},
-  {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['customers','sales','sale','quick','exchange','inventory','purchase','suppliers','shifts','stocktake','waste','accounting','reports','readiness','devices','settings','scenarios']},
+  {id:'crm',title:'顧客與點餐',code:'CRM',intro:'幫你照顧客人',detail:'會員、點數、儲值、點餐與預訂。',description:'會員、點數、儲值、點餐和預訂，讓接單與經營回頭客更方便。',taskIds:['reservations','customers','sales','members','orders','restaurant','exchange','quick','sale','refunds','promotions','reports']},
+  {id:'erp',title:'營運管理',code:'ERP',intro:'幫你顧好貨和錢',detail:'商品、庫存、進貨、付款與帳務。',description:'商品、庫存、進貨、付款和帳務，知道還剩多少貨、今天賣了多少、有哪些款項要付。',taskIds:['customers','sales','sale','refunds','quick','exchange','inventory','purchase','suppliers','shifts','stocktake','stocksetup','stockhistory','warehouse','lots','waste','accounting','reports','readiness','devices','settings','recovery','scenarios']},
 ]
-export function workspaceTasks(session,query='',area='all'){
+export function workspaceTasks(session,query='',area='all',options={}){
   const terms=query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
   const group=WORKSPACE_AREAS.find(a=>a.id===area)
-  const matched=WORKSPACE_TASKS.filter(t=>hasPermission(session,t.perm)&&(area==='all'||group?.taskIds.includes(t.id))&&terms.every(term=>(t.title+' '+t.detail+' '+t.words+' '+tr(t.title)+' '+tr(t.detail)).toLocaleLowerCase().includes(term)))
+  const matched=WORKSPACE_TASKS.filter(t=>hasPermission(session,t.perm)&&(!t.needsStockSetup||options.stockSetupEnabled===true)&&(area==='all'||group?.taskIds.includes(t.id))&&terms.every(term=>(t.title+' '+t.detail+' '+t.words+' '+tr(t.title)+' '+tr(t.detail)).toLocaleLowerCase().includes(term)))
   return group?matched.sort((a,b)=>group.taskIds.indexOf(a.id)-group.taskIds.indexOf(b.id)):matched
 }
 export function workspaceReminders(store,session){

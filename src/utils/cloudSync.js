@@ -4,6 +4,9 @@ import { browserStorage, readRecords, writeRecords } from './browserStorage'
 // pull：從 Supabase 拉全部資料，覆蓋本機
 import { getSupabase, isCloudEnabled } from './supabaseClient'
 import { isElectron } from './dataAccess'
+import {hasStockCostHistory} from '../../electron/stockCompatibility.mjs'
+import {nativeSettingText} from '../../electron/settingEncoding.mjs'
+import {readRestaurantConfig} from '../../electron/restaurantRules.mjs'
 
 // ===== Tables 設定 =====
 // localKey：localStorage key（Browser 模式）
@@ -153,16 +156,18 @@ function saveLS(key, value) {
 // 從本機讀全部資料（Electron 用 exportData，Browser 用 localStorage）
 async function readLocal() {
   if (isElectron) {
-    const data = await window.electronAPI.db.exportData()
+    const complete = await window.electronAPI.db.exportFullBackup(),data=complete.book
     return {
       _revision:data._revision,
+      _stockCostHistory:hasStockCostHistory(data),
+      _protectedHistory:complete.protection.version>=2||complete.protection.snapshots.length>0,
       _restaurantOrders:data.restaurantOrders||[],
       _restaurantOperations:data.restaurantOperations||[],
       _salesDocuments:data.salesDocuments||[],
       _salesOperations:data.salesOperations||[],
       _customerEntries:data.customerEntries||[],_customerOperations:data.customerOperations||[],
       _supplierEntries:data.supplierEntries||[],_supplierOperations:data.supplierOperations||[],
-      _restaurantEnabled:JSON.parse(data.settings?.find(s=>s.key==='restaurantConfig')?.value||'{}').enabled===true,
+      _restaurantEnabled:readRestaurantConfig(nativeSettingText(data.settings?.find(s=>s.key==='restaurantConfig')),data.products||[]).enabled===true,
       pos2_products: data.products || [],
       pos2_members: data.members || [],
       pos2_orders: data.orders || [],
@@ -181,15 +186,19 @@ async function readLocal() {
   }
   const all = {}
   for (const t of TABLES) all[t.localKey] = loadLS(t.localKey)
-  const data=readRecords().data,raw=data.pos_business_settings.find(s=>s.key==='restaurantConfig')?.value
+  const record=readRecords(),data=record.data,raw=data.pos_business_settings.find(s=>s.key==='restaurantConfig')?.value
+  all._protectedHistory=record.recovery?.version>=2||!!record.recovery?.snapshots.length
+  all._stockCostHistory=hasStockCostHistory({settings:data.pos_business_settings,stockCostEntries:data.pos_stock_cost_entries,stockCostOperations:data.pos_stock_cost_operations})
   all._restaurantOrders=data.pos_restaurant_orders;all._restaurantOperations=data.pos_restaurant_operations
   all._salesDocuments=data.pos_sales_documents;all._salesOperations=data.pos_sales_operations
   all._customerEntries=data.pos_customer_entries;all._customerOperations=data.pos_customer_operations
   all._supplierEntries=data.pos_supplier_entries;all._supplierOperations=data.pos_supplier_operations
-  all._restaurantEnabled=raw==null?false:JSON.parse(JSON.parse(raw)).enabled===true
+  all._restaurantEnabled=readRestaurantConfig(raw==null?null:JSON.parse(raw),data.pos2_products).enabled===true
   return all
 }
 function guardRestaurantCloud(data){
+  if(data._stockCostHistory)throw Error('成本帳請使用完整備份還原預覽，不能部分同步')
+  if(data._protectedHistory)throw Error('保護紀錄請使用完整備份搬移，不能部分同步；手機共用店面可照常使用。')
   if(data._supplierEntries?.length||data._supplierOperations?.length)throw Error('目前雲端快照不包含完整供應商核准、預付與抵付回執，已停止同步。請使用完整 JSON 備份；手機共用店面可照常使用。')
   if(data._customerEntries?.length||data._customerOperations?.length)throw Error('目前雲端快照不包含完整客戶預收與抵付回執，已停止同步。請使用完整 JSON 備份；手機共用店面可照常使用。')
   if(data._salesDocuments.length||data._salesOperations.length)throw Error('目前雲端快照不包含完整銷售、應收及收款回執，已停止同步。請使用完整 JSON 備份；手機共用店面可照常使用。')

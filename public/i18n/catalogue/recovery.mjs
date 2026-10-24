@@ -87,5 +87,6 @@ const rows={
  '資料復原':['Data recovery','データの復元','资料复原'],
  '重新查看還原預覽':['Review the restore preview again','復元プレビューを確認し直す','重新查看还原预览'],
  '復原已保存，但重新讀取未完成。請保持原單號並重新載入：':['Recovery was saved, but reloading is incomplete. Keep the original ID and reload: ','復元は保存されましたが、再読み込みが未完了です。元の番号を保持して読み込み直してください：','复原已保存，但重新读取未完成。请保持原单号并重新载入：'],
+ '這筆已確認，還有紀錄待核對。':['This result is confirmed. Other records still need checking.','この結果は確認済みです。ほかに確認が必要な記録があります。','这笔已确认，还有纪录待核对。'],
 }
 export default Object.fromEntries(Object.entries(rows).map(([key,text],index)=>[key,[...text,2190+index]]))

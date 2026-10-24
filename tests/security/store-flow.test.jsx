@@ -11,10 +11,21 @@ beforeEach(()=>{
   map=new Map();rejectRecord=false
   vi.stubGlobal('localStorage',{getItem:k=>map.get(k)??null,setItem:(k,v)=>{if(rejectRecord&&k===RECORD_KEY)throw new Error('容量不足');map.set(k,String(v))},removeItem:k=>map.delete(k)})
   vi.stubGlobal('navigator',{locks:{request:async(_name,options,cb)=>typeof options==='function'?options({}):cb({})}})
-  writeRecords({pos2_products:[{id:'p',name:'商品',price:30,stock:10,cost:10}],pos2_members:[],pos2_shifts:[{id:'s',status:'open'}]})
+  writeRecords({pos_users:[{id:'owner',username:'店主',role:'owner'}],pos2_products:[{id:'p',name:'商品',price:30,stock:10,cost:10}],pos2_members:[],pos2_shifts:[{id:'s',status:'open'}]})
 })
 afterEach(()=>{cleanup();vi.unstubAllGlobals()})
-async function store(){const hook=renderHook(()=>useStore({userId:'owner',role:'owner'}));await waitFor(()=>expect(hook.result.current.ready).toBe(true));return hook}
+async function store(){const hook=renderHook(()=>useStore({userId:'owner',username:'店主',role:'owner'}));await waitFor(()=>expect(hook.result.current.ready).toBe(true));return hook}
+test('the actual store adopts the authoritative product result and never adds a stale quantity to draft-backed edits',async()=>{
+ const h=await store(),actor={userId:'owner',username:'店主',role:'owner'},context=await (await import('../../src/utils/browserPrivateDrafts')).getBrowserPrivateDraftContext(actor),drafts=await import('../../src/utils/productEditDraft'),value=drafts.newProductEditDraft(h.result.current.products[0]);value.form.price='31.50';value.submission={id:'product-edit-'+crypto.randomUUID(),time:new Date().toISOString()};writeRecords({pos2_products:[{...readRecords().data.pos2_products[0],stock:9,category:'其他裝置'}]});let result
+ await act(async()=>{result=await h.result.current.updateProduct('p',drafts.productEditInput(value,context))});expect(result.success).toBe(true);expect(h.result.current.products[0]).toMatchObject({price:31.5,stock:9,category:'其他裝置'});expect(h.result.current.products[0]._productEdit).toBeUndefined();expect(h.result.current.products[0].draftContext).toBeUndefined()
+})
+test('draft-backed cash recording uses captured original fields and records money once without a second global journal',async()=>{
+ const h=await store(),actor={userId:'owner',username:'店主',role:'owner'},context=await (await import('../../src/utils/browserPrivateDrafts')).getBrowserPrivateDraftContext(actor),request={id:'cash-'+crypto.randomUUID(),time:new Date().toISOString(),shiftId:'s',type:'in',amount:12.5,reason:'  補零  ',cashier:'原收銀員'},draft={request,draftContext:context};let row
+ await act(async()=>{row=await h.result.current.logCash('out',999,'changed','changed',draft)});expect(row).toEqual(request);const before=JSON.stringify(readRecords());await act(async()=>h.result.current.logCash('out',999,'changed','changed',draft));expect(JSON.stringify(readRecords())).toBe(before);expect(readRecords().data.pos2_cash_log).toHaveLength(1);expect(localStorage.getItem('pos_pending_financial_v1')).toBeNull()
+})
+test('opening guide navigation binds the current task and never writes business completion flags',async()=>{
+ const {result}=await store(),before=JSON.stringify(readRecords());let first;act(()=>{first=result.current.startReadinessTask('add-product')});expect(result.current.view).toBe('inventory');expect(result.current.readinessTask.id).toBe(first);let second;act(()=>{second=result.current.startReadinessTask('open-shift')});act(()=>expect(result.current.finishReadinessTask(first)).toBe(false));expect(result.current.view).toBe('shifts');act(()=>expect(result.current.finishReadinessTask(second)).toBe(true));expect(result.current.view).toBe('readiness');expect(result.current.readinessTask).toBeNull();expect(JSON.stringify(readRecords())).toBe(before)
+})
 test('real store commits a sale, updates canonical stock and clears the cart only after acknowledgement',async()=>{
   const {result}=await store();act(()=>result.current.addToCart(result.current.products[0],2))
   let order;await act(async()=>{order=await result.current.checkout('cash',100)})

@@ -1,0 +1,80 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),Database=require('better-sqlite3')
+const init=require('../../electron/database.js'),legacy=require('../fixtures/table-kitchen-v1.json'),{canonicalSignature}=require('../../electron/operationRules.mjs')
+const {salesDate}=require('../../electron/salesRules.mjs'),{buildPnL}=require('../../electron/accountingCore.mjs'),{stockPeriodDisclosure}=require('../../electron/stockAccounting.mjs')
+const {validateStockCostBook}=require('../../electron/stockBackup.mjs'),{stockReportCostPostings}=require('../../electron/stockReportCosts.mjs')
+const root=process.env.POS_SECURITY_FIXTURE_ROOT;if(!root)throw Error('isolated restaurant funds cost root required')
+const out=process.env.POS_CUSTOMERS_EVIDENCE||root;fs.mkdirSync(out,{recursive:true})
+const owner=legacy.owner,fixtures=[],checks=[]
+const ok=result=>{assert.equal(result.success,true,result.error);return result},now=()=>new Date().toISOString(),today=()=>salesDate(new Date())
+function pass(label){checks.push(label);console.log('PASS '+label)}
+function fixture(name,active=true){
+ const file=path.join(root,name+'.db'),f={file,db:init(file)};fixtures.push(f)
+ for(const user of legacy.before.users)f.db.addUser(user)
+ f.db.setSetting('sharedStoreId','funds-cost-'+name)
+ for(const product of [{id:'bowl',name:'Bowl',unit:'份',price:95,cost:0,stock:0},{id:'premium',name:'Premium',unit:'份',price:120,cost:0,stock:0},{id:'rice',name:'Rice',unit:'kg',price:10,cost:10,stock:.1},{id:'box',name:'Box',unit:'個',price:3,cost:3,stock:10}])f.db.addProduct(product)
+ f.db.addSupplier({id:'supplier',name:'Ingredient supplier'});f.db.openShift({id:'shift',cashier:owner.username,openCash:200})
+ const config=f.db.getRestaurantState().config
+ ok(f.db.applyRestaurantOperation({id:'configure',kind:'restaurant',action:'configure',time:now(),expectedConfig:canonicalSignature(config),config:{...config,enabled:true,fundsEnabled:true,dailyCapacity:50,slotCapacity:20,recipes:{bowl:[{id:'rice',qty:.1},{id:'box',qty:1}],premium:[{id:'rice',qty:.2},{id:'box',qty:1}]}}},owner))
+ f.activate=()=>{const s=f.db.getSalesState(owner);return ok(f.db.applyStockCostOperation({id:'opening',protocol:'pos-stock-cost/v1',action:'open',time:now(),storeId:s.storeId,epoch:s.epoch,reviewed:true,snapshotDigest:f.db.getStockCostPreview(owner).snapshotDigest,overrides:[]},owner))}
+ if(active)f.activate()
+ ok(f.db.applyInventoryOperation({id:'purchase-create',kind:'purchase-create',time:now(),purchase:{id:'purchase',supplierId:'supplier',date:today(),items:[{productId:'rice',name:'Rice',unit:'kg',qty:.3,unitCost:30,received:0}]}},owner))
+ ok(f.db.applyInventoryOperation({id:'receive',kind:'receive',time:now(),purchaseId:'purchase',expectedPurchase:canonicalSignature(f.db.getPurchases()[0]),quantities:[.3]},owner))
+ ok(f.db.updateProduct('rice',{cost:99},owner))
+ f.entry=()=>f.db.getRestaurantState().entries[0]
+ f.call=(id,action,extra={})=>{const s=f.db.getRestaurantState(),entry=s.entries[0];return f.db.applyRestaurantOperation({id,kind:'restaurant',action,time:now(),storeId:s.storeId,epoch:s.epoch,fundsProtocol:'pos-restaurant-funds/v1',costMode:s.costMode,...(action==='create'?{day:today(),slot:'12:00',channel:'walkin',customer:'Guest',contact:'',note:''}:{entryId:entry.id,expectedVersion:entry.version}),...extra},owner)}
+ f.create=(items=[{id:'bowl',qty:1,price:95},{id:'premium',qty:1,price:120}])=>ok(f.call('booking','create',{items}))
+ f.pay=(id,amount,payMethod='cash')=>ok(f.call(id,'funds-receive',{amount,paid:amount,payMethod,shiftId:'shift'}))
+ f.fulfil=()=>{ok(f.call('cook','advance',{status:'cooking'}));ok(f.call('ready','advance',{status:'ready'}));return ok(f.call('complete','advance',{status:'completed'}))}
+ f.state=()=>f.db.getStockCostState(owner)
+ f.accounting=()=>f.db.getStockAccountingState(owner)
+ f.pnl=()=>{const report=f.accounting();return buildPnL(report.journals,today(),today(),stockPeriodDisclosure(report,today(),today()))}
+ f.stock=()=>f.db.getProducts().find(row=>row.id==='rice').stock
+ f.verify=()=>validateStockCostBook(f.db.exportData())
+ return f
+}
+try{
+ const f=fixture('fifo');f.create();const before=f.db.exportData(),held=f.state().projection.custody.positions.filter(row=>row.owner.stage==='reserved')
+ const first=f.pay('deposit',100),once=f.db.exportData();assert.ok(first.costReceipt);assert.deepEqual(f.state().projection.custody.positions.filter(row=>row.owner.stage==='reserved'),held)
+ assert.deepEqual(ok(f.db.applyRestaurantOperation(JSON.parse(f.db.exportData().restaurantOperations.find(row=>row.id==='deposit').signature),owner)).costReceipt,first.costReceipt);assert.deepEqual(f.db.exportData(),once)
+ assert.equal(f.pnl().revenue,0);f.verify()
+ pass('actual SQLite advance preserves reserved FIFO, records one cost acknowledgement and replays the exact original without a second collection')
+ const stale=f.call('stale-cost-mode','funds-receive',{amount:1,paid:1,payMethod:'cash',shiftId:'shift',costMode:'reference'})
+ assert.equal(stale.success,false);assert.deepEqual(f.db.exportData(),once)
+ pass('an explicit stale cost policy is rejected before changing the original financial or cost books')
+ f.pay('tail',115,'card');const delivered=f.fulfil();assert.equal(f.pnl().cogs,13);assert.equal(f.pnl().revenue,215)
+ const sources=f.state().projection.custody.sources,owners=f.state().projection.custody.positions.filter(row=>row.owner.stage==='consumed')
+ assert.ok(owners.some(row=>JSON.parse(row.owner.referenceId)[0]==='restaurant-funded-item'));assert.equal(f.stock(),.1);f.verify()
+ const posting=()=>stockReportCostPostings(f.verify(),{products:f.db.getProducts(),orders:f.db.getOrders(),restaurantEntries:f.db.getRestaurantState().entries,salesDocuments:[]})
+ const cost=id=>posting().filter(row=>row.productId===id).reduce((sum,row)=>sum+BigInt(row.amountCents),0n)
+ assert.equal(cost('bowl'),400n);assert.equal(cost('premium'),900n)
+ pass('fulfilment uses actual old and received ingredient layers for each menu item, replacing the edited reference cost exactly once')
+ const partial=ok(f.call('cancel-a','cancel-part',{quantities:[{id:'bowl',qty:1}],reason:'prepared first item',shiftId:'shift'}));assert.equal(partial.refund.total,-95)
+ assert.equal(f.pnl().cogs,9);assert.equal(f.pnl().opExpenses,4);assert.equal(cost('bowl'),0n);assert.equal(cost('premium'),900n);assert.equal(f.stock(),.1);f.verify()
+ pass('a selected prepared refund reverses only that menu item original FIFO cost and keeps its ingredients as waste')
+ const all=ok(f.call('cancel-b','cancel',{reason:'prepared remaining',shiftId:'shift'}));assert.equal(all.refund.total,-120);assert.equal(f.pnl().revenue,0);assert.equal(f.pnl().cogs,0);assert.equal(f.pnl().opExpenses,13);assert.equal(f.stock(),.1);f.verify()
+ const complete=f.db.exportData(),packet=f.db.exportFullBackup(owner);assert.equal(packet.protection.version,6)
+ f.db.close();f.db=init(f.file);assert.deepEqual(f.db.exportData(),complete);f.verify();assert.equal(f.pnl().netIncome,-13)
+ pass('full cancellation, complete format6 backup and a real SQLite reopen preserve all costs, refunds and immutable historical cost snapshots')
+ const p=fixture('partial-before');p.create([{id:'bowl',qty:2,price:95},{id:'premium',qty:1,price:120}]);p.pay('deposit',50)
+ ok(p.call('release-one','cancel-part',{quantities:[{id:'bowl',qty:1}],reason:'unstarted'}));assert.equal(p.stock(),.1);p.verify()
+ ok(p.call('cook','advance',{status:'cooking'}));ok(p.call('lose-premium','cancel-part',{quantities:[{id:'premium',qty:1}],reason:'prepared'}));assert.equal(p.stock(),.1);assert.equal(p.pnl().opExpenses,9);p.verify()
+ p.pay('tail',45,'card');ok(p.call('ready','advance',{status:'ready'}));ok(p.call('complete','advance',{status:'completed'}));assert.equal(p.pnl().cogs,6);assert.equal(p.pnl().opExpenses,9);p.verify()
+ pass('unstarted selected portions return only their FIFO reservation; prepared selected portions retain actual loss while the remaining meal fulfils normally')
+ const limited=p.db.getRestaurantState().config
+ ok(p.db.applyRestaurantOperation({id:'lower-capacity',kind:'restaurant',action:'configure',time:now(),expectedConfig:canonicalSignature(limited),config:{...limited,dailyCapacity:2,slotCapacity:2}},owner))
+ const beforeCapacity=p.db.exportData(),over=p.call('over-capacity','create',{items:[{id:'bowl',qty:1,price:95}]})
+ assert.equal(over.success,false);assert.deepEqual(p.db.exportData(),beforeCapacity)
+ pass('prepared cancelled portions retain their used kitchen capacity and cannot let another meal exceed the actual daily limit')
+ const late=fixture('late-failure');late.create();const raw=new Database(late.file);require('../../electron/databaseFeatureFence.cjs').register(raw)
+ raw.exec("CREATE TRIGGER funds_cost_late_failure BEFORE INSERT ON stock_cost_operations WHEN NEW.id LIKE '%late-payment%' BEGIN SELECT RAISE(ABORT,'fixture late coupled cost failure'); END")
+ const prior=late.db.exportData(),failure=late.call('late-payment','funds-receive',{amount:10,paid:10,payMethod:'cash',shiftId:'shift'})
+ assert.equal(failure.success,false);assert.deepEqual(late.db.exportData(),prior);raw.exec('DROP TRIGGER funds_cost_late_failure');raw.close()
+ pass('a real late cost-receipt SQL failure rolls back payment, cash, restaurant and cost books together')
+ const historical=fixture('fulfilled-before-opening',false);historical.create();historical.pay('deposit',215);historical.fulfil();historical.activate()
+ ok(historical.call('historic-return','cancel-part',{quantities:[{id:'bowl',qty:1}],reason:'missing historical FIFO',shiftId:'shift'}))
+ assert.equal(historical.pnl().complete,false);assert.equal(historical.pnl().netIncome,null)
+ assert.ok(historical.state().projection.sourceEvidence.some(row=>row.basis==='unknown-historic-funded-return'));historical.verify()
+ pass('fulfilment before cost opening stays explicitly unvalued when no original FIFO exists, rather than substituting today\'s edited reference price')
+ fs.writeFileSync(path.join(out,'restaurant-funds-cost-observations.json'),JSON.stringify({schemaVersion:1,checks,realSQLite:true,originalOrder:delivered.order.id,originalContract:before.restaurantOrders[0].total,initialSourceCount:sources.length,realMerchantData:false},null,2))
+ console.log(JSON.stringify({success:true,marker:'POS_RESTAURANT_FUNDS_COST_PASS',tests:checks.length}))
+}catch(error){console.error(error.stack);process.exitCode=1}finally{for(const f of fixtures)try{f.db.close()}catch{}}

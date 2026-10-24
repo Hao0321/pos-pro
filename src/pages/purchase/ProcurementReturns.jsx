@@ -1,14 +1,17 @@
 import {tr,trMessage} from "../../i18n"
-import {useEffect,useRef,useState} from 'react'
+import {useEffect,useRef,useState,lazy,Suspense} from 'react'
 import {canonicalSignature} from '../../../electron/operationRules.mjs'
 import {procurementSummary} from '../../../electron/procurementRules.mjs'
 import {availableForReturn,quoteProcurementAllocation} from '../../../electron/procurementValuation.mjs'
 import {ps} from './controls.jsx'
+import {loadLotState} from '../../utils/dataAccess'
+const SupplierLotReturnModal=lazy(()=>import('./SupplierLotReturnModal.jsx'))
 
 const money=n=>'NT$ '+n.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2})
 const control={minHeight:48,fontSize:16,width:'100%'}
-export default function ProcurementReturns({po,onCommand,openShift,readOnly=false}){
+export default function ProcurementReturns({po,onCommand,openShift,readOnly=false,store,session}){
   const [dialog,setDialog]=useState(null),[error,setError]=useState(''),[done,setDone]=useState(''),[busy,setBusy]=useState(false),running=useRef(false)
+  const [lotState,setLotState]=useState(null)
   const p=po.procurement,summary=procurementSummary(po)
   useEffect(()=>{
     const committed=e=>{if(dialog&&e.detail?.purchase?.id===po.id&&e.detail.receipt?.kind===dialog.kind){setDialog(null);setBusy(false);running.current=false;setError('');setDone('已保存，可核對下方紀錄。')}}
@@ -16,6 +19,7 @@ export default function ProcurementReturns({po,onCommand,openShift,readOnly=fals
   },[dialog,po.id])
   const sources=[{id:'',label:'尚未請款的貨'},...p.bills.map(b=>({id:b.id,label:'請款單 '+b.reference}))].map(source=>({...source,...availableForReturn(po,source.id)})).filter(s=>s.quantities.some(q=>q>0))
   function open(kind,extra={}){setError('');setDone('');setDialog({kind,expectedPurchase:canonicalSignature(po),invoiceId:sources[0]?.id||'',quantities:po.items.map(()=>''),reason:'',method:'bank',amount:'',note:'',...extra})}
+  async function openReturn(){if(running.current)return;if(!store||!session)return open('purchase-return');running.current=true;setBusy(true);setError('');setDone('');try{const state=await loadLotState(session);if(state.active)setLotState(state);else open('purchase-return')}catch(cause){setError(cause.message)}finally{running.current=false;setBusy(false)}}
   const update=(key,value)=>setDialog(d=>({...d,[key]:value}))
   const available=dialog?.kind==='purchase-return'?availableForReturn(po,dialog.invoiceId):null
   let preview=null
@@ -34,7 +38,9 @@ export default function ProcurementReturns({po,onCommand,openShift,readOnly=fals
   const title=dialog&&({'purchase-return':'把貨退給供應商','purchase-refund':'記錄收到供應商退款','purchase-refund-reverse':'更正供應商退款'}[dialog.kind])
   return <section aria-label={tr("採購退貨與退款")} style={{margin:'16px 0'}}>
     <h4>{tr("退貨與供應商退款")}</h4>
-    {!readOnly&&!p.cancel&&sources.length>0&&<button className="btn btn-ghost" style={{minHeight:48,marginTop:8}} onClick={()=>open('purchase-return')}>{tr("辦理退貨")}</button>}
+    {!readOnly&&!p.cancel&&sources.length>0&&!lotState&&<button className="btn btn-ghost" data-purchase-return style={{minHeight:56,marginTop:8}} disabled={busy} onClick={openReturn}>{tr("辦理退貨")}</button>}
+    {error&&!dialog&&!lotState&&<p role="alert">{trMessage(error)}</p>}
+    {lotState&&<Suspense fallback={<p role="status">{tr('正在核對庫存…')}</p>}><SupplierLotReturnModal po={po} state={lotState} store={store} session={session} onClose={()=>setLotState(null)} onSaved={()=>{setLotState(null);setDone('已保存，可核對下方紀錄。')}}/></Suspense>}
     {summary.credit>0&&<div className="card" style={{padding:14,marginTop:10}}><strong>{tr("供應商尚待退回 ")}{money(summary.credit)}</strong><p>{tr("請核對實際收到的款項，再記錄退款。")}</p>{!readOnly&&summary.bills.filter(b=>b.credit>0).map(b=><button key={b.id} className="btn btn-primary" style={{minHeight:48,marginTop:8,width:'100%',whiteSpace:'normal'}} onClick={()=>open('purchase-refund',{invoiceId:b.id,reference:b.reference,amount:String(b.credit)})}>{tr("記錄收到退款 · ")}{b.reference} · {money(b.credit)}</button>)}</div>}
     {done&&<p role="status">{trMessage(done)}</p>}
     {(p.returns?.length>0||p.refunds?.length>0)&&<details open><summary style={{padding:'12px 0',cursor:'pointer'}}>{tr("退貨與退款紀錄")}</summary>

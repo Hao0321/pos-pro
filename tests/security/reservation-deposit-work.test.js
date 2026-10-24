@@ -1,0 +1,10 @@
+import {describe,it,expect} from 'vitest'
+import {reservationDepositWork,reservationDepositUnresolved} from '../../src/utils/reservationDepositWork.mjs'
+const booking=(status='seated')=>({id:'booking',status,depositTerms:{requiredCents:1000}}),balance={availableCents:500},reception=(...states)=>({orders:states.map((status,index)=>({id:String(index),bookingId:'booking',status}))})
+describe('M22 unused deposit work beyond table release',()=>{
+ it('keeps cancellation, departure and no-show money visible even when meal bills are settled',()=>{for(const status of ['cancelled','completed','no-show'])expect(reservationDepositUnresolved(booking(status),balance,false,reception('completed'))).toBe(true)})
+ it('includes a still-seated party after every actual linked meal ends, without declaring that booking ended',()=>{const work=reservationDepositWork(booking(),balance,false,reception('completed','cancelled'));expect(work).toMatchObject({unresolved:true,finishedMeals:true,terminal:false});expect(booking().status).toBe('seated')})
+ it('does not call a no-meal, partly finished or new追加餐點 party ready for refund',()=>{for(const orders of [reception(),reception('completed','cooking'),reception('completed','reserved'),reception('ready')])expect(reservationDepositUnresolved(booking(),balance,false,orders)).toBe(false);expect(reservationDepositUnresolved(booking('confirmed'),balance,false,reception('completed'))).toBe(false)})
+ it('keeps missing or unknown original money visible rather than substituting zero',()=>{expect(reservationDepositUnresolved(booking(),null,true,reception('missing'))).toBe(true);expect(reservationDepositUnresolved(booking('completed'),null,true,reception())).toBe(true)})
+ it('drops fully used/refunded money and ignores other bookings’ meal statuses',()=>{expect(reservationDepositUnresolved(booking(),{availableCents:0},false,reception('completed'))).toBe(false);expect(reservationDepositUnresolved(booking(),balance,false,{orders:[{bookingId:'other',status:'completed'}]})).toBe(false);expect(reservationDepositUnresolved({...booking(),depositTerms:{requiredCents:0}},balance,false,reception('completed'))).toBe(false)})
+})

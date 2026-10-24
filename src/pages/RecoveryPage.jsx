@@ -2,16 +2,19 @@ import {useEffect,useMemo,useRef,useState} from 'react'
 import {tr,trMessage,getLocale} from '../i18n'
 import {browserStorage} from '../utils/browserStorage'
 import {readPendingFinancial} from '../utils/financialCommand'
+import {readKitchenPrintPending,retryKitchenPrint,KITCHEN_PRINT_PENDING} from '../utils/kitchenPrintClient'
 import {getRecoveryState,applyProtectedRecovery,readRecoveryCommand,retryRecoveryCommand,exportRecoverySource,exportRecoveryDiagnostics,downloadRecoveryData} from '../utils/recoveryClient'
 import {exportBackupFile} from '../utils/security'
 import RecoverySummary from '../components/RecoverySummary'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
+import {RECOVERY_PROTOCOL} from '../../electron/recoveryRules.mjs'
 import '../styles/recovery.css'
 
 function originals(){
   const rows=[],financial=readPendingFinancial(),checkout=browserStorage.getItem('pos_pending_checkout_v1')
   if(financial)rows.push(financial)
   if(checkout){const value=JSON.parse(checkout);if(typeof value.plan?.order?.id!=='string')throw Error('待確認單號需要核對');rows.push({...value,kind:'checkout'})}
+  try{const printing=readKitchenPrintPending();if(printing)rows.push(printing)}catch(error){rows.printError=error.message}
   return rows
 }
 const operationId=pending=>pending.kind==='checkout'?pending.plan.order.id:pending.request.id
@@ -20,21 +23,27 @@ export default function RecoveryPage({store,session}){
   const running=useRef(false)
   const root=useRef(null),status=useRef(null)
   useEffect(()=>{if(notice){root.current?.scrollTo?.({top:0,behavior:'auto'});status.current?.focus({preventScroll:true})}},[notice])
-  const loaded=useMemo(()=>{try{return {rows:originals(),commands:['restore','recover'].map(readRecoveryCommand).filter(Boolean)}}catch(error){return {rows:[],commands:[],error:error.message}}},[refresh,store.financialState.phase,store.checkoutState.phase])
+  const loaded=useMemo(()=>{try{const rows=originals();return {rows,commands:['restore','recover'].map(readRecoveryCommand).filter(Boolean),error:rows.printError}}catch(error){return {rows:[],commands:[],error:error.message}}},[refresh,store.financialState.phase,store.checkoutState.phase])
+  useEffect(()=>{const update=()=>setRefresh(v=>v+1);window.addEventListener('pos-kitchen-print-pending-changed',update);return()=>window.removeEventListener('pos-kitchen-print-pending-changed',update)},[])
   const pending=loaded.rows.find(p=>operationId(p)===selected)||loaded.rows[0],pendingId=pending&&operationId(pending)
   useEffect(()=>{
     let cancelled=false;setState(null);setAck('')
     if(pending)getRecoveryState(pending,session).then(value=>{if(!cancelled)setState(value)}).catch(error=>{if(!cancelled)setError(error.message)})
     return()=>{cancelled=true}
   },[pendingId,refresh,session.userId])
-  async function confirmOriginal(){
+  async function confirmOriginal(allowWaiting=false){
+    const proof=await getRecoveryState(pending,session)
+    if(proof?.protocol!==RECOVERY_PROTOCOL||proof.operationId!==pendingId||!['matched','missing','different'].includes(proof.active))throw Error('原紀錄仍需要核對，請保留原單號')
+    if(proof.active!=='matched'){if(allowWaiting)return false;throw Error('原紀錄仍需要核對，請保留原單號')}
     const current=originals().find(row=>operationId(row)===pendingId)
-    if(!current){if((await getRecoveryState(pending,session)).active!=='matched')throw Error('原紀錄仍需要核對，請保留原單號');await store.reloadAfterRecovery();setNotice('原紀錄已確認，可以繼續營業');setRefresh(v=>v+1);return}
+    if(!current){await store.reloadAfterRecovery();setNotice('原紀錄已確認，可以繼續營業');setRefresh(v=>v+1);return true}
     if(canonicalSignature(current)!==canonicalSignature(pending))throw Error('原單號內容已改變，請保留紀錄核對')
 
     if(pending?.kind==='checkout')await store.retryCheckout()
+    else if(readKitchenPrintPending()?.request.id===pendingId)await retryKitchenPrint(session,{recovered:true})
     else if(pending)await store.retryFinancial()
     await store.reloadAfterRecovery();setNotice('原紀錄已確認，可以繼續營業');setRefresh(v=>v+1)
+    return true
   }
   async function perform(action){
     if(running.current)return;running.current=true;setBusy(true);setError('');setNotice('')
@@ -46,9 +55,13 @@ export default function RecoveryPage({store,session}){
   }
   async function retry(entry){
     await retryRecoveryCommand(entry,session);await store.reloadAfterRecovery()
-    if(pending)await confirmOriginal();else{setNotice('復原已確認，資料已重新載入');setRefresh(v=>v+1)}
+    if(pending)await confirmOriginal(true)
+    const waiting=originals().length>0||['restore','recover'].some(kind=>readRecoveryCommand(kind))
+    if(waiting)setNotice('這筆已確認，還有紀錄待核對。')
+    else if(!pending)setNotice('復原已確認，資料已重新載入')
+    setRefresh(v=>v+1)
   }
-  function exportPending(){downloadRecoveryData({financial:browserStorage.getItem('pos_pending_financial_v1'),checkout:browserStorage.getItem('pos_pending_checkout_v1'),restore:browserStorage.getItem('pos_pending_restore_v1'),recovery:browserStorage.getItem('pos_pending_recovery_v1')},'pending-original-records');setNotice('已開啟備份下載，請確認檔案實際保存完成')}
+  function exportPending(){downloadRecoveryData({financial:browserStorage.getItem('pos_pending_financial_v1'),checkout:browserStorage.getItem('pos_pending_checkout_v1'),printing:browserStorage.getItem(KITCHEN_PRINT_PENDING),restore:browserStorage.getItem('pos_pending_restore_v1'),recovery:browserStorage.getItem('pos_pending_recovery_v1')},'pending-original-records');setNotice('已開啟備份下載，請確認檔案實際保存完成')}
   return <section className="recovery-page" ref={root}><header><div><p className="recovery-eyebrow">{tr('保留原單號，安心核對')}</p><h1>{tr('一步一步找回資料')}</h1><p>{tr('先核對原單號，再看保護副本。找回後會核對原紀錄。')}</p></div><button className="btn btn-ghost" onClick={()=>store.setView('dashboard')}>{tr('回首頁')}</button></header>
     {(loaded.error||error)&&<p role="alert" className="recovery-error">{trMessage(loaded.error||error)}</p>}
     {notice&&<p role="status" ref={status} tabIndex={-1} className="recovery-notice">{tr(notice)}</p>}

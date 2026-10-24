@@ -1,0 +1,238 @@
+{
+  "provenance": {
+    "producerHead": "4cd440092ba155a1af75e96850f00891f2a029c1",
+    "producerSourceReceiptSha256": "30c9b6eea91397c499bbaf2005e6dd68c001c4fb9d03589e1d399cd8f0a3ca55",
+    "generatedByActualNativeApi": true,
+    "nullableInputAccepted": true,
+    "genuinePreCoreReadRejected": true,
+    "merchantData": false
+  },
+  "owner": {
+    "userId": "owner",
+    "username": "Synthetic Owner",
+    "role": "owner"
+  },
+  "requests": {
+    "create": {
+      "storeId": "null-digest-fixture",
+      "epoch": "e9ceb30a-82ff-418a-8ba1-da6bbda4133a",
+      "time": "2026-10-18T14:44:26.245Z",
+      "date": "2026-10-18",
+      "expectedOpeningDigest": null,
+      "id": "null-profile",
+      "kind": "customer-ledger",
+      "action": "customer-create",
+      "expectedRevision": 0,
+      "customer": {
+        "id": "customer",
+        "name": "Synthetic Customer"
+      }
+    },
+    "receive": {
+      "storeId": "null-digest-fixture",
+      "epoch": "e9ceb30a-82ff-418a-8ba1-da6bbda4133a",
+      "time": "2026-10-18T14:44:26.245Z",
+      "date": "2026-10-18",
+      "expectedOpeningDigest": null,
+      "id": "null-receive",
+      "kind": "customer-ledger",
+      "action": "receive",
+      "expectedRevision": 1,
+      "customerId": "customer",
+      "amount": 5,
+      "method": "bank",
+      "confirmed": true
+    },
+    "pay": {
+      "storeId": "null-digest-fixture",
+      "epoch": "e9ceb30a-82ff-418a-8ba1-da6bbda4133a",
+      "time": "2026-10-18T14:44:26.245Z",
+      "date": "2026-10-18",
+      "expectedOpeningDigest": null,
+      "id": "null-pay",
+      "kind": "supplier-ledger",
+      "action": "pay",
+      "expectedRevision": 0,
+      "supplierId": "supplier",
+      "expectedSupplierName": "Synthetic Supplier",
+      "amount": 7,
+      "method": "bank",
+      "confirmed": true
+    }
+  },
+  "data": {
+    "storeId": "null-digest-fixture",
+    "epoch": "e9ceb30a-82ff-418a-8ba1-da6bbda4133a",
+    "products": [],
+    "documents": [],
+    "salesOperations": [],
+    "customerEntries": [
+      {
+        "version": 1,
+        "id": "null-profile",
+        "storeId": "null-digest-fixture",
+        "revision": 1,
+        "time": "2026-10-18T14:44:26.245Z",
+        "date": "2026-10-18",
+        "action": "customer-create",
+        "customerId": "customer",
+        "actor": {
+          "userId": "owner",
+          "username": "Synthetic Owner",
+          "role": "owner"
+        },
+        "input": {
+          "storeId": "null-digest-fixture",
+          "epoch": "e9ceb30a-82ff-418a-8ba1-da6bbda4133a",
+          "time": "2026-10-18T14:44:26.245Z",
+          "date": "2026-10-18",
+          "expectedOpeningDigest": null,
+          "id": "null-profile",
+          "kind": "customer-ledger",
+          "action": "customer-create",
+          "expectedRevision": 0,
+          "customer": {
+            "id": "customer",
+            "name": "Synthetic Customer"
+          }
+        },
+        "customer": {
+          "id": "customer",
+          "name": "Synthetic Customer",
+          "contact": "",
+          "phone": "",
+          "email": "",
+          "address": "",
+          "note": ""
+        }
+      },
+      {
+        "version": 1,
+        "id": "null-receive",
+        "storeId": "null-digest-fixture",
+        "revision": 2,
+        "time": "2026-10-18T14:44:26.245Z",
+        "date": "2026-10-18",
+        "action": "receive",
+        "customerId": "customer",
+        "actor": {
+          "userId": "owner",
+          "username": "Synthetic Owner",
+          "role": "owner"
+        },
+        "input": {
+          "storeId": "null-digest-fixture",
+          "epoch": "e9ceb30a-82ff-418a-8ba1-da6bbda4133a",
+          "time": "2026-10-18T14:44:26.245Z",
+          "date": "2026-10-18",
+          "expectedOpeningDigest": null,
+          "id": "null-receive",
+          "kind": "customer-ledger",
+          "action": "receive",
+          "expectedRevision": 1,
+          "customerId": "customer",
+          "amount": 5,
+          "method": "bank",
+          "confirmed": true
+        },
+        "customerName": "Synthetic Customer",
+        "amount": 5,
+        "method": "bank",
+        "reference": "",
+        "note": "",
+        "shiftId": "",
+        "cashLogId": ""
+      }
+    ],
+    "customerOperations": [
+      {
+        "id": "null-profile",
+        "kind": "customer-ledger",
+        "action": "customer-create",
+        "customerId": "customer",
+        "revision": 1,
+        "signature": "{\"action\":\"customer-create\",\"customer\":{\"id\":\"customer\",\"name\":\"Synthetic Customer\"},\"date\":\"2026-10-18\",\"epoch\":\"e9ceb30a-82ff-418a-8ba1-da6bbda4133a\",\"expectedOpeningDigest\":null,\"expectedRevision\":0,\"id\":\"null-profile\",\"kind\":\"customer-ledger\",\"storeId\":\"null-digest-fixture\",\"time\":\"2026-10-18T14:44:26.245Z\"}",
+        "event": "{\"action\":\"customer-create\",\"actor\":{\"role\":\"owner\",\"userId\":\"owner\",\"username\":\"Synthetic Owner\"},\"customer\":{\"address\":\"\",\"contact\":\"\",\"email\":\"\",\"id\":\"customer\",\"name\":\"Synthetic Customer\",\"note\":\"\",\"phone\":\"\"},\"customerId\":\"customer\",\"date\":\"2026-10-18\",\"id\":\"null-profile\",\"input\":{\"action\":\"customer-create\",\"customer\":{\"id\":\"customer\",\"name\":\"Synthetic Customer\"},\"date\":\"2026-10-18\",\"epoch\":\"e9ceb30a-82ff-418a-8ba1-da6bbda4133a\",\"expectedOpeningDigest\":null,\"expectedRevision\":0,\"id\":\"null-profile\",\"kind\":\"customer-ledger\",\"storeId\":\"null-digest-fixture\",\"time\":\"2026-10-18T14:44:26.245Z\"},\"revision\":1,\"storeId\":\"null-digest-fixture\",\"time\":\"2026-10-18T14:44:26.245Z\",\"version\":1}",
+        "cashLogId": null
+      },
+      {
+        "id": "null-receive",
+        "kind": "customer-ledger",
+        "action": "receive",
+        "customerId": "customer",
+        "revision": 2,
+        "signature": "{\"action\":\"receive\",\"amount\":5,\"confirmed\":true,\"customerId\":\"customer\",\"date\":\"2026-10-18\",\"epoch\":\"e9ceb30a-82ff-418a-8ba1-da6bbda4133a\",\"expectedOpeningDigest\":null,\"expectedRevision\":1,\"id\":\"null-receive\",\"kind\":\"customer-ledger\",\"method\":\"bank\",\"storeId\":\"null-digest-fixture\",\"time\":\"2026-10-18T14:44:26.245Z\"}",
+        "event": "{\"action\":\"receive\",\"actor\":{\"role\":\"owner\",\"userId\":\"owner\",\"username\":\"Synthetic Owner\"},\"amount\":5,\"cashLogId\":\"\",\"customerId\":\"customer\",\"customerName\":\"Synthetic Customer\",\"date\":\"2026-10-18\",\"id\":\"null-receive\",\"input\":{\"action\":\"receive\",\"amount\":5,\"confirmed\":true,\"customerId\":\"customer\",\"date\":\"2026-10-18\",\"epoch\":\"e9ceb30a-82ff-418a-8ba1-da6bbda4133a\",\"expectedOpeningDigest\":null,\"expectedRevision\":1,\"id\":\"null-receive\",\"kind\":\"customer-ledger\",\"method\":\"bank\",\"storeId\":\"null-digest-fixture\",\"time\":\"2026-10-18T14:44:26.245Z\"},\"method\":\"bank\",\"note\":\"\",\"reference\":\"\",\"revision\":2,\"shiftId\":\"\",\"storeId\":\"null-digest-fixture\",\"time\":\"2026-10-18T14:44:26.245Z\",\"version\":1}",
+        "cashLogId": null
+      }
+    ],
+    "suppliers": [
+      {
+        "id": "supplier",
+        "name": "Synthetic Supplier",
+        "contact": "",
+        "phone": "",
+        "payTerms": "",
+        "note": "",
+        "catalog": []
+      }
+    ],
+    "purchases": [],
+    "supplierEntries": [
+      {
+        "version": 1,
+        "id": "null-pay",
+        "storeId": "null-digest-fixture",
+        "revision": 1,
+        "time": "2026-10-18T14:44:26.245Z",
+        "date": "2026-10-18",
+        "action": "pay",
+        "actor": {
+          "userId": "owner",
+          "username": "Synthetic Owner",
+          "role": "owner"
+        },
+        "input": {
+          "storeId": "null-digest-fixture",
+          "epoch": "e9ceb30a-82ff-418a-8ba1-da6bbda4133a",
+          "time": "2026-10-18T14:44:26.245Z",
+          "date": "2026-10-18",
+          "expectedOpeningDigest": null,
+          "id": "null-pay",
+          "kind": "supplier-ledger",
+          "action": "pay",
+          "expectedRevision": 0,
+          "supplierId": "supplier",
+          "expectedSupplierName": "Synthetic Supplier",
+          "amount": 7,
+          "method": "bank",
+          "confirmed": true
+        },
+        "supplierId": "supplier",
+        "supplierName": "Synthetic Supplier",
+        "amount": 7,
+        "method": "bank",
+        "reference": "",
+        "note": "",
+        "shiftId": "",
+        "cashLogId": ""
+      }
+    ],
+    "supplierOperations": [
+      {
+        "id": "null-pay",
+        "kind": "supplier-ledger",
+        "action": "pay",
+        "supplierId": "supplier",
+        "revision": 1,
+        "signature": "{\"action\":\"pay\",\"amount\":7,\"confirmed\":true,\"date\":\"2026-10-18\",\"epoch\":\"e9ceb30a-82ff-418a-8ba1-da6bbda4133a\",\"expectedOpeningDigest\":null,\"expectedRevision\":0,\"expectedSupplierName\":\"Synthetic Supplier\",\"id\":\"null-pay\",\"kind\":\"supplier-ledger\",\"method\":\"bank\",\"storeId\":\"null-digest-fixture\",\"supplierId\":\"supplier\",\"time\":\"2026-10-18T14:44:26.245Z\"}",
+        "event": "{\"action\":\"pay\",\"actor\":{\"role\":\"owner\",\"userId\":\"owner\",\"username\":\"Synthetic Owner\"},\"amount\":7,\"cashLogId\":\"\",\"date\":\"2026-10-18\",\"id\":\"null-pay\",\"input\":{\"action\":\"pay\",\"amount\":7,\"confirmed\":true,\"date\":\"2026-10-18\",\"epoch\":\"e9ceb30a-82ff-418a-8ba1-da6bbda4133a\",\"expectedOpeningDigest\":null,\"expectedRevision\":0,\"expectedSupplierName\":\"Synthetic Supplier\",\"id\":\"null-pay\",\"kind\":\"supplier-ledger\",\"method\":\"bank\",\"storeId\":\"null-digest-fixture\",\"supplierId\":\"supplier\",\"time\":\"2026-10-18T14:44:26.245Z\"},\"method\":\"bank\",\"note\":\"\",\"reference\":\"\",\"revision\":1,\"shiftId\":\"\",\"storeId\":\"null-digest-fixture\",\"supplierId\":\"supplier\",\"supplierName\":\"Synthetic Supplier\",\"time\":\"2026-10-18T14:44:26.245Z\",\"version\":1}",
+        "cashLogId": null,
+        "internal": false
+      }
+    ],
+    "inventoryAudits": [],
+    "cashLogs": [],
+    "openShift": null
+  }
+}

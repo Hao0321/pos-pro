@@ -4,19 +4,174 @@
   "portableProtocol": "business-document/v1",
   "portableSchema": "/agent/business-document-v1.schema.json",
   "exchangeProfiles": [
-    {"protocol":"business-party/v1","schema":"/agent/business-party-v1.schema.json","purpose":"share a store identifier and display name; not identity authentication"},
-    {"protocol":"business-catalogue/v1","schema":"/agent/business-catalogue-v1.schema.json","purpose":"public reference prices, not an order"},
-    {"protocol":"business-quote/v1","schema":"/agent/business-quote-v1.schema.json","purpose":"recipient-specific immutable quotation; human-reviewed buyer purchase import and seller sales-order handoff"}
+    {
+      "protocol": "business-party/v1",
+      "schema": "/agent/business-party-v1.schema.json",
+      "purpose": "share a store identifier and display name; not identity authentication"
+    },
+    {
+      "protocol": "business-catalogue/v1",
+      "schema": "/agent/business-catalogue-v1.schema.json",
+      "purpose": "public reference prices, not an order"
+    },
+    {
+      "protocol": "business-quote/v1",
+      "schema": "/agent/business-quote-v1.schema.json",
+      "purpose": "recipient-specific immutable quotation; human-reviewed buyer purchase import and seller sales-order handoff"
+    }
   ],
-  "publicCatalogue": {"path":"/api/catalogue","surface":"existing customer ordering server when started; no automatic publication","prices":"TWD reference prices; no costs or other customers' quotes"},
+  "publicCatalogue": {
+    "path": "/api/catalogue",
+    "surface": "existing customer ordering server when started; no automatic publication",
+    "prices": "TWD reference prices; no costs or other customers' quotes"
+  },
   "schema": "/agent/document-draft-v1.schema.json",
+  "selectedRestaurantDraft": {
+    "protocol": "pos-restaurant-agent-draft/v1",
+    "schema": "/agent/restaurant-draft-v1.schema.json",
+    "context": "Use the task-minimized copy packet in Quick documents; its restaurantMenu contains offer/variant/group/choice IDs and prices, without products, stocks, recipes or costs.",
+    "preview": "Authenticated window.electronAPI.db.getRestaurantAgentPreview({draft}); read-only. refresh:true explicitly rechecks a changed menu while preserving draft identity.",
+    "confirmation": "A human confirms in Quick documents. The application binds a current private menuReview, retains the draft source in the original receipt and uses the authoritative quote time for the operation. No anonymous order-write endpoint."
+  },
   "guide": "/llms.txt",
-  "context": {"surface": "authenticated application browser or desktop preload", "method": "window.electronAPI.db.getAgentContext()", "authentication": "existing login and paired-device session; no credentials in drafts"},
-  "delivery": {"paste": "快速建單", "linkFragment": "agentDraft=<encodeURIComponent(JSON)>"},
-  "kinds": ["sale", "restaurant", "purchase"],
+  "context": {
+    "surface": "authenticated application browser or desktop preload",
+    "method": "window.electronAPI.db.getAgentContext()",
+    "authentication": "existing login and paired-device session; no credentials in drafts"
+  },
+  "delivery": {
+    "paste": "快速建單",
+    "linkFragment": "agentDraft=<encodeURIComponent(JSON)>"
+  },
+  "kinds": [
+    "sale",
+    "restaurant",
+    "purchase"
+  ],
   "humanReviewRequired": true,
-  "customerReceiptDraft": {"protocol":"pos-customer-receipt-draft/v1","schema":"/agent/customer-receipt-draft-v1.schema.json","context":"authenticated window.electronAPI.db.getSalesState().customerLedger.customers; owner only","paste":"客戶與款項 → 讓 Agent 幫我填收款草稿","requiresActualReceiptConfirmation":true,"automaticMoneyMovement":false},
+  "customerReceiptDraft": {
+    "protocol": "pos-customer-receipt-draft/v1",
+    "schema": "/agent/customer-receipt-draft-v1.schema.json",
+    "context": "authenticated window.electronAPI.db.getSalesState().customerLedger.customers; owner only",
+    "paste": "客戶與款項 → 讓 Agent 幫我填收款草稿",
+    "requiresActualReceiptConfirmation": true,
+    "automaticMoneyMovement": false
+  },
   "moneyMovement": false,
   "arbitraryExecution": false,
-  "featurePrice": "free"
+  "featurePrice": "free",
+  "purchaseUnitsDraft": {
+    "protocol": "pos-purchase-units-draft/v1",
+    "schema": "/agent/purchase-units-draft-v1.schema.json",
+    "guide": "/agent/guides/purchase-units.txt",
+    "context": "Owner copies the task packet in Purchase → New purchase. Sparse input preserves omitted owner fields.",
+    "delivery": [
+      "paste",
+      "json-file",
+      "text-file",
+      "single-json-code-fence",
+      "file-drop"
+    ],
+    "humanReviewRequired": true,
+    "moneyMovement": false
+  },
+  "migrationDraft": {
+    "protocol": "pos-migration-draft/v1",
+    "schema": "/agent/migration-draft-v1.schema.json",
+    "guide": "/agent/guides/migration.txt",
+    "status": "owner-master-and-stock-review",
+    "businessCommit": false,
+    "humanReviewRequired": true,
+    "moneyMovement": false,
+    "localMasterCommit": [
+      "products",
+      "suppliers",
+      "customers"
+    ],
+    "identity": "Exact source system + company + entity + externalId. No name-only merge.",
+    "unsupportedCommit": [
+      "opening-receivables",
+      "opening-payables",
+      "history-reference"
+    ],
+    "confirmation": "Authenticated owner previews counts, source-ID mappings, source/local field differences and unresolved issues. Original stock facts continue into a separate stock/cost trial in the same entry. A displayed confirmation atomically commits the reviewed batch; Agent cannot approve or execute.",
+    "openingStock": {
+      "tableEntity": "opening-stock",
+      "sourceProtocol": "pos-migration-draft/v1",
+      "guide": "/agent/guides/opening-stock.txt",
+      "example": "/agent/examples/opening-stock-v1.json",
+      "humanReviewRequired": true,
+      "currency": "TWD",
+      "quantityDecimalPlaces": 3,
+      "valueDecimalPlaces": 2,
+      "valuationRateDecimalPlaces": 12,
+      "clearingAccount": "3902",
+      "ordinarySaleOrPurchase": false,
+      "externalAgentWriteApi": false,
+      "fullMigrationComplete": false,
+      "installerUpdated": false
+    },
+    "directFiles": {
+      "extensions": [
+        "csv",
+        "tsv",
+        "xlsx"
+      ],
+      "maxBytes": {
+        "csv": 80000,
+        "tsv": 80000,
+        "xlsx": 120000
+      },
+      "workbook": {
+        "multipleWorksheets": true,
+        "originalFilePreserved": true,
+        "formulaExecution": false,
+        "ownerReviewRequired": true
+      },
+      "legacyXls": false,
+      "externalAiUpload": false
+    },
+    "financialFiles": {
+      "protocol": "pos-financial-file-migration/v1",
+      "guide": "/agent/guides/financial-files.txt",
+      "sourceFormats": [
+        "csv",
+        "tsv",
+        "xlsx"
+      ],
+      "requestProtocol": "pos-opening-migration/v3",
+      "receiptProtocol": "pos-opening-migration-receipt/v3",
+      "protectionVersion": 20,
+      "humanReviewRequired": true,
+      "originalFilesPreserved": true,
+      "externalAiUpload": false,
+      "externalAgentWriteApi": false,
+      "fullMigrationComplete": false,
+      "installerUpdated": false
+    }
+  },
+  "catalogueOrderDraft": {
+    "protocol": "business-catalogue-order/v1",
+    "schema": "/agent/business-catalogue-order-v1.schema.json",
+    "guide": "/agent/guides/catalogue-order.txt",
+    "purpose": "Buyer prepares a local purchase from an intact public reference-price catalogue and explicit selected quantities.",
+    "context": "Authenticated owner context advertises catalogueOrdering.protocol; supplier-scoped SKU mappings are human-reviewed.",
+    "delivery": [
+      "public-catalogue-json",
+      "paste",
+      "json-file",
+      "file-drop"
+    ],
+    "humanReviewRequired": true,
+    "automaticMoneyMovement": false,
+    "automaticReceiving": false,
+    "sentToSupplier": false,
+    "maxBytes": 32768,
+    "storedSource": "procurement.sourceCatalogue",
+    "compatibility": {
+      "purchaseVersion": 3,
+      "browserRecordVersion": 2,
+      "feature": "catalogue-purchase-v1"
+    }
+  }
 }

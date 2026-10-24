@@ -1,0 +1,6 @@
+const workbook=require('./financialMigrationFixture.cjs'),quote=(value,separator)=>value.includes(separator)||/["\r\n]/.test(value)?'"'+value.replaceAll('"','""')+'"':value,encode=(headers,rows,separator)=>'\uFEFF'+headers.map(value=>quote(value,separator)).join(separator)+'\r\n\r\n'+rows.map(row=>row.map(value=>quote(value,separator)).join(separator)).join('\r\n')+'\r\n'
+module.exports=function financialDelimited(){
+ const ar=structuredClone(workbook.standard[1]),ap=structuredClone(workbook.standard[2]),stock=structuredClone(workbook.standard[0]);ar.headers.push('note');ar.rows[0][7]='1,000.00';ar.rows[0][9]='1,400.00';ar.rows[0].push('Original note\r\nSecond physical line');ar.rows[1].push('Original credit')
+ ap.rows[0][5]='03/10/2026';ap.rows[0][6]='01/11/2026';ap.rows[0][7]='900,00';ap.rows[0][9]='1200,00';ap.rows[0][10]='300,00';ap.rows[1][5]='04/10/2026';ap.rows[1][7]='200,00';ap.rows[1][9]='200,00';ap.rows[1][10]='0,00'
+ return [{name:'original-receivables.csv',text:encode(ar.headers,ar.rows,','),separator:','},{name:'original-payables.tsv',text:encode(ap.headers,ap.rows,'\t'),separator:'\t'},{name:'original-stock.csv',text:encode(stock.headers,stock.rows,','),separator:','}]
+}

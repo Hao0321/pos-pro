@@ -3,6 +3,7 @@ import {canonicalSignature} from '../../electron/operationRules.mjs'
 export const supplierDraftKey=(storeId,userId)=>'pos_supplier_draft_v1:'+encodeURIComponent(storeId)+':'+encodeURIComponent(userId)
 export function supplierDraftRequest(form,shiftId=''){
  const input={kind:SUPPLIER_KIND,action:form.action,storeId:form.storeId,epoch:form.epoch,date:form.date,expectedRevision:form.ledgerRevision}
+ if(Object.hasOwn(form,'expectedOpeningDigest')&&form.expectedOpeningDigest!==undefined)input.expectedOpeningDigest=form.expectedOpeningDigest
  const actualShift=form.submittedShiftId??(form.method==='cash'?shiftId:'')
  if(['pay','payment-propose','allocate','unallocate','refund','refund-reverse','pay-reverse'].includes(form.action))Object.assign(input,{supplierId:form.supplierId,expectedSupplierName:form.expectedSupplierName})
  if(form.action==='policy-set')Object.assign(input,{mode:form.mode,reason:form.reason,reviewed:form.confirmed})
@@ -12,6 +13,7 @@ export function supplierDraftRequest(form,shiftId=''){
  if(form.action==='pay')Object.assign(input,{amount:Number(form.amount),method:form.method,reference:form.reference||'',note:form.note||'',shiftId:actualShift,confirmed:form.confirmed,...(form.proposalId?{proposalId:form.proposalId}:{})})
  if(['allocate','unallocate'].includes(form.action))Object.assign(input,{items:(form.items||[]).filter(row=>Number(row.amount)>0).map(row=>({...row,amount:Number(row.amount)})),reviewed:form.confirmed,...(form.action==='allocate'?{paymentId:form.paymentId}:{allocationId:form.allocationId,reason:form.reason})})
  if(form.action==='refund')Object.assign(input,{paymentId:form.paymentId,amount:Number(form.amount),reference:form.reference||'',reason:form.reason,shiftId:actualShift,confirmed:form.confirmed})
+ if(form.action==='refund'&&form.fundingKind==='opening-credit')input.method=form.method
  if(form.action==='pay-reverse')Object.assign(input,{paymentId:form.paymentId,reason:form.reason,shiftId:actualShift,confirmed:form.confirmed})
  if(form.action==='refund-reverse')Object.assign(input,{refundId:form.refundId,reason:form.reason,shiftId:actualShift,confirmed:form.confirmed})
  return input

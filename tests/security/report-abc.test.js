@@ -1,5 +1,6 @@
 import {test,expect} from 'vitest'
 import {classifyProductRevenue} from '../../src/utils/analytics'
+test('exact report cents rank correctly above Number precision without changing the A boundary',()=>{const r=classifyProductRevenue([{id:'a',revenue:0,revenueCents:'18014398509481983'},{id:'b',revenue:0,revenueCents:'18014398509481984'}]);expect(r.items.map(row=>row.id)).toEqual(['b','a']);expect(r.totalCents).toBe('36028797018963967');expect(r.a).toHaveLength(2)})
 test('a single product contributing all revenue is a priority A product',()=>{const result=classifyProductRevenue([{id:'only',revenue:400}]);expect(result.a.map(row=>row.id)).toEqual(['only']);expect(result.c).toEqual([]);expect(result.items[0].cumPct).toBe(100)})
 test('exact 70/20/10 shares cross the A/B/C boundaries without putting the leading item in B',()=>{expect(classifyProductRevenue([{id:'c',revenue:10},{id:'a',revenue:70},{id:'b',revenue:20}]).items.map(row=>[row.id,row.cls,row.cumPct])).toEqual([['a','A',70],['b','B',90],['c','C',100]])})
 test('an indivisible threshold-crossing item remains in its priority band and ties are deterministic',()=>{const input=[{id:'b',revenue:50},{id:'a',revenue:50}],original=structuredClone(input);expect(classifyProductRevenue(input).items.map(row=>[row.id,row.cls])).toEqual([['a','A'],['b','A']]);expect(input).toEqual(original)})

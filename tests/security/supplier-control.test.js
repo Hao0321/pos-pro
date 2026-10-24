@@ -2,6 +2,7 @@ import {beforeEach,test,expect} from 'vitest'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
 import {createProcurement} from '../../electron/procurementRules.mjs'
 import {planInventory} from '../../electron/inventoryOperations.mjs'
+import {makeReceiptReview} from '../../electron/receiptReview.mjs'
 import {emptySupplierControl,deriveSupplierControl,projectSupplierControl,assertProcurementApproval,validateSupplierPaymentApproval,consumeSupplierPaymentApproval,procurementApprovalMaterial,purchaseMatchesApproval} from '../../electron/supplierControl.mjs'
 import {supplierAppliedCents,supplierClaimKey} from '../../electron/supplierCredit.mjs'
 const maker={userId:'maker',username:'Fixture Maker',role:'owner'},checker={userId:'checker',username:'Fixture Checker',role:'owner'},time='2026-10-16T02:00:00Z'
@@ -25,9 +26,9 @@ test('enabling dual mode requires two owner accounts, explicit review and an aut
   expect(()=>apply('policy-set',{mode:'dual-owner',reason:''})).toThrow();expect(control.policy.mode).toBe('simple')
 })
 test('the maker cannot approve its own purchase and a different authenticated account opens the protected actions',()=>{
-  mode('dual-owner');enroll();for(const kind of ['receive','purchase-bill','purchase-pay'])expect(()=>assertProcurementApproval({kind,purchaseId:po.id},data,control)).toThrow('未核准')
+  mode('dual-owner');enroll();for(const kind of ['receive','receive-reviewed','purchase-bill','purchase-pay'])expect(()=>assertProcurementApproval({kind,purchaseId:po.id},data,control)).toThrow('未核准')
   expect(()=>approve(maker)).toThrow('自己的提案');expect(control.purchases.get(po.id).status).toBe('pending');approve();expect(control.purchases.get(po.id).approvedBy).toEqual(checker)
-  for(const kind of ['receive','purchase-bill','purchase-pay'])expect(()=>assertProcurementApproval({kind,purchaseId:po.id},data,control)).not.toThrow()
+  for(const kind of ['receive','receive-reviewed','purchase-bill','purchase-pay'])expect(()=>assertProcurementApproval({kind,purchaseId:po.id},data,control)).not.toThrow()
 })
 test('switching back to simple mode never frees a previously submitted dual-account purchase',()=>{
   mode('dual-owner');enroll();mode('simple');expect(()=>assertProcurementApproval({kind:'receive',purchaseId:po.id},data,control)).toThrow('未核准');expect(()=>enroll()).toThrow('原採購');approve();expect(control.purchases.get(po.id).requiredApproval).toBe(true)
@@ -45,7 +46,8 @@ test('stale or changed purchase terms cannot borrow the old approval',()=>{
 })
 test('catalogue-to-stock linkage on actual receiving preserves the original approved catalogue terms',()=>{
   po=createProcurement({id:'catalog-create',kind:'purchase-create',time,purchase:{id:'catalog-po',supplierId:'supplier',date:'2026-10-16',items:[{catalogId:'catalog',name:'Rice',unit:'袋',qty:2,unitCost:100}]}},data);data.purchases=[po]
-  const material=procurementApprovalMaterial(po),received=planInventory({id:'catalog-receive',kind:'receive',time,purchaseId:po.id,expectedPurchase:canonicalSignature(po),quantities:[1]},data,maker).purchase
+  const material=procurementApprovalMaterial(po),request={id:'catalog-receive',kind:'receive-reviewed',time,purchaseId:po.id,expectedPurchase:canonicalSignature(po),quantities:[1],newItems:[{lineIndex:0,priceCents:15000}]},reviewData={...data,storeId:'supplier-fixture',epoch:'supplier-epoch'};request.receiptReview=makeReceiptReview(request,reviewData)
+  const received=planInventory(request,reviewData,maker).purchase
   expect(received.items[0].productId).toBeTruthy();expect(purchaseMatchesApproval(received,material)).toBe(true);received.items[0].catalogId='other';expect(purchaseMatchesApproval(received,material)).toBe(false)
 })
 test('a payment proposal and its review move no money, and the maker cannot approve it',()=>{

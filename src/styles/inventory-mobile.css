@@ -1,0 +1,25 @@
+.inventory-mobile-label{display:none}
+@media(max-width:720px){
+ .inventory-page{display:block!important;overflow-y:auto!important;min-width:0;max-width:100%}
+ .inventory-page>div{min-width:0;max-width:100%}
+ .inventory-products{display:block!important;overflow:visible!important;margin-top:14px}
+ .inventory-product-rows{overflow:visible!important}
+ .inventory-table-head{display:none!important}
+ .inventory-category-heading{min-width:0!important;overflow-wrap:anywhere;padding-top:12px!important;padding-bottom:12px!important}
+ .inventory-product-row{position:relative;grid-template-columns:minmax(0,1fr) auto!important;min-width:0!important;gap:8px!important;contain-intrinsic-size:auto 170px}
+ .inventory-product-row>span,.inventory-product-row>div{min-width:0;overflow-wrap:anywhere}
+ .inventory-product-name{grid-column:1;grid-row:1}
+ .inventory-product-title{font-size:18px!important;line-height:1.4}
+ .inventory-product-actions{grid-column:2;grid-row:1;align-items:start;gap:8px!important}
+ .inventory-product-actions .btn-icon{min-width:48px;min-height:48px}
+ .inventory-product-actions .inventory-label-action{display:none}
+ .inventory-product-price{grid-column:1;grid-row:2;text-align:left!important}
+ .inventory-product-stock{grid-column:2;grid-row:2;flex-direction:column;align-items:flex-end!important}
+ .inventory-product-cost{grid-column:1;grid-row:3;text-align:left!important}
+ .inventory-product-category{grid-column:2;grid-row:3;text-align:right;font-size:14px!important}
+ .inventory-product-barcode{grid-column:1/-1;grid-row:4}
+ .inventory-product-price,.inventory-product-cost,.inventory-product-stock>span:not(.inventory-mobile-label){font-size:18px!important}
+ .inventory-mobile-label{display:block;font-family:var(--font-sans);font-size:14px;font-weight:400;color:var(--text-secondary)}
+ .inventory-product-row>input[type=checkbox]{position:absolute;top:14px;left:8px;width:24px;height:24px;z-index:1}
+ .inventory-product-row[data-batch-mode=true] .inventory-product-name{padding-left:26px}
+}

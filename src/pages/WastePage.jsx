@@ -5,12 +5,16 @@ import { exportXLS } from '../utils/exportXLS'
 import { localDate } from '../utils/checkoutSafety.mjs'
 import { quantityValue } from '../../electron/operationRules.mjs'
 import useVisibleViewport from '../hooks/useVisibleViewport'
+import {loadWasteCostState} from '../utils/dataAccess'
+import {stockWasteCosts,wasteAmountText} from '../../electron/stockWasteCosts.mjs'
+import '../styles/waste.css'
 
 const REASONS = ['過期', '破損', '腐壞', '自用', '試吃樣品', '盤虧', '其他']
 
 export default function WastePage({ store, session }) {
   const { products, wasteLog, recordWaste, financialState } = store
   const viewport = useVisibleViewport()
+  const compact=window.innerWidth<=600
   const busy = useRef(false), active = useRef(false), pendingId = useRef(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(''), [message, setMessage] = useState('')
@@ -20,6 +24,20 @@ export default function WastePage({ store, session }) {
   const [reason, setReason] = useState(REASONS[0])
   const [search, setSearch] = useState('')
   const [filterMonth, setFilterMonth] = useState(() => localDate().slice(0,7))
+  const [costRefresh,setCostRefresh]=useState(0),financialVisible=session?.role!=='staff',actorKey=session?.userId?JSON.stringify([session.userId,session.username,session.role]):''
+  const [valuation,setValuation]=useState(()=>({phase:actorKey?'loading':'reference',key:actorKey,rows:[],wasteLog:null,products:null,error:''}))
+  useEffect(()=>{
+    if(!actorKey||!financialVisible)return
+    let alive=true;setValuation({phase:'loading',key:actorKey,rows:[],wasteLog,products,error:''})
+    loadWasteCostState(session).then(value=>{if(!alive)return;if(typeof value?.costActive!=='boolean'||!Array.isArray(value.wasteCosts))throw Error('損耗成本需要核對');setValuation({phase:value.costActive?'active':'reference',key:actorKey,rows:value.wasteCosts,wasteLog,products,error:''})}).catch(error=>{if(alive)setValuation({phase:'error',key:actorKey,rows:[],wasteLog,products,error:error.message})})
+    return()=>{alive=false}
+  },[actorKey,financialVisible,wasteLog,products,costRefresh])
+  useEffect(()=>{const refresh=()=>setCostRefresh(value=>value+1);window.addEventListener('pos-stock-cost-changed',refresh);return()=>window.removeEventListener('pos-stock-cost-changed',refresh)},[])
+  const costPhase=!actorKey?'reference':valuation.key!==actorKey||valuation.wasteLog!==wasteLog||valuation.products!==products?'loading':valuation.phase
+  const costRows=useMemo(()=>new Map((costPhase==='reference'?stockWasteCosts(null,wasteLog):costPhase==='active'?valuation.rows:[]).map(row=>[row.wasteId,row])),[costPhase,wasteLog,valuation.rows])
+  const cost=waste=>costRows.get(waste.id)||{complete:false,knownValueCents:0,valueCents:null,basis:'unresolved'}
+  const lossText=waste=>cost(waste).complete?wasteAmountText(cost(waste).valueCents,getLocale()):tr('成本待確認')
+  const unitCostText=waste=>cost(waste).basis==='original-source'?tr('原始批次'):cost(waste).basis==='posted'?tr('已記錄'):cost(waste).basis==='reference'&&waste.cost>0?waste.cost.toLocaleString(getLocale()):tr('成本待確認')
 
   function confirmed(recovered=false) {
     active.current=false;pendingId.current=null
@@ -43,9 +61,8 @@ export default function WastePage({ store, session }) {
     })
   }, [wasteLog, filterMonth, search])
 
-  const loss = w => Math.round((w.cost || 0) * Math.abs(w.qty) * 100) / 100
-  const totalLoss = Math.round(filtered.reduce((s,w) => s + loss(w), 0)*100)/100
-  const totalQty = filtered.reduce((s,w) => s + Math.abs(w.qty), 0)
+  const totalLossCents=filtered.reduce((sum,waste)=>sum+BigInt(cost(waste).knownValueCents),0n),pendingCosts=filtered.filter(waste=>!cost(waste).complete).length
+  const productKinds=new Set(filtered.map(waste=>waste.productId)).size
 
   // 即期商品
   const expiringSoon = useMemo(() => {
@@ -85,7 +102,7 @@ export default function WastePage({ store, session }) {
   }
 
   function exportExcel() {
-    const rows = [['日期','時間','商品','數量','成本','損失','原因','記錄者']]
+    const rows = [['日期','時間','商品','數量','單位',...(financialVisible?['成本依據','損失']:[]),'原因','記錄者'].map(label=>tr(label))]
     filtered.forEach(w => {
       const t = new Date(w.time)
       rows.push([
@@ -93,27 +110,29 @@ export default function WastePage({ store, session }) {
         t.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}),
         w.productName,
         Math.abs(w.qty),
-        w.cost || 0,
-        loss(w),
+        cost(w).unit||'',
+        ...(financialVisible?[unitCostText(w),cost(w).complete?wasteAmountText(cost(w).valueCents,getLocale(),false):tr('成本待確認')]:[]),
         w.reason,
         w.cashier || '',
       ])
     })
-    rows.push(['','','合計', totalQty, '', totalLoss, '', ''])
+    rows.push(['','',tr('合計'),'','',...(financialVisible?['',pendingCosts?tr('成本待確認'):wasteAmountText(totalLossCents,getLocale(),false)]:[]),'',''])
     exportXLS(rows, `損耗紀錄_${filterMonth}.xls`)
   }
 
   return (
-    <div style={ws.root}>
+    <div className="waste-page" style={ws.root} data-waste-page data-waste-cost-state={financialVisible?costPhase:'hidden'}>
       {!showAdd&&error&&<p role="alert" style={{color:'var(--red)',marginBottom:12}}>{trMessage(error)}</p>}
       {message&&<p role="status" style={{marginBottom:12}}>{trMessage(message)}</p>}
+      {financialVisible&&costPhase==='loading'&&<p role="status">{tr('正在核對損耗成本…')}</p>}
+      {financialVisible&&costPhase==='error'&&<div role="alert"><p>{trMessage(valuation.error)}</p><button className="btn" onClick={()=>setCostRefresh(value=>value+1)}>{tr('重新讀取')}</button></div>}
       <div style={ws.header}>
         <div>
           <h2 className="page-title" style={{fontSize:20, fontWeight:600}}>{tr("損耗管理")}</h2>
           <div style={{fontSize:13, color:'var(--text-tertiary)', marginTop:4}}>{tr("記錄過期、破損、自用等庫存損耗")}</div>
         </div>
-        <button disabled={saving} className="btn btn-primary" onClick={()=>{setError('');setMessage('');setShowAdd(true)}} style={{display:'flex',alignItems:'center',gap:6}}>
-          <Plus size={16}/>{tr(" 新增損耗")}</button>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button className="btn btn-ghost" disabled={saving||financialState&&financialState.phase!=='idle'} onClick={()=>store.setView('lots')}>{tr('批次與效期')}</button><button disabled={saving} className="btn btn-primary" onClick={()=>{setError('');setMessage('');setShowAdd(true)}} style={{display:'flex',alignItems:'center',gap:6}}>
+          <Plus size={16}/>{tr(" 新增損耗")}</button></div>
       </div>
 
       {expiringSoon.length > 0 && (
@@ -148,22 +167,23 @@ export default function WastePage({ store, session }) {
         <div style={{display:'flex', gap:10, marginBottom:14, flexWrap:'wrap', alignItems:'center'}}>
           <input className="field" type="month" value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} style={{width:160}}/>
           <input className="field" placeholder={tr("搜尋商品/原因")} value={search} onChange={e=>setSearch(e.target.value)} style={{flex:1, minWidth:200}}/>
-          <button className="btn btn-ghost btn-sm" onClick={exportExcel}>{tr("匯出 Excel")}</button>
+          <button className="btn btn-ghost btn-sm" disabled={financialVisible&&['loading','error'].includes(costPhase)} onClick={exportExcel}>{tr("匯出 Excel")}</button>
         </div>
 
-        <div style={{display:'flex', gap:12, marginBottom:14}}>
+        <div className="waste-stats" style={{display:'flex', gap:12, marginBottom:14}}>
           <div style={ws.statBox}>
             <div style={{fontSize:11, color:'var(--text-tertiary)'}}>{tr("合計筆數")}</div>
             <div style={{fontSize:20, fontWeight:600, fontFamily:'var(--font-mono)'}}>{filtered.length}</div>
           </div>
           <div style={ws.statBox}>
-            <div style={{fontSize:11, color:'var(--text-tertiary)'}}>{tr("合計件數")}</div>
-            <div style={{fontSize:20, fontWeight:600, fontFamily:'var(--font-mono)'}}>{totalQty}</div>
+            <div style={{fontSize:11, color:'var(--text-tertiary)'}}>{tr("商品種類")}</div>
+            <div style={{fontSize:20, fontWeight:600, fontFamily:'var(--font-mono)'}}>{productKinds}</div>
           </div>
-          <div style={ws.statBox}>
-            <div style={{fontSize:11, color:'var(--text-tertiary)'}}>{tr("合計損失")}</div>
-            <div style={{fontSize:20, fontWeight:600, fontFamily:'var(--font-mono)', color:'var(--red)'}}>NT$ {totalLoss.toLocaleString()}</div>
-          </div>
+          {financialVisible&&<div className="waste-total-stat" style={ws.statBox}>
+            <div style={{fontSize:11, color:'var(--text-tertiary)'}}>{tr(costPhase==='reference'?'參考損失':pendingCosts?'已確認損失':'合計損失')}</div>
+            <div data-waste-total style={{fontSize:20, fontWeight:600, fontFamily:'var(--font-mono)', color:'var(--red)'}}>{['loading','error'].includes(costPhase)?tr('成本待確認'):'NT$ '+wasteAmountText(totalLossCents,getLocale())}</div>
+            {pendingCosts>0&&!['loading','error'].includes(costPhase)&&<small>{tr('另有 {0} 筆成本待確認',{0:pendingCosts})}</small>}
+          </div>}
         </div>
 
         {filtered.length === 0 ? (
@@ -171,6 +191,12 @@ export default function WastePage({ store, session }) {
             <Package size={32} color="var(--text-tertiary)" style={{margin:'0 auto 12px', opacity:0.5}}/>
             <div>{tr("無損耗紀錄")}</div>
           </div>
+        ) : compact?(
+          <div className="waste-mobile-list" data-waste-mobile-list>{filtered.map(waste=><article key={waste.id}>
+            <strong>{waste.productName}</strong><p>{tr('數量')}：{Math.abs(waste.qty)} {cost(waste).unit||''}</p>
+            {financialVisible&&<div className="waste-card-loss"><span>{tr('損失')}</span><strong data-waste-loss={waste.id}>{cost(waste).complete?'NT$ '+lossText(waste):lossText(waste)}</strong><small>{unitCostText(waste)}</small></div>}
+            <p>{waste.reason}</p><details><summary>{tr('查看紀錄')}</summary><p>{new Date(waste.time).toLocaleString(getLocale())}</p><p>{waste.cashier}</p><small>{tr('已入帳，保留紀錄')}</small></details>
+          </article>)}</div>
         ) : (
           <div style={{overflowX:'auto'}}><table style={{width:'100%',minWidth:650,fontSize:13,borderCollapse:'collapse'}}>
             <thead>
@@ -178,8 +204,8 @@ export default function WastePage({ store, session }) {
                 <th style={ws.th}>{tr("時間")}</th>
                 <th style={ws.th}>{tr("商品")}</th>
                 <th style={{...ws.th, textAlign:'right'}}>{tr("數量")}</th>
-                <th style={{...ws.th, textAlign:'right'}}>{tr("單位成本")}</th>
-                <th style={{...ws.th, textAlign:'right'}}>{tr("損失")}</th>
+                {financialVisible&&<th style={{...ws.th, textAlign:'right'}}>{tr("成本依據")}</th>}
+                {financialVisible&&<th style={{...ws.th, textAlign:'right'}}>{tr("損失")}</th>}
                 <th style={ws.th}>{tr("原因")}</th>
                 <th style={ws.th}>{tr("記錄者")}</th>
                 <th style={ws.th}></th>
@@ -191,8 +217,8 @@ export default function WastePage({ store, session }) {
                   <td style={ws.td}>{new Date(w.time).toLocaleString(getLocale(),{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
                   <td style={ws.td}>{w.productName}</td>
                   <td style={{...ws.td, textAlign:'right', fontFamily:'var(--font-mono)'}}>{Math.abs(w.qty)}</td>
-                  <td style={{...ws.td, textAlign:'right', fontFamily:'var(--font-mono)', color:'var(--text-secondary)'}}>{(w.cost||0).toLocaleString()}</td>
-                  <td style={{...ws.td, textAlign:'right', fontFamily:'var(--font-mono)', color:'var(--red)', fontWeight:500}}>{loss(w).toLocaleString()}</td>
+                  {financialVisible&&<td style={{...ws.td, textAlign:'right', fontFamily:'var(--font-mono)', color:'var(--text-secondary)'}}>{unitCostText(w)}</td>}
+                  {financialVisible&&<td data-waste-loss={w.id} style={{...ws.td, textAlign:'right', fontFamily:'var(--font-mono)', color:'var(--red)', fontWeight:500}}>{lossText(w)}</td>}
                   <td style={ws.td}><span className="badge badge-amber">{w.reason}</span></td>
                   <td style={ws.td}>{w.cashier}</td>
                   <td style={ws.td}>

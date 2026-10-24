@@ -1,6 +1,7 @@
+import {hasPurchaseUnitBasis} from './purchaseUnitPricing.mjs'
 import {canonicalSignature,moneyValue} from './operationRules.mjs'
 import {businessId,text} from './businessExchange.mjs'
-import {isProcurement,validateProcurement,PROCUREMENT_KINDS} from './procurementRules.mjs'
+import {isProcurement,validateProcurement,PROCUREMENT_KINDS,isPurchaseCreate} from './procurementRules.mjs'
 
 export const SUPPLIER_MODES=['simple','dual-owner']
 export const SUPPLIER_CONTROL_ACTIONS=['policy-set','purchase-enroll','purchase-approve','purchase-reject','purchase-withdraw','payment-propose','payment-approve','payment-reject','payment-withdraw']
@@ -16,7 +17,7 @@ function enoughOwners(data,history){if(!history&&new Set(data.ownerIds||[]).size
 export function procurementApprovalMaterial(po){
   validateProcurement(po);if(!isProcurement(po))throw Error('歷史進貨單不能補造採購核准文件')
   return {id:po.id,supplierId:po.supplierId,supplierName:po.supplierName,date:po.date,note:po.note,total:po.total,
-    items:po.items.map(row=>({productId:row.productId||null,catalogId:row.catalogId||null,name:row.name,unit:row.unit,qty:row.qty,unitCost:row.unitCost})),sourceQuote:po.procurement.sourceQuote||null}
+    ...(po.procurement.version===2?{pricingVersion:2}:{}),items:po.items.map(row=>({productId:row.productId||null,catalogId:row.catalogId||null,name:row.name,unit:row.unit,qty:row.qty,...(hasPurchaseUnitBasis(row)?{costBasis:structuredClone(row.costBasis)}:{unitCost:row.unitCost})})),sourceQuote:po.procurement.sourceQuote||null,...(po.procurement.sourceCatalogue?{sourceCatalogue:structuredClone(po.procurement.sourceCatalogue)}:{})}
 }
 export function purchaseMatchesApproval(po,material){
   const current=procurementApprovalMaterial(po)
@@ -43,16 +44,16 @@ export function deriveSupplierControl(action,request,data,actor,control,base,{hi
   }
   if(action==='purchase-enroll'||action==='purchase-register'){
     const internal=action==='purchase-register'
-    if(internal&&(!registerPurchase||!['receive',...PROCUREMENT_KINDS].includes(request.kind)))throw Error('採購核准登記缺少原庫存操作')
+    if(internal&&(!registerPurchase||!['receive','receive-lots','receive-reviewed',...PROCUREMENT_KINDS].includes(request.kind)))throw Error('採購核准登記缺少原庫存操作')
     if(!internal)requireReview(request)
     const po=internal?registerPurchase:findPurchase(request,data)
     validateProcurement(po)
     if(!isProcurement(po)||po.procurement.cancel||control.purchases.has(po.id))throw Error('原採購已納入核准或已取消，請查看原紀錄')
-    if(internal&&request.kind!=='purchase-create'&&control.policy.mode==='dual-owner')throw Error('這張舊採購請先納入核准，不能直接收貨或付款')
+    if(internal&&!isPurchaseCreate(request.kind)&&control.policy.mode==='dual-owner')throw Error('這張舊採購請先納入核准，不能直接收貨或付款')
     event.purchaseId=po.id;event.supplierId=po.supplierId;event.supplierName=po.supplierName
     event.material=procurementApprovalMaterial(po);event.requiredApproval=control.policy.mode==='dual-owner';event.policyRevision=control.policy.revision
     event.originRevision=internal?(data.purchases.find(row=>row.id===po.id)?.procurement.revision||1):po.procurement.revision
-    event.adopted=!internal||request.kind!=='purchase-create'
+    event.adopted=!internal||!isPurchaseCreate(request.kind)
     if(internal)event.inventoryOperationId=request.id
     return event
   }
@@ -113,10 +114,10 @@ export function projectSupplierControl(control,event){
 }
 export function supplierControlView(control){return {policy:control.policy,purchaseApprovals:[...control.purchases.values()],paymentApprovals:[...control.proposals.values()]}}
 export function assertProcurementApproval(request,data,control){
-  if(!['receive',...PROCUREMENT_KINDS].includes(request.kind)||request.kind==='purchase-create')return
+  if(!['receive','receive-lots','receive-reviewed',...PROCUREMENT_KINDS].includes(request.kind)||isPurchaseCreate(request.kind))return
   const po=data.purchases.find(row=>row.id===request.purchaseId),approval=control.purchases.get(request.purchaseId)
   if(approval&&po&&!purchaseMatchesApproval(po,approval.material))throw Error('採購條件與原核准不同，請保留原單核對')
-  if(!['receive','purchase-bill','purchase-pay'].includes(request.kind))return
+  if(!['receive','receive-lots','receive-reviewed','purchase-bill','purchase-pay'].includes(request.kind))return
   if(!approval){if(control.policy.mode==='dual-owner')throw Error('這張舊採購請先納入核准，不能直接收貨或付款');return}
   if(approval.status!=='approved')throw Error('這張採購還未核准或已退回，請先完成另一帳號核對')
 }

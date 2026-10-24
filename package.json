@@ -7,6 +7,11 @@
   "license": "MIT",
   "main": "electron/main.js",
   "scripts": {
+    "test:opening-migration": "node scripts/run-native-security.cjs --opening-migration",
+    "test:opening-migration-ui": "npm run build && node scripts/run-native-security.cjs --opening-migration-ui",
+    "test:opening-migration-browser-ui": "npm run build && node scripts/run-native-security.cjs --opening-migration-browser-ui",
+    "test:receipt-review": "node scripts/run-native-security.cjs --receipt-review",
+    "test:agent-migration-ui": "npm run build && node scripts/run-native-security.cjs --agent-migration-ui",
     "test:customers": "node scripts/run-native-security.cjs --customers",
     "test:customers-ui": "npm run build && node scripts/run-native-security.cjs --customers-ui",
     "test:delivery": "node scripts/delivery/self-test.cjs",
@@ -43,31 +48,40 @@
     "test:scenarios": "node scripts/run-native-security.cjs --scenarios",
     "test:scenario-ui": "npm run build && node scripts/run-native-security.cjs --scenario-ui",
     "postinstall": "electron-builder install-app-deps",
-    "build:icons": "node scripts/generate-icon.js"
+    "build:icons": "node scripts/generate-icon.js",
+    "test:master-migration": "node scripts/run-native-security.cjs --master-migration",
+    "test:tabular-migration": "node scripts/run-native-security.cjs --tabular-migration",
+    "test:tabular-migration-ui": "npm run build && node scripts/run-native-security.cjs --tabular-migration-ui",
+    "test:workbook-migration": "node scripts/run-native-security.cjs --workbook-migration",
+    "test:workbook-migration-ui": "npm run build && node scripts/run-native-security.cjs --workbook-migration-ui",
+    "test:workbook-migration-browser-ui": "npm run build && node scripts/run-native-security.cjs --workbook-migration-browser-ui"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.106.2",
+    "@noble/hashes": "2.4.0",
     "better-sqlite3": "13.0.3",
     "cloudflared": "^0.7.1",
     "electron-store": "^10.0.0",
     "express": "5.2.1",
+    "fflate": "0.8.3",
+    "saxes": "6.0.0",
+    "ws": "8.22.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@supabase/supabase-js": "^2.106.2",
+    "@testing-library/react": "16.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "electron": "44.6.0",
+    "electron-builder": "26.15.3",
     "html5-qrcode": "^2.3.8",
     "jsbarcode": "^3.11.6",
+    "jsdom": "27.4.0",
     "lucide-react": "^0.383.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "ws": "8.22.0"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "6.1.2",
-    "electron": "44.6.0",
-    "electron-builder": "26.15.3",
     "vite": "8.3.3",
-    "vitest": "5.0.3",
-    "@testing-library/react": "16.3.0",
-    "jsdom": "27.4.0",
-    "@electric-sql/pglite": "0.5.8"
+    "vitest": "5.0.3"
   },
   "build": {
     "appId": "com.posPro.desktop",
@@ -81,6 +95,7 @@
       "dist/**/*",
       "electron/**/*",
       "public/menu/**/*",
+      "public/reserve/**/*",
       "public/i18n/**/*",
       "!**/*.map"
     ],

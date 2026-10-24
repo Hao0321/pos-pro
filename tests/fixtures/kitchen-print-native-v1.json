@@ -1,0 +1,627 @@
+{
+  "provenance": {
+    "producer": "actual native SQLite and loopback TCP",
+    "productionSourceSha256": "f6e122252cd0968c6dc0560bc478e34e65eefaca876e406e0dbef92fc3c1c9dc",
+    "testSourceSha256": "f861936e19f0115691bc4b9f0b77281260e9e4d44d42fe12a73f644c4e940aa9",
+    "sourceFileSha256": "2c9e9670840fb06ba8c6d4c1b6c3d4a9303d4f8ecd234701ca8c41e0091f8e56",
+    "realMerchantData": false,
+    "physicalPrinter": false
+  },
+  "owner": {
+    "userId": "table-owner",
+    "username": "Table owner",
+    "role": "owner"
+  },
+  "packet": {
+    "format": "pos-complete-backup/v1",
+    "storage": "sqlite",
+    "storeId": "table-fixture-store",
+    "features": [
+      "cross-storage-v1",
+      "kitchen-print-v1",
+      "record-shapes-v1",
+      "restaurant-intake-v1"
+    ],
+    "book": {
+      "products": [
+        {
+          "id": "bowl",
+          "name": "Rice bowl",
+          "category": "Meals",
+          "price": 100,
+          "cost": 0,
+          "stock": 0,
+          "barcode": "",
+          "unit": "bowl",
+          "noBarcode": true,
+          "imageUrl": "",
+          "expiryDate": "",
+          "supplierId": "",
+          "reorderLevel": 0,
+          "createdAt": "2026-10-16 21:23:49",
+          "updatedAt": "2026-10-16 21:23:49"
+        },
+        {
+          "id": "ready",
+          "name": "Ready meal",
+          "category": "Meals",
+          "price": 80,
+          "cost": 30,
+          "stock": 2,
+          "barcode": "",
+          "unit": "portion",
+          "noBarcode": true,
+          "imageUrl": "",
+          "expiryDate": "",
+          "supplierId": "",
+          "reorderLevel": 0,
+          "createdAt": "2026-10-16 21:23:49",
+          "updatedAt": "2026-10-16 21:23:49"
+        },
+        {
+          "id": "rice",
+          "name": "Rice ingredient",
+          "category": "Ingredients",
+          "price": 1,
+          "cost": 2,
+          "stock": 5,
+          "barcode": "",
+          "unit": "kg",
+          "noBarcode": true,
+          "imageUrl": "",
+          "expiryDate": "",
+          "supplierId": "",
+          "reorderLevel": 0,
+          "createdAt": "2026-10-16 21:23:49",
+          "updatedAt": "2026-10-16 21:23:49"
+        }
+      ],
+      "members": [],
+      "orders": [
+        {
+          "id": "CO00000000-0000-4000-8000-000000000005",
+          "subtotal": 80,
+          "discount": 0,
+          "manualDiscount": 0,
+          "balanceUsed": 0,
+          "total": 80,
+          "payMethod": "pending",
+          "paid": 0,
+          "change_amount": 0,
+          "payments": [],
+          "memberId": null,
+          "pointsUsed": 0,
+          "pointsEarned": 0,
+          "time": "2026-10-16T13:23:49.479Z",
+          "source": "customer",
+          "status": "pending",
+          "tableNum": "5",
+          "note": "Guest: ",
+          "taxId": "",
+          "shiftId": "",
+          "refundOf": "",
+          "cashier": "",
+          "fullRefund": false,
+          "itemCosts": {},
+          "trackingTokenHash": "e9ab922182dcfc40a4a5a2f44dc02ac761e0f1709e9c73b3a1c3f6cc582a4dd5",
+          "requestSignature": "ffc98e957668f1236f7bfd8b6728637b5d81aba56b2e603aa137aaf36e197256",
+          "change": 0,
+          "items": [
+            {
+              "id": "ready",
+              "name": "Ready meal",
+              "price": 80,
+              "qty": 1
+            }
+          ]
+        }
+      ],
+      "suppliers": [],
+      "purchases": [],
+      "promotions": [],
+      "users": [
+        {
+          "id": "table-owner",
+          "username": "Table owner",
+          "password": "{\"salt\":[4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],\"iter\":1000,\"hash\":[50,105,113,182,34,70,15,158,76,48,253,64,114,166,103,71,185,119,120,83,48,82,0,220,175,112,166,213,225,27,158,252]}",
+          "role": "owner"
+        },
+        {
+          "id": "table-staff",
+          "username": "Table staff",
+          "password": "{\"salt\":[4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],\"iter\":1000,\"hash\":[50,105,113,182,34,70,15,158,76,48,253,64,114,166,103,71,185,119,120,83,48,82,0,220,175,112,166,213,225,27,158,252]}",
+          "role": "staff"
+        }
+      ],
+      "manualJournal": [],
+      "heldOrders": [],
+      "shifts": [
+        {
+          "id": "table-shift",
+          "cashier": "Table owner",
+          "cashierId": "",
+          "openTime": "2026-10-16T13:23:49.399Z",
+          "closeTime": "",
+          "openCash": 0,
+          "closeCash": 0,
+          "expectedCash": 0,
+          "diff": 0,
+          "cashSales": 0,
+          "cardSales": 0,
+          "orderCount": 0,
+          "refundCount": 0,
+          "refundAmount": 0,
+          "note": "",
+          "status": "open"
+        }
+      ],
+      "cashLog": [],
+      "wasteLog": [],
+      "memberTopups": [],
+      "auditLog": [],
+      "settings": [
+        {
+          "key": "orderTrackingSecret",
+          "value": "synthetic-table-fixture-tracking-key"
+        },
+        {
+          "key": "printerIP",
+          "value": "127.0.0.1"
+        },
+        {
+          "key": "printerPort",
+          "value": "1445"
+        },
+        {
+          "key": "printerType",
+          "value": "network"
+        },
+        {
+          "key": "receiptWidth",
+          "value": "32"
+        },
+        {
+          "key": "restaurantConfig",
+          "value": "{\"enabled\":true,\"dailyCapacity\":30,\"slotCapacity\":5,\"recipes\":{\"bowl\":[{\"id\":\"rice\",\"qty\":1.25}]},\"kitchenPrinting\":{\"version\":1,\"enabled\":true,\"destination\":{\"type\":\"network\",\"ip\":\"127.0.0.1\",\"port\":1445},\"format\":{\"version\":1,\"locale\":\"zh-TW\",\"columns\":32}}}"
+        },
+        {
+          "key": "sharedStoreId",
+          "value": "table-fixture-store"
+        }
+      ],
+      "restaurantOrders": [
+        {
+          "id": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+          "version": 1,
+          "channel": "walkin",
+          "day": "2026-10-16",
+          "slot": "23:15",
+          "customer": "",
+          "contact": "",
+          "note": "Guest:",
+          "items": [
+            {
+              "id": "ready",
+              "name": "Ready meal",
+              "price": 80,
+              "qty": 1,
+              "cost": 30
+            }
+          ],
+          "allocations": [
+            {
+              "id": "ready",
+              "name": "Ready meal",
+              "qty": 1,
+              "unitCost": 30
+            }
+          ],
+          "quantity": 1,
+          "total": 80,
+          "status": "reserved",
+          "createdAt": "2026-10-16T15:19:48.983Z",
+          "startedAt": "",
+          "saleId": "",
+          "refundId": "",
+          "pickupNumber": 1,
+          "customerOrderId": "CO00000000-0000-4000-8000-000000000005",
+          "tableNum": "5"
+        }
+      ],
+      "restaurantOperations": [
+        {
+          "id": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+          "kind": "restaurant",
+          "action": "create",
+          "signature": "{\"action\":\"create\",\"channel\":\"walkin\",\"contact\":\"\",\"customer\":\"\",\"customerOrderId\":\"CO00000000-0000-4000-8000-000000000005\",\"customerOrderSignature\":\"{\\\"id\\\":\\\"CO00000000-0000-4000-8000-000000000005\\\",\\\"items\\\":[{\\\"id\\\":\\\"ready\\\",\\\"name\\\":\\\"Ready meal\\\",\\\"price\\\":80,\\\"qty\\\":1}],\\\"note\\\":\\\"Guest: \\\",\\\"requestSignature\\\":\\\"ffc98e957668f1236f7bfd8b6728637b5d81aba56b2e603aa137aaf36e197256\\\",\\\"source\\\":\\\"customer\\\",\\\"status\\\":\\\"pending\\\",\\\"tableId\\\":\\\"\\\",\\\"tableNum\\\":\\\"5\\\",\\\"time\\\":\\\"2026-10-16T13:23:49.479Z\\\",\\\"total\\\":80}\",\"day\":\"2026-10-16\",\"id\":\"accept-a1aa342d-7164-4258-9070-5cbe893a21ea\",\"items\":[{\"id\":\"ready\",\"price\":80,\"qty\":1}],\"kind\":\"restaurant\",\"note\":\"Guest: \",\"slot\":\"23:15\",\"time\":\"2026-10-16T15:19:48.983Z\"}",
+          "entityId": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+          "entityVersion": 1,
+          "productIds": [
+            "ready"
+          ],
+          "saleId": "",
+          "refundId": "",
+          "time": "2026-10-16T15:19:48.983Z",
+          "actor": {
+            "userId": "table-owner",
+            "username": "Table owner",
+            "role": "owner"
+          }
+        },
+        {
+          "id": "enable-25a2f211-8015-42c6-8021-771bc4bd6a6f",
+          "kind": "restaurant",
+          "action": "configure",
+          "signature": "{\"action\":\"configure\",\"config\":{\"dailyCapacity\":30,\"enabled\":true,\"kitchenPrinting\":{\"destination\":{\"ip\":\"127.0.0.1\",\"port\":1445,\"type\":\"network\"},\"enabled\":true,\"format\":{\"columns\":32,\"locale\":\"zh-TW\",\"version\":1},\"version\":1},\"recipes\":{\"bowl\":[{\"id\":\"rice\",\"qty\":1.25}]},\"slotCapacity\":5},\"expectedConfig\":\"{\\\"dailyCapacity\\\":30,\\\"enabled\\\":true,\\\"recipes\\\":{\\\"bowl\\\":[{\\\"id\\\":\\\"rice\\\",\\\"qty\\\":1.25}]},\\\"slotCapacity\\\":5}\",\"id\":\"enable-25a2f211-8015-42c6-8021-771bc4bd6a6f\",\"kind\":\"restaurant\",\"kitchenPaperAcknowledged\":true,\"time\":\"2026-10-16T15:19:48.964Z\"}",
+          "entityId": "",
+          "entityVersion": 0,
+          "productIds": [],
+          "saleId": "",
+          "refundId": "",
+          "time": "2026-10-16T15:19:48.964Z",
+          "actor": {
+            "userId": "table-owner",
+            "username": "Table owner",
+            "role": "owner"
+          }
+        },
+        {
+          "id": "table-fixture-config",
+          "kind": "restaurant",
+          "action": "configure",
+          "signature": "{\"action\":\"configure\",\"config\":{\"dailyCapacity\":30,\"enabled\":true,\"recipes\":{\"bowl\":[{\"id\":\"rice\",\"qty\":1.25}]},\"slotCapacity\":5},\"expectedConfig\":\"{\\\"dailyCapacity\\\":30,\\\"enabled\\\":false,\\\"recipes\\\":{},\\\"slotCapacity\\\":5}\",\"id\":\"table-fixture-config\",\"kind\":\"restaurant\",\"time\":\"2026-10-16T13:23:49.399Z\"}",
+          "entityId": "",
+          "entityVersion": 0,
+          "productIds": [],
+          "saleId": "",
+          "refundId": "",
+          "time": "2026-10-16T13:23:49.399Z",
+          "actor": {
+            "userId": "table-owner",
+            "username": "Table owner",
+            "role": "owner"
+          }
+        }
+      ],
+      "salesDocuments": [],
+      "salesOperations": [],
+      "customerEntries": [],
+      "customerOperations": [],
+      "supplierEntries": [],
+      "supplierOperations": [],
+      "stockCostEntries": [],
+      "stockCostOperations": [],
+      "kitchenPrintJobs": [
+        {
+          "id": "kp-accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+          "entryId": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+          "sourceOperationId": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+          "sourceSignature": "{\"action\":\"create\",\"channel\":\"walkin\",\"contact\":\"\",\"customer\":\"\",\"customerOrderId\":\"CO00000000-0000-4000-8000-000000000005\",\"customerOrderSignature\":\"{\\\"id\\\":\\\"CO00000000-0000-4000-8000-000000000005\\\",\\\"items\\\":[{\\\"id\\\":\\\"ready\\\",\\\"name\\\":\\\"Ready meal\\\",\\\"price\\\":80,\\\"qty\\\":1}],\\\"note\\\":\\\"Guest: \\\",\\\"requestSignature\\\":\\\"ffc98e957668f1236f7bfd8b6728637b5d81aba56b2e603aa137aaf36e197256\\\",\\\"source\\\":\\\"customer\\\",\\\"status\\\":\\\"pending\\\",\\\"tableId\\\":\\\"\\\",\\\"tableNum\\\":\\\"5\\\",\\\"time\\\":\\\"2026-10-16T13:23:49.479Z\\\",\\\"total\\\":80}\",\"day\":\"2026-10-16\",\"id\":\"accept-a1aa342d-7164-4258-9070-5cbe893a21ea\",\"items\":[{\"id\":\"ready\",\"price\":80,\"qty\":1}],\"kind\":\"restaurant\",\"note\":\"Guest: \",\"slot\":\"23:15\",\"time\":\"2026-10-16T15:19:48.983Z\"}",
+          "kind": "prepare",
+          "copy": 0,
+          "parentId": "",
+          "epoch": "2f7f741c-4dcc-4d4f-9fd6-5eb7c6b40850",
+          "dispatch": "auto",
+          "ticket": {
+            "protocol": "pos-kitchen-ticket/v1",
+            "entryId": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+            "sourceOrderId": "CO00000000-0000-4000-8000-000000000005",
+            "tableNum": "5",
+            "pickupNumber": 1,
+            "day": "2026-10-16",
+            "slot": "23:15",
+            "channel": "walkin",
+            "customer": "",
+            "contact": "",
+            "note": "Guest:",
+            "cancelReason": "",
+            "items": [
+              {
+                "id": "ready",
+                "name": "Ready meal",
+                "qty": 1
+              }
+            ],
+            "total": 80,
+            "kind": "prepare",
+            "copy": 0
+          },
+          "createdAt": "2026-10-16T15:19:48.983Z",
+          "createdBy": {
+            "userId": "table-owner",
+            "username": "Table owner",
+            "role": "owner"
+          },
+          "version": 3,
+          "state": "submitted",
+          "attempt": {
+            "id": "claim-88cde16d-3d23-48be-b354-a51a95735bb5",
+            "session": "native-worker",
+            "startedAt": "2026-10-16T15:19:49.002Z",
+            "destination": {
+              "type": "network",
+              "ip": "127.0.0.1",
+              "port": 1445
+            },
+            "format": {
+              "version": 1,
+              "locale": "zh-TW",
+              "columns": 32
+            },
+            "contentSha256": "9802b4331cd79fe7c005306420a6507fa7ccf2d6f2d06d6cf5438a79631520a3",
+            "endedAt": "2026-10-16T15:19:49.025Z",
+            "outcome": "submitted",
+            "error": ""
+          },
+          "paper": null
+        }
+      ],
+      "kitchenPrintOperations": [
+        {
+          "id": "claim-88cde16d-3d23-48be-b354-a51a95735bb5",
+          "kind": "kitchen-print",
+          "action": "claim",
+          "signature": "{\"action\":\"claim\",\"contentSha256\":\"9802b4331cd79fe7c005306420a6507fa7ccf2d6f2d06d6cf5438a79631520a3\",\"destination\":{\"ip\":\"127.0.0.1\",\"port\":1445,\"type\":\"network\"},\"expectedVersion\":1,\"format\":{\"columns\":32,\"locale\":\"zh-TW\",\"version\":1},\"id\":\"claim-88cde16d-3d23-48be-b354-a51a95735bb5\",\"jobId\":\"kp-accept-a1aa342d-7164-4258-9070-5cbe893a21ea\",\"time\":\"2026-10-16T15:19:49.002Z\"}",
+          "internal": true,
+          "time": "2026-10-16T15:19:49.002Z",
+          "actor": {
+            "userId": "kitchen-worker",
+            "username": "Kitchen worker",
+            "role": "system"
+          },
+          "sequence": 2,
+          "changes": [
+            {
+              "id": "kp-accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+              "beforeVersion": 1,
+              "job": {
+                "id": "kp-accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+                "entryId": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+                "sourceOperationId": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+                "sourceSignature": "{\"action\":\"create\",\"channel\":\"walkin\",\"contact\":\"\",\"customer\":\"\",\"customerOrderId\":\"CO00000000-0000-4000-8000-000000000005\",\"customerOrderSignature\":\"{\\\"id\\\":\\\"CO00000000-0000-4000-8000-000000000005\\\",\\\"items\\\":[{\\\"id\\\":\\\"ready\\\",\\\"name\\\":\\\"Ready meal\\\",\\\"price\\\":80,\\\"qty\\\":1}],\\\"note\\\":\\\"Guest: \\\",\\\"requestSignature\\\":\\\"ffc98e957668f1236f7bfd8b6728637b5d81aba56b2e603aa137aaf36e197256\\\",\\\"source\\\":\\\"customer\\\",\\\"status\\\":\\\"pending\\\",\\\"tableId\\\":\\\"\\\",\\\"tableNum\\\":\\\"5\\\",\\\"time\\\":\\\"2026-10-16T13:23:49.479Z\\\",\\\"total\\\":80}\",\"day\":\"2026-10-16\",\"id\":\"accept-a1aa342d-7164-4258-9070-5cbe893a21ea\",\"items\":[{\"id\":\"ready\",\"price\":80,\"qty\":1}],\"kind\":\"restaurant\",\"note\":\"Guest: \",\"slot\":\"23:15\",\"time\":\"2026-10-16T15:19:48.983Z\"}",
+                "kind": "prepare",
+                "copy": 0,
+                "parentId": "",
+                "epoch": "2f7f741c-4dcc-4d4f-9fd6-5eb7c6b40850",
+                "dispatch": "auto",
+                "ticket": {
+                  "protocol": "pos-kitchen-ticket/v1",
+                  "entryId": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+                  "sourceOrderId": "CO00000000-0000-4000-8000-000000000005",
+                  "tableNum": "5",
+                  "pickupNumber": 1,
+                  "day": "2026-10-16",
+                  "slot": "23:15",
+                  "channel": "walkin",
+                  "customer": "",
+                  "contact": "",
+                  "note": "Guest:",
+                  "cancelReason": "",
+                  "items": [
+                    {
+                      "id": "ready",
+                      "name": "Ready meal",
+                      "qty": 1
+                    }
+                  ],
+                  "total": 80,
+                  "kind": "prepare",
+                  "copy": 0
+                },
+                "createdAt": "2026-10-16T15:19:48.983Z",
+                "createdBy": {
+                  "userId": "table-owner",
+                  "username": "Table owner",
+                  "role": "owner"
+                },
+                "version": 2,
+                "state": "sending",
+                "attempt": {
+                  "id": "claim-88cde16d-3d23-48be-b354-a51a95735bb5",
+                  "session": "native-worker",
+                  "startedAt": "2026-10-16T15:19:49.002Z",
+                  "destination": {
+                    "type": "network",
+                    "ip": "127.0.0.1",
+                    "port": 1445
+                  },
+                  "format": {
+                    "version": 1,
+                    "locale": "zh-TW",
+                    "columns": 32
+                  },
+                  "contentSha256": "9802b4331cd79fe7c005306420a6507fa7ccf2d6f2d06d6cf5438a79631520a3",
+                  "endedAt": "",
+                  "outcome": "",
+                  "error": ""
+                },
+                "paper": null
+              }
+            }
+          ]
+        },
+        {
+          "id": "finish-7c960c08-8356-459f-b7d2-06349723b192",
+          "kind": "kitchen-print",
+          "action": "finish",
+          "signature": "{\"action\":\"finish\",\"attemptId\":\"claim-88cde16d-3d23-48be-b354-a51a95735bb5\",\"error\":\"\",\"id\":\"finish-7c960c08-8356-459f-b7d2-06349723b192\",\"jobId\":\"kp-accept-a1aa342d-7164-4258-9070-5cbe893a21ea\",\"submitted\":true,\"time\":\"2026-10-16T15:19:49.025Z\"}",
+          "internal": true,
+          "time": "2026-10-16T15:19:49.025Z",
+          "actor": {
+            "userId": "kitchen-worker",
+            "username": "Kitchen worker",
+            "role": "system"
+          },
+          "sequence": 3,
+          "changes": [
+            {
+              "id": "kp-accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+              "beforeVersion": 2,
+              "job": {
+                "id": "kp-accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+                "entryId": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+                "sourceOperationId": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+                "sourceSignature": "{\"action\":\"create\",\"channel\":\"walkin\",\"contact\":\"\",\"customer\":\"\",\"customerOrderId\":\"CO00000000-0000-4000-8000-000000000005\",\"customerOrderSignature\":\"{\\\"id\\\":\\\"CO00000000-0000-4000-8000-000000000005\\\",\\\"items\\\":[{\\\"id\\\":\\\"ready\\\",\\\"name\\\":\\\"Ready meal\\\",\\\"price\\\":80,\\\"qty\\\":1}],\\\"note\\\":\\\"Guest: \\\",\\\"requestSignature\\\":\\\"ffc98e957668f1236f7bfd8b6728637b5d81aba56b2e603aa137aaf36e197256\\\",\\\"source\\\":\\\"customer\\\",\\\"status\\\":\\\"pending\\\",\\\"tableId\\\":\\\"\\\",\\\"tableNum\\\":\\\"5\\\",\\\"time\\\":\\\"2026-10-16T13:23:49.479Z\\\",\\\"total\\\":80}\",\"day\":\"2026-10-16\",\"id\":\"accept-a1aa342d-7164-4258-9070-5cbe893a21ea\",\"items\":[{\"id\":\"ready\",\"price\":80,\"qty\":1}],\"kind\":\"restaurant\",\"note\":\"Guest: \",\"slot\":\"23:15\",\"time\":\"2026-10-16T15:19:48.983Z\"}",
+                "kind": "prepare",
+                "copy": 0,
+                "parentId": "",
+                "epoch": "2f7f741c-4dcc-4d4f-9fd6-5eb7c6b40850",
+                "dispatch": "auto",
+                "ticket": {
+                  "protocol": "pos-kitchen-ticket/v1",
+                  "entryId": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+                  "sourceOrderId": "CO00000000-0000-4000-8000-000000000005",
+                  "tableNum": "5",
+                  "pickupNumber": 1,
+                  "day": "2026-10-16",
+                  "slot": "23:15",
+                  "channel": "walkin",
+                  "customer": "",
+                  "contact": "",
+                  "note": "Guest:",
+                  "cancelReason": "",
+                  "items": [
+                    {
+                      "id": "ready",
+                      "name": "Ready meal",
+                      "qty": 1
+                    }
+                  ],
+                  "total": 80,
+                  "kind": "prepare",
+                  "copy": 0
+                },
+                "createdAt": "2026-10-16T15:19:48.983Z",
+                "createdBy": {
+                  "userId": "table-owner",
+                  "username": "Table owner",
+                  "role": "owner"
+                },
+                "version": 3,
+                "state": "submitted",
+                "attempt": {
+                  "id": "claim-88cde16d-3d23-48be-b354-a51a95735bb5",
+                  "session": "native-worker",
+                  "startedAt": "2026-10-16T15:19:49.002Z",
+                  "destination": {
+                    "type": "network",
+                    "ip": "127.0.0.1",
+                    "port": 1445
+                  },
+                  "format": {
+                    "version": 1,
+                    "locale": "zh-TW",
+                    "columns": 32
+                  },
+                  "contentSha256": "9802b4331cd79fe7c005306420a6507fa7ccf2d6f2d06d6cf5438a79631520a3",
+                  "endedAt": "2026-10-16T15:19:49.025Z",
+                  "outcome": "submitted",
+                  "error": ""
+                },
+                "paper": null
+              }
+            }
+          ]
+        },
+        {
+          "id": "kp-auto-accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+          "kind": "kitchen-print",
+          "action": "enqueue",
+          "signature": "{\"action\":\"enqueue\",\"id\":\"kp-auto-accept-a1aa342d-7164-4258-9070-5cbe893a21ea\",\"sourceId\":\"accept-a1aa342d-7164-4258-9070-5cbe893a21ea\",\"time\":\"2026-10-16T15:19:48.983Z\"}",
+          "internal": true,
+          "time": "2026-10-16T15:19:48.983Z",
+          "actor": {
+            "userId": "table-owner",
+            "username": "Table owner",
+            "role": "owner"
+          },
+          "sequence": 1,
+          "changes": [
+            {
+              "id": "kp-accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+              "beforeVersion": 0,
+              "job": {
+                "id": "kp-accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+                "entryId": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+                "sourceOperationId": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+                "sourceSignature": "{\"action\":\"create\",\"channel\":\"walkin\",\"contact\":\"\",\"customer\":\"\",\"customerOrderId\":\"CO00000000-0000-4000-8000-000000000005\",\"customerOrderSignature\":\"{\\\"id\\\":\\\"CO00000000-0000-4000-8000-000000000005\\\",\\\"items\\\":[{\\\"id\\\":\\\"ready\\\",\\\"name\\\":\\\"Ready meal\\\",\\\"price\\\":80,\\\"qty\\\":1}],\\\"note\\\":\\\"Guest: \\\",\\\"requestSignature\\\":\\\"ffc98e957668f1236f7bfd8b6728637b5d81aba56b2e603aa137aaf36e197256\\\",\\\"source\\\":\\\"customer\\\",\\\"status\\\":\\\"pending\\\",\\\"tableId\\\":\\\"\\\",\\\"tableNum\\\":\\\"5\\\",\\\"time\\\":\\\"2026-10-16T13:23:49.479Z\\\",\\\"total\\\":80}\",\"day\":\"2026-10-16\",\"id\":\"accept-a1aa342d-7164-4258-9070-5cbe893a21ea\",\"items\":[{\"id\":\"ready\",\"price\":80,\"qty\":1}],\"kind\":\"restaurant\",\"note\":\"Guest: \",\"slot\":\"23:15\",\"time\":\"2026-10-16T15:19:48.983Z\"}",
+                "kind": "prepare",
+                "copy": 0,
+                "parentId": "",
+                "epoch": "2f7f741c-4dcc-4d4f-9fd6-5eb7c6b40850",
+                "dispatch": "auto",
+                "ticket": {
+                  "protocol": "pos-kitchen-ticket/v1",
+                  "entryId": "accept-a1aa342d-7164-4258-9070-5cbe893a21ea",
+                  "sourceOrderId": "CO00000000-0000-4000-8000-000000000005",
+                  "tableNum": "5",
+                  "pickupNumber": 1,
+                  "day": "2026-10-16",
+                  "slot": "23:15",
+                  "channel": "walkin",
+                  "customer": "",
+                  "contact": "",
+                  "note": "Guest:",
+                  "cancelReason": "",
+                  "items": [
+                    {
+                      "id": "ready",
+                      "name": "Ready meal",
+                      "qty": 1
+                    }
+                  ],
+                  "total": 80,
+                  "kind": "prepare",
+                  "copy": 0
+                },
+                "createdAt": "2026-10-16T15:19:48.983Z",
+                "createdBy": {
+                  "userId": "table-owner",
+                  "username": "Table owner",
+                  "role": "owner"
+                },
+                "version": 1,
+                "state": "queued",
+                "attempt": null,
+                "paper": null
+              }
+            }
+          ]
+        }
+      ],
+      "_revision": "1e807f7fd30f27eb7b4850c15498147abaab73d69b33f8f18a83671f21a58319"
+    },
+    "protection": {
+      "version": 5,
+      "books": [
+        {
+          "id": "sha256:dd5f231872f708028c2a7f732641c6964cf06bccd3a849e585dde2f0fd57dcab",
+          "data": "{\"products\":[],\"members\":[],\"orders\":[],\"suppliers\":[],\"purchases\":[],\"promotions\":[],\"users\":[{\"id\":\"table-owner\",\"username\":\"Table owner\",\"password\":\"{\\\"salt\\\":[4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],\\\"iter\\\":1000,\\\"hash\\\":[50,105,113,182,34,70,15,158,76,48,253,64,114,166,103,71,185,119,120,83,48,82,0,220,175,112,166,213,225,27,158,252]}\",\"role\":\"owner\"},{\"id\":\"table-staff\",\"username\":\"Table staff\",\"password\":\"{\\\"salt\\\":[4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],\\\"iter\\\":1000,\\\"hash\\\":[50,105,113,182,34,70,15,158,76,48,253,64,114,166,103,71,185,119,120,83,48,82,0,220,175,112,166,213,225,27,158,252]}\",\"role\":\"staff\"}],\"manualJournal\":[],\"heldOrders\":[],\"shifts\":[],\"cashLog\":[],\"wasteLog\":[],\"memberTopups\":[],\"auditLog\":[],\"settings\":[],\"restaurantOrders\":[],\"restaurantOperations\":[],\"salesDocuments\":[],\"salesOperations\":[],\"customerEntries\":[],\"customerOperations\":[],\"supplierEntries\":[],\"supplierOperations\":[],\"stockCostEntries\":[],\"stockCostOperations\":[],\"_revision\":\"8570bb29aaa2bc9725c2c07631492b9ec873f9aa9ed3eef50df6d9fa2669e17a\"}",
+          "contentSignature": "09d16db4fc49c50cc8d0e0abc7ef283e2890349ea8161cccc5d0299253d78a45",
+          "storage": "sqlite"
+        }
+      ],
+      "snapshots": [
+        {
+          "id": "rescue-93c9aafd-1fc3-4280-ae91-9c410278412b",
+          "createdAt": "2026-10-16T15:19:48.948Z",
+          "actorId": "table-owner",
+          "storeId": "",
+          "afterMaterial": "a394d4b12c1b1b46d73882470060b5a6ca1a31838e15d00602b6128e7713bb0a",
+          "operationId": "restore-37c709b8-1a31-42d8-98fd-50f00fe09565",
+          "bookId": "sha256:dd5f231872f708028c2a7f732641c6964cf06bccd3a849e585dde2f0fd57dcab"
+        }
+      ],
+      "originalIds": [],
+      "events": [
+        {
+          "id": "restore-37c709b8-1a31-42d8-98fd-50f00fe09565",
+          "actorId": "table-owner",
+          "signature": "{\"kind\":\"restore-preview\",\"previewId\":\"restore-37c709b8-1a31-42d8-98fd-50f00fe09565\"}",
+          "receipt": "{\"protocol\":\"pos-recovery-v1\",\"success\":true,\"id\":\"restore-37c709b8-1a31-42d8-98fd-50f00fe09565\",\"sourceId\":\"rescue-93c9aafd-1fc3-4280-ae91-9c410278412b\",\"revision\":\"210b59e4f15deeadac69c145445b6dfe4a628733a244995aed00f340da785dd5\",\"storeId\":\"table-fixture-store\"}"
+        }
+      ]
+    },
+    "checksum": "sha256:f4de36a239e46c2b7a54cbae720b198075808dc094a602768388510f219871ca"
+  }
+}

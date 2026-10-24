@@ -3,11 +3,14 @@ import {readExchangeTextSetting} from '../../electron/businessExchange.mjs'
 import {salesDate} from '../../electron/salesRules.mjs'
 import {planSupplierLedger,supplierLedgerReceipt,validateSupplierLedgerRecords} from '../../electron/supplierLedger.mjs'
 import {procurementCreationRequests} from '../../electron/procurementHistory.mjs'
+import {browserToBook} from '../../electron/recoveryRules.mjs'
+import {readOpeningCutoverHistory} from '../../electron/openingCutoverHistory.mjs'
 
 export function readBrowserSupplier(record){
  const rows=record.data,data={storeId:readExchangeTextSetting(rows.pos_business_settings,'sharedStoreId'),epoch:record.salesEpoch,
   products:rows.pos2_products,purchases:rows.pos_purchases,suppliers:rows.pos_suppliers,supplierEntries:rows.pos_supplier_entries,supplierOperations:rows.pos_supplier_operations,
   inventoryAudits:rows.pos_audit_log,cashLogs:rows.pos2_cash_log,openShift:rows.pos2_shifts.find(row=>row.status==='open')||null,ownerIds:rows.pos_users.filter(row=>row.role==='owner').map(row=>row.id),supplierFence:record.supplierFence}
+ data.openingBalanceContext=readOpeningCutoverHistory(browserToBook(record.data)).context
  data.supplierLedger=validateSupplierLedgerRecords(data.supplierEntries,data.supplierOperations,data)
  return data
 }

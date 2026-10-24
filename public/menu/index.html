@@ -13,6 +13,8 @@
       <h1 id="store-name">載入中...</h1>
       <p class="subtitle" data-i18n="線上點餐系統">線上點餐系統</p>
       <div class="menu-preferences"><label><span data-i18n="語言">語言</span><select id="menu-language" aria-label="語言"><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option><option value="zh-CN">简体中文</option></select></label><label><span data-i18n="介面風格">介面風格</span><select id="menu-style" aria-label="介面風格"><option value="poster" data-i18n="海報風格">海報風格</option><option value="simple" data-i18n="明亮簡約">明亮簡約</option></select></label></div><p id="preference-warning" role="status"></p>
+      <p id="table-context" role="status"></p><p id="customer-order-warning" role="alert"></p>
+      <div data-guest-draft-status role="status" aria-live="polite" hidden></div>
     </header>
 
     <!-- 搜尋 -->
@@ -44,6 +46,7 @@
       </div>
       <div id="cart-items" class="cart-items"></div>
       <div id="cart-footer" class="cart-footer">
+        <div data-guest-draft-status role="status" aria-live="polite" hidden></div>
         <div class="cart-total">
           <span data-i18n="合計">合計</span>
           <span id="cart-total-amount">$0</span>
@@ -58,21 +61,25 @@
     <div id="order-form-overlay" class="order-form-overlay" style="display:none">
       <div class="order-form">
         <h2 data-i18n="確認訂單">確認訂單</h2>
+        <div data-guest-draft-status role="status" aria-live="polite" hidden></div>
         <div class="form-group">
           <label for="customer-name" data-i18n="您的姓名（選填）">您的姓名（選填）</label>
-          <input type="text" id="customer-name" placeholder="方便取餐時叫號" data-i18n-placeholder="方便取餐時叫號">
+          <input type="text" id="customer-name" maxlength="100" placeholder="方便取餐時叫號" data-i18n-placeholder="方便取餐時叫號">
         </div>
         <div class="form-group">
           <label for="table-num" data-i18n="桌號 / 備註（選填）">桌號 / 備註（選填）</label>
-          <input type="text" id="table-num" placeholder="例如: 3號桌" data-i18n-placeholder="例如: 3號桌">
+          <input type="text" id="table-num" maxlength="40" placeholder="例如: 3號桌" data-i18n-placeholder="例如: 3號桌">
         </div>
         <div class="form-group">
           <label for="order-note" data-i18n="備註">備註</label>
-          <textarea id="order-note" placeholder="特殊需求..." data-i18n-placeholder="特殊需求..." rows="2"></textarea>
+          <textarea id="order-note" maxlength="500" placeholder="特殊需求..." data-i18n-placeholder="特殊需求..." rows="2"></textarea>
         </div>
+        <ul id="form-menu-items" class="form-menu-items" hidden></ul>
+        <p id="form-warning" role="alert" hidden></p>
         <div class="form-total">
           <span data-i18n="合計">合計</span>: <strong id="form-total">NT$ 0</strong>
         </div>
+        <details id="pending-order-reference" hidden><summary data-i18n="原訂單編號">原訂單編號</summary><code id="pending-order-id" style="overflow-wrap:anywhere"></code></details>
         <div class="form-actions">
           <button data-action="closeOrderForm" class="btn-secondary" data-i18n="取消">取消</button>
           <button data-action="confirmOrder" class="btn-primary">確認送出</button>
@@ -85,9 +92,11 @@
       <div class="success-content">
         <div class="success-icon">&#10003;</div>
         <h2 data-i18n="訂單已送出!">訂單已送出!</h2>
-        <p id="success-order-id"></p>
+        <p id="success-table-label"></p><p id="success-pickup-number" style="font-size:1.8rem;font-weight:700"></p>
+        <p id="success-order-total"></p><p id="success-order-price-change" role="status"></p>
         <p id="success-status" class="status-text">等待店家確認中...</p>
         <button data-action="resetApp" class="btn-primary" data-i18n="繼續點餐">繼續點餐</button>
+        <details style="margin-top:20px"><summary data-i18n="原訂單編號">原訂單編號</summary><p id="success-order-id" style="overflow-wrap:anywhere"></p></details>
       </div>
     </div>
   </div>

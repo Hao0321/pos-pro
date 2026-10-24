@@ -65,7 +65,7 @@ app.whenReady().then(async()=>{try{
   pass('a missing cached module is reported as incomplete despite an active worker, preserving the sale')
   await nav('班別交班');await waitFor('!![...document.querySelectorAll("button")].find(b=>b.textContent.trim()==="交班")','drawer calculation')
   await click('交班');await waitFor('!!document.querySelector("[aria-label=實際交班現金]")','close drawer form')
-  assert.equal(await js('document.querySelector("[aria-label=實際交班現金]").value'),'295')
+  assert.equal(await js('document.querySelector("[aria-label=實際交班現金]").value'),'');assert.equal(await js('document.querySelector("[data-shift-save=close]").disabled'),true);await input('[aria-label=實際交班現金]','295')
   await click('確認交班');await waitFor('document.body.innerText.includes("交班已保存")','close acknowledgement')
   records=await js('JSON.parse(localStorage.getItem("pos_atomic_records_v1"))');assert.equal(records.data.pos2_shifts[0].expectedCash,295);assert.equal(records.data.pos2_shifts[0].diff,0);assert.equal(records.data.pos2_shifts[0].status,'closed')
   pass('actual phone drawer close uses the saved sale and stores the same expected cash and zero difference offline')
