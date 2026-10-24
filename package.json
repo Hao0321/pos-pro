@@ -97,7 +97,9 @@
       "public/menu/**/*",
       "public/reserve/**/*",
       "public/i18n/**/*",
-      "!**/*.map"
+      "!**/*.map",
+      "src/utils/checkoutSafety.mjs",
+      "src/utils/refundSafety.mjs"
     ],
     "extraMetadata": {
       "main": "electron/main.js"
