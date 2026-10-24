@@ -2,6 +2,7 @@ import {canonicalSignature,moneyValue,quantityValue,operationHeader} from './ope
 import {cents,units,amount,amountUnits,procurementLineCents} from './procurementAmounts.mjs'
 import {beginProcurementValuation,appendValuation,valuationState,allocationFor} from './procurementValuation.mjs'
 import {validateQuote,validateQuotedPurchase} from './businessExchange.mjs'
+import {validateCataloguePurchase} from './catalogueOrder.mjs'
 import {supplierAppliedCents} from './supplierCredit.mjs'
 import {supplierLotReturn,supplierLotReturnDeltas,SUPPLIER_LOT_RETURN} from './supplierLotReturn.mjs'
 import {PURCHASE_UNITS_KIND,hasPurchaseUnitBasis,purchaseLineCents,validatePurchaseItemPrice,assertPurchaseUnitReview} from './purchaseUnitPricing.mjs'
@@ -11,7 +12,7 @@ export {purchaseLineCents} from './purchaseUnitPricing.mjs'
 export const PROCUREMENT_CREATE_KINDS=['purchase-create',PURCHASE_UNITS_KIND]
 export const isPurchaseCreate=kind=>PROCUREMENT_CREATE_KINDS.includes(kind)
 export const PROCUREMENT_KINDS=[...PROCUREMENT_CREATE_KINDS,'purchase-bill','purchase-pay','purchase-reverse','purchase-cancel','purchase-return',SUPPLIER_LOT_RETURN,'purchase-refund','purchase-refund-reverse']
-export const isProcurement=po=>[1,2].includes(po?.procurement?.version)
+export const isProcurement=po=>[1,2,3].includes(po?.procurement?.version)
 export const parsePurchase=row=>({...row,items:typeof row.items==='string'?JSON.parse(row.items||'[]'):row.items,procurement:typeof row.procurement==='string'?JSON.parse(row.procurement):row.procurement??null})
 export const purchaseParams=po=>({...po,items:JSON.stringify(po.items),procurement:po.procurement?JSON.stringify(po.procurement):null})
 const sum=rows=>rows.reduce((n,r)=>n+cents(r.amount),0)
@@ -47,11 +48,13 @@ export function createProcurement(request,data){
   if(converted)assertPurchaseUnitReview(request,data)
   if(data.purchases.some(po=>po.procurement?.createdOperationId===request.id))throw Object.assign(Error('原採購建立回執缺少，請保留原編號核對'),{historyUncertain:true})
   if(request.sourceQuote!==undefined){
+    if(request.sourceCatalogue!==undefined)throw Error('公開目錄與專屬報價不能混用。')
     const quote=validateQuote(request.sourceQuote.document,{now:Date.now(),recipientStoreId:data.storeId})
     if(!data.storeId)throw Error('請先確認採購收件店面')
     if(data.purchases.some(p=>{const q=p.procurement?.sourceQuote?.document;return q&&q.sender.id===quote.sender.id&&q.recipient.id===quote.recipient.id&&q.id===quote.id}))throw Error('這份報價已建立採購，請查看原採購單')
     validateQuotedPurchase({...input,total:input.items.reduce((n,i)=>n+procurementLineCents(i.qty,i.unitCost),0)/100},request.sourceQuote,{products:data.products})
   }
+  if(request.sourceCatalogue!==undefined){if(converted||!data.storeId)throw Error('請先確認目錄採購的店面與單位。');validateCataloguePurchase({...input,total:input.items.reduce((sum,row)=>sum+procurementLineCents(row.qty,row.unitCost),0)/100},request.sourceCatalogue,{products:data.products,recipientStoreId:data.storeId})}
   if(data.purchases.some(p=>p.id===input.id))throw Error('採購單編號已存在，請核對原單')
   const supplier=data.suppliers.find(s=>s.id===input.supplierId);if(!supplier)throw Error('供應商不存在')
   if(!Array.isArray(input.items)||!input.items.length||input.items.length>1000)throw Error('請填寫採購品項')
@@ -66,7 +69,7 @@ export function createProcurement(request,data){
   })
   if(converted&&!items.some(hasPurchaseUnitBasis))throw Error('包裝採購缺少原包裝事實')
   return {id:input.id,supplierId:supplier.id,supplierName:supplier.name||'',status:'ordered',date:date(input.date,'訂購日'),receivedDate:'',paidDate:'',note:String(input.note||'').slice(0,2000),total:amount(items.reduce((n,i)=>n+purchaseLineCents(i),0)),items,
-    procurement:{version:converted?2:1,revision:1,createdOperationId:request.id,createdAt:request.time,receipts:[],bills:[],payments:[],reversals:[],cancel:null,...(converted?{valuation:{version:1,legacyCount:0,order:[]}}:{}),...(request.sourceQuote?{sourceQuote:structuredClone(request.sourceQuote)}:{})}}
+    procurement:{version:converted?2:request.sourceCatalogue?3:1,revision:1,createdOperationId:request.id,createdAt:request.time,receipts:[],bills:[],payments:[],reversals:[],cancel:null,...(converted?{valuation:{version:1,legacyCount:0,order:[]}}:{}),...(request.sourceQuote?{sourceQuote:structuredClone(request.sourceQuote)}:{}),...(request.sourceCatalogue?{sourceCatalogue:structuredClone(request.sourceCatalogue)}:{})}}
 }
 export function recordProcurementReceipt(original,received,request){
   if(!isProcurement(original))return received
@@ -157,9 +160,11 @@ export function validateProcurement(po){
   if(po.procurement==null)return
   if(!isProcurement(po))throw Error('採購紀錄版本不支援')
   const p=po.procurement
+  if((p.version===3)!==(p.sourceCatalogue!==undefined)||p.sourceCatalogue!==undefined&&p.sourceQuote!==undefined)throw Error('目錄採購版本與來源不符，請保留原單。')
+  if(p.sourceCatalogue!==undefined)validateCataloguePurchase(po,p.sourceCatalogue)
   if(p.sourceQuote!==undefined)validateQuotedPurchase(po,p.sourceQuote)
   if(!Number.isSafeInteger(p.revision)||p.revision<1||!Array.isArray(po.items)||!po.items.length)throw Error('採購紀錄損壞')
-  if(p.version===1&&po.items.some(hasPurchaseUnitBasis)||p.version===2&&!po.items.some(hasPurchaseUnitBasis))throw Error('採購單位版本與原價資料不符')
+  if(p.version!==2&&po.items.some(hasPurchaseUnitBasis)||p.version===2&&!po.items.some(hasPurchaseUnitBasis))throw Error('採購單位版本與原價資料不符')
   if(p.version===2&&(!p.valuation||p.valuation.legacyCount!==0))throw Error('包裝採購缺少原始分毫分配順序')
   for(const item of po.items){validatePurchaseItemPrice(item);quantityValue(item.received,'已收貨量');if(units(item.received)>units(item.qty))throw Error('採購收貨超額')}
   if(cents(po.total)!==po.items.reduce((n,i)=>n+purchaseLineCents(i),0))throw Error('採購合計金額不符')

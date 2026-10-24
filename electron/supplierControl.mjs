@@ -17,7 +17,7 @@ function enoughOwners(data,history){if(!history&&new Set(data.ownerIds||[]).size
 export function procurementApprovalMaterial(po){
   validateProcurement(po);if(!isProcurement(po))throw Error('歷史進貨單不能補造採購核准文件')
   return {id:po.id,supplierId:po.supplierId,supplierName:po.supplierName,date:po.date,note:po.note,total:po.total,
-    ...(po.procurement.version===2?{pricingVersion:2}:{}),items:po.items.map(row=>({productId:row.productId||null,catalogId:row.catalogId||null,name:row.name,unit:row.unit,qty:row.qty,...(hasPurchaseUnitBasis(row)?{costBasis:structuredClone(row.costBasis)}:{unitCost:row.unitCost})})),sourceQuote:po.procurement.sourceQuote||null}
+    ...(po.procurement.version===2?{pricingVersion:2}:{}),items:po.items.map(row=>({productId:row.productId||null,catalogId:row.catalogId||null,name:row.name,unit:row.unit,qty:row.qty,...(hasPurchaseUnitBasis(row)?{costBasis:structuredClone(row.costBasis)}:{unitCost:row.unitCost})})),sourceQuote:po.procurement.sourceQuote||null,...(po.procurement.sourceCatalogue?{sourceCatalogue:structuredClone(po.procurement.sourceCatalogue)}:{})}
 }
 export function purchaseMatchesApproval(po,material){
   const current=procurementApprovalMaterial(po)

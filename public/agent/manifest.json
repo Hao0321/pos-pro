@@ -149,5 +149,29 @@
       "fullMigrationComplete": false,
       "installerUpdated": false
     }
+  },
+  "catalogueOrderDraft": {
+    "protocol": "business-catalogue-order/v1",
+    "schema": "/agent/business-catalogue-order-v1.schema.json",
+    "guide": "/agent/guides/catalogue-order.txt",
+    "purpose": "Buyer prepares a local purchase from an intact public reference-price catalogue and explicit selected quantities.",
+    "context": "Authenticated owner context advertises catalogueOrdering.protocol; supplier-scoped SKU mappings are human-reviewed.",
+    "delivery": [
+      "public-catalogue-json",
+      "paste",
+      "json-file",
+      "file-drop"
+    ],
+    "humanReviewRequired": true,
+    "automaticMoneyMovement": false,
+    "automaticReceiving": false,
+    "sentToSupplier": false,
+    "maxBytes": 32768,
+    "storedSource": "procurement.sourceCatalogue",
+    "compatibility": {
+      "purchaseVersion": 3,
+      "browserRecordVersion": 2,
+      "feature": "catalogue-purchase-v1"
+    }
   }
 }

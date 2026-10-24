@@ -50,10 +50,11 @@ function prefix(before,current){
 }
 function validateCreation(request,after){
   if(request.kind===PURCHASE_UNITS_KIND)assertPurchaseUnitReview(request)
-  if(after.procurement.version!==(request.kind===PURCHASE_UNITS_KIND?2:1))throw Error('採購版本與建立原單不符')
+  if(after.procurement.version!==(request.kind===PURCHASE_UNITS_KIND?2:request.sourceCatalogue?3:1))throw Error('採購版本與建立原單不符')
   const input=request.purchase
   if(!input||request.id!==after.procurement.createdOperationId||request.time!==after.procurement.createdAt||input.id!==after.id||input.supplierId!==after.supplierId||input.date!==after.date||String(input.note||'').slice(0,2000)!==after.note||input.items?.length!==after.items.length)throw Error('採購建立回執缺少原始條件')
   if(canonicalSignature(request.sourceQuote??null)!==canonicalSignature(after.procurement.sourceQuote??null))throw Error('採購建立回執缺少原報價')
+  if(canonicalSignature(request.sourceCatalogue??null)!==canonicalSignature(after.procurement.sourceCatalogue??null))throw Error('採購建立回執缺少原目錄與選品。')
   input.items.forEach((item,index)=>{const row=after.items[index];if((item.productId||null)!==row.productId||(item.catalogId||null)!==row.catalogId||String(item.name).trim()!==row.name||(item.unit||'個')!==row.unit||item.qty!==row.qty||item.unitCost!==row.unitCost||canonicalSignature(item.costBasis??null)!==canonicalSignature(row.costBasis??null)||row.received!==0)throw Error('採購建立的品項或單價不一致')})
 }
 export function buildSupplierPurchaseTimelines(data,needed){

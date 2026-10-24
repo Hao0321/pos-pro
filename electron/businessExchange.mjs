@@ -98,6 +98,7 @@ export function validateExchangeSettings(settings,purchases=[],auditLogs){
   const state=readExchangeStore(raw),storeId=readExchangeTextSetting(settings,'sharedStoreId')
   if((state.quotes.length||state.pricebooks.length)&&(!storeId||state.quotes.some(q=>q.sender.id!==storeId)))throw Error('報價歷史與店面身份不符')
   if(purchases.some(p=>p.procurement?.sourceQuote&&p.procurement.sourceQuote.document.recipient.id!==storeId))throw Error('採購報價與收件店面不符')
+  if(purchases.some(p=>p.procurement?.sourceCatalogue&&p.procurement.sourceCatalogue.document.recipientStoreId!==storeId))throw Error('目錄採購與收件店面不符。')
   if(auditLogs===undefined)return
   const receipts=new Map(),books=[]
   for(const entry of auditLogs.filter(row=>row.action===EXCHANGE_ACTION||String(row.id).startsWith(EXCHANGE_PREFIX))){

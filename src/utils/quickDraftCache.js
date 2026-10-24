@@ -1,13 +1,17 @@
 import {RESTAURANT_AGENT_PROTOCOL,assertRestaurantAgentShape} from '../../electron/restaurantAgentDraft.mjs'
+import {CATALOGUE_ORDER_PROTOCOL,readCatalogueOrder} from '../../electron/catalogueOrder.mjs'
+import {CATALOGUE_SELECTION_PROTOCOL,validCatalogueSelection} from './catalogueSelection.mjs'
 const prefix='pos_quick_draft_v1:'
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v)
 const strings=['protocol','id','issuedAt','storeId','catalogueRevision','kind','supplierId','date','channel','day','slot','customer','contact','note']
 export function validQuickDraftState(state,scope){
   if(!object(state)||Object.keys(state).length!==4||Object.keys(state).some(key=>!['kind','text','draft','external'].includes(key))||!['sale','restaurant','purchase'].includes(state.kind)||scope.role!=='owner'&&state.kind==='purchase'||typeof state.text!=='string'||state.text.length>32768)return false
   const d=state.draft
-  if(d?.protocol===RESTAURANT_AGENT_PROTOCOL){try{assertRestaurantAgentShape(d,{allowEmpty:true})}catch{return false}if(d.storeId!==scope.storeId||d.kind!==state.kind||state.external!==null)return false}
+  if(d?.protocol===CATALOGUE_SELECTION_PROTOCOL){if(!validCatalogueSelection(d,scope)||state.external!==null)return false}
+  else if(d?.protocol===RESTAURANT_AGENT_PROTOCOL){try{assertRestaurantAgentShape(d,{allowEmpty:true})}catch{return false}if(d.storeId!==scope.storeId||d.kind!==state.kind||state.external!==null)return false}
   else if(d!==null&&(!object(d)||Object.keys(d).some(k=>k!=='items'&&!strings.includes(k))||strings.some(k=>d[k]!==undefined&&typeof d[k]!=='string')||d.storeId!==scope.storeId||d.kind!==state.kind||d.protocol!=='pos-document-draft/v1'||!Array.isArray(d.items)||d.items.length>100||d.items.some(i=>!object(i)||Object.keys(i).some(k=>!['productId','qty','unitCost'].includes(k))||typeof i.productId!=='string'||!Number.isFinite(i.qty)||i.unitCost!==undefined&&!Number.isFinite(i.unitCost))))return false
-  if(state.external!==null&&(!object(state.external)||!object(state.external.document)||!['business-document/v1','business-quote/v1'].includes(state.external.document.protocol)||!object(state.external.overrides)||Object.entries(state.external.overrides).some(([k,v])=>k.length>300||typeof v!=='string'||v.length>128)))return false
+  if(state.external!==null&&(!object(state.external)||!object(state.external.document)||!['business-document/v1','business-quote/v1',CATALOGUE_ORDER_PROTOCOL].includes(state.external.document.protocol)||!object(state.external.overrides)||Object.entries(state.external.overrides).some(([k,v])=>k.length>300||typeof v!=='string'||v.length>128)))return false
+  if(state.external?.document.protocol===CATALOGUE_ORDER_PROTOCOL){try{readCatalogueOrder(state.external.document,{recipientStoreId:scope.storeId})}catch{return false}const facts=state.external.facts;if(scope.role!=='owner'||facts!==undefined&&(!object(facts)||Object.keys(facts).sort().join(',')!=='date,supplierId'||typeof facts.supplierId!=='string'||facts.supplierId.length>128||typeof facts.date!=='string'||facts.date.length>10))return false}
   return true
 }
 export function quickDraftScope(context,session){

@@ -39,12 +39,12 @@ export function planInventory(request,data,actor){
       if(qty>0){
         if(id){
           const p=products.get(id);if(!p)throw Error('進貨商品已不存在，請核對 '+item.name)
-          if(original.procurement?.version===2&&(p.unit||'個')!==item.unit)throw Error('商品基本單位已變更，請保留原輸入重新核對')
+          if([2,3].includes(original.procurement?.version)&&(p.unit||'個')!==item.unit)throw Error('商品基本單位已變更，請保留原輸入重新核對')
           p.stock=Math.round((quantityValue(p.stock,'商品庫存')+qty)*1000)/1000;quantityValue(p.stock,'到貨後庫存');changed.add(id)
         }else{
           const linked=item.catalogId&&supplier?.catalog?.find(c=>c.id===item.catalogId)?.productId
           if(linked&&products.has(linked)){
-            id=linked;const p=products.get(id);if(original.procurement?.version===2&&(p.unit||'個')!==item.unit)throw Error('商品基本單位已變更，請保留原輸入重新核對');p.stock=Math.round((quantityValue(p.stock,'商品庫存')+qty)*1000)/1000;quantityValue(p.stock,'到貨後庫存');changed.add(id)
+            id=linked;const p=products.get(id);if([2,3].includes(original.procurement?.version)&&(p.unit||'個')!==item.unit)throw Error('商品基本單位已變更，請保留原輸入重新核對');p.stock=Math.round((quantityValue(p.stock,'商品庫存')+qty)*1000)/1000;quantityValue(p.stock,'到貨後庫存');changed.add(id)
           }else{
             id='p-'+request.id+'-'+index;if(products.has(id))throw Error('新商品編號衝突，請核對')
             const price=newPrices.find(row=>row.lineIndex===index)

@@ -2,6 +2,7 @@ import {RECEIPT_REVIEW_KIND,hasReceiptLots,retainReceiptReviewFeature} from './r
 import {readReservationBook} from './reservationHistory.mjs'
 import {isProcurement} from './procurementRules.mjs'
 import {PURCHASE_UNITS_KIND,retainPurchaseUnitFeature} from './purchaseUnitPricing.mjs'
+import {retainCataloguePurchaseFeature} from './catalogueOrder.mjs'
 import {canonicalSignature,operationHeader,moneyValue,quantityValue} from './operationRules.mjs'
 import {updateBrowserSettings} from './settingEncoding.mjs'
 import {signature as checkoutSignature} from './checkoutSignature.mjs'
@@ -106,6 +107,7 @@ export function planBrowserStockBusiness(book,runtime,method,request,actor){
     next.purchases=plan.createPurchase?[plan.purchase,...book.purchases]:book.purchases.map(row=>row.id===plan.purchase?.id?plan.purchase:row)
     if(request.kind===RECEIPT_REVIEW_KIND)next.settings=retainReceiptReviewFeature(next).settings
     if(request.kind===PURCHASE_UNITS_KIND)next.settings=retainPurchaseUnitFeature(next).settings
+    if(request.sourceCatalogue)next.settings=retainCataloguePurchaseFeature(next).settings
     next.suppliers=book.suppliers.map(row=>row.id===plan.supplier?.id?plan.supplier:row)
     next.cashLog=plan.cashLog?[plan.cashLog,...book.cashLog]:book.cashLog
     next.auditLog=[{id:'stock-operation:'+request.id,action:'INVENTORY_OPERATION',detail:plan.receipt,timestamp:runtime.timestamp,userId:actor.userId,username:actor.username,role:actor.role},...book.auditLog]

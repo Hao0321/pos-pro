@@ -22,8 +22,9 @@ import {usesRestaurantMenu,RESTAURANT_MENU_FEATURE,RESTAURANT_MENU_CONFIG_KEY} f
 import {usesRestaurantPublicMenu,RESTAURANT_PUBLIC_MENU_FEATURE} from './restaurantCustomerMenu.mjs'
 import {usesPrivateQuickDrafts,PRIVATE_QUICK_FEATURE} from './privateDrafts.mjs'
 import {WAREHOUSE_FEATURE,WAREHOUSE_SETTING} from './warehouseRules.mjs'
+import {CATALOGUE_ORDER_FEATURE,CATALOGUE_ORDER_FENCE,assertCataloguePurchaseFeature} from './catalogueOrder.mjs'
 
-export const RECOVERY_FEATURES=['financial-file-migration-v1','reservation-deposit-application-v1','reservation-deposits-v1','reservation-service-v1','reservation-public-v1','reservation-capacity-v1','opening-cutover-v1','stock-opening-migration-v1','agent-workbook-migration-v1','agent-tabular-migration-v1','agent-master-migration-v1',RECEIPT_REVIEW_FEATURE,PURCHASE_UNITS_FEATURE,'stock-supplier-lot-returns-v1','stock-receipt-lots-v1','stock-lot-count-v1','stock-lots-v1',WAREHOUSE_FEATURE,PRIVATE_QUICK_FEATURE,RESTAURANT_PUBLIC_MENU_FEATURE,RESTAURANT_MENU_FEATURE,RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
+export const RECOVERY_FEATURES=['catalogue-purchase-v1','financial-file-migration-v1','reservation-deposit-application-v1','reservation-deposits-v1','reservation-service-v1','reservation-public-v1','reservation-capacity-v1','opening-cutover-v1','stock-opening-migration-v1','agent-workbook-migration-v1','agent-tabular-migration-v1','agent-master-migration-v1',RECEIPT_REVIEW_FEATURE,PURCHASE_UNITS_FEATURE,'stock-supplier-lot-returns-v1','stock-receipt-lots-v1','stock-lot-count-v1','stock-lots-v1',WAREHOUSE_FEATURE,PRIVATE_QUICK_FEATURE,RESTAURANT_PUBLIC_MENU_FEATURE,RESTAURANT_MENU_FEATURE,RESTAURANT_FUNDS_FEATURE,KITCHEN_PRINT_FEATURE,RESTAURANT_INTAKE_FEATURE,'record-shapes-v1','cross-storage-v1','customer-ledger-v1','stock-cost-v1','supplier-ledger-v1']
 export const recoveryDataError=()=>Error('備份保護紀錄不完整或內容不同，請保留原檔核對')
 export function recoveryFeatureFloor(features=[],minimum=1){
  if(![1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20].includes(minimum)||!Array.isArray(features)||features.some(feature=>!RECOVERY_FEATURES.includes(feature)))throw recoveryDataError()
@@ -31,6 +32,7 @@ export function recoveryFeatureFloor(features=[],minimum=1){
 }
 export function retainRecoveryFeatures(book,features){
  const settings=new Map(book.settings.map(row=>[row.key,row]))
+ if(features.includes(CATALOGUE_ORDER_FEATURE))settings.set(CATALOGUE_ORDER_FENCE,{key:CATALOGUE_ORDER_FENCE,value:'1'})
  if(features.includes('financial-file-migration-v1'))settings.set('financialFileMigrationVersionFence',{key:'financialFileMigrationVersionFence',value:'1'})
  if(features.includes('reservation-deposit-application-v1'))settings.set('reservationDepositApplicationVersionFence',{key:'reservationDepositApplicationVersionFence',value:'1'})
  if(features.includes('reservation-deposits-v1'))settings.set('reservationDepositVersionFence',{key:'reservationDepositVersionFence',value:'1'})
@@ -80,6 +82,7 @@ export function recoveryBook(data,storage,{complete=false,digest=stockLedgerDige
  readReservationBook(book,[],{strictDining:true})
  requireMasterHistory(book)
  const features=[]
+ if(assertCataloguePurchaseFeature({...book,settings}))features.push(CATALOGUE_ORDER_FEATURE)
  if(settings.some(row=>row.key==='financialFileMigrationVersionFence'&&row.value==='1'))features.push('financial-file-migration-v1')
  if(settings.some(row=>row.key==='reservationDepositApplicationVersionFence'&&row.value==='1'))features.push('reservation-deposit-application-v1')
  if(settings.some(row=>row.key==='reservationDepositVersionFence'&&row.value==='1'))features.push('reservation-deposits-v1')

@@ -18,7 +18,7 @@ export function mergeAgentMappings(old,input,products,actor){
 const sourceKey=row=>row.sku?'sku:'+row.sku:row.barcode?'barcode:'+row.barcode:'name:'+row.name
 export function businessDocumentDraftId(senderId,externalId){return 'b-'+bytesToHex(sha256(new TextEncoder().encode(canonicalSignature([BUSINESS_PROTOCOL,senderId,externalId])))).slice(0,48)}
 export async function prepareBusinessDocument(...args){return prepareBusinessDocumentSync(...args)}
-export function prepareBusinessDocumentSync(doc,context,overrides={},{skuIsLocal=true,now=Date.now()}={}){
+export function prepareBusinessDocumentSync(doc,context,overrides={},{skuIsLocal=true,now=Date.now(),unitMax=30}={}){
   only(doc,['protocol','id','createdAt','sender','recipientStoreId','intent','currency','items','total','fulfilment','note'],'交換單據')
   if(doc.protocol!==BUSINESS_PROTOCOL||!['sale','restaurant','purchase'].includes(doc.intent))throw Error('交換協議版本或單據用途不支援')
   const externalId=text(doc.id,'外部單號',128);only(doc.sender,['id','name'],'來源公司');const senderId=text(doc.sender.id,'來源公司代碼',128)
@@ -32,7 +32,7 @@ export function prepareBusinessDocumentSync(doc,context,overrides={},{skuIsLocal
     only(row,['sku','barcode','name','qty','unit','unitPrice'],'交換品項')
     if(!row.sku&&!row.barcode&&!row.name)throw Error('交換品項須有代碼、條碼或名稱')
     for(const key of ['sku','barcode','name'])if(row[key]!==undefined)text(row[key],'對方品項'+key,200)
-    quantityValue(row.qty,'交換數量',.001);const unit=text(row.unit,'品項單位',30),key=sourceKey(row),override=own(overrides,key),remembered=own(mappings,key)
+    quantityValue(row.qty,'交換數量',.001);const unit=text(row.unit,'品項單位',unitMax),key=sourceKey(row),override=own(overrides,key),remembered=own(mappings,key)
     let product=(override||remembered)?context.products.find(p=>p.id===(override||remembered)):null
     const identified=context.products.filter(p=>skuIsLocal&&row.sku&&(p.id===row.sku||p.sku===row.sku)||row.barcode&&p.barcode===row.barcode)
     if(identified.length>1||product&&identified.some(p=>p.id!==product.id))throw Error('品項代碼、條碼或已記住的對照互相矛盾，請先核對')

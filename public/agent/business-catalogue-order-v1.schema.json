@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "business-catalogue-order-v1.schema.json",
+  "title": "Buyer-prepared public-catalogue purchase draft v1",
+  "description": "A buyer selection from an intact public reference-price catalogue. Not a seller-issued quote, seller acceptance, receipt or payment. Maximum serialized document size is 32768 UTF-8 bytes. The authenticated owner reviews local mappings, supplier and date before creating one local purchase.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "id", "createdAt", "recipientStoreId", "catalogue", "items"],
+  "properties": {
+    "protocol": {"const": "business-catalogue-order/v1"},
+    "id": {"type": "string", "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"},
+    "createdAt": {"type": "string", "format": "date-time"},
+    "recipientStoreId": {"type": "string", "pattern": "^[A-Za-z0-9:_-]{1,128}$"},
+    "catalogue": {"$ref": "business-catalogue-v1.schema.json"},
+    "items": {
+      "type": "array", "minItems": 1, "maxItems": 100,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["sku", "qty"],
+        "properties": {
+          "sku": {"type": "string", "pattern": "^[A-Za-z0-9:_-]{1,128}$"},
+          "qty": {"type": "number", "minimum": 0.001, "maximum": 1000000000, "multipleOf": 0.001}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+import {readPublicCatalogue,readCatalogueOrder,CATALOGUE_ORDER_PROTOCOL,CATALOGUE_ORDER_ID} from '../../electron/catalogueOrder.mjs'
+import {procurementLineCents} from '../../electron/procurementAmounts.mjs'
+import {moneyValue} from '../../electron/operationRules.mjs'
+import {agentBusinessDay} from '../../electron/agentDraftRules.mjs'
+export const CATALOGUE_SELECTION_PROTOCOL='pos-catalogue-selection/v1'
+export function makeCatalogueSelection(catalogue,context){readPublicCatalogue(catalogue);if(context.role!=='owner')throw Error('請用店主帳號依目錄準備採購。');return {protocol:CATALOGUE_SELECTION_PROTOCOL,id:crypto.randomUUID(),issuedAt:new Date().toISOString(),storeId:context.storeId,kind:'purchase',catalogue:structuredClone(catalogue),quantities:{},facts:{supplierId:'',date:agentBusinessDay(context)}}}
+export function validCatalogueSelection(value,context){try{if(value?.protocol!==CATALOGUE_SELECTION_PROTOCOL||Object.keys(value).sort().join(',')!=='catalogue,facts,id,issuedAt,kind,protocol,quantities,storeId'||!CATALOGUE_ORDER_ID.test(value.id)||!Number.isFinite(Date.parse(value.issuedAt))||value.storeId!==context.storeId||context.role!=='owner'||value.kind!=='purchase')return false;readPublicCatalogue(value.catalogue);if(!value.quantities||typeof value.quantities!=='object'||Array.isArray(value.quantities)||Object.entries(value.quantities).some(([key,raw])=>!value.catalogue.items.some(item=>item.sku===key)||typeof raw!=='string'||raw.length>2000)||!value.facts||Object.keys(value.facts).sort().join(',')!=='date,supplierId'||typeof value.facts.supplierId!=='string'||value.facts.supplierId.length>128||typeof value.facts.date!=='string'||value.facts.date.length>10)return false;return true}catch{return false}}
+export const catalogueQuantity=(value,sku)=>Object.hasOwn(value.quantities,sku)?value.quantities[sku]:''
+export function catalogueSelectionPreview(value){
+ const rows=[],items=[];let total=0
+ for(const product of value.catalogue.items){const raw=catalogueQuantity(value,product.sku),trimmed=raw.trim();if(!trimmed)continue;if(!/^(?:0|[1-9]\d*)(?:\.\d{1,3})?$/.test(trimmed))throw Error('數量請用一般小數，最多三位；原輸入會保留。');const qty=Number(trimmed);if(qty===0)continue;const cents=procurementLineCents(qty,product.unitPrice);items.push({sku:product.sku,qty});rows.push({...product,qty,raw,cents});total+=cents;if(!Number.isSafeInteger(total))throw Error('目錄數量或金額超過上限。')}
+ moneyValue(total/100,'目錄採購合計');return {items,rows,total:total/100,count:items.length}
+}
+export function selectedCatalogueOrder(value){const preview=catalogueSelectionPreview(value);return readCatalogueOrder({protocol:CATALOGUE_ORDER_PROTOCOL,id:value.id,createdAt:value.issuedAt,recipientStoreId:value.storeId,catalogue:structuredClone(value.catalogue),items:preview.items})}
+export function resumeCatalogueSelection(order,draft){return {protocol:CATALOGUE_SELECTION_PROTOCOL,id:order.id,issuedAt:order.createdAt,storeId:order.recipientStoreId,kind:'purchase',catalogue:structuredClone(order.catalogue),quantities:Object.fromEntries(order.items.map(row=>[row.sku,String(row.qty)])),facts:{supplierId:draft.supplierId||'',date:draft.date??''}}}

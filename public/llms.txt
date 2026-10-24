@@ -4,6 +4,7 @@ All features are free. ## Choose one task
 Discovery: /.well-known/pos-agent.json → /agent/manifest.json. In desktop file builds use paths relative to dist/; the paired application also serves these files under /shop/.
 
 - Sale / restaurant / legacy purchase / cross-company quote: /agent/guides/legacy-documents.txt (pos-document-draft/v1, business-document/v1; authenticated getAgentContext; human review).
+- Public catalogue purchase: /agent/guides/catalogue-order.txt (import business-catalogue/v1 directly, select quantities, review and confirm; business-catalogue-order/v1 preserves the original selection. Reference prices do not imply supplier acceptance).
 - Package purchase: /agent/guides/purchase-units.txt (pos-purchase-units-draft/v1; owner task packet; raw quantities and original prices; paste/file/code fence/drop).
 - Move from another ERP/CRM: /agent/guides/migration.txt (pos-migration-draft/v1; source facts and owner-confirmed product/supplier/customer import; direct XLSX/CSV/TSV).
 - Original invoices/credits: /agent/guides/opening-balances.txt; original CSV/TSV/XLSX: /agent/guides/financial-files.txt (same owner review, retained raw bytes, v3 / format20; canonical JSON v2 / format14 remains supported).

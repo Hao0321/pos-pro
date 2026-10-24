@@ -13,7 +13,7 @@ module.exports=function(db,stmts,supplierParams){
   return {getStocktakeState(actor){verified(actor);return db.transaction(()=>{if(!stmts.getSetting.get('sharedStoreId')?.value)stmts.setSetting.run('sharedStoreId',randomUUID());return physicalStocktakeState({...current(),...countData()})})()},applyInventoryOperation(request,actor){
     if(!actor||!['owner','staff'].includes(actor.role)||request.kind!=='stocktake'&&actor.role!=='owner')throw Error('權限不足')
     if(request.protocol===PHYSICAL_STOCKTAKE)verified(actor)
-    if(request.kind===RECEIPT_REVIEW_KIND||request.kind===PURCHASE_UNITS_KIND||stmts.getSetting.get(PURCHASE_UNITS_SETTING)?.value==='1')verified(actor)
+    if(request.kind===RECEIPT_REVIEW_KIND||request.kind===PURCHASE_UNITS_KIND||request.sourceCatalogue||stmts.getSetting.get(PURCHASE_UNITS_SETTING)?.value==='1')verified(actor)
     let replay=false,historyChecked=false
     try{return db.transaction(()=>{
       const key=INVENTORY_PREFIX+request.id,old=db.prepare('SELECT * FROM audit_log WHERE id=?').get(key)
@@ -21,6 +21,7 @@ module.exports=function(db,stmts,supplierParams){
       const read=()=>{const data=request.supplierContext||fence.hasSupplierFence(db)?readSupplier():{...current(),storeId:stmts.getSetting.get('sharedStoreId')?.value};return request.kind==='stocktake'||request.kind===RECEIPT_REVIEW_KIND?{...data,...countData()}:data},data=read()
       if(old){if(old.action!==INVENTORY_ACTION)throw Error('庫存回執需要核對');if(request.protocol===PHYSICAL_STOCKTAKE&&old.userId!==actor.userId&&actor.role!=='owner')throw Error('權限不足');return supplierInventoryReceipt(request,JSON.parse(old.detail),data)}
       const plan=planSupplierInventory(request,data,actor)
+      if(request.sourceCatalogue){fence.installCataloguePurchaseFence(db);stmts.setSetting.run('cataloguePurchaseVersionFence','1')}
       if(request.draftContext){fence.installPrivateQuickFence(db);stmts.setSetting.run('stockCostVersionFence','1')}
       if(plan.supplierRegistration)fence.installSupplierFence(db)
       if(request.kind===PURCHASE_UNITS_KIND){fence.installPurchaseUnitsFence(db);stmts.setSetting.run(PURCHASE_UNITS_SETTING,'1')}

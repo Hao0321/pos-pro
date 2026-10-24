@@ -16,7 +16,7 @@ export function makeAgentContextSync({storeId,products,suppliers=[],restaurantCo
   const vendors=role==='owner'?suppliers.map(s=>({id:s.id,name:s.name})):[]
   const identity={storeId,role,catalogue:catalogue.map(({stock,...p})=>p),suppliers:vendors,restaurantConfig}
   const digest=bytesToHex(sha256(new TextEncoder().encode(canonicalSignature(identity))))
-  return {protocol:AGENT_PROTOCOL,storeId,role,catalogueRevision:digest,kinds:role==='owner'?kinds:kinds.filter(k=>k!=='purchase'),products:catalogue,suppliers:vendors,mappings,restaurantEnabled:restaurantConfig.enabled,restaurantConfig:{enabled:restaurantConfig.enabled,dailyCapacity:restaurantConfig.dailyCapacity,slotCapacity:restaurantConfig.slotCapacity},...restaurantAgentMenuContext(storeId,restaurantConfig,products),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone}
+  return {protocol:AGENT_PROTOCOL,storeId,role,catalogueRevision:digest,kinds:role==='owner'?kinds:kinds.filter(k=>k!=='purchase'),catalogueOrdering:{protocol:'business-catalogue-order/v1',procurementVersion:3,browserRecordVersion:2},products:catalogue,suppliers:vendors,mappings,restaurantEnabled:restaurantConfig.enabled,restaurantConfig:{enabled:restaurantConfig.enabled,dailyCapacity:restaurantConfig.dailyCapacity,slotCapacity:restaurantConfig.slotCapacity},...restaurantAgentMenuContext(storeId,restaurantConfig,products),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone}
 }
 export async function makeAgentContext(input){return makeAgentContextSync(input)}
 export function validateAgentDraft(draft,context,now=Date.now(),allowIncomplete=false){

@@ -1,0 +1,33 @@
+Prepare a purchase directly from a public catalogue
+
+All software features are free. No paid AI service is required.
+
+For a person: import business-catalogue/v1 in Quick documents, select quantities,
+review the exact reference-price total, then continue to local product mapping,
+supplier/date and the existing purchase confirmation.
+
+For an Agent: return business-catalogue-order/v1 according to the sibling schema.
+Use a fresh lowercase UUID for a genuinely new buyer order. Keep this same ID
+and original contents across uncertainty/retries. Use recipientStoreId from the
+authenticated buyer context, a valid createdAt, the intact original catalogue,
+and items containing only selected catalogue SKU and positive quantity.
+
+The original catalogue revision must match the canonical public content hash.
+Do not change its prices, add inferred prices or pretend it is a private quote.
+SKU belongs to its source company; an equal local product ID is not proof of
+identity. The owner must review unresolved mappings and local units. Quantities
+support three decimal places and TWD reference prices support cents. Selected
+rows must be unique and the total must remain within application limits.
+
+This buyer-prepared draft is not seller acceptance. Confirmation creates one
+local purchase only. It does not send it to a supplier, receive inventory or
+pay money. Recipient-specific negotiated prices continue to use business-quote/v1.
+
+New services advertise catalogueOrdering.protocol in the authenticated Agent
+context. New purchases preserve the original catalogue, selection and reviewed
+local product mapping in procurement.sourceCatalogue. Purchase format3,
+browser record format2 and catalogue-purchase-v1 backup/SQLite feature guards
+protect older readers and writers. Recovery graph structure is unchanged.
+
+Paste, JSON file and file drop use the existing authenticated Quick entry.
+There is no anonymous order-write endpoint or permission embedded in a draft.

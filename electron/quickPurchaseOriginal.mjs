@@ -1,14 +1,16 @@
 import {AGENT_PROTOCOL,validateAgentDraft,agentCommand} from './agentDraftRules.mjs'
 import {BUSINESS_PROTOCOL,businessDocumentDraftId,prepareBusinessDocumentSync} from './businessDocument.mjs'
 import {QUOTE_PROTOCOL,validateQuote,validateQuotedPurchase,only,text} from './businessExchange.mjs'
-import {quoteDocumentDraftId} from './quoteImport.mjs'
+import {quoteDocumentDraftId,catalogueOrderDraftId} from './quoteImport.mjs'
+import {CATALOGUE_ORDER_PROTOCOL,readCatalogueOrder,assertCatalogueOriginal} from './catalogueOrder.mjs'
 import {canonicalSignature} from './operationRules.mjs'
 import {procurementLineCents} from './procurementAmounts.mjs'
 
 const different=()=>Error('原編號已用於不同內容，請保留原單核對。')
-export const isPurchaseImport=document=>document?.protocol===AGENT_PROTOCOL&&document.kind==='purchase'||document?.protocol===BUSINESS_PROTOCOL&&document.intent==='purchase'||document?.protocol===QUOTE_PROTOCOL
+export const isPurchaseImport=document=>document?.protocol===AGENT_PROTOCOL&&document.kind==='purchase'||document?.protocol===BUSINESS_PROTOCOL&&document.intent==='purchase'||document?.protocol===QUOTE_PROTOCOL||document?.protocol===CATALOGUE_ORDER_PROTOCOL
 export function purchaseImportId(document,storeId){
  if(!isPurchaseImport(document)||new TextEncoder().encode(JSON.stringify(document)).length>32768)throw different()
+ if(document.protocol===CATALOGUE_ORDER_PROTOCOL){readCatalogueOrder(document,{recipientStoreId:storeId});return 'agent-'+catalogueOrderDraftId(document)}
  if(document.protocol===QUOTE_PROTOCOL){validateQuote(document,{recipientStoreId:storeId});return 'agent-'+quoteDocumentDraftId(document)}
  if(document.protocol===BUSINESS_PROTOCOL){
   only(document,['protocol','id','createdAt','sender','recipientStoreId','intent','currency','items','total','fulfilment','note'],'交換單據');only(document.sender,['id','name'],'來源公司')
@@ -26,12 +28,13 @@ export function purchaseImportId(document,storeId){
 export function assertImportedPurchaseSource(document,request){
  const storeId=request?.supplierContext?.storeId,purchase=request?.purchase
  if(!storeId||request.kind!=='purchase-create'||purchaseImportId(document,storeId)!==request.id||purchase?.id!=='PO-'+request.id)throw different()
+ if(document.protocol===CATALOGUE_ORDER_PROTOCOL){if(request.sourceQuote!==undefined)throw different();assertCatalogueOriginal(document,request);return 'stored-catalogue-order'}
  if(document.protocol===QUOTE_PROTOCOL){
   if(canonicalSignature(document)!==canonicalSignature(request.sourceQuote?.document))throw different()
   validateQuotedPurchase({...purchase,total:purchase.items.reduce((n,row)=>n+procurementLineCents(row.qty,row.unitCost),0)/100},request.sourceQuote,{recipientStoreId:storeId})
   return 'stored-quote-document'
  }
- if(request.sourceQuote!==undefined)throw different()
+ if(request.sourceQuote!==undefined||request.sourceCatalogue!==undefined)throw different()
  // Source draft time was not saved by older purchase writers. It is only a
  // syntax clock here; current expiry must still guard every new purchase.
  const now=Date.parse(document.protocol===AGENT_PROTOCOL?document.issuedAt:document.createdAt)
