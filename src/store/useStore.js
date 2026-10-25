@@ -1,3 +1,4 @@
+import {verifySupplierRefundProof} from '../../electron/supplierRefund.mjs'
 import {verifyPurchaseInvoiceProof} from '../../electron/purchaseInvoice.mjs'
 import {verifyPurchasePaymentProof} from '../../electron/purchasePayment.mjs'
 import {privateDraftDigest} from '../../electron/privateDrafts.mjs'
@@ -650,6 +651,11 @@ export function useStore(session){
     categories,todayOrders,todayRevenue,lowStockCount,todayProfit,todaySales,todayBusinessCount:todayOrders.length+todaySales.deliveries,
     allJournal,autoJournal,manualEntries,reservationEntries,restaurantEntries,
     addManualEntry,deleteManualEntry,
+    confirmSupplierRefund:async(input,proof,metadata)=>{
+      const result=verifySupplierRefundProof(input,proof);if(!metadata?.isCurrent())return
+      const pending=readPendingFinancial();if(pending?.request.id===input.id){if(pending.kind!==proof.request.kind||privateDraftDigest(pending.request)!==input.digest)throw Error('退款原紀錄需要核對，請保留輸入，勿重複記帳。');const {id,time,...body}=proof.request;await executeFinancial(proof.request.kind,body,async()=>result,setFinancialState,{id,time})}
+      if(!metadata?.isCurrent())return;return applyInventoryResult(result)
+    },
     confirmPurchaseInvoice:async(input,proof,metadata)=>{
       const result=verifyPurchaseInvoiceProof(input,proof);if(!metadata?.isCurrent())return
       const pending=readPendingFinancial();if(pending?.request.id===input.id){if(pending.kind!=='purchase-bill'||privateDraftDigest(pending.request)!==input.digest)throw Error('請款原紀錄需要核對，請保留輸入，勿重複建單。');const {id,time,...body}=proof.request;await executeFinancial('purchase-bill',body,async()=>result,setFinancialState,{id,time})}
