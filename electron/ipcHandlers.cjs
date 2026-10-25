@@ -71,8 +71,8 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
 
   // ----- Members -----
   handle('db:getMembers', () => db.getMembers())
-  handle('db:addMember', (_e, data) => db.addMember(data))
-  handle('db:updateMember', (_e, id, data) => db.updateMember(id, data))
+  handle('db:addMember', (_e, data) => db.addMember(data,ipcSecurity.current()))
+  handle('db:updateMember', (_e, id, data) => db.updateMember(id, data,ipcSecurity.current()))
   handle('db:deleteMember', (_e, id) => db.deleteMember(id))
 
   // ----- Orders -----

@@ -2,6 +2,7 @@ import {tr,trMessage,getLocale} from "../i18n"
 import { useState, useMemo,useRef,useEffect } from 'react'
 import { Plus, Pencil, Trash2, X, Check, Gift, TrendingUp, Phone, Wallet, RotateCcw, Cake } from 'lucide-react'
 import RefundModal from '../components/RefundModal'
+import MemberProfileEditor from '../components/MemberProfileEditor'
 import { computeMemberRFM } from '../utils/analytics'
 
 const TIER = {
@@ -9,12 +10,10 @@ const TIER = {
   silver: { label:'銀卡', color:'var(--silver)',         bg:'var(--silver-dim)',   min:10000, max:30000 },
   gold:   { label:'金卡', color:'var(--gold-bright)',    bg:'var(--gold-dim)',     min:30000, max:Infinity },
 }
-const EMPTY_FORM = { name:'', phone:'', note:'', birthday:'' }
 
 export default function MembersPage({ store, session }) {
-  const { members, addMember, updateMember, deleteMember, orders, products, topupMember, refund } = store
-  const [editing,    setEditing]    = useState(null)
-  const [form,       setForm]       = useState(EMPTY_FORM)
+  const { members, deleteMember, orders, products, topupMember, refund } = store
+  const profileEditor=useRef(null)
   const [search,     setSearch]     = useState('')
   const [filterTier, setFilterTier] = useState('all')
   const [selected,   setSelected]   = useState(null)
@@ -49,17 +48,8 @@ export default function MembersPage({ store, session }) {
     return okSearch && okTier
   })
 
-  function startNew()  { setEditing('new');  setForm({...EMPTY_FORM,_creationId:'m'+crypto.randomUUID()}) }
-  function startEdit(m){ setEditing(m.id);   setForm({name:m.name, phone:m.phone, note:m.note||'', birthday:m.birthday||''}) }
-
-  async function save() {
-    if(saving.current)return
-    if (!form.name || !form.phone) return
-    saving.current=true
-    try{if (editing === 'new') await addMember(form)
-    else await updateMember(editing, form)
-    setEditing(null)}catch(e){alert(tr("會員未確認保存，請保留內容並核對：{0}", {0: e.message}))}finally{saving.current=false}
-  }
+  function startNew()  { profileEditor.current?.start() }
+  function startEdit(m){ profileEditor.current?.start(m) }
 
   async function handleTopup() {
     if (!selectedLive||saving.current) return
@@ -104,7 +94,7 @@ export default function MembersPage({ store, session }) {
           </div>
           <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
             {session?.role==='owner'&&<button className="btn btn-ghost" style={{minHeight:48,fontSize:16}} data-loyalty-settings-entry onClick={store.openLoyaltySettings}>{tr('設定會員福利')}</button>}
-            <button className="btn btn-primary btn-sm" onClick={startNew}>
+            <button className="btn btn-primary" style={{minHeight:48,fontSize:18}} data-member-new onClick={startNew}>
               <Plus size={15}/>{tr("新增會員")}</button>
           </div>
         </div>
@@ -126,6 +116,8 @@ export default function MembersPage({ store, session }) {
           </div>
         </div>
 
+        <MemberProfileEditor ref={profileEditor} store={store} session={session} onSaved={setSelected}/>
+
         {/* Member list */}
         <div style={ms.list}>
           {filtered.map(m => {
@@ -134,11 +126,12 @@ export default function MembersPage({ store, session }) {
             const active = selected?.id === m.id
             const rfm = rfmMap.get(m.id)
             return (
-              <button key={m.id} data-member-card={m.id} onClick={event=>{memberTrigger.current=event.currentTarget;setSelected(active?null:m)}} style={{
+              <div key={m.id} role="group" data-member-card={m.id} onClick={event=>{memberTrigger.current=event.currentTarget.querySelector('[data-member-open]');setSelected(active?null:m)}} style={{
                 ...ms.memberCard,
                 background: active ? 'var(--bg-active)' : 'var(--bg-raised)',
                 border: `1px solid ${active ? 'var(--border-mid)' : 'var(--border-dim)'}`,
               }}>
+                <button type="button" data-member-open={m.id} aria-label={tr('查看會員 {0}',{0:m.name})} style={{display:'flex',alignItems:'center',gap:14,flex:1,minWidth:0,minHeight:48,padding:0,textAlign:'left',background:'transparent',border:0,color:'inherit',cursor:'pointer'}}>
                 <div style={{...ms.avatar, background:t.bg, color:t.color}}>
                   {m.name[0]}
                 </div>
@@ -180,11 +173,12 @@ export default function MembersPage({ store, session }) {
                     </div>
                   )}
                 </div>
+                </button>
                 <div style={{display:'flex', flexDirection:'column', gap:4}}>
-                  <button className="btn-icon btn-sm" onClick={e=>{e.stopPropagation();startEdit(m)}}><Pencil size={13}/></button>
-                  <button className="btn-icon btn-sm" style={{color:'var(--red)'}} onClick={e=>{e.stopPropagation();setConfirmDel(m.id)}}><Trash2 size={13}/></button>
+                  <button type="button" className="btn-icon" data-member-edit={m.id} aria-label={tr('編輯會員')} style={{minWidth:48,minHeight:48}} onClick={e=>{e.stopPropagation();startEdit(m)}}><Pencil size={18}/></button>
+                  <button type="button" className="btn-icon" aria-label={tr('確認刪除此會員？')} style={{color:'var(--red)',minWidth:48,minHeight:48}} onClick={e=>{e.stopPropagation();setConfirmDel(m.id)}}><Trash2 size={18}/></button>
                 </div>
-              </button>
+              </div>
             )
           })}
           {filtered.length===0 && (
@@ -212,7 +206,7 @@ export default function MembersPage({ store, session }) {
                 {selectedLive.birthday && tr(" · 生日 {0}", {0: selectedLive.birthday})}
               </div>
             </div>
-            <button ref={detailClose} className="btn-icon" data-member-close aria-label={tr('關閉會員詳情')} style={{marginLeft:'auto'}} onClick={()=>setSelected(null)}><X size={16}/></button>
+            <button ref={detailClose} className="btn-icon" data-member-close aria-label={tr('關閉會員詳情')} style={{marginLeft:'auto',minWidth:48,minHeight:48}} onClick={()=>setSelected(null)}><X size={18}/></button>
           </div>
 
           <div style={ms.statsGrid} className="member-stats">
@@ -306,30 +300,6 @@ export default function MembersPage({ store, session }) {
             <div style={{display:'flex', gap:10}}>
               <button className="btn btn-primary" style={{flex:1}} disabled={!topupAmt} onClick={handleTopup}>{tr("確認儲值")}</button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setShowTopup(false)}>{tr("取消")}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit drawer */}
-      {editing && (
-        <div style={ms.overlay}>
-          <div style={ms.drawer} className="animate-scale">
-            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20}}>
-              <span style={{fontWeight:600, fontSize:15}}>{editing==='new'?tr("新增會員"):tr("編輯會員")}</span>
-              <button className="btn-icon" onClick={()=>setEditing(null)}><X size={16}/></button>
-            </div>
-            <FieldLabel>{tr("姓名 *")}</FieldLabel>
-            <input className="field" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder={tr("陳小明")} style={{marginBottom:12}}/>
-            <FieldLabel>{tr("手機號碼 *")}</FieldLabel>
-            <input className="field" value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="0912-345-678" style={{marginBottom:12, fontFamily:'var(--font-mono)'}}/>
-            <FieldLabel>{tr("生日（選填）")}</FieldLabel>
-            <input className="field" type="date" value={form.birthday || ''} onChange={e=>setForm(f=>({...f,birthday:e.target.value}))} style={{marginBottom:12}}/>
-            <FieldLabel>{tr("備註")}</FieldLabel>
-            <input className="field" value={form.note} onChange={e=>setForm(f=>({...f,note:e.target.value}))} placeholder={tr("（選填）")} style={{marginBottom:20}}/>
-            <div style={{display:'flex', gap:10}}>
-              <button className="btn btn-primary" style={{flex:1}} onClick={save}><Check size={15}/>{tr("儲存")}</button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setEditing(null)}>{tr("取消")}</button>
             </div>
           </div>
         </div>
