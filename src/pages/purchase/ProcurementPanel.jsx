@@ -10,7 +10,7 @@ import {availableForReturn} from '../../../electron/procurementValuation.mjs'
 const money=value=>'NT$ '+value.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2})
 const fieldStyle={minHeight:44,fontSize:16,width:'100%'}
 const actionStyle={minHeight:44}
-export function ProcurementPanel({po,onCommand,openShift,readOnly=false,approvalBlocked=false,supplierCredits=[],onSupplierLedger,store,session,onOpenPayment,paymentReady=true,onOpenInvoice,invoiceReady=true}){
+export function ProcurementPanel({po,onCommand,openShift,readOnly=false,approvalBlocked=false,supplierCredits=[],onSupplierLedger,store,session,onOpenPayment,paymentReady=true,onOpenInvoice,invoiceReady=true,onOpenRefund,refundReady=true}){
   const [dialog,setDialog]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false)
   const saving=useRef(false)
   useEffect(()=>{
@@ -57,7 +57,7 @@ export function ProcurementPanel({po,onCommand,openShift,readOnly=false,approval
         {reverse?<p style={{fontSize:12}}>{tr("已沖銷 ")}{reverse.date}：{reverse.reason}</p>:!readOnly&&<button className="btn btn-ghost" style={actionStyle} onClick={()=>open('purchase-reverse',{paymentId:pay.id,method:pay.method})}>{tr("沖銷此付款")}</button>}</div>
     })}</div>}
     <details><summary style={{cursor:'pointer',padding:'12px 0'}}>{tr("收貨憑證（")}{p.receipts.length}{tr(" 筆）")}</summary>{p.receipts.map(r=><div key={r.id} style={{fontSize:12,padding:8,overflowWrap:'anywhere'}}>{r.date} · {money(r.amount)} · {r.id}<div>{r.quantities.map((q,i)=>q>0?`${po.items[i].name} ${q} ${po.items[i].unit||'個'}`:'').filter(Boolean).join('、')}</div></div>)}</details>
-    <ProcurementReturns po={po} onCommand={onCommand} openShift={openShift} readOnly={readOnly} store={store} session={session}/>
+    <ProcurementReturns po={po} onCommand={onCommand} openShift={openShift} readOnly={readOnly} store={store} session={session} onOpenRefund={onOpenRefund} refundReady={refundReady}/>
     <p style={{fontSize:12,color:'var(--text-secondary)'}}>{tr("請款僅可登錄已收貨部分；付款與收貨各自追蹤。付款記錄須與實際付款核對。")}</p>
     {dialog&&<div style={ps.overlay}><form role="dialog" aria-modal="true" aria-label={title} onSubmit={submit} style={ps.modal}>
       <h3 style={{marginBottom:12}}>{tr(title)}</h3>
