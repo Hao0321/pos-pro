@@ -194,7 +194,7 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
 
   // ----- Topups -----
   handle('db:getTopups', (_e, memberId) => db.getTopups(memberId))
-  handle('db:addTopup', (_e, data) => db.addTopup(data))
+  handle('db:addTopup', (_e, data) => db.addTopup(data,ipcSecurity.current()))
 
   // ----- Printer -----
   handle('printer:printReceipt', async (_e, orderData) => {

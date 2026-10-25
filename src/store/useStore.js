@@ -32,7 +32,7 @@ import {
   loadHeldOrders, addHeldOrder, deleteHeldOrder,
   getOpenShift, openShift as apiOpenShift, closeShift as apiCloseShift, addCashLog,
   loadWasteLog, addWaste, deleteWaste,
-  addTopup, loadTopups,
+  addTopup, loadTopups, readMemberTopupOriginal,
   getSetting, setSetting,setSettings,
   applyInventoryOperation,
   applyExchangeOperation,
@@ -378,6 +378,19 @@ export function useStore(session){
     return result.topup
   }, [dataError,openShift])
 
+  function applyMemberTopup(result){setMembers(prev=>prev.map(m=>m.id===result.member.id?result.member:m));setTopups(prev=>[result.topup,...prev.filter(t=>t.id!==result.topup.id)]);return result}
+  async function saveMemberTopupDraft(request){
+    if(dataError)throw Error(dataError)
+    const {id,time,...input}=request
+    return applyMemberTopup(await executeFinancial('topup',input,value=>addTopup(value,sessionRef.current),setFinancialState,{id,time}))
+  }
+  async function confirmMemberTopupDraft(request){
+    const {id,time,...input}=request,pending=readPendingFinancial()
+    if(!pending)return readMemberTopupOriginal(request,sessionRef.current)
+    if(pending.kind!=='topup'||pending.request.id!==id)throw Error('請先核對上一筆異動')
+    return applyMemberTopup(await executeFinancial('topup',input,value=>readMemberTopupOriginal(value,sessionRef.current),setFinancialState,{id,time}))
+  }
+
   function applyInventoryResult(result){
     result=finalizePurchaseDraft(finalizeReceiptLotDraft(result,sessionRef.current),sessionRef.current)
     if(result.supplierLedger){const current=supplierRef.current;const next={...current,supplierLedger:result.supplierLedger,legacyReadOnly:true,purchases:result.purchase?[result.purchase,...(current?.purchases||[]).filter(po=>po.id!==result.purchase.id)]:current?.purchases||[]};supplierRef.current=next;setSupplierState(next)}
@@ -464,7 +477,7 @@ export function useStore(session){
   }
   async function retryFinancial(){
     const pending=readPendingFinancial();if(!pending)return
-    const ports={restaurant:r=>applyRestaurantOperation(r,session),refund:r=>dbRefund(r.refundOf,r,null,null,sessionRef.current),topup:addTopup,waste:r=>addWaste(r,sessionRef.current),cashlog:addCashLog,stocktake:r=>applyInventoryOperation(r,session),receive:r=>applyInventoryOperation(r,session),'receive-lots':r=>applyInventoryOperation(r,session),'receive-reviewed':r=>applyInventoryOperation(r,session)}
+    const ports={restaurant:r=>applyRestaurantOperation(r,session),refund:r=>dbRefund(r.refundOf,r,null,null,sessionRef.current),topup:r=>addTopup(r,sessionRef.current),waste:r=>addWaste(r,sessionRef.current),cashlog:addCashLog,stocktake:r=>applyInventoryOperation(r,session),receive:r=>applyInventoryOperation(r,session),'receive-lots':r=>applyInventoryOperation(r,session),'receive-reviewed':r=>applyInventoryOperation(r,session)}
     ports.reservation=r=>applyReservationOperation(r,sessionRef.current)
     ports.exchange=r=>applyExchangeOperation(r,session)
     ports['stock-cost']=r=>applyStockSetupOperation(r,sessionRef.current)
@@ -652,7 +665,7 @@ export function useStore(session){
     heldOrders, holdCart, recallHeld, removeHeld,
     wasteLog, recordWaste, removeWaste,
     openShift, startShift, endShift, logCash,reloadOpenShift,
-    topupMember,
+    topupMember,saveMemberTopupDraft,confirmMemberTopupDraft,
     pointsRule, updatePointsRule,
     birthdayBonus, updateBirthdayBonus,
     updateBusinessSettings,
