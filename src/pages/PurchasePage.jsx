@@ -12,12 +12,15 @@ import { PayableTab } from "./purchase/PayableTab.jsx"
 import {ProcurementPanel} from './purchase/ProcurementPanel.jsx'
 import {isProcurement,procurementSummary} from '../../electron/procurementRules.mjs'
 import SupplierPurchaseStatus,{purchaseApprovalBlocked} from './suppliers/SupplierPurchaseStatus'
+import usePurchasePaymentDraft from '../hooks/usePurchasePaymentDraft'
+import PurchasePaymentComposer from '../components/PurchasePaymentComposer'
 const ArrivalModal=lazy(()=>import('./purchase/ArrivalModal.jsx'))
 const NewPurchase=lazy(()=>import('./purchase/NewPurchase.jsx').then(module=>({default:module.NewPurchase})))
 
 export default function PurchasePage({ store, session }) {
   const { products, commitInventory, orders = [] } = store
   const canEdit=session?.role==='owner'
+  const payment=usePurchasePaymentDraft({store,session:session||{userId:'',username:'',role:''}})
   const [suppliers,  setSuppliers]  = useState([])
   const [purchases,  setPurchases]  = useState(()=>store.purchases||[])
   const [tab,        setTab]        = useState('list')
@@ -93,7 +96,8 @@ export default function PurchasePage({ store, session }) {
         </div>
       </div>
 
-      {tab === 'list'      && <PurchaseList purchases={purchases} selected={selected} onSelect={setSelected} onReceive={canEdit&&!receiving?setReceiving:null} canReceive={po=>!purchaseApprovalBlocked(po,store.supplierState)} renderProcurement={po=><><SupplierPurchaseStatus po={po} state={store.supplierState} onOpen={store.openSupplierLedger}/><ProcurementPanel key={po.id} po={po} store={store} session={session} onCommand={commitInventory} openShift={store.openShift} readOnly={!canEdit} approvalBlocked={purchaseApprovalBlocked(po,store.supplierState)} supplierCredits={supplierCredits} onSupplierLedger={()=>store.openSupplierLedger(po.supplierId)}/></>}/>}
+      <PurchasePaymentComposer draft={payment} onShift={()=>store.setView('shifts')}/>
+      {tab === 'list'      && <PurchaseList purchases={purchases} selected={selected} onSelect={setSelected} onReceive={canEdit&&!receiving?setReceiving:null} canReceive={po=>!purchaseApprovalBlocked(po,store.supplierState)} renderProcurement={po=><><SupplierPurchaseStatus po={po} state={store.supplierState} onOpen={store.openSupplierLedger}/><ProcurementPanel key={po.id} po={po} store={store} session={session} onCommand={commitInventory} openShift={store.openShift} readOnly={!canEdit} approvalBlocked={purchaseApprovalBlocked(po,store.supplierState)} supplierCredits={supplierCredits} onSupplierLedger={()=>store.openSupplierLedger(po.supplierId)} onOpenPayment={(purchaseId,invoiceId)=>payment.open(purchaseId,invoiceId).catch(error=>setSaveError(error.message))} paymentReady={!payment.workspace.blocked&&!payment.busy}/></>}/>}
       {saveError&&!receiving&&<p role="alert" style={{color:'var(--red)'}}>{trMessage(saveError)}</p>}
       {tab === 'new'       && <Suspense fallback={<p role="status">{tr('正在核對採購資料…')}</p>}><NewPurchase products={products} suppliers={suppliers} purchases={purchases} orders={orders} store={store} session={session} onSave={async(po,command)=>{creatingId.current=po.id;const r=await commitInventory(command.kind,command.input,command.identity,command.prepare);setSelected(r.purchase);setTab('list');return r}}/></Suspense>}
       {tab === 'suppliers' && <SupplierList suppliers={suppliers} products={products} purchases={purchases} onSave={saveSuppliers} onGoInventory={()=>store.setView?.('inventory')}/>}

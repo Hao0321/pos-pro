@@ -10,7 +10,7 @@ import {availableForReturn,quoteProcurementAllocation} from '../../../electron/p
 const money=value=>'NT$ '+value.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2})
 const fieldStyle={minHeight:44,fontSize:16,width:'100%'}
 const actionStyle={minHeight:44}
-export function ProcurementPanel({po,onCommand,openShift,readOnly=false,approvalBlocked=false,supplierCredits=[],onSupplierLedger,store,session}){
+export function ProcurementPanel({po,onCommand,openShift,readOnly=false,approvalBlocked=false,supplierCredits=[],onSupplierLedger,store,session,onOpenPayment,paymentReady=true}){
   const [dialog,setDialog]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false)
   const saving=useRef(false)
   useEffect(()=>{
@@ -29,7 +29,6 @@ export function ProcurementPanel({po,onCommand,openShift,readOnly=false,approval
       const {kind,expectedPurchase}=dialog
       const input={purchaseId:po.id,expectedPurchase}
       if(kind==='purchase-bill')Object.assign(input,{quantities:dialog.quantities.map(Number),reference:dialog.reference,dueDate:dialog.dueDate})
-      if(kind==='purchase-pay')Object.assign(input,{invoiceId:dialog.invoiceId,amount:Number(dialog.amount),method:dialog.method,note:dialog.note,...(dialog.method==='cash'?{shiftId:openShift?.id||''}:{})})
       if(kind==='purchase-reverse')Object.assign(input,{paymentId:dialog.paymentId,reason:dialog.reason,...(dialog.method==='cash'?{shiftId:openShift?.id||''}:{})})
       if(kind==='purchase-cancel')input.reason=dialog.reason
       await onCommand(kind,input);setDialog(null)
@@ -53,7 +52,7 @@ export function ProcurementPanel({po,onCommand,openShift,readOnly=false,approval
     {p.cancel&&<p role="status">{tr("已取消：")}{p.cancel.reason}</p>}
     {summary.bills.map(b=><div key={b.id} className="card" style={{padding:14,marginBottom:8}}>
       <strong>{tr("請款單 ")}{b.reference}</strong><div style={{fontSize:12,margin:'6px 0'}}>{tr("到期 ")}{b.dueDate}{tr(" · 請款 ")}{money(b.amount)}{tr(" · 未付 ")}{money(Math.max(0,b.balance))}{b.credit>0?tr(" · 供應商待退 {0}", {0: money(b.credit)}):''}{b.overdue?tr(" · 已逾期"):''}</div>
-      {!readOnly&&b.balance>0&&<button className="btn btn-primary" disabled={approvalBlocked} style={actionStyle} onClick={()=>open('purchase-pay',{invoiceId:b.id,reference:b.reference,amount:String(b.balance)})}>{tr("記錄付款")}</button>}
+      {!readOnly&&b.balance>0&&<button className="btn btn-primary" disabled={approvalBlocked||!paymentReady||!onOpenPayment} data-procurement-payment={b.id} style={{...actionStyle,minHeight:48}} onClick={()=>onOpenPayment(po.id,b.id)}>{tr("記錄付款")}</button>}
     </div>)}
     {p.payments.length>0&&<div style={{margin:'16px 0'}}><h4>{tr("付款與沖銷紀錄")}</h4>{p.payments.map(pay=>{
       const reverse=p.reversals.find(r=>r.paymentId===pay.id),bill=p.bills.find(b=>b.id===pay.invoiceId)
@@ -70,13 +69,6 @@ export function ProcurementPanel({po,onCommand,openShift,readOnly=false,approval
         <label>{tr("付款到期日")}<input aria-label={tr("付款到期日")} className="field" style={fieldStyle} type="date" required value={dialog.dueDate} onChange={e=>update('dueDate',e.target.value)}/></label>
         {po.items.map((item,i)=><label key={i} style={{display:'block',marginTop:10}}>{item.name}{tr("（已收未請 ")}{billable[i]}）<input aria-label={tr("請款數量 {0} {1}", {0: item.name, 1: i+1})} className="field" style={fieldStyle} type="number" step="0.001" min="0" max={billable[i]} required value={dialog.quantities[i]} onChange={e=>update('quantities',dialog.quantities.map((q,index)=>index===i?e.target.value:q))}/></label>)}
         <p>{tr("本次請款 ")}{money(billPreview)}</p><p style={{fontSize:12}}>{tr("依採購單價核對，不包含額外稅額或價差調整。")}</p>
-      </>}
-      {dialog.kind==='purchase-pay'&&<>
-        <p>{tr("請款單 ")}{dialog.reference}</p>
-        <label>{tr("本次付款金額")}<input autoFocus aria-label={tr("本次付款金額")} className="field" style={fieldStyle} type="number" min="0.01" step="0.01" required value={dialog.amount} onChange={e=>update('amount',e.target.value)}/></label>
-        <label>{tr("付款方式")}<select aria-label={tr("付款方式")} className="field" style={fieldStyle} value={dialog.method} onChange={e=>update('method',e.target.value)}><option value="bank">{tr("銀行存款")}</option><option value="cash">{tr("本班次現金")}</option></select></label>
-        <label>{tr("付款備註")}<input aria-label={tr("付款備註")} className="field" style={fieldStyle} maxLength={500} value={dialog.note} onChange={e=>update('note',e.target.value)}/></label>
-        <p style={{fontSize:12}}>{tr("確認實際已付款後保存；此操作只記帳，不會執行銀行轉帳。")}</p>
       </>}
       {['purchase-reverse','purchase-cancel'].includes(dialog.kind)&&<label>{dialog.kind==='purchase-reverse'?tr("沖銷理由"):tr("取消理由")}<textarea autoFocus aria-label={tr("操作理由")} className="field" style={fieldStyle} maxLength={500} required value={dialog.reason} onChange={e=>update('reason',e.target.value)}/></label>}
       {dialog.method==='cash'&&<p style={{fontSize:12}}>{openShift?tr("現金流水會計入目前班次。"):tr("請先開班，才能記錄現金支出或沖銷收入。")}</p>}

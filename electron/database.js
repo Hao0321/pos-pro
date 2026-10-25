@@ -771,5 +771,6 @@ module.exports = function initDatabase(dbPath) {
   require('./heldCartOperations.cjs')(db,api)
   require('./expenseEntryOperations.cjs')(db,api,stockStore)
   require('./expenseDrawerOperations.cjs')(db,api)
+  require('./purchasePaymentRead.cjs')(db,api,stmts)
   return api
 }

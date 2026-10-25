@@ -1,3 +1,5 @@
+import {verifyPurchasePaymentProof} from '../../electron/purchasePayment.mjs'
+import {privateDraftDigest} from '../../electron/privateDrafts.mjs'
 import {saveExpenseEntry as persistExpenseEntry} from '../utils/dataAccess'
 import {DRAWER_EXPENSE,DRAWER_RETURN,verifyDrawerProof} from '../../electron/expenseDrawer.mjs'
 import {verifyExpenseProof} from '../../electron/expenseEntry.mjs'
@@ -647,6 +649,11 @@ export function useStore(session){
     categories,todayOrders,todayRevenue,lowStockCount,todayProfit,todaySales,todayBusinessCount:todayOrders.length+todaySales.deliveries,
     allJournal,autoJournal,manualEntries,reservationEntries,restaurantEntries,
     addManualEntry,deleteManualEntry,
+    confirmPurchasePayment:async(input,proof,metadata)=>{
+      const result=verifyPurchasePaymentProof(input,proof);if(!metadata?.isCurrent())return
+      const pending=readPendingFinancial();if(pending?.request.id===input.id){if(pending.kind!=='purchase-pay'||privateDraftDigest(pending.request)!==input.digest)throw Error('付款原紀錄需要核對，請保留輸入，勿重複付款。');const {id,time,...body}=proof.request;await executeFinancial('purchase-pay',body,async()=>result,setFinancialState,{id,time})}
+      if(!metadata?.isCurrent())return;return applyInventoryResult(result)
+    },
     saveExpenseEntry:input=>persistExpenseEntry(input,sessionRef.current),
     confirmExpenseEntry:(input,proof,metadata)=>{
       const linked=[DRAWER_EXPENSE,DRAWER_RETURN].includes(input.protocol),result=(linked?verifyDrawerProof:verifyExpenseProof)(input,proof);if(!metadata?.isCurrent())return
