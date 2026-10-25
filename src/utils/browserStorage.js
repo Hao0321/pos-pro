@@ -1,4 +1,6 @@
 import {projectReservationBook,assertReservationTableChange,assertReservationMemberRemoval} from '../../electron/reservationCommit.mjs'
+import {DRAWER_JOURNAL} from '../../electron/expenseDrawer.mjs'
+import {validateBrowserDrawer,appendBrowserDrawer,guardBrowserDrawer} from '../../electron/browserExpenseDrawerBook.mjs'
 import {projectBrowserReservationDining} from '../../electron/browserReservationDining.mjs'
 import {readReservationBook,reservationKnownReceipts} from '../../electron/reservationHistory.mjs'
 import {ordinaryRestaurantOperations} from '../../electron/reservationBarrier.mjs'
@@ -65,7 +67,7 @@ export function readRecords() {
   const raw = nativeStorage().getItem(RECORD_KEY)
   if (raw != null) {
     const record = JSON.parse(raw)
-    if (![1,2].includes(record?.version) || !Number.isSafeInteger(record.revision) || record.revision < 1 || !record.data)
+    if (![1,2,3].includes(record?.version) || !Number.isSafeInteger(record.revision) || record.revision < 1 || !record.data)
       throw new Error('本機資料紀錄損壞，請保留資料並還原備份。')
     if(record.salesEpoch!==undefined&&(typeof record.salesEpoch!=='string'||!record.salesEpoch))throw new Error('銷售還原識別損壞，請保留原資料核對。')
     if(record.supplierFence!==undefined&&typeof record.supplierFence!=='boolean')throw Error('供應商資料版本保護損壞，請保留原資料核對')
@@ -79,7 +81,8 @@ export function readRecords() {
     if(Object.keys(record.data).some(key=>!keys.has(key)))throw Error('備份含有目前版本不支援的資料，請保留原檔並使用相容版本')
     recoveryMetadata(record)
     validateSettingRows(record.data.pos_business_settings,'browser')
-    if((record.version===2)!==assertCataloguePurchaseFeature({settings:record.data.pos_business_settings,purchases:record.data.pos_purchases}))throw Error('目錄採購的版本保護需要核對，請保留原單。')
+    const catalogue=assertCataloguePurchaseFeature({settings:record.data.pos_business_settings,purchases:record.data.pos_purchases})
+    if((record.version===3)!==validateBrowserDrawer(record.data)||record.version!==3&&(record.version===2)!==catalogue)throw Error('抽屜支出或目錄採購的版本保護需要核對，請保留原單。')
     if(record.data.pos_business_settings.some(row=>row.encoding)&&![2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20].includes(record.recovery?.version))throw Error('復原保護索引損壞，請保留原資料核對')
     validateBrowserProtection(record)
     readReservationBook(browserToBook(record.data),[],{strictDining:true})
@@ -124,6 +127,7 @@ export function readRecords() {
   const legacyConfig=data.pos_business_settings.find(row=>row.key==='restaurantConfig')?.value
   if(usesRestaurantFunds(readRestaurantConfig(legacyConfig==null?null:JSON.parse(legacyConfig),data.pos2_products),data.pos_restaurant_orders,data.pos2_orders))throw Error('預訂款項缺少店面或復原識別，請保留原資料核對。')
   validateStockCostBook(browserToBook(data))
+  if(validateBrowserDrawer(data))throw Error('抽屜支出需要完整資料紀錄，請保留原資料核對。')
   return {version:1,revision:0,data}
 }
 export function recoveryMetadata(record=readRecords()){
@@ -142,7 +146,7 @@ export function assertOriginalOperationAvailable(method,id,record=readRecords(),
   const error=new Error('原編號曾經保存，目前帳本無法確認這筆內容。請使用復原引導核對。')
   error.historyUncertain=true;throw error
 }
-export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false,recoveryCommand=null,transfer=null,physicalStocktake=null,stockBusiness=null,stockSetup=null,kitchenPrint=null,warehouse=null,lots=null,purchaseUnits=null,receiptReview=null,cataloguePurchase=null,masterMigration=null,openingMigration=null,reservation=null}={}) {
+export function writeRecords(updates, expectedRevision, {restore=false,ensureSalesEpoch=false,recoveryCommand=null,transfer=null,physicalStocktake=null,stockBusiness=null,stockSetup=null,kitchenPrint=null,warehouse=null,lots=null,purchaseUnits=null,receiptReview=null,cataloguePurchase=null,masterMigration=null,openingMigration=null,reservation=null,expenseDrawer=null}={}) {
   if(cataloguePurchase&&[restore,transfer,physicalStocktake,stockBusiness,stockSetup,kitchenPrint,warehouse,lots,purchaseUnits,receiptReview,masterMigration,openingMigration,reservation].some(Boolean))throw Error('請一次保存一個原操作')
   if(stockBusiness?.request?.reservationDining)throw Error('請從原訂位流程保存餐點')
   if(reservation&&(restore||transfer||physicalStocktake||stockBusiness||stockSetup||kitchenPrint||warehouse||lots||purchaseUnits||receiptReview||masterMigration||openingMigration))throw Error('請一次保存一個原操作')
@@ -161,7 +165,14 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
     if (!keys.has(key)) throw new Error('未知資料集合')
     validArray(value)
   }
+  if(expenseDrawer){
+    if(Object.keys(updates).length||[restore,transfer,physicalStocktake,stockBusiness,stockSetup,kitchenPrint,warehouse,lots,purchaseUnits,receiptReview,cataloguePurchase,masterMigration,openingMigration,reservation].some(Boolean))throw Error('請一次保存一個原操作')
+    const planned=appendBrowserDrawer(current,expenseDrawer)
+    assertOriginalOperationAvailable('addManualEntry',planned.plan.entry.id,current,planned.plan.entry);assertOriginalOperationAvailable('addCashLog',planned.plan.cash.id,current,planned.plan.cash)
+    updates=planned.updates
+  }
   const next = {...current,version:1,revision:current.revision+1,data:{...current.data,...updates}}
+  if(!restore&&!expenseDrawer)guardBrowserDrawer(current.data,next.data)
   if(!restore&&!masterMigration&&!openingMigration&&!reservation)for(const key of ['financialFileMigrationVersionFence','openingCutoverVersionFence','openingCutoverHead','stockOpeningMigrationVersionFence','stockOpeningMigrationHead','agentWorkbookMigrationVersionFence','agentTabularMigrationVersionFence','agentMasterMigrationVersionFence','agentMasterMigrationHead'])if(canonicalSignature(current.data.pos_business_settings.find(row=>row.key===key)||null)!==canonicalSignature(next.data.pos_business_settings.find(row=>row.key===key)||null))throw Error('搬家保護紀錄由正式搬入與完整備份流程管理')
   if(!restore&&!masterMigration&&!openingMigration&&canonicalSignature(current.data.pos_audit_log.filter(row=>row.action==='AGENT_MASTER_MIGRATION'))!==canonicalSignature(next.data.pos_audit_log.filter(row=>row.action==='AGENT_MASTER_MIGRATION')))throw Error('搬家回執只能由正式搬入流程保存')
   if(!restore&&!openingMigration&&canonicalSignature(current.data.pos_audit_log.filter(row=>['AGENT_OPENING_MIGRATION','AGENT_OPENING_CUTOVER'].includes(row.action)))!==canonicalSignature(next.data.pos_audit_log.filter(row=>['AGENT_OPENING_MIGRATION','AGENT_OPENING_CUTOVER'].includes(row.action))))throw Error('期初回執只能由正式開帳流程保存')
@@ -301,7 +312,9 @@ export function writeRecords(updates, expectedRevision, {restore=false,ensureSal
   if(next.data.pos_business_settings.some(row=>row.key==='agentWorkbookMigrationVersionFence'&&row.value==='1'))next.recovery={...recoveryMetadata(next),version:Math.max(12,recoveryMetadata(next).version)}
   if(next.data.pos_business_settings.some(row=>row.encoding)&&![2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20].includes(next.recovery?.version))throw Error('復原保護索引損壞，請保留原資料核對')
   validateBrowserProtection(next)
-  next.version=assertCataloguePurchaseFeature({settings:next.data.pos_business_settings,purchases:next.data.pos_purchases})?2:1
+  if(restore&&current.version===3&&!next.data.pos_business_settings.some(row=>row.key===DRAWER_JOURNAL))next.data.pos_business_settings=updateBrowserSettings(next.data.pos_business_settings,{[DRAWER_JOURNAL]:JSON.stringify(JSON.stringify({version:1,entries:[]}))})
+  const catalogue=assertCataloguePurchaseFeature({settings:next.data.pos_business_settings,purchases:next.data.pos_purchases})
+  next.version=validateBrowserDrawer(next.data)?3:catalogue?2:1
   // setItem is atomic: quota/security failure keeps the previous complete record.
   nativeStorage().setItem(RECORD_KEY, JSON.stringify(next))
   return next

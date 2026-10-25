@@ -8,7 +8,7 @@ import '../styles/expense-entry.css'
 const presets=[['5202','月租金'],['5203','水電費'],['5201','薪資'],['5205','廣告費'],['5206','雜費']]
 const paymentNames={'1101':'現金','1103':'銀行存款','2101':'尚未付款'}
 export default function ExpenseEntryEditor({store,session={userId:'',username:'',role:''},stockActive=false,onPurchase}){
- const draft=useExpenseEntryDraft({session,saveRequest:input=>store.saveExpenseEntry(input),onSaved:(input,proof,metadata)=>store.confirmExpenseEntry(input,proof,metadata)}),{form}=draft.value
+ const draft=useExpenseEntryDraft({session,saveRequest:input=>store.saveExpenseEntry(input),onSaved:(input,proof,metadata)=>store.confirmExpenseEntry(input,proof,metadata),getVisibleShift:()=>store.openShift}),{form}=draft.value
  const [error,setError]=useState(''),running=useRef(false),off=draft.workspace.blocked||draft.busy||draft.pending
  let amount=null,valid=false;try{amount=expenseMoney(form.amount);expenseDate(form.date);valid=!!form.description.trim()&&!(stockActive&&form.expenseAccount==='1211')}catch{}
  async function perform(work){if(running.current)return;running.current=true;setError('');try{await work()}catch(e){setError(e.message)}finally{running.current=false}}
@@ -18,7 +18,7 @@ export default function ExpenseEntryEditor({store,session={userId:'',username:''
   <WorkspaceDraftNotice draft={{...draft.workspace,notice:draft.workspace.notice?'已接回上次輸入。':''}}/>
   {draft.message&&<p role="status" className="expense-entry-message" data-expense-message>{tr(draft.message)}</p>}
   {error&&<p role="alert" className="expense-entry-error" data-expense-error>{trMessage(error)}</p>}
-  <form onSubmit={e=>{e.preventDefault();perform(draft.save)}}>
+  <form onSubmit={e=>{e.preventDefault();perform(()=>draft.save(store.openShift&&form.payAccount==='1101'?'drawer':'outside'))}}>
    <fieldset disabled={off}>
     <label htmlFor="expense-amount">{tr('支出金額')}</label><div className="expense-entry-amount"><span>NT$</span><input id="expense-amount" data-expense-amount inputMode="decimal" autoComplete="off" value={form.amount} maxLength={100} placeholder="0.00" onChange={e=>field('amount',e)}/></div>
     <label htmlFor="expense-purpose">{tr('這筆錢用在哪裡？')}</label><input id="expense-purpose" data-expense-description value={form.description} maxLength={500} placeholder={tr('例：清潔用品、水電費')} onChange={e=>field('description',e)}/>
@@ -35,7 +35,7 @@ export default function ExpenseEntryEditor({store,session={userId:'',username:''
     </details>
    </fieldset>
    <div className="expense-entry-preview" aria-live="polite"><strong>{amount===null?'NT$ —':new Intl.NumberFormat(getLocale(),{style:'currency',currency:'TWD',minimumFractionDigits:2}).format(amount)}</strong><span>{tr(paymentNames[form.payAccount])} · {tr(ACCOUNTS[form.expenseAccount]?.name||'存貨')}</span></div>
-   {draft.pending?<div className="expense-entry-recovery"><p>{tr('先核對剛才那筆，請勿重新記帳。')}</p><button type="button" className="btn btn-primary" data-expense-check disabled={draft.busy||draft.workspace.blocked} onClick={()=>perform(draft.check)}>{tr(draft.busy?'正在核對…':'核對原支出')}</button>{draft.retryAllowed&&<button type="button" className="btn btn-ghost" data-expense-retry disabled={draft.busy||draft.workspace.blocked} onClick={()=>perform(draft.save)}>{tr('沿用原編號記帳')}</button>}<details><summary>{tr('查看原單資訊')}</summary><code>{draft.value.submission.id}</code></details></div>:<button className="btn btn-primary expense-entry-save" data-expense-save type="submit" disabled={off||!valid}>{tr(draft.busy?'正在記帳…':'記好這筆支出')}</button>}
+   {draft.pending?<div className="expense-entry-recovery"><p>{tr('先核對剛才那筆，請勿重新記帳。')}</p><button type="button" className="btn btn-primary" data-expense-check disabled={draft.busy||draft.workspace.blocked} onClick={()=>perform(draft.check)}>{tr(draft.busy?'正在核對…':'核對原支出')}</button>{draft.retryAllowed&&<button type="button" className="btn btn-ghost" data-expense-retry disabled={draft.busy||draft.workspace.blocked} onClick={()=>perform(draft.save)}>{tr('沿用原編號記帳')}</button>}<details><summary>{tr('查看原單資訊')}</summary><code>{draft.value.submission.id}</code></details></div>:store.openShift&&form.payAccount==='1101'?<div className="expense-entry-funding"><button className="btn btn-primary expense-entry-save" data-expense-drawer-save type="submit" disabled={off||!valid}>{tr(draft.busy?'正在記帳…':'從抽屜付出並記帳')}</button><button className="btn btn-ghost expense-entry-save" data-expense-save type="button" disabled={off||!valid} onClick={()=>perform(()=>draft.save('outside'))}>{tr('用抽屜以外的錢付，僅記費用')}</button></div>:<button className="btn btn-primary expense-entry-save" data-expense-save type="submit" disabled={off||!valid}>{tr(draft.busy?'正在記帳…':'記好這筆支出')}</button>}
   </form>
   <p className="expense-entry-footnote">{tr('只記錄已發生的支出，不會替你付款。')}</p>
   {stockActive&&form.expenseAccount==='1211'&&<p role="alert">{tr('進貨請到進貨管理，數量與成本會一起保存')}</p>}

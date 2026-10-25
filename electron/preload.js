@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     previewOpeningMigration: input=>ipcRenderer.invoke('db:previewOpeningMigration',input),
     applyOpeningMigration: input=>ipcRenderer.invoke('db:applyOpeningMigration',input),
     getPrivateDraftContext:()=>ipcRenderer.invoke('db:getPrivateDraftContext'),
+    getExpenseDrawerState:()=>ipcRenderer.invoke('db:getExpenseDrawerState'),
     getLoyaltyProgramPreview:input=>ipcRenderer.invoke('db:getLoyaltyProgramPreview',input),
     applyLoyaltyProgram:input=>ipcRenderer.invoke('db:applyLoyaltyProgram',input),
     lookupPrivateDraftOriginal:input=>ipcRenderer.invoke('db:lookupPrivateDraftOriginal',input),

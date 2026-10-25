@@ -1,3 +1,4 @@
+import {browserDrawerOriginal} from './browserExpenseDrawer'
 import {browserExpenseOriginal} from './browserExpenseEntry'
 import {wasteEntryLookup} from '../../electron/wasteEntryDraft.mjs'
 import {heldOriginal} from '../../electron/heldCart.mjs'
@@ -22,7 +23,7 @@ export function getBrowserPrivateDraftContext(actor){return withSalesLock(()=>{
  return context(saved,actor)
 })}
 export async function lookupBrowserPrivateDraftOriginal(input,actor){await getBrowserPrivateDraftContext(actor);return withSalesLock(()=>{
- const saved=readRecords(),current=context(saved,actor);if(input.family==='expense-entry')return browserExpenseOriginal(input,saved,actor);if(input.family==='held-cart')return heldOriginal(input,current,browserHeldJournal(saved),saved.data.pos2_held_orders);assertDraftLookup(input,current)
+ const saved=readRecords(),current=context(saved,actor);if(['expense-drawer','expense-drawer-return'].includes(input.family))return browserDrawerOriginal(input,saved,actor);if(input.family==='expense-entry')return browserExpenseOriginal(input,saved,actor);if(input.family==='held-cart')return heldOriginal(input,current,browserHeldJournal(saved),saved.data.pos2_held_orders);assertDraftLookup(input,current)
  if(input.family==='loyalty-program'){const get=key=>readExchangeTextSetting(saved.data.pos_business_settings,key);return loyaltyProgramOriginal(input,loyaltyFacts(current,readLoyaltyRules(get),readLoyaltyPrograms(get(LOYALTY_PROGRAMS)),issuedLoyaltyValue(saved.data.pos2_members,saved.data.pos2_orders)))}
  if(input.family==='product-edit')return productEditOriginal(input,current,readProductEditJournal(readExchangeTextSetting(saved.data.pos_business_settings,PRODUCT_EDIT_JOURNAL)))
  if(input.family==='member-profile')return memberProfileOriginal(input,current,readMemberProfileJournal(readExchangeTextSetting(saved.data.pos_business_settings,MEMBER_PROFILE_JOURNAL)))
