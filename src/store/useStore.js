@@ -1,3 +1,5 @@
+import {saveExpenseEntry as persistExpenseEntry} from '../utils/dataAccess'
+import {verifyExpenseProof} from '../../electron/expenseEntry.mjs'
 import {isPurchaseCreate} from '../../electron/procurementRules.mjs'
 import {isCashMovementRejection} from '../../electron/cashMovementDraft.mjs'
 import {isProductEdit,isProductEditRejection} from '../../electron/productEditDraft.mjs'
@@ -221,8 +223,7 @@ export function useStore(session){
     return n
   },[])
   const deleteManualEntry = useCallback(async id=>{
-    if (isElectron){const r=await dbDeleteManualEntry(id);if(r?.success!==true)throw Error(r?.error||'帳務刪除失敗')}
-    else saveLS('pos2_manual_j',loadLS('pos2_manual_j',[]).filter(j=>j.id!==id))
+    const r=await dbDeleteManualEntry(id,sessionRef.current);if(r?.success!==true)throw Error(r?.error||'帳務刪除失敗')
     setManualEntries(p=>p.filter(e=>e.id!==id))
   },[])
 
@@ -645,6 +646,8 @@ export function useStore(session){
     categories,todayOrders,todayRevenue,lowStockCount,todayProfit,todaySales,todayBusinessCount:todayOrders.length+todaySales.deliveries,
     allJournal,autoJournal,manualEntries,reservationEntries,restaurantEntries,
     addManualEntry,deleteManualEntry,
+    saveExpenseEntry:input=>persistExpenseEntry(input,sessionRef.current),
+    confirmExpenseEntry:(input,proof,metadata)=>{const result=verifyExpenseProof(input,proof);if(!metadata?.isCurrent())return;setManualEntries(previous=>result.removed?previous.filter(row=>row.id!==input.id):[result.entry,...previous.filter(row=>row.id!==input.id)]);return result.entry},
     reloadFromDB,reloadAfterRecovery,
     // v2.1
     heldOrders, holdCart, recallHeld, removeHeld,

@@ -207,6 +207,9 @@ const modes={
   '--scenario-ui':['native-scenario-ui.cjs','POS_SCENARIO_UI_PASS',true],
 }
 Object.assign(modes,{
+  '--expense-entry':['native-expense-entry-state.cjs','POS_EXPENSE_ENTRY_STATE_PASS',false],
+  '--expense-entry-ui':['native-expense-entry-ui.cjs','POS_EXPENSE_ENTRY_UI_PASS',true],
+  '--expense-entry-browser-ui':['native-expense-entry-browser-ui.cjs','POS_EXPENSE_ENTRY_BROWSER_UI_PASS',true],
   '--held-cart':['native-held-cart-state.cjs','POS_HELD_CART_STATE_PASS',false],
   '--held-cart-ui':['native-held-cart-ui.cjs','POS_HELD_CART_UI_PASS',true],
   '--held-cart-browser-ui':['native-held-cart-browser-ui.cjs','POS_HELD_CART_BROWSER_UI_PASS',true],

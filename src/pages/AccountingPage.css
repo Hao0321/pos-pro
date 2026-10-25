@@ -1,3 +1,4 @@
 .accounting-page{min-width:0;overflow-wrap:anywhere}
+.manual-entry-cancel{padding:12px;margin:8px 0;border:1px solid var(--border-dim);border-radius:10px;line-height:1.6;font-size:15px}.manual-entry-cancel p{margin:0 0 8px}.manual-entry-cancel>div{display:flex;gap:8px;flex-wrap:wrap}.manual-entry-cancel button{min-height:48px;min-width:48px;font-size:16px;white-space:normal}
 .accounting-notice{font-size:13px;padding:12px;background:var(--bg-active);line-height:1.6;margin-bottom:12px}
 @media(max-width:720px){.accounting-page .accounting-columns{grid-template-columns:minmax(0,1fr)!important}.accounting-page>div:first-child{flex-wrap:wrap;gap:12px}.accounting-page>div:first-child>div:last-child{flex-wrap:wrap}.accounting-page input[type=date]{min-width:0;width:125px}}

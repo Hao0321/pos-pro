@@ -1,5 +1,6 @@
 import {tr,trMessage,getLocale} from "../i18n"
-import { Fragment,useState, useMemo,useRef } from 'react'
+import ExpenseEntryEditor from '../components/ExpenseEntryEditor'
+import { Fragment,useState, useMemo } from 'react'
 import useAccountingView from '../hooks/useAccountingView'
 import {stockPeriodDisclosure} from '../../electron/stockAccounting.mjs'
 import {aggregateJournal,formatMoneyCents,journalLineCents} from '../../electron/journalAmounts.mjs'
@@ -19,16 +20,8 @@ const TABS = [
   { key: 'expense',  label: '記錄費用', Icon: Plus       },
 ]
 
-const EXPENSE_ACCOUNTS = Object.entries(ACCOUNTS)
-  .filter(([,v]) => v.type === 'expense')
-  .map(([k,v]) => ({ code: k, name: v.name, group: v.group }))
-
-const ASSET_ACCOUNTS = Object.entries(ACCOUNTS)
-  .filter(([,v]) => v.type === 'asset')
-  .map(([k,v]) => ({ code: k, name: v.name }))
-
 export default function AccountingPage({ store,session }) {
-  const { manualEntries, addManualEntry, deleteManualEntry } = store
+  const { manualEntries, deleteManualEntry } = store
   const accounting=useAccountingView(store,session),allJournal=accounting.journals
   const [tab, setTab]   = useState('pnl')
 
@@ -56,13 +49,13 @@ export default function AccountingPage({ store,session }) {
   return (
     <div style={ac.root} className="accounting-page">
       {/* Header */}
-      <div style={ac.header}>
+      <div style={{...ac.header,...(tab==='expense'?{display:'none'}:{})}}>
         <div>
           <h2 className="page-title" style={ac.title}>{tr("會計帳務")}</h2>
           <div style={{fontSize:12,color:'var(--text-tertiary)',marginTop:2}}>{tr("自動複式記帳 · ")}{allJournal.length}{tr(" 筆分錄")}</div>
         </div>
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
-          <div style={ac.dateRange}>
+          <div style={{...ac.dateRange,...(tab==='expense'?{display:'none'}:{})}}>
             <input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={ac.dateInput}/>
             <span style={{color:'var(--text-tertiary)',fontSize:12}}>{tr("至")}</span>
             <input type="date" value={to}   onChange={e=>setTo(e.target.value)}   style={ac.dateInput}/>
@@ -90,16 +83,18 @@ export default function AccountingPage({ store,session }) {
 
       {/* Content */}
       <div style={ac.content}>
+        {tab!=='expense'&&<>
         {accounting.loading&&<p role="status">{tr('正在核對庫存成本與帳務…')}</p>}
         {accounting.error&&<p role="alert">{trMessage(accounting.error)}</p>}
         {!validPeriod&&<p role="alert">{tr('請確認起訖日期，結束日不能早於開始日')}</p>}
         {canRead&&accounting.report.status==='active'&&<p className="accounting-notice">{tr('成本已按實際庫存異動計算；開帳前的分錄保留原紀錄。')}</p>}
         {canRead&&accounting.report.financialOpening?.pending&&<p role="status" className="accounting-notice">{tr('期初對帳尚未完成')}</p>}
         {canRead&&(!pnl.complete||!balance.complete)&&<p role="status" className="accounting-notice">{tr('成本或帳務仍有待核對項目，完整毛利、淨利與資產不顯示為已確認。')}</p>}
+        </>}
         {canRead&&tab === 'pnl'     && <PnLView     pnl={pnl} from={from} to={to} />}
         {canRead&&tab === 'journal' && <JournalView grouped={grouped} manualEntries={manualEntries} deleteManualEntry={deleteManualEntry} frozenIds={accounting.report.status==='active'?accounting.report.frozenManualIds||[]:[]}/>}
         {canRead&&tab === 'balance' && <BalanceView balance={balance} asOf={to}/>}
-        {canRead&&tab === 'expense' && <ExpenseView addManualEntry={addManualEntry} stockActive={accounting.report.status==='active'} onPurchase={()=>store.setView('purchase')}/>}
+        {tab === 'expense' && <ExpenseEntryEditor store={store} session={session} stockActive={accounting.report?.status==='active'} onPurchase={()=>store.setView('purchase')}/>}
       </div>
     </div>
   )
@@ -201,6 +196,8 @@ function PnLRow({ label, cents, bold, sub, lg, highlight }) {
 // ── 日記帳 ────────────────────────────────────────────────
 function JournalView({ grouped, manualEntries, deleteManualEntry,frozenIds }) {
   const [expanded, setExpanded] = useState({})
+  const [removal,setRemoval]=useState(''),[removing,setRemoving]=useState(false),[removeError,setRemoveError]=useState('')
+  async function remove(id){if(removing)return;setRemoving(true);setRemoveError('');try{await deleteManualEntry(id);setRemoval('')}catch(error){setRemoveError(error.message)}finally{setRemoving(false)}}
   const toggle = (date) => setExpanded(p=>({...p,[date]:!p[date]}))
   const manualIds = new Set(manualEntries.map(e=>e.id))
 
@@ -228,16 +225,17 @@ function JournalView({ grouped, manualEntries, deleteManualEntry,frozenIds }) {
             {open && (
               <div style={{borderTop:'1px solid var(--border-dim)'}}>
                 {entries.map(j=>(
-                  <div key={j.id} style={{borderBottom:'1px solid var(--border-dim)',padding:'10px 16px'}}>
+                  <div key={j.id} data-manual-entry={j.id} style={{borderBottom:'1px solid var(--border-dim)',padding:'10px 16px'}}>
                     <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
                       <span style={{...ac.typeBadge,...TYPE_STYLE[j.type]||TYPE_STYLE.manual}}>{tr(TYPE_LABEL[j.type]||'手動')}</span>
                       <span style={{fontSize:13,fontWeight:500}}>{['auto_business_sale','auto_customer_ledger','auto_supplier_ledger'].includes(j.type)?tr(j.descriptionKey,j.descriptionValues):j.type==='stock-cost'?trMessage(j.description):j.description}</span>
                       {manualIds.has(j.id)&&!frozenIds.includes(j.id) && (
-                        <button className="btn-icon btn-sm" style={{marginLeft:'auto',color:'var(--red)'}} onClick={()=>deleteManualEntry(j.id).catch(e=>alert(trMessage(e.message)))}>
+                        <button className="btn-icon btn-sm" data-manual-cancel={j.id} aria-label={tr('取消這筆補登記錄')} disabled={removing} style={{marginLeft:'auto',color:'var(--red)',minHeight:48,minWidth:48}} onClick={()=>{setRemoval(j.id);setRemoveError('')}}>
                           <Trash2 size={13}/>
                         </button>
                       )}
                     </div>
+                    {removal===j.id&&<div className="manual-entry-cancel" role="group" aria-label={tr('確認取消補登記錄')}><p>{tr('確定取消這筆補登記錄？')}</p><p>{tr('只取消補登記錄，不會退款。')}</p>{removeError&&<p role="alert">{trMessage(removeError)}</p>}<div><button className="btn btn-ghost" disabled={removing} onClick={()=>setRemoval('')}>{tr('保留記錄')}</button><button className="btn btn-ghost" data-manual-confirm-cancel={j.id} disabled={removing} onClick={()=>remove(j.id)}>{tr(removing?'正在核對…':'確認取消補登記錄')}</button></div></div>}
                     <div style={{display:'grid',gridTemplateColumns:'1fr 90px 90px',gap:4,fontSize:11}}>
                       <span style={{color:'var(--text-tertiary)',letterSpacing:'.04em'}}>{tr("科目")}</span>
                       <span style={{color:'var(--text-tertiary)',textAlign:'right'}}>{tr("借方")}</span>
@@ -324,136 +322,6 @@ function BSSection({ items, color }) {
       ))}
     </div>
   )
-}
-
-// ── 記錄費用 ──────────────────────────────────────────────
-const EXPENSE_PRESETS = [
-  { label:'月租金',  account:'5202', payAccount:'1101' },
-  { label:'水電費',  account:'5203', payAccount:'1101' },
-  { label:'薪資',    account:'5201', payAccount:'1101' },
-  { label:'進貨',    account:'1211', payAccount:'1101' },
-  { label:'廣告費',  account:'5205', payAccount:'1103' },
-  { label:'雜費',    account:'5206', payAccount:'1101' },
-]
-
-function ExpenseView({ addManualEntry,stockActive,onPurchase }) {
-  const saving=useRef(false),creationId=useRef('JM'+crypto.randomUUID())
-  const today = localDate()
-  const [form, setForm] = useState({ date:today, description:'', amount:'', expenseAccount:'5202', payAccount:'1101', note:'' })
-  const [saved, setSaved] = useState(false)
-
-  function applyPreset(preset) {
-    setForm(f=>({...f,expenseAccount:preset.account,payAccount:preset.payAccount,description:preset.label}))
-  }
-
-  async function handleSave() {
-    if(saving.current)return
-    if (!form.amount || !form.description || isNaN(parseFloat(form.amount))) return
-    const amount  = parseFloat(form.amount)
-    const expAcc  = form.expenseAccount
-    const payAcc  = form.payAccount
-    const isInventory = expAcc === '1211' // 進貨記庫存，不記費用科目
-
-    saving.current=true
-    try{await addManualEntry({
-      _creationId:creationId.current,
-      date: form.date,
-      description: form.description,
-      lines: isInventory
-        ? [
-            { account:'1211',    debit:amount,  credit:0,      note:form.note||'入庫' },
-            { account:payAcc,    debit:0,        credit:amount, note:'付款' },
-          ]
-        : [
-            { account:expAcc,    debit:amount,  credit:0,      note:form.note||form.description },
-            { account:payAcc,    debit:0,        credit:amount, note:'付款' },
-          ],
-    })
-
-    creationId.current='JM'+crypto.randomUUID();setSaved(true)
-    setForm(f=>({...f,description:'',amount:'',note:''}))
-    setTimeout(()=>setSaved(false), 2000)
-    }catch(e){alert(tr("帳務未確認保存，請保留內容並核對：{0}", {0: trMessage(e.message)}))}finally{saving.current=false}
-  }
-
-  const EXPENSE_ACC = Object.entries(ACCOUNTS)
-    .filter(([,v])=>v.type==='expense'||v.code==='1211')
-    .filter(([k])=>k!=='5301')
-
-  return (
-    <div style={{maxWidth:560,margin:'0 auto',display:'flex',flexDirection:'column',gap:16}}>
-      <div style={ac.cardTitle}>{tr("記錄費用 / 進貨")}</div>
-
-      {/* Presets */}
-      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-        {EXPENSE_PRESETS.filter(row=>!stockActive||row.account!=='1211').map(p=>(
-          <button key={p.label} className="btn btn-ghost btn-sm" onClick={()=>applyPreset(p)} style={{fontSize:12}}>
-            {tr(p.label)}
-          </button>
-        ))}
-      </div>
-      {stockActive&&<button className="btn btn-ghost" onClick={onPurchase}>{tr('進貨請到進貨管理，數量與成本會一起保存')}</button>}
-
-      <div className="card" style={{padding:'20px 22px',display:'flex',flexDirection:'column',gap:14}}>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-          <div>
-            <FieldLabel>{tr("日期")}</FieldLabel>
-            <input type="date" className="field" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/>
-          </div>
-          <div>
-            <FieldLabel>{tr("金額 (NT$) *")}</FieldLabel>
-            <input type="number" className="field" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} placeholder="0" style={{fontFamily:'var(--font-mono)'}}/>
-          </div>
-        </div>
-
-        <div>
-          <FieldLabel>{tr("摘要 *")}</FieldLabel>
-          <input className="field" value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} placeholder={tr("例：三月份租金、水電費")}/>
-        </div>
-
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-          <div>
-            <FieldLabel>{tr("費用科目")}</FieldLabel>
-            <select className="field" value={form.expenseAccount} onChange={e=>setForm(f=>({...f,expenseAccount:e.target.value}))} style={{cursor:'pointer'}}>
-              {Object.entries(ACCOUNTS).filter(([,v])=>v.type==='expense'||v.code==='1211').map(([k,v])=>(
-                <option key={k} value={k}>{k} {tr(v.name)}</option>
-              ))}
-              {!stockActive&&<option value="1211">{tr("1211 存貨（進貨）")}</option>}
-            </select>
-          </div>
-          <div>
-            <FieldLabel>{tr("付款方式")}</FieldLabel>
-            <select className="field" value={form.payAccount} onChange={e=>setForm(f=>({...f,payAccount:e.target.value}))} style={{cursor:'pointer'}}>
-              <option value="1101">{tr("1101 現金")}</option>
-              <option value="1103">{tr("1103 銀行存款")}</option>
-              <option value="2101">{tr("2101 應付帳款（賒帳）")}</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <FieldLabel>{tr("備註")}</FieldLabel>
-          <input className="field" value={form.note} onChange={e=>setForm(f=>({...f,note:e.target.value}))} placeholder={tr("（選填）")}/>
-        </div>
-
-        <button className="btn btn-primary" onClick={handleSave} style={{width:'100%',padding:13}}>
-          {saved ? <><Check size={16}/>{tr("已記帳")}</> : tr("記帳")}
-        </button>
-      </div>
-
-      <div className="card" style={{padding:'14px 16px'}}>
-        <div style={{fontSize:11,color:'var(--text-tertiary)',lineHeight:1.8}}>
-          <div>{tr('每筆結帳依付款與成本紀錄自動產生分錄。')}</div>
-          <div>{tr("💰 此頁面補登 ")}<strong style={{color:'var(--text-secondary)'}}>{tr("費用、進貨、薪資")}</strong>{tr(" 等非銷售支出")}</div>
-          <div>{tr("📊 所有資料自動彙整至損益表與資產負債表")}</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function FieldLabel({ children }) {
-  return <div style={{fontSize:11,color:'var(--text-tertiary)',marginBottom:5,letterSpacing:'.03em'}}>{children}</div>
 }
 
 const ac = {
