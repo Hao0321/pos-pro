@@ -1,6 +1,9 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
   '--member-profile-ui':['native-member-profile-ui.cjs','POS_MEMBER_PROFILE_UI_PASS',true],
+  '--member-topup-state':['native-member-topup-state.cjs','POS_MEMBER_TOPUP_STATE_PASS',false],
+  '--member-topup-ui':['native-member-topup-ui.cjs','POS_MEMBER_TOPUP_UI_PASS',true],
+  '--member-topup-browser-ui':['native-member-topup-browser-ui.cjs','POS_MEMBER_TOPUP_BROWSER_UI_PASS',true],
   '--member-profile-state':['native-member-profile-state.cjs','POS_MEMBER_PROFILE_STATE_PASS',false],
   '--member-profile-browser-ui':['native-member-profile-browser-ui.cjs','POS_MEMBER_PROFILE_BROWSER_UI_PASS',true],
   '--catalogue-purchase-ui':['native-catalogue-purchase-ui.cjs','POS_CATALOGUE_PURCHASE_UI_PASS',true],

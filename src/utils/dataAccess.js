@@ -1,3 +1,4 @@
+import {isMemberTopupDraft,memberTopupInput,memberTopupOriginal} from '../../electron/memberTopupDraft.mjs'
 import './sharedBridge'
 import {getBrowserPrivateDraftContext,lookupBrowserPrivateDraftOriginal} from './browserPrivateDrafts'
 import {privateDraftContext,privateDraftMappingInput} from '../../electron/privateDrafts.mjs'
@@ -454,8 +455,9 @@ export async function loadTopups(memberId) {
   const all = loadLS('pos2_topups', [])
   return memberId ? all.filter(t => t.memberId === memberId) : all
 }
-export async function addTopup(data) {
+export async function addTopup(data,actor=null) {
   if (isElectron) return window.electronAPI.db.addTopup(data)
+  if(isMemberTopupDraft(data))return (await import('./browserMemberTopup')).commitBrowserMemberTopup(data,actor)
   return withSalesLock(()=>{
     try {
       const current=readRecords(),records=current.data,old=records.pos2_topups.find(t=>t.id===data.id)
@@ -475,4 +477,11 @@ export async function addTopup(data) {
       return {success:true,member:next,topup:data}
     }catch(error){return {success:false,committed:error.historyUncertain?null:false,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
   })
+}
+
+export async function readMemberTopupOriginal(request,actor){
+ const before=await loadPrivateDraftContext(actor),data=memberTopupInput(request,before,actor),[topups,members]=await Promise.all([loadTopups(),loadMembers([])]),topup=memberTopupOriginal(data,topups)
+ if(!topup)throw Error('儲值紀錄讀不到，請保留原編號。')
+ const after=await loadPrivateDraftContext(actor);if(JSON.stringify(before)!==JSON.stringify(after))throw Error('店面或帳號已變更，請保留原輸入核對。')
+ return {success:true,topup,member:members.find(row=>row.id===request.memberId)||{id:request.memberId}}
 }

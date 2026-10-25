@@ -766,5 +766,6 @@ module.exports = function initDatabase(dbPath) {
   require('./productEditOperations.cjs')(db,api)
   require('./loyaltyProgramOperations.cjs')(db,api)
   require('./memberProfileOperations.cjs')(db,api)
+  require('./memberTopupOperations.cjs')(db,api)
   return api
 }

@@ -3,6 +3,7 @@ import { useState, useMemo,useRef,useEffect } from 'react'
 import { Plus, Pencil, Trash2, X, Check, Gift, TrendingUp, Phone, Wallet, RotateCcw, Cake } from 'lucide-react'
 import RefundModal from '../components/RefundModal'
 import MemberProfileEditor from '../components/MemberProfileEditor'
+import MemberTopupEditor from '../components/MemberTopupEditor'
 import { computeMemberRFM } from '../utils/analytics'
 
 const TIER = {
@@ -12,18 +13,13 @@ const TIER = {
 }
 
 export default function MembersPage({ store, session }) {
-  const { members, deleteMember, orders, products, topupMember, refund } = store
-  const profileEditor=useRef(null)
+  const { members, deleteMember, orders, products, refund } = store
+  const profileEditor=useRef(null),topupEditor=useRef(null)
   const [search,     setSearch]     = useState('')
   const [filterTier, setFilterTier] = useState('all')
   const [selected,   setSelected]   = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
-  const [showTopup,  setShowTopup]  = useState(false)
-  const [topupAmt,   setTopupAmt]   = useState('')
-  const [topupBonus, setTopupBonus] = useState('')
-  const [topupMethod,setTopupMethod] = useState('cash')
   const [refundOrder,setRefundOrder] = useState(null)
-  const saving=useRef(false)
   const memberTrigger=useRef(null),detailClose=useRef(null)
 
   // 重新從 list 取最新資料（避免顯示過期）
@@ -50,16 +46,6 @@ export default function MembersPage({ store, session }) {
 
   function startNew()  { profileEditor.current?.start() }
   function startEdit(m){ profileEditor.current?.start(m) }
-
-  async function handleTopup() {
-    if (!selectedLive||saving.current) return
-    const amt = parseFloat(topupAmt) || 0
-    const bonus = session?.role==='owner'?(parseFloat(topupBonus) || 0):0
-    if (amt <= 0) return
-    saving.current=true
-    try{await topupMember(selectedLive.id, amt, bonus, topupMethod, session?.username || '')
-    setShowTopup(false); setTopupAmt(''); setTopupBonus(''); setTopupMethod('cash')}catch(e){alert(trMessage(e.message))}finally{saving.current=false}
-  }
 
   async function handleRefund(origOrder, refundItems, opts) {
     return await refund(origOrder, refundItems, opts)
@@ -117,6 +103,7 @@ export default function MembersPage({ store, session }) {
         </div>
 
         <MemberProfileEditor ref={profileEditor} store={store} session={session} onSaved={setSelected}/>
+        <MemberTopupEditor ref={topupEditor} store={store} session={session} onSaved={setSelected}/>
 
         {/* Member list */}
         <div style={ms.list}>
@@ -217,7 +204,7 @@ export default function MembersPage({ store, session }) {
           </div>
 
           <div style={{display:'flex', gap:8, marginBottom:16}}>
-            <button className="btn btn-primary btn-sm" onClick={()=>setShowTopup(true)} style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6}}>
+            <button className="btn btn-primary" data-member-topup-entry onClick={()=>topupEditor.current?.start(selectedLive)} style={{minHeight:48,fontSize:18,flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6}}>
               <Wallet size={14}/>{tr(" 儲值")}</button>
           </div>
 
@@ -265,44 +252,6 @@ export default function MembersPage({ store, session }) {
           priorRefunds={orders.filter(o => o.refundOf === refundOrder.id)}
           onClose={()=>setRefundOrder(null)}
           onRefund={handleRefund}/>
-      )}
-
-      {showTopup && selectedLive && (
-        <div style={ms.overlay} onClick={()=>setShowTopup(false)}>
-          <div style={ms.drawer} className="animate-scale" onClick={e=>e.stopPropagation()}>
-            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16}}>
-              <span style={{fontWeight:600, fontSize:15, display:'flex', alignItems:'center', gap:8}}>
-                <Wallet size={16}/>{tr(" 會員儲值")}</span>
-              <button className="btn-icon" onClick={()=>setShowTopup(false)}><X size={16}/></button>
-            </div>
-            <div style={{padding:'10px 12px', background:'var(--bg-overlay)', borderRadius:8, marginBottom:14, fontSize:13}}>
-              {selectedLive.name}{tr(" · 目前餘額 ")}<strong style={{fontFamily:'var(--font-mono)'}}>NT$ {(selectedLive.balance||0).toLocaleString()}</strong>
-            </div>
-            <FieldLabel>{tr("儲值金額 *")}</FieldLabel>
-            <input className="field" type="number" value={topupAmt} onChange={e=>setTopupAmt(e.target.value)} placeholder="1000" autoFocus style={{marginBottom:12}}/>
-            <FieldLabel>{tr("贈送金額（選填）")}</FieldLabel>
-            <input className="field" type="number" disabled={session?.role!=='owner'} value={topupBonus} onChange={e=>setTopupBonus(e.target.value)} placeholder={session?.role==='owner'?tr("例：儲千送百"):tr("贈額需由老闆設定")} style={{marginBottom:12}}/>
-            <FieldLabel>{tr("付款方式")}</FieldLabel>
-            <div style={{display:'flex', gap:8, marginBottom:18}}>
-              {[['cash','現金'],['card','電子']].map(([k,l]) => (
-                <button key={k} onClick={()=>setTopupMethod(k)} style={{
-                  flex:1, padding:10, borderRadius:8, fontSize:13,
-                  background: topupMethod===k?'var(--gold)':'var(--bg-overlay)',
-                  color: topupMethod===k?'#fff':'var(--text-secondary)',
-                  border:`1px solid ${topupMethod===k?'var(--gold)':'var(--border-subtle)'}`,
-                }}>{tr(l)}</button>
-              ))}
-            </div>
-            {(parseFloat(topupAmt)+parseFloat(topupBonus||0)) > 0 && (
-              <div style={{textAlign:'center', padding:12, background:'var(--gold-dim)', borderRadius:8, color:'var(--gold-bright)', marginBottom:14, fontSize:13}}>{tr("會員可使用 NT$ ")}{(parseFloat(topupAmt)+parseFloat(topupBonus||0)).toLocaleString()}
-              </div>
-            )}
-            <div style={{display:'flex', gap:10}}>
-              <button className="btn btn-primary" style={{flex:1}} disabled={!topupAmt} onClick={handleTopup}>{tr("確認儲值")}</button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setShowTopup(false)}>{tr("取消")}</button>
-            </div>
-          </div>
-        </div>
       )}
 
       {confirmDel && (
