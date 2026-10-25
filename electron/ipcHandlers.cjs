@@ -81,8 +81,8 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:getOrderItems', (_e, orderId) => db.getOrderItems(orderId))
 
   // ----- Checkout (atomic) -----
-  handle('db:checkout', (_e, orderData, stockUpdates, memberUpdate) => {
-    return db.checkout(orderData, stockUpdates, memberUpdate,ipcSecurity.current())
+  handle('db:checkout', (_e, orderData, stockUpdates, memberUpdate, cartBinding) => {
+    return db.checkout(orderData, stockUpdates, memberUpdate,ipcSecurity.current(),cartBinding)
   })
 
   // ----- Customer Orders -----
@@ -176,7 +176,7 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
 
   // ----- Held Orders -----
   handle('db:getHeldOrders', () => db.getHeldOrders())
-  handle('db:addHeldOrder', (_e, data) => db.addHeldOrder(data))
+  handle('db:addHeldOrder', (_e, data) => db.addHeldOrder(data,ipcSecurity.current()))
   handle('db:deleteHeldOrder', (_e, id) => db.deleteHeldOrder(id))
 
   // ----- Shifts -----

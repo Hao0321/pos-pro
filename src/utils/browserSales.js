@@ -7,6 +7,8 @@ import {browserToBook} from '../../electron/recoveryRules.mjs'
 import {validateStockCostBook} from '../../electron/stockBackup.mjs'
 import {browserStockActor} from '../../electron/browserStockPlan.mjs'
 import {refundOwner,verifyBrowserRefundReview} from './browserRefundReview'
+import {assertCheckoutCart} from '../../electron/heldCart.mjs'
+import {browserCartContext} from './browserHeldCart'
 export const SALES_PROTOCOL='pos-checkout-v5'
 function receipt(order,data) {
   return {protocol:SALES_PROTOCOL,success:true,orderId:order.id,order,
@@ -61,10 +63,13 @@ export function browserReceipt(id,actor) {
   }
   return order ? receipt(order,data) : {protocol:SALES_PROTOCOL,success:true,found:false}
 }
-export async function commitBrowserSale(request,actor) {
+export async function commitBrowserSale(request,actor,cartBinding) {
   return withSalesLock(()=>{
+    let writing=false,beforeRaw=null,admitted=false
     try {
       const current=readRecords(),data=current.data,existing=data.pos2_orders.find(o=>o.id===request.id)
+      if(cartBinding)assertCheckoutCart(cartBinding,request,browserCartContext(current,actor),data.pos2_products,!!existing)
+      admitted=true
       if(hasBrowserStockCost(current))return commitBrowserStockBusiness('checkout',request,actor,current)
       assertOriginalOperationAvailable('checkout',request.id,current,request)
       if (existing) {
@@ -85,8 +90,12 @@ export async function commitBrowserSale(request,actor) {
         points:m.points+plan.memberUpdate.pointsDelta,totalSpent:(m.totalSpent||0)+plan.memberUpdate.spentDelta,
         balance:(m.balance||0)+plan.memberUpdate.balanceDelta,tier:plan.memberUpdate.tier,
         ...(plan.memberUpdate.lastBirthdayBonus?{lastBirthdayBonus:plan.memberUpdate.lastBirthdayBonus}:{})} : m)
+      beforeRaw=localStorage.getItem(RECORD_KEY);writing=true
       const next=writeRecords({pos2_products:products,pos2_members:members,pos2_orders:[plan.order,...data.pos2_orders]},current.revision)
       return receipt(plan.order,next.data)
-    } catch(error) {return {protocol:SALES_PROTOCOL,success:false,committed:error.historyUncertain?null:false,orderId:request.id,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}}
+    } catch(error) {
+      if(writing)try{if(localStorage.getItem(RECORD_KEY)!==beforeRaw){const data=readRecords().data,order=data.pos2_orders.find(row=>row.id===request.id);if(order&&signature(order)===signature(request))return receipt(order,data);return {protocol:SALES_PROTOCOL,success:false,committed:null,orderId:request.id,error:error.message}}}catch{return {protocol:SALES_PROTOCOL,success:false,committed:null,orderId:request.id,error:error.message}}
+      return {protocol:SALES_PROTOCOL,success:false,committed:error.historyUncertain||cartBinding&&!admitted?null:false,orderId:request.id,...(error.historyUncertain?{errorCode:'RECOVERY_REQUIRED'}:{}),error:error.message}
+    }
   })
 }
