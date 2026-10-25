@@ -1,5 +1,9 @@
 # Agent 建單協議 v1
 
+## 供應商請款整理
+
+「採購 → 登錄請款 → 讓 Agent 幫我填」提供 `pos-purchase-invoice-draft/v1`。它把原供應商文件整理成待核對欄位，沒有付款或自主建單權限；店家核對後才用既有請款交易保存。詳見 [流程與限制](PURCHASE_INVOICES.md) 及 [JSON Schema](../public/agent/purchase-invoice-draft-v1.schema.json)。請勿用 `#agentDraft` 或付款草稿來送此資料。
+
 ## 客戶收款草稿：2.15.0
 
 「客戶與款項 → 讓 Agent 幫我填收款草稿」接受獨立的 `pos-customer-receipt-draft/v1`，格式見 [JSON Schema](../public/agent/customer-receipt-draft-v1.schema.json)。這是填表草稿，不是銀行付款證明，也不是自動收款 API。原本 `pos-document-draft/v1` 的 `sale` 仍代表收銀購物車，不改成賒銷或預收款。

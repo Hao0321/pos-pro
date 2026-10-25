@@ -1,0 +1,13 @@
+import {draftObject,privateDraftDigest} from '../../electron/privateDrafts.mjs'
+import {PURCHASE_INVOICE_FAMILY,invoiceQuantity} from '../../electron/purchaseInvoice.mjs'
+export const newPurchaseInvoice=()=>({target:null,form:{reference:'',dueDate:'',quantities:[]},agent:{raw:'',applied:null},submission:null})
+export const invoiceItemsDigest=po=>privateDraftDigest(po.items.map(({received,...item})=>item))
+export function validPurchaseInvoice(value){try{
+ draftObject(value,['target','form','agent','submission']);const f=value.form;draftObject(f,['reference','dueDate','quantities']);if(typeof f.reference!=='string'||f.reference.length>100||typeof f.dueDate!=='string'||f.dueDate.length>10||!Array.isArray(f.quantities)||f.quantities.length>1000||f.quantities.some(q=>typeof q!=='string'||q.length>32))return false
+ draftObject(value.agent,['raw','applied']);if(typeof value.agent.raw!=='string'||new TextEncoder().encode(value.agent.raw).length>32768)return false
+ if(value.agent.applied){draftObject(value.agent.applied,['digest','total']);if(!/^[a-f0-9]{64}$/.test(value.agent.applied.digest)||typeof value.agent.applied.total!=='number'||!Number.isFinite(value.agent.applied.total)||value.agent.applied.total<0)return false}
+ if(value.target){const t=value.target;draftObject(t,['purchaseId','supplierId','supplierName','purchaseDigest','itemsDigest','itemCount','date']);if(['purchaseId','supplierId'].some(k=>typeof t[k]!=='string'||!t[k]||t[k].length>128)||typeof t.supplierName!=='string'||t.supplierName.length>2000||!['purchaseDigest','itemsDigest'].every(k=>/^[a-f0-9]{64}$/.test(t[k]))||!Number.isInteger(t.itemCount)||t.itemCount<1||t.itemCount>1000||t.itemCount!==f.quantities.length||!/^\d{4}-\d{2}-\d{2}$/.test(t.date))return false}
+ if(value.submission){draftObject(value.submission,['id','time','digest']);if(!value.target||!/^purchase-bill-[-a-f0-9]{36}$/.test(value.submission.id)||!Number.isFinite(Date.parse(value.submission.time))||!/^[a-f0-9]{64}$/.test(value.submission.digest))return false}return true
+}catch{return false}}
+export function invoiceTarget({po,supplier}){return {purchaseId:po.id,supplierId:po.supplierId,supplierName:supplier.name,purchaseDigest:privateDraftDigest(po),itemsDigest:invoiceItemsDigest(po),itemCount:po.items.length,date:po.date}}
+export function invoiceLookup(value,context){if(!validPurchaseInvoice(value)||!value.submission)throw Error('請款原紀錄需要核對，請保留輸入，勿重複建單。');return {family:PURCHASE_INVOICE_FAMILY,context,id:value.submission.id,digest:value.submission.digest,document:{purchaseId:value.target.purchaseId,reference:value.form.reference,dueDate:value.form.dueDate,quantities:value.form.quantities.map(invoiceQuantity),expectedPurchaseDigest:value.target.purchaseDigest}}}

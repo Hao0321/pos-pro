@@ -1,3 +1,4 @@
+import {verifyPurchaseInvoiceProof} from '../../electron/purchaseInvoice.mjs'
 import {verifyPurchasePaymentProof} from '../../electron/purchasePayment.mjs'
 import {privateDraftDigest} from '../../electron/privateDrafts.mjs'
 import {saveExpenseEntry as persistExpenseEntry} from '../utils/dataAccess'
@@ -649,6 +650,11 @@ export function useStore(session){
     categories,todayOrders,todayRevenue,lowStockCount,todayProfit,todaySales,todayBusinessCount:todayOrders.length+todaySales.deliveries,
     allJournal,autoJournal,manualEntries,reservationEntries,restaurantEntries,
     addManualEntry,deleteManualEntry,
+    confirmPurchaseInvoice:async(input,proof,metadata)=>{
+      const result=verifyPurchaseInvoiceProof(input,proof);if(!metadata?.isCurrent())return
+      const pending=readPendingFinancial();if(pending?.request.id===input.id){if(pending.kind!=='purchase-bill'||privateDraftDigest(pending.request)!==input.digest)throw Error('請款原紀錄需要核對，請保留輸入，勿重複建單。');const {id,time,...body}=proof.request;await executeFinancial('purchase-bill',body,async()=>result,setFinancialState,{id,time})}
+      if(!metadata?.isCurrent())return;return applyInventoryResult(result)
+    },
     confirmPurchasePayment:async(input,proof,metadata)=>{
       const result=verifyPurchasePaymentProof(input,proof);if(!metadata?.isCurrent())return
       const pending=readPendingFinancial();if(pending?.request.id===input.id){if(pending.kind!=='purchase-pay'||privateDraftDigest(pending.request)!==input.digest)throw Error('付款原紀錄需要核對，請保留輸入，勿重複付款。');const {id,time,...body}=proof.request;await executeFinancial('purchase-pay',body,async()=>result,setFinancialState,{id,time})}
