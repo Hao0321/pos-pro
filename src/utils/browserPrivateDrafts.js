@@ -1,3 +1,4 @@
+import {wasteEntryLookup} from '../../electron/wasteEntryDraft.mjs'
 import {readRecords,writeRecords,withSalesLock} from './browserStorage'
 import {updateBrowserSettings} from '../../electron/settingEncoding.mjs'
 import {privateDraftContext,assertDraftLookup,privateDraftOriginal,privateQuickOriginal,privateDraftDigest} from '../../electron/privateDrafts.mjs'
@@ -22,6 +23,12 @@ export async function lookupBrowserPrivateDraftOriginal(input,actor){await getBr
  if(input.family==='loyalty-program'){const get=key=>readExchangeTextSetting(saved.data.pos_business_settings,key);return loyaltyProgramOriginal(input,loyaltyFacts(current,readLoyaltyRules(get),readLoyaltyPrograms(get(LOYALTY_PROGRAMS)),issuedLoyaltyValue(saved.data.pos2_members,saved.data.pos2_orders)))}
  if(input.family==='product-edit')return productEditOriginal(input,current,readProductEditJournal(readExchangeTextSetting(saved.data.pos_business_settings,PRODUCT_EDIT_JOURNAL)))
  if(input.family==='member-profile')return memberProfileOriginal(input,current,readMemberProfileJournal(readExchangeTextSetting(saved.data.pos_business_settings,MEMBER_PROFILE_JOURNAL)))
+ if(input.family==='waste-entry'){
+  const {core,digest}=wasteEntryLookup(input.document,current,actor);if(core.id!==input.id||digest!==input.digest)throw Error('原損耗資料需要核對，請保留輸入。')
+  if(!saved.data.pos2_waste.some(row=>row.id===core.id))return {protocol:'pos-private-draft-original/v1',status:'missing',id:core.id}
+  const result=browserStockBusinessResult('addWaste',core,saved,actor);return {protocol:'pos-private-draft-original/v1',status:'matched',id:core.id,digest,action:'create',entryId:core.id,result:{...result,product:result.product||{id:core.productId}}}
+ }
+
  if(input.family){
   const imported=input.family==='quick-purchase-import',purchase=imported||input.family==='quick-purchase';if(purchase)readBrowserSupplier(saved);else browserRestaurantState()
   const row=purchase?saved.data.pos_audit_log.find(row=>row.id==='stock-operation:'+input.id):saved.data.pos_restaurant_operations.find(row=>row.id===input.id),receipt=purchase?(row?(typeof row.detail==='string'?JSON.parse(row.detail):row.detail):null):row

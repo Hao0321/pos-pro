@@ -1,3 +1,4 @@
+import {isWasteEntry,wasteEntryCore} from './wasteEntryDraft.mjs'
 import {RECEIPT_REVIEW_KIND,hasReceiptLots,retainReceiptReviewFeature} from './receiptReview.mjs'
 import {readReservationBook} from './reservationHistory.mjs'
 import {isProcurement} from './procurementRules.mjs'
@@ -29,6 +30,7 @@ export function browserStockActor(book,actor,method,input=null){
   return {userId:account.id,username:account.username,role:account.role}
 }
 export function normalizeStockBusinessInput(method,request){
+  if(method==='addWaste'&&isWasteEntry(request))return structuredClone(wasteEntryCore(request))
   if(method==='checkout')return JSON.parse(checkoutSignature(request))
   if(method==='refundOrder')return {id:request.id,time:request.time,...JSON.parse(refundSignature(request))}
   return structuredClone(request)

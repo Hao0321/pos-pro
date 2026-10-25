@@ -42,6 +42,12 @@ export function assertPrivateQuickPurchase(request,{scope=null,actor=null,receip
  return context
 }
 export function assertDraftLookup(input,current){
+ if(input?.family==='waste-entry'){
+  draftObject(input,['context','id','digest','family','document']);assertPrivateDraftContext(input.context)
+  if(!/^waste-entry-[-a-f0-9]{36}$/.test(input.id)||typeof input.digest!=='string'||!/^[a-f0-9]{64}$/.test(input.digest)||privateDraftDigest(input.context)!==privateDraftDigest(current)||privateDraftDigest(input.document)!==input.digest)throw invalid()
+  return
+ }
+
  if(input?.family==='quick-purchase-import'){
   draftObject(input,['context','id','family','document']);assertPrivateDraftContext(input.context)
   if(current.role!=='owner')throw Error('權限不足')

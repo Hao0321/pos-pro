@@ -3,96 +3,30 @@ import React from 'react'
 import {beforeEach,afterEach,test,expect,vi} from 'vitest'
 import {render,screen,fireEvent,cleanup,act,waitFor} from '@testing-library/react'
 import WastePage from '../../src/pages/WastePage'
+import {admitWasteEntry,wasteEntryCore,wasteEntryOriginal} from '../../electron/wasteEntryDraft.mjs'
+import {privateDraftDigest} from '../../electron/privateDrafts.mjs'
+const f=vi.hoisted(()=>({context:null,products:[],rows:[],last:null,persist:vi.fn(),save:vi.fn(),load:vi.fn(),lookup:vi.fn(),cost:vi.fn()}))
+vi.mock('../../src/utils/dataAccess',()=>({loadPrivateDraftContext:f.load,loadProducts:async()=>structuredClone(f.products),lookupWasteEntry:f.lookup,lookupPrivateDraftOriginal:vi.fn(),loadWasteCostState:f.cost}))
+const actor={userId:'owner',username:'Owner',role:'owner'},product={id:'raw',name:'測試原料',unit:'公斤',stock:2,cost:100,expiryDate:'2026-10-01'}
+function setup(persist=async()=>true,rows=[]){f.rows=structuredClone(rows);f.persist.mockImplementation(persist);f.store={products:f.products,wasteLog:f.rows,saveWasteEntry:f.save,confirmWasteEntry:vi.fn(async()=>{}),reloadFromDB:vi.fn(async()=>{}),setView:vi.fn()};return render(<WastePage store={f.store} session={actor}/>)}
+async function form(quantity){await waitFor(()=>expect(document.querySelector('[data-waste-entry-ready=true]')).toBeTruthy());fireEvent.click(screen.getByText('新增損耗'));await waitFor(()=>expect(document.querySelector('[data-waste-entry-product]')).toBeTruthy());fireEvent.change(document.querySelector('[data-waste-entry-product]'),{target:{value:'raw'}});await waitFor(()=>expect(document.querySelector('[data-waste-entry-product]').matches(':enabled')).toBe(true));fireEvent.change(document.querySelector('[data-waste-entry-quantity]'),{target:{value:quantity}});await waitFor(()=>expect(document.querySelector('[data-waste-entry-quantity]').value).toBe(quantity));return document.querySelector('[data-waste-entry-save]')}
+beforeEach(()=>{
+ vi.useFakeTimers({toFake:['Date']}).setSystemTime(new Date('2026-09-30T16:30:00Z'));localStorage.clear();f.products=[{...product}];f.rows=[];f.last=null;f.context={protocol:'pos-private-draft-context/v1',storeId:'waste-ui',epoch:'waste-epoch',userId:actor.userId,role:'owner'}
+ f.load.mockReset().mockImplementation(async()=>({...f.context}));f.cost.mockReset().mockResolvedValue({costActive:false,wasteCosts:[]});f.persist.mockReset();f.save.mockReset().mockImplementation(async request=>{f.last=request;const checked=admitWasteEntry(request,f.context,{products:f.products,wasteLog:f.rows},actor),reply=await f.persist(request);if(reply===undefined)return reply;if(!checked.original){f.rows.push({...checked.data,productName:product.name,cost:product.cost});f.products[0].stock-=checked.data.qty}return {success:true,waste:f.rows.find(row=>row.id===request.id),product:f.products[0]}})
+ f.lookup.mockReset().mockImplementation(async request=>{const row=wasteEntryOriginal(wasteEntryCore(request),f.rows);return {protocol:'pos-private-draft-original/v1',status:row?'matched':'missing',id:request.id,...(row?{digest:privateDraftDigest(request),action:'create',entryId:request.id,result:{success:true,waste:row,product:f.products[0]}}:{})}})
+ vi.stubGlobal('navigator',{locks:{request:async(_key,options,work)=>(typeof options==='function'?options:work)({})}})
+})
+afterEach(()=>{cleanup();vi.useRealTimers();vi.restoreAllMocks();vi.unstubAllGlobals()})
+test('fractional ingredient units are preserved rather than truncated',async()=>{setup();fireEvent.click(await form('0.125'));await waitFor(()=>expect(f.rows).toHaveLength(1));await waitFor(()=>expect(document.querySelector('[data-waste-entry-dialog]')).toBeNull());expect(f.save).toHaveBeenCalledWith(expect.objectContaining({productId:'raw',qty:.125}));expect(f.products[0].stock).toBe(1.875)})
+test('one integer loss accepts exactly one acknowledged save',async()=>{setup();fireEvent.click(await form('1'));await waitFor(()=>expect(document.querySelector('[data-waste-entry-dialog]')).toBeNull());expect(f.save).toHaveBeenCalledTimes(1);expect(f.rows[0].qty).toBe(1)})
+test('an in-flight save retains input and ignores a second confirmation',async()=>{let finish;setup(()=>new Promise(resolve=>{finish=resolve}));const button=await form('1');fireEvent.click(button);await waitFor(()=>expect(f.save).toHaveBeenCalledTimes(1));fireEvent.click(button);expect(button.disabled).toBe(true);expect(document.querySelector('[data-waste-entry-quantity]').value).toBe('1');await act(async()=>finish(true));await waitFor(()=>expect(document.querySelector('[data-waste-entry-dialog]')).toBeNull());expect(f.save).toHaveBeenCalledTimes(1)})
+test.each(['0','-1','0.0001','3'])('invalid or unavailable quantity %s remains visible without mutation',async quantity=>{setup();const button=await form(quantity);expect(button.disabled).toBe(true);expect(f.save).not.toHaveBeenCalled();expect(document.querySelector('[data-waste-entry-quantity]').value).toBe(quantity);expect(screen.getByRole('alert').textContent).toMatch(/數量|庫存/)})
+test('unknown save keeps a locked original and permits explicit receipt verification',async()=>{setup(async()=>{throw Error('保存結果尚未確認，請核對原編號')});fireEvent.click(await form('1'));await waitFor(()=>expect(screen.getByRole('alert').textContent).toContain('原編號'));expect(document.querySelector('[data-waste-entry-quantity]').matches(':disabled')).toBe(true);expect(document.querySelector('[data-waste-entry-check]')).toBeTruthy();expect(f.save).toHaveBeenCalledTimes(1)})
+test('a definitive rejection retains editable raw input',async()=>{setup(async()=>{throw Object.assign(Error('fixture rolled back'),{notCommitted:true})});fireEvent.click(await form(' ０.１２５ '));await waitFor(()=>expect(screen.getByRole('alert').textContent).toContain('rolled back'));expect(document.querySelector('[data-waste-entry-quantity]').value).toBe(' ０.１２５ ');expect(document.querySelector('[data-waste-entry-quantity]').matches(':enabled')).toBe(true);expect(f.rows).toHaveLength(0)})
+test('month filtering uses the displayed local business month across midnight',()=>{setup(undefined,[{id:'before',productName:'上個月紀錄',qty:1,cost:100,time:'2026-09-30T15:59:00Z'},{id:'after',productName:'本月凌晨紀錄',qty:.125,cost:100,time:'2026-09-30T16:01:00Z'}]);fireEvent.change(document.querySelector('input[type=month]'),{target:{value:'2026-10'}});expect(screen.getByText('本月凌晨紀錄')).toBeTruthy();expect(screen.queryByText('上個月紀錄')).toBeNull()})
+test('the default loss month follows local month rollover',()=>{setup();expect(document.querySelector('input[type=month]').value).toBe('2026-10')})
+test('missing acknowledgement never clears the entered loss',async()=>{setup(async()=>undefined);fireEvent.click(await form('1'));await waitFor(()=>expect(screen.getByRole('alert').textContent).toContain('讀不到'));expect(document.querySelector('[data-waste-entry-quantity]').value).toBe('1');expect(document.querySelector('[data-waste-entry-dialog]')).toBeTruthy()})
+test('quick disposal preselects the product but needs one visible confirmation',async()=>{setup();await waitFor(()=>expect(document.querySelector('[data-waste-entry-ready=true]')).toBeTruthy());fireEvent.click(screen.getByRole('button',{name:'報廢'}));await waitFor(()=>expect(document.querySelector('[data-waste-entry-quantity]')).toBeTruthy());expect(document.querySelector('[data-waste-entry-product]').value).toBe('raw');expect(document.querySelector('[data-waste-entry-quantity]').value).toBe('1');expect(f.save).not.toHaveBeenCalled();fireEvent.click(document.querySelector('[data-waste-entry-save]'));await waitFor(()=>expect(document.querySelector('[data-waste-entry-dialog]')).toBeNull());expect(f.save).toHaveBeenCalledTimes(1)})
+test('confirmed original recovery closes the old form without submitting a second loss',async()=>{setup(async()=>{throw Error('尚未確認，請以原編號重試')});fireEvent.click(await form('1'));await waitFor(()=>expect(document.querySelector('[data-waste-entry-check]')).toBeTruthy());f.rows.push({...wasteEntryCore(f.last),productName:product.name,cost:product.cost});fireEvent.click(document.querySelector('[data-waste-entry-check]'));await waitFor(()=>expect(document.querySelector('[data-waste-entry-dialog]')).toBeNull());expect(f.save).toHaveBeenCalledTimes(1);expect(screen.getByText('原編號損耗已確認保存，請勿再次記錄。')).toBeTruthy()})
 
-const product={id:'raw',name:'測試原料',stock:2,cost:100,expiryDate:'2026-10-01'}
-function setup(recordWaste=vi.fn(async()=>({id:'saved'})),wasteLog=[]){
-  render(<WastePage store={{products:[product],wasteLog,recordWaste}} session={{username:'fixture'}}/>)
-  return recordWaste
-}
-function form(quantity){
-  fireEvent.click(screen.getByText('新增損耗'))
-  fireEvent.change(screen.getByRole('combobox'),{target:{value:'raw'}})
-  fireEvent.change(screen.getByRole('spinbutton'),{target:{value:quantity}})
-  return screen.getByRole('button',{name:'記錄'})
-}
-beforeEach(()=>vi.useFakeTimers({toFake:['Date']}).setSystemTime(new Date('2026-09-30T16:30:00Z')))
-afterEach(()=>{cleanup();vi.useRealTimers();vi.restoreAllMocks()})
-
-test('a real waste form preserves fractional ingredient units instead of truncating them',async()=>{
-  const save=setup(),button=form('0.125')
-  await act(async()=>fireEvent.click(button))
-  expect(save).toHaveBeenCalledWith(expect.objectContaining({productId:'raw',qty:0.125}))
-  expect(screen.queryByText('記錄損耗')).toBeNull()
-})
-test('a normal integer loss accepts one acknowledged save',async()=>{
-  const save=setup(),button=form('1')
-  await act(async()=>fireEvent.click(button))
-  expect(save).toHaveBeenCalledWith(expect.objectContaining({qty:1}))
-  expect(screen.queryByText('記錄損耗')).toBeNull()
-})
-test('one integer waste waits for the acknowledgement and ignores repeated clicks',async()=>{
-  let finish;const save=setup(vi.fn(()=>new Promise(resolve=>{finish=resolve}))),button=form('1')
-  fireEvent.click(button);fireEvent.click(button)
-  expect(save).toHaveBeenCalledTimes(1)
-  expect(button.disabled).toBe(true)
-  expect(screen.getByRole('spinbutton').value).toBe('1')
-  await act(async()=>finish({id:'saved'}))
-  expect(screen.queryByText('記錄損耗')).toBeNull()
-})
-test.each(['0','-1','0.0001','3'])('invalid or unavailable quantity %s stays visible without a mutation',async quantity=>{
-  const save=setup(),button=form(quantity)
-  await act(async()=>fireEvent.click(button))
-  expect(save).not.toHaveBeenCalled()
-  expect(screen.getByRole('spinbutton').value).toBe(quantity)
-  expect(screen.getByRole('alert').textContent).toMatch(/數量|庫存/)
-})
-test('a rejected waste save preserves the entered quantity and shows an error',async()=>{
-  const save=setup(vi.fn(async()=>{throw Error('保存結果尚未確認，請核對原編號')})),button=form('1')
-  await act(async()=>fireEvent.click(button))
-  await waitFor(()=>expect(screen.getByRole('alert').textContent).toContain('原編號'))
-  expect(screen.getByRole('spinbutton').value).toBe('1')
-  expect(button.disabled).toBe(false)
-  expect(save).toHaveBeenCalledTimes(1)
-})
-test('month selection uses the displayed local business month across midnight',()=>{
-  setup(undefined,[
-    {id:'before',productName:'上個月紀錄',qty:1,cost:100,time:'2026-09-30T15:59:00Z'},
-    {id:'after',productName:'本月凌晨紀錄',qty:0.125,cost:100,time:'2026-09-30T16:01:00Z'},
-  ])
-  const month=document.querySelector('input[type=month]')
-  fireEvent.change(month,{target:{value:'2026-10'}})
-  expect(screen.getByText('本月凌晨紀錄')).toBeTruthy()
-  expect(screen.queryByText('上個月紀錄')).toBeNull()
-  expect(month.value).toBe('2026-10')
-})
-test('the default loss month is the current local month at month rollover',()=>{
-  setup()
-  expect(document.querySelector('input[type=month]').value).toBe('2026-10')
-})
-test('a missing acknowledgement leaves the entered loss visible for reconciliation',async()=>{
-  setup(vi.fn(async()=>undefined));const button=form('1')
-  await act(async()=>fireEvent.click(button))
-  expect(screen.getByRole('spinbutton').value).toBe('1')
-  expect(screen.getByRole('alert').textContent).toContain('回覆不完整')
-})
-test('quick disposal also waits once and prevents a second confirmation while saving',async()=>{
-  const confirm=vi.spyOn(window,'confirm').mockReturnValue(true)
-  let finish;const save=setup(vi.fn(()=>new Promise(resolve=>{finish=resolve})))
-  const button=screen.getByRole('button',{name:'報廢'})
-  fireEvent.click(button);fireEvent.click(button)
-  expect(save).toHaveBeenCalledTimes(1);expect(confirm).toHaveBeenCalledTimes(1)
-  await act(async()=>finish({id:'quick-saved'}))
-  expect(screen.getByRole('status').textContent).toContain('已保存')
-})
-test('original-ID recovery closes the old form after the original loss is confirmed',async()=>{
-  const save=vi.fn(async()=>{throw Error('尚未確認，請以原編號重試')})
-  const original={products:[product],wasteLog:[],recordWaste:save,financialState:{phase:'idle'}}
-  const view=render(<WastePage store={original} session={{username:'fixture'}}/>),button=form('1')
-  await act(async()=>fireEvent.click(button))
-  view.rerender(<WastePage store={{...original,financialState:{phase:'uncertain',kind:'waste',id:'waste-original'}}}/>)
-  const row={id:'waste-original',productName:'測試原料',qty:1,cost:100,time:new Date().toISOString()}
-  view.rerender(<WastePage store={{...original,wasteLog:[row],financialState:{phase:'idle'}}}/>)
-  expect(screen.queryByText('記錄損耗')).toBeNull()
-  expect(screen.getByRole('status').textContent).toContain('原編號')
-  expect(save).toHaveBeenCalledTimes(1)
-})
+test('a shared recovery completion automatically confirms and closes the original editor',async()=>{const view=setup(async()=>{throw Error('尚未確認，請以原編號重試')});fireEvent.click(await form('1'));await waitFor(()=>expect(document.querySelector('[data-waste-entry-check]')).toBeTruthy());f.rows.push({...wasteEntryCore(f.last),productName:product.name,cost:product.cost});view.rerender(<WastePage store={{...f.store,wasteLog:[...f.rows],financialState:{phase:'idle',kind:'waste'}}} session={actor}/>);await waitFor(()=>expect(document.querySelector('[data-waste-entry-dialog]')).toBeNull());expect(f.save).toHaveBeenCalledTimes(1);expect(screen.getByText('原編號損耗已確認保存，請勿再次記錄。')).toBeTruthy()})

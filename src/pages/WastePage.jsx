@@ -1,27 +1,19 @@
+import WasteEntryEditor from '../components/WasteEntryEditor'
 import {tr,trMessage,getLocale} from "../i18n"
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Plus, AlertTriangle, Package } from 'lucide-react'
 import { exportXLS } from '../utils/exportXLS'
 import { localDate } from '../utils/checkoutSafety.mjs'
-import { quantityValue } from '../../electron/operationRules.mjs'
-import useVisibleViewport from '../hooks/useVisibleViewport'
 import {loadWasteCostState} from '../utils/dataAccess'
 import {stockWasteCosts,wasteAmountText} from '../../electron/stockWasteCosts.mjs'
 import '../styles/waste.css'
 
-const REASONS = ['過期', '破損', '腐壞', '自用', '試吃樣品', '盤虧', '其他']
 
 export default function WastePage({ store, session }) {
-  const { products, wasteLog, recordWaste, financialState } = store
-  const viewport = useVisibleViewport()
+  const { products, wasteLog, financialState } = store
   const compact=window.innerWidth<=600
-  const busy = useRef(false), active = useRef(false), pendingId = useRef(null)
+  const entryEditor=useRef(null)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(''), [message, setMessage] = useState('')
-  const [showAdd, setShowAdd] = useState(false)
-  const [productId, setProductId] = useState('')
-  const [qty, setQty] = useState('')
-  const [reason, setReason] = useState(REASONS[0])
   const [search, setSearch] = useState('')
   const [filterMonth, setFilterMonth] = useState(() => localDate().slice(0,7))
   const [costRefresh,setCostRefresh]=useState(0),financialVisible=session?.role!=='staff',actorKey=session?.userId?JSON.stringify([session.userId,session.username,session.role]):''
@@ -38,20 +30,6 @@ export default function WastePage({ store, session }) {
   const cost=waste=>costRows.get(waste.id)||{complete:false,knownValueCents:0,valueCents:null,basis:'unresolved'}
   const lossText=waste=>cost(waste).complete?wasteAmountText(cost(waste).valueCents,getLocale()):tr('成本待確認')
   const unitCostText=waste=>cost(waste).basis==='original-source'?tr('原始批次'):cost(waste).basis==='posted'?tr('已記錄'):cost(waste).basis==='reference'&&waste.cost>0?waste.cost.toLocaleString(getLocale()):tr('成本待確認')
-
-  function confirmed(recovered=false) {
-    active.current=false;pendingId.current=null
-    setShowAdd(false);setProductId('');setQty('');setReason(REASONS[0]);setError('')
-    setMessage(recovered?'原編號損耗已確認保存，請勿再次記錄。':'損耗已保存並扣除庫存。')
-  }
-  useEffect(() => {
-    if(!active.current)return
-    if(financialState?.kind==='waste'&&financialState.phase!=='idle')pendingId.current=financialState.id
-    if(financialState?.phase==='idle'&&pendingId.current){
-      if(wasteLog.some(w=>w.id===pendingId.current))confirmed(true)
-      else {active.current=false;pendingId.current=null}
-    }
-  }, [financialState, wasteLog])
 
   const filtered = useMemo(() => {
     return wasteLog.filter(w => {
@@ -78,29 +56,6 @@ export default function WastePage({ store, session }) {
     })).sort((a,b) => a.daysLeft - b.daysLeft)
   }, [products])
 
-  async function saveLoss(p, quantity, cause) {
-    if(busy.current)return
-    busy.current=true;setSaving(true);setError('');setMessage('')
-    try{
-      if(!p)throw Error('請選擇損耗商品')
-      quantityValue(quantity,'損耗數量',.001)
-      if(quantity>p.stock)throw Error('損耗數量超過目前可用庫存，請先核對')
-      active.current=true
-      const result=await recordWaste({productId:p.id,productName:p.name,qty:quantity,cost:p.cost||0,reason:cause,cashier:session?.username||''})
-      if(typeof result?.id!=='string'||!result.id)throw Error('損耗保存回覆不完整，請核對原編號')
-      confirmed()
-    }catch(e){setError(e.message||'損耗保存尚未確認，請保留內容並核對原編號')}
-    finally{busy.current=false;setSaving(false)}
-  }
-  async function handleAdd() {
-    await saveLoss(products.find(x=>x.id===productId),Number(qty),reason)
-  }
-
-  async function handleQuickAdd(p) {
-    if (busy.current || !confirm(tr("記錄「{0}」1 個庫存單位過期？", {0: p.name}))) return
-    await saveLoss(p,1,'過期')
-  }
-
   function exportExcel() {
     const rows = [['日期','時間','商品','數量','單位',...(financialVisible?['成本依據','損失']:[]),'原因','記錄者'].map(label=>tr(label))]
     filtered.forEach(w => {
@@ -122,8 +77,7 @@ export default function WastePage({ store, session }) {
 
   return (
     <div className="waste-page" style={ws.root} data-waste-page data-waste-cost-state={financialVisible?costPhase:'hidden'}>
-      {!showAdd&&error&&<p role="alert" style={{color:'var(--red)',marginBottom:12}}>{trMessage(error)}</p>}
-      {message&&<p role="status" style={{marginBottom:12}}>{trMessage(message)}</p>}
+      <WasteEntryEditor ref={entryEditor} store={store} session={session} onBusy={setSaving}/>
       {financialVisible&&costPhase==='loading'&&<p role="status">{tr('正在核對損耗成本…')}</p>}
       {financialVisible&&costPhase==='error'&&<div role="alert"><p>{trMessage(valuation.error)}</p><button className="btn" onClick={()=>setCostRefresh(value=>value+1)}>{tr('重新讀取')}</button></div>}
       <div style={ws.header}>
@@ -131,7 +85,7 @@ export default function WastePage({ store, session }) {
           <h2 className="page-title" style={{fontSize:20, fontWeight:600}}>{tr("損耗管理")}</h2>
           <div style={{fontSize:13, color:'var(--text-tertiary)', marginTop:4}}>{tr("記錄過期、破損、自用等庫存損耗")}</div>
         </div>
-        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button className="btn btn-ghost" disabled={saving||financialState&&financialState.phase!=='idle'} onClick={()=>store.setView('lots')}>{tr('批次與效期')}</button><button disabled={saving} className="btn btn-primary" onClick={()=>{setError('');setMessage('');setShowAdd(true)}} style={{display:'flex',alignItems:'center',gap:6}}>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button className="btn btn-ghost" disabled={saving||financialState&&financialState.phase!=='idle'} onClick={()=>store.setView('lots')}>{tr('批次與效期')}</button><button disabled={saving} className="btn btn-primary" data-waste-new onClick={()=>entryEditor.current?.start()} style={{display:'flex',alignItems:'center',gap:6}}>
           <Plus size={16}/>{tr(" 新增損耗")}</button></div>
       </div>
 
@@ -150,7 +104,7 @@ export default function WastePage({ store, session }) {
               }}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4}}>
                   <div style={{fontSize:13, fontWeight:500, flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name}</div>
-                  <button disabled={saving} onClick={()=>handleQuickAdd(p)} style={{padding:8,minWidth:44,minHeight:44,fontSize:12,color:'var(--red)',background:'none',border:'1px solid var(--red)',borderRadius:4}}>{tr("報廢")}</button>
+                  <button disabled={saving} data-waste-quick={p.id} onClick={()=>entryEditor.current?.start(p)} style={{padding:8,minWidth:48,minHeight:48,fontSize:16,color:'var(--red)',background:'none',border:'1px solid var(--red)',borderRadius:4}}>{tr("報廢")}</button>
                 </div>
                 <div style={{fontSize:11, color:'var(--text-secondary)'}}>{tr("庫存 ")}{p.stock}{tr(" · 到期 ")}{p.expiryDate}
                 </div>
@@ -231,42 +185,6 @@ export default function WastePage({ store, session }) {
         )}
       </div>
 
-      {showAdd && (
-        <>
-          <div style={{position:'fixed',inset:0,background:'rgba(23,37,60,0.40)',zIndex:998}} onClick={()=>!saving&&setShowAdd(false)}/>
-          <div role="dialog" aria-modal="true" aria-labelledby="waste-dialog-title" style={{position:'fixed',top:viewport.top+viewport.height/2,left:'50%',transform:'translate(-50%,-50%)',background:'var(--bg-raised)',borderRadius:12,width:420,maxWidth:'90vw',maxHeight:viewport.height*.9,overflowY:'auto',boxShadow:'var(--shadow-lg)',zIndex:999}}>
-            <div style={{padding:'10px 18px',borderBottom:'1px solid var(--border-dim)',display:'flex',alignItems:'center',justifyContent:'space-between',fontSize:15,fontWeight:600}}><span id="waste-dialog-title">{tr("記錄損耗")}</span><button aria-label={tr("關閉損耗表單")} disabled={saving} onClick={()=>setShowAdd(false)} style={{minWidth:44,minHeight:44}}>✕</button></div>
-            <div style={{padding:18}}>
-              {error&&<p role="alert" style={{color:'var(--red)',marginBottom:12}}>{trMessage(error)}</p>}
-              <div style={{marginBottom:10}}>
-                <label htmlFor="waste-product" style={{fontSize:12,color:'var(--text-tertiary)'}}>{tr("商品")}</label>
-                <select id="waste-product" disabled={saving} className="field" style={{fontSize:16,minHeight:44}} value={productId} onChange={e=>setProductId(e.target.value)} autoFocus>
-                  <option value="">{tr("— 請選擇 —")}</option>
-                  {products.map(p => <option key={p.id} value={p.id}>{p.name}{tr(" (庫存 ")}{p.stock})</option>)}
-                </select>
-              </div>
-              <div style={{marginBottom:10}}>
-                <label htmlFor="waste-quantity" style={{fontSize:12,color:'var(--text-tertiary)'}}>{tr("數量（與庫存相同單位，最多三位小數）")}</label>
-                <input id="waste-quantity" disabled={saving} className="field" style={{fontSize:16,minHeight:44}} type="number" inputMode="decimal" min="0.001" step="0.001" value={qty} onChange={e=>setQty(e.target.value)} placeholder="0"/>
-              </div>
-              <div style={{marginBottom:10}}>
-                <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>{tr("原因")}</div>
-                <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:6}}>
-                  {REASONS.map(r => (
-                    <button disabled={saving} key={r} onClick={()=>setReason(r)} style={{
-                      padding:'8px 4px',minHeight:44,fontSize:12,borderRadius:6,
-                      background: reason===r?'var(--gold)':'var(--bg-overlay)',
-                      color: reason===r?'#fff':'var(--text-secondary)',
-                      border:`1px solid ${reason===r?'var(--gold)':'var(--border-subtle)'}`,
-                    }}>{r}</button>
-                  ))}
-                </div>
-              </div>
-              <button className="btn btn-primary" style={{width:'100%',padding:12,minHeight:44,marginTop:8}} disabled={saving||!productId||qty===''} onClick={handleAdd}>{saving?tr("保存中…"):tr("記錄")}</button>
-            </div>
-          </div>
-        </>
-      )}
     </div>
   )
 }
