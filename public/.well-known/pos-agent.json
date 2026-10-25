@@ -40,6 +40,16 @@
       "approvalPolicy": "store-controlled",
       "moneyMovement": false,
       "linkFragment": false
+    },
+    {
+      "protocol": "pos-purchase-invoice-draft/v1",
+      "schema": "/agent/purchase-invoice-draft-v1.schema.json",
+      "role": "owner",
+      "contextMethod": "Copy task instructions from the authenticated selected purchase invoice form",
+      "pasteSurface": "purchase invoice",
+      "humanReviewRequired": true,
+      "moneyMovement": false,
+      "linkFragment": false
     }
   ],
   "humanReviewRequired": true,

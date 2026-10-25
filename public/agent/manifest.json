@@ -173,5 +173,14 @@
       "browserRecordVersion": 2,
       "feature": "catalogue-purchase-v1"
     }
+  },
+  "purchaseInvoiceDraft": {
+    "protocol": "pos-purchase-invoice-draft/v1",
+    "schema": "/agent/purchase-invoice-draft-v1.schema.json",
+    "context": "Explicit owner copy packet from the selected purchase invoice; ordered quantities, current source digest and original source total",
+    "paste": "採購 → 登錄請款 → 讓 Agent 幫我填",
+    "humanReviewRequired": true,
+    "automaticMoneyMovement": false,
+    "linkFragment": false
   }
 }

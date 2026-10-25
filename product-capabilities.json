@@ -72,7 +72,7 @@
       "name": "一鍵 Agent 資料包、跨公司文件、未知品項對照與確認建單",
       "status": "unmeasured",
       "implementation": "available",
-      "nextExperiment": "同一份外部文件通過資料包、檔案、JSON 區塊、配對手機及原編號重試 M34：新增 business-catalogue-order/v1 與公開Schema／指南，直接選品轉成本店採購，完整保留來源與原編號。外部Agent與供應商實際互通仍待驗收。"
+      "nextExperiment": "同一份外部文件通過資料包、檔案、JSON 區塊、配對手機及原編號重試 M34：新增 business-catalogue-order/v1 與公開Schema／指南，直接選品轉成本店採購，完整保留來源與原編號。外部Agent與供應商實際互通仍待驗收。 M42：新增採購範圍的供應商請款整理說明與貼回核對；來源合計須一致，日期不猜測，不自行保存或付款。獨立外部 Agent 互通仍未量測。"
     },
     {
       "id": "agent.interoperability",
@@ -121,7 +121,7 @@
       "name": "採購、部分收貨、核對請款、分次付款與分錄",
       "status": "unmeasured",
       "implementation": "available",
-      "nextExperiment": "目前版本重跑原生、UI、共用手機、備份及現金核對 M34：公開目錄參考價選品、公司範圍SKU對照、原子來源保存、真正回覆遺失、同單重匯、雙店主審批與FIFO收貨已經實際檢查；尚未代表供應商接單、收貨或付款自動完成。 M41：供應商請款付款補上原文草稿、明確分幣、固定原編號與唯讀原筆核對，沿用統一待確認交易與原採購帳；說明見 docs/PURCHASE_PAYMENTS.md。真人、實體手機、公開安裝版及其他表單仍未完成。"
+      "nextExperiment": "目前版本重跑原生、UI、共用手機、備份及現金核對 M34：公開目錄參考價選品、公司範圍SKU對照、原子來源保存、真正回覆遺失、同單重匯、雙店主審批與FIFO收貨已經實際檢查；尚未代表供應商接單、收貨或付款自動完成。 M41：供應商請款付款補上原文草稿、明確分幣、固定原編號與唯讀原筆核對，沿用統一待確認交易與原採購帳；說明見 docs/PURCHASE_PAYMENTS.md。真人、實體手機、公開安裝版及其他表單仍未完成。 M42：請款補上已收未請自動帶入、原文接續、精確數量及原筆唯讀核對；Agent 可整理原單，再由店家核對。說明見 docs/PURCHASE_INVOICES.md。其他流程與真人／實體手機驗收仍未完成。"
     },
     {
       "id": "procurement.returns",
