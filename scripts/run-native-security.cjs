@@ -208,6 +208,9 @@ const modes={
 }
 Object.assign(modes,{
   '--expense-entry':['native-expense-entry-state.cjs','POS_EXPENSE_ENTRY_STATE_PASS',false],
+  '--purchase-payment':['native-purchase-payment-state.cjs','POS_PURCHASE_PAYMENT_STATE_PASS',false],
+  '--purchase-payment-ui':['native-purchase-payment-ui.cjs','POS_PURCHASE_PAYMENT_UI_PASS',true],
+  '--purchase-payment-browser-ui':['native-purchase-payment-browser-ui.cjs','POS_PURCHASE_PAYMENT_BROWSER_UI_PASS',true],
   '--expense-drawer':['native-expense-drawer-state.cjs','POS_EXPENSE_DRAWER_STATE_PASS',false],
   '--expense-drawer-compat':['native-expense-drawer-compat.cjs','POS_EXPENSE_DRAWER_COMPAT_PASS',false],
   '--expense-drawer-ui':['native-expense-drawer-ui.cjs','POS_EXPENSE_DRAWER_UI_PASS',true],
