@@ -17,3 +17,10 @@
 .expense-entry-secondary{display:flex;flex-direction:column;gap:8px;padding-bottom:12px}
 .accounting-page>div:nth-child(2){overflow-x:auto;min-height:48px}.accounting-page>div:nth-child(2)>button{min-height:48px;flex-shrink:0}
 @media(max-width:600px){.expense-entry h2{font-size:24px}.expense-entry-presets>button{flex:1 0 auto}}
+.expense-entry-funding{display:flex;flex-direction:column;gap:8px}
+.expense-return-dialog{position:fixed;inset:0;z-index:1400;background:#0008;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+.expense-return-card{width:100%;max-width:480px;max-height:calc(100dvh - 32px);overflow-y:auto;box-sizing:border-box;padding:24px;border-radius:16px;border:1px solid var(--border-dim);background:var(--bg-base);color:var(--text-primary);box-shadow:0 16px 64px #0004;font-size:16px;line-height:1.6}
+.expense-return-card h2{margin:0 0 16px;font-size:24px;line-height:1.35}.expense-return-card>strong{display:block;font-size:28px;font-family:var(--font-mono)}.expense-return-purpose{font-size:19px;font-weight:600;overflow-wrap:anywhere}
+.expense-return-card dl{display:grid;grid-template-columns:1fr;gap:4px;padding:12px 0}.expense-return-card dt{color:var(--text-secondary)}.expense-return-card dd{margin:0 0 8px;overflow-wrap:anywhere;font-family:var(--font-mono)}
+.expense-return-actions{display:flex;flex-direction:column;gap:10px}.expense-return-card button,.expense-return-card summary{min-height:48px;min-width:48px;font-size:16px;white-space:normal;line-height:1.5}.expense-return-status{margin-left:auto;color:var(--text-secondary);font-size:14px}
+.accounting-page [data-manual-entry]>div:first-child{flex-wrap:wrap}

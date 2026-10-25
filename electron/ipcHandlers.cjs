@@ -41,6 +41,7 @@ module.exports = function registerIpcHandlers({ ipcMain, db, ipcSecurity, getOrd
   handle('db:previewOpeningMigration',(_e,input)=>db.previewOpeningMigration(input,ipcSecurity.current()))
   handle('db:applyOpeningMigration',(_e,input)=>db.applyOpeningMigration(input,ipcSecurity.current()))
   handle('db:getPrivateDraftContext',()=>db.getPrivateDraftContext(ipcSecurity.current()))
+  handle('db:getExpenseDrawerState',()=>db.getExpenseDrawerState(ipcSecurity.current()))
   handle('db:lookupPrivateDraftOriginal',(_e,input)=>db.lookupPrivateDraftOriginal(input,ipcSecurity.current()))
   handle('db:getLoyaltyProgramPreview',(_e,input)=>db.getLoyaltyProgramPreview(input,ipcSecurity.current()))
   handle('db:applyLoyaltyProgram',(_e,input)=>db.applyLoyaltyProgram(input,ipcSecurity.current()))

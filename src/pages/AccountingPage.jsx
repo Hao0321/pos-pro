@@ -1,5 +1,7 @@
 import {tr,trMessage,getLocale} from "../i18n"
 import ExpenseEntryEditor from '../components/ExpenseEntryEditor'
+import ExpenseCashReturn from '../components/ExpenseCashReturn'
+import useExpenseReturnDraft from '../hooks/useExpenseReturnDraft'
 import { Fragment,useState, useMemo } from 'react'
 import useAccountingView from '../hooks/useAccountingView'
 import {stockPeriodDisclosure} from '../../electron/stockAccounting.mjs'
@@ -23,6 +25,7 @@ const TABS = [
 export default function AccountingPage({ store,session }) {
   const { manualEntries, deleteManualEntry } = store
   const accounting=useAccountingView(store,session),allJournal=accounting.journals
+  const drawer=useExpenseReturnDraft({store,session:session||{userId:'',username:'',role:''}})
   const [tab, setTab]   = useState('pnl')
 
   const now   = new Date()
@@ -92,7 +95,8 @@ export default function AccountingPage({ store,session }) {
         {canRead&&(!pnl.complete||!balance.complete)&&<p role="status" className="accounting-notice">{tr('成本或帳務仍有待核對項目，完整毛利、淨利與資產不顯示為已確認。')}</p>}
         </>}
         {canRead&&tab === 'pnl'     && <PnLView     pnl={pnl} from={from} to={to} />}
-        {canRead&&tab === 'journal' && <JournalView grouped={grouped} manualEntries={manualEntries} deleteManualEntry={deleteManualEntry} frozenIds={accounting.report.status==='active'?accounting.report.frozenManualIds||[]:[]}/>}
+        <ExpenseCashReturn draft={drawer} onShift={()=>store.setView('shifts')}/>
+        {canRead&&tab === 'journal' && <JournalView grouped={grouped} manualEntries={manualEntries} deleteManualEntry={deleteManualEntry} frozenIds={accounting.report.status==='active'?accounting.report.frozenManualIds||[]:[]} drawer={drawer}/>}
         {canRead&&tab === 'balance' && <BalanceView balance={balance} asOf={to}/>}
         {tab === 'expense' && <ExpenseEntryEditor store={store} session={session} stockActive={accounting.report?.status==='active'} onPurchase={()=>store.setView('purchase')}/>}
       </div>
@@ -194,7 +198,7 @@ function PnLRow({ label, cents, bold, sub, lg, highlight }) {
 }
 
 // ── 日記帳 ────────────────────────────────────────────────
-function JournalView({ grouped, manualEntries, deleteManualEntry,frozenIds }) {
+function JournalView({ grouped, manualEntries, deleteManualEntry,frozenIds,drawer }) {
   const [expanded, setExpanded] = useState({})
   const [removal,setRemoval]=useState(''),[removing,setRemoving]=useState(false),[removeError,setRemoveError]=useState('')
   async function remove(id){if(removing)return;setRemoving(true);setRemoveError('');try{await deleteManualEntry(id);setRemoval('')}catch(error){setRemoveError(error.message)}finally{setRemoving(false)}}
@@ -207,6 +211,7 @@ function JournalView({ grouped, manualEntries, deleteManualEntry,frozenIds }) {
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:8,overflowY:'auto',height:'100%'}}>
+      {removeError&&!removal&&<p role="alert">{trMessage(removeError)}</p>}
       {grouped.map(([date, entries]) => {
         const dayTotal=-BigInt(aggregateJournal(entries).accounts['4101']?.netDebitCents||0)
         const open = expanded[date] !== false  // default open
@@ -224,12 +229,14 @@ function JournalView({ grouped, manualEntries, deleteManualEntry,frozenIds }) {
 
             {open && (
               <div style={{borderTop:'1px solid var(--border-dim)'}}>
-                {entries.map(j=>(
+                {entries.map(j=>{const linked=drawer.expenses.find(row=>row.id===j.id),reversal=drawer.expenses.some(row=>row.returnEntryId===j.id);return (
                   <div key={j.id} data-manual-entry={j.id} style={{borderBottom:'1px solid var(--border-dim)',padding:'10px 16px'}}>
                     <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
                       <span style={{...ac.typeBadge,...TYPE_STYLE[j.type]||TYPE_STYLE.manual}}>{tr(TYPE_LABEL[j.type]||'手動')}</span>
-                      <span style={{fontSize:13,fontWeight:500}}>{['auto_business_sale','auto_customer_ledger','auto_supplier_ledger'].includes(j.type)?tr(j.descriptionKey,j.descriptionValues):j.type==='stock-cost'?trMessage(j.description):j.description}</span>
-                      {manualIds.has(j.id)&&!frozenIds.includes(j.id) && (
+                      <span style={{fontSize:13,fontWeight:500}}>{['auto_business_sale','auto_customer_ledger','auto_supplier_ledger'].includes(j.type)?tr(j.descriptionKey,j.descriptionValues):j.type==='stock-cost'||reversal?trMessage(j.description):j.description}</span>
+                      {linked&&!linked.returned&&<button className="btn btn-ghost" data-expense-return-open={j.id} disabled={!drawer.drawerReady||drawer.busy||drawer.workspace.blocked||!!drawer.value.expense} style={{marginLeft:'auto',minHeight:48}} onClick={()=>drawer.open(j.id).catch(error=>setRemoveError(error.message))}>{tr('記錄現金退回')}</button>}
+                      {(linked?.returned||reversal)&&<span className="expense-return-status">{tr(reversal?'現金退回紀錄':'已退回')}</span>}
+                      {drawer.drawerReady&&!linked&&!reversal&&manualIds.has(j.id)&&!frozenIds.includes(j.id) && (
                         <button className="btn-icon btn-sm" data-manual-cancel={j.id} aria-label={tr('取消這筆補登記錄')} disabled={removing} style={{marginLeft:'auto',color:'var(--red)',minHeight:48,minWidth:48}} onClick={()=>{setRemoval(j.id);setRemoveError('')}}>
                           <Trash2 size={13}/>
                         </button>
@@ -256,7 +263,7 @@ function JournalView({ grouped, manualEntries, deleteManualEntry,frozenIds }) {
                       )})}
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             )}
           </div>

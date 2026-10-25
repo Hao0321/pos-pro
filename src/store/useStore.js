@@ -1,4 +1,5 @@
 import {saveExpenseEntry as persistExpenseEntry} from '../utils/dataAccess'
+import {DRAWER_EXPENSE,DRAWER_RETURN,verifyDrawerProof} from '../../electron/expenseDrawer.mjs'
 import {verifyExpenseProof} from '../../electron/expenseEntry.mjs'
 import {isPurchaseCreate} from '../../electron/procurementRules.mjs'
 import {isCashMovementRejection} from '../../electron/cashMovementDraft.mjs'
@@ -647,7 +648,12 @@ export function useStore(session){
     allJournal,autoJournal,manualEntries,reservationEntries,restaurantEntries,
     addManualEntry,deleteManualEntry,
     saveExpenseEntry:input=>persistExpenseEntry(input,sessionRef.current),
-    confirmExpenseEntry:(input,proof,metadata)=>{const result=verifyExpenseProof(input,proof);if(!metadata?.isCurrent())return;setManualEntries(previous=>result.removed?previous.filter(row=>row.id!==input.id):[result.entry,...previous.filter(row=>row.id!==input.id)]);return result.entry},
+    confirmExpenseEntry:(input,proof,metadata)=>{
+      const linked=[DRAWER_EXPENSE,DRAWER_RETURN].includes(input.protocol),result=(linked?verifyDrawerProof:verifyExpenseProof)(input,proof);if(!metadata?.isCurrent())return
+      const entries=linked?result.entries:result.removed?[]:[result.entry],ids=new Set([input.id,...entries.map(row=>row.id)])
+      setManualEntries(previous=>[...entries,...previous.filter(row=>!ids.has(row.id))])
+      if(linked){window.dispatchEvent(new Event('pos-cash-operation'));window.dispatchEvent(new Event('pos-expense-drawer-changed'))}return result.entry
+    },
     reloadFromDB,reloadAfterRecovery,
     // v2.1
     heldOrders, holdCart, recallHeld, removeHeld,

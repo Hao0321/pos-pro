@@ -6,6 +6,7 @@ import {browserToBook} from '../../electron/recoveryRules.mjs'
 import {validateStockCostBook} from '../../electron/stockBackup.mjs'
 import * as model from '../../electron/expenseEntry.mjs'
 import {privateDraftDigest} from '../../electron/privateDrafts.mjs'
+import {browserDrawerJournal} from './browserExpenseDrawer'
 export const browserExpenseJournal=record=>model.readExpenseJournal(readExchangeTextSetting(record.data.pos_business_settings,model.EXPENSE_JOURNAL))
 export const browserExpenseOriginal=(input,record,actor)=>model.expenseOriginal(input,browserCartContext(record,actor),browserExpenseJournal(record),record.data.pos2_manual_j)
 export function commitBrowserExpense(input,actor){return withSalesLock(()=>{
@@ -20,6 +21,7 @@ export function commitBrowserExpense(input,actor){return withSalesLock(()=>{
 })}
 export function removeBrowserExpense(id,actor){return withSalesLock(()=>{
  const record=readRecords(),context=browserCartContext(record,actor);if(context.role!=='owner')throw Error('此操作需要店主權限');const journal=browserExpenseJournal(record),receipt=journal.entries.find(row=>row.id===id)
+ if(browserDrawerJournal(record).entries.some(row=>row.id===id||row.returned?.entry.id===id))throw Error('抽屜支出請先確認現金已退回，不能直接刪改。')
  if(record.data.pos_stock_cost_entries.length&&validateStockCostBook(browserToBook(record.data)).projection.legacyJournals.some(row=>row.id===id))throw Error('開帳前的帳務已保留，請新增更正分錄')
  const settings=receipt?updateBrowserSettings(record.data.pos_business_settings,{[model.EXPENSE_JOURNAL]:JSON.stringify(JSON.stringify({version:1,entries:journal.entries.map(row=>row.id===id?{...row,removed:true}:row)}))}):record.data.pos_business_settings
  writeRecords({pos2_manual_j:record.data.pos2_manual_j.filter(row=>row.id!==id),pos_business_settings:settings},record.revision);return {success:true}
