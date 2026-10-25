@@ -1,3 +1,4 @@
+import {isWasteEntry,wasteEntryLookup} from '../../electron/wasteEntryDraft.mjs'
 import {isMemberTopupDraft,memberTopupInput,memberTopupOriginal} from '../../electron/memberTopupDraft.mjs'
 import './sharedBridge'
 import {getBrowserPrivateDraftContext,lookupBrowserPrivateDraftOriginal} from './browserPrivateDrafts'
@@ -430,6 +431,7 @@ export async function loadWasteLog() {
 }
 export async function addWaste(data,actor) {
   if (isElectron) return window.electronAPI.db.addWaste(data)
+  if(isWasteEntry(data))return (await import('./browserWasteEntry')).commitBrowserWasteEntry(data,actor)
   return withSalesLock(()=>{
     try{
     const current=readRecords(),records=current.data,p=records.pos2_products.find(p=>p.id===data.productId)
@@ -485,3 +487,10 @@ export async function readMemberTopupOriginal(request,actor){
  const after=await loadPrivateDraftContext(actor);if(JSON.stringify(before)!==JSON.stringify(after))throw Error('店面或帳號已變更，請保留原輸入核對。')
  return {success:true,topup,member:members.find(row=>row.id===request.memberId)||{id:request.memberId}}
 }
+
+export async function lookupWasteEntry(request,actor){
+ const context=await loadPrivateDraftContext(actor),{core,digest}=wasteEntryLookup(request,context,actor),result=await lookupPrivateDraftOriginal({context,family:'waste-entry',id:core.id,digest,document:request},actor)
+ if(result?.protocol!=='pos-private-draft-original/v1'||result.id!==core.id||!['matched','missing'].includes(result.status)||result.status==='matched'&&(result.digest!==digest||result.action!=='create'||result.entryId!==core.id||result.result?.success!==true))throw Error('損耗紀錄讀不到，請保留原編號。')
+ return result
+}
+export async function readWasteEntryOriginal(request,actor){const proof=await lookupWasteEntry(request,actor);if(proof.status!=='matched')throw Error('損耗紀錄讀不到，請保留原編號。');return proof.result}

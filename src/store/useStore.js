@@ -31,7 +31,7 @@ import {
   loadManualJournal, saveManualJournal, dbAddManualEntry, dbDeleteManualEntry,
   loadHeldOrders, addHeldOrder, deleteHeldOrder,
   getOpenShift, openShift as apiOpenShift, closeShift as apiCloseShift, addCashLog,
-  loadWasteLog, addWaste, deleteWaste,
+  loadWasteLog, addWaste, deleteWaste, readWasteEntryOriginal,
   addTopup, loadTopups, readMemberTopupOriginal,
   getSetting, setSetting,setSettings,
   applyInventoryOperation,
@@ -364,6 +364,19 @@ export function useStore(session){
     return result.waste
   }, [])
 
+  function applyWasteEntry(result){setWasteLog(prev=>[result.waste,...prev.filter(row=>row.id!==result.waste.id)]);setProducts(prev=>prev.map(row=>row.id===result.product.id?result.product:row));return result}
+  async function saveWasteEntry(request){
+    if(dataError)throw Error(dataError)
+    const {id,time,...input}=request
+    return applyWasteEntry(await executeFinancial('waste',input,value=>addWaste(value,sessionRef.current),setFinancialState,{id,time}))
+  }
+  async function confirmWasteEntry(request){
+    const {id,time,...input}=request,pending=readPendingFinancial()
+    if(!pending)return readWasteEntryOriginal(request,sessionRef.current)
+    if(pending.kind!=='waste'||pending.request.id!==id)throw Error('請先核對上一筆異動')
+    return applyWasteEntry(await executeFinancial('waste',input,value=>readWasteEntryOriginal(value,sessionRef.current),setFinancialState,{id,time}))
+  }
+
   const removeWaste = useCallback(async (id) => {
     await deleteWaste(id)
     setWasteLog(p => p.filter(w => w.id !== id))
@@ -663,7 +676,7 @@ export function useStore(session){
     reloadFromDB,reloadAfterRecovery,
     // v2.1
     heldOrders, holdCart, recallHeld, removeHeld,
-    wasteLog, recordWaste, removeWaste,
+    wasteLog, recordWaste, removeWaste,saveWasteEntry,confirmWasteEntry,
     openShift, startShift, endShift, logCash,reloadOpenShift,
     topupMember,saveMemberTopupDraft,confirmMemberTopupDraft,
     pointsRule, updatePointsRule,
