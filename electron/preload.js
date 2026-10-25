@@ -62,8 +62,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getOrders: () => ipcRenderer.invoke('db:getOrders'),
     addOrder: (data) => ipcRenderer.invoke('db:addOrder', data),
     getOrderItems: (orderId) => ipcRenderer.invoke('db:getOrderItems', orderId),
-    checkout: (orderData, stockUpdates, memberUpdate) =>
-      ipcRenderer.invoke('db:checkout', orderData, stockUpdates, memberUpdate),
+    checkout: (orderData, stockUpdates, memberUpdate, cartBinding) =>
+      ipcRenderer.invoke('db:checkout', orderData, stockUpdates, memberUpdate,cartBinding),
 
     getCustomerOrders: () => ipcRenderer.invoke('db:getCustomerOrders'),
     updateOrderStatus: (id, status) => ipcRenderer.invoke('db:updateOrderStatus', id, status),

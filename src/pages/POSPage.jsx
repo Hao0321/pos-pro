@@ -1,4 +1,4 @@
-import {tr} from "../i18n"
+import {tr,trMessage} from "../i18n"
 import { browserStorage } from '../utils/browserStorage'
 import { useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense } from 'react'
 import { Search, ScanLine, X, Tag, ShoppingCart, DollarSign, Pause, Eye, Clock, Camera, Receipt } from 'lucide-react'
@@ -31,6 +31,7 @@ export default function POSPage({ store, session }) {
   const [showLookup,setShowLookup] = useState(false)
   const [showReceipts,setShowReceipts] = useState(false)
   const [showCamera,setShowCamera] = useState(false)
+  useEffect(()=>{if(store.cartWorkspace?.pending){setShowHeld(false);setShowCart(false)}},[store.cartWorkspace?.pending?.id])
   // 一鍵開班：零用金自動帶上次的值，收銀員不用每天跳去班別管理
   const [quickCash, setQuickCash] = useState(() => { try { return browserStorage.getItem('pos_last_open_cash') || '' } catch { return '' } })
   const [opening,   setOpening]   = useState(false)
@@ -65,15 +66,15 @@ export default function POSPage({ store, session }) {
   }, [findByBarcode, addToCart])
 
   const handleHold = useCallback(async (label) => {
-    await holdCart(label, session?.username || '')
-    showFeedback(true, '已掛單')
+    const saved=await holdCart(label, session?.username || '')
+    if(saved)showFeedback(true, '已掛單')
   }, [holdCart, session])
 
   const handleKeyDown = useCallback(e => {
     if (e.key === 'F1') { e.preventDefault(); setShowLookup(true); return }
     if (e.key === 'F2' && cart.length > 0) {
       e.preventDefault()
-      handleHold('')
+      handleHold('').catch(error=>showFeedback(false,error.message))
       return
     }
     if (e.key === 'F3') { e.preventDefault(); setShowHeld(true); return }
@@ -145,7 +146,7 @@ export default function POSPage({ store, session }) {
   }
 
   return (
-    <div style={ps.root} tabIndex={0} onKeyDown={handleKeyDown}>
+    <div style={ps.root} tabIndex={0} onKeyDown={handleKeyDown} data-pos-page data-cart-ready={store.cartWorkspace?.ready??true}>
       <div style={ps.left}>
         <div style={{...ps.topBar,...(isMobile?{padding:'10px 12px',gap:8}:{})}}>
           <div style={ps.searchWrap}>
@@ -239,7 +240,7 @@ export default function POSPage({ store, session }) {
 
         <div style={{...ps.grid, gridTemplateColumns: isMobile ? 'repeat(auto-fill, minmax(100px, 1fr))' : 'repeat(auto-fill, minmax(130px, 1fr))'}}>
           {filtered.map((p, idx) => (
-            <ProductCard key={p.id} product={p} idx={idx} onAdd={() => addToCart(p)} isMobile={isMobile}/>
+            <ProductCard key={p.id} product={p} idx={idx} onAdd={() => {try{addToCart(p)}catch(error){showFeedback(false,error.message)}}} isMobile={isMobile}/>
           ))}
           {filtered.length === 0 && (
             <div style={ps.empty}>
@@ -257,7 +258,7 @@ export default function POSPage({ store, session }) {
             onCheckout={handleCheckout} onFindMember={findMember} onSelectMember={setActiveMember}
             onUpdatePrice={handleUpdatePrice} onHold={handleHold}
             pointsRule={pointsRule}
-            manualDiscount={manualDiscount} setManualDiscount={setManualDiscount}/>
+            manualDiscount={manualDiscount} setManualDiscount={setManualDiscount} cartWorkspace={store.cartWorkspace}/>
         </div>
       )}
 
@@ -285,14 +286,14 @@ export default function POSPage({ store, session }) {
                 onFindMember={findMember} onSelectMember={setActiveMember}
                 onUpdatePrice={handleUpdatePrice} onHold={handleHold}
                 pointsRule={pointsRule}
-                manualDiscount={manualDiscount} setManualDiscount={setManualDiscount}/>
+                manualDiscount={manualDiscount} setManualDiscount={setManualDiscount} cartWorkspace={store.cartWorkspace}/>
             </div>
           </div>
         </>
       )}
 
       {showHeld && (
-        <HeldOrdersModal heldOrders={heldOrders} members={members}
+        <HeldOrdersModal heldOrders={heldOrders} members={members} hasCart={!!cart.length}
           onRecall={recallHeld} onRemove={removeHeld}
           onClose={()=>setShowHeld(false)}/>
       )}

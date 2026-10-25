@@ -126,9 +126,9 @@ module.exports=function sharedStore({db,distRoot,certificateRoot,onChanged=()=>{
     if(name==='updateSupplier'&&Object.hasOwn(args[1]||{},'catalog')&&!Object.hasOwn(args[1],'_expectedCatalog'))throw Error('修改貨源須帶入原目錄，請重新核對')
     if(name==='writeAuditLog'){args[0]={...args[0],userId:actor.userId,username:actor.username,role:actor.role}}
     if(name==='getScenarioTemplateReceipt')return db[name](args[0],actor)
-    if(name==='checkout')return db.checkout(args[0],args[1],args[2],actor)
+    if(name==='checkout')return db.checkout(args[0],args[1],args[2],actor,args[3])
     if(name==='refundOrder')return db.refundOrder(args[0],args[1],actor)
-    if(['addProduct','addMember','addTopup','addWaste','deleteProduct','addManualEntry','deleteManualEntry','addCashLog'].includes(name))return db[name](args[0],actor)
+    if(['addProduct','addMember','addTopup','addWaste','addHeldOrder','deleteProduct','addManualEntry','deleteManualEntry','addCashLog'].includes(name))return db[name](args[0],actor)
     if(['updateProduct','updateMember','updateOrderStatus'].includes(name))return db[name](args[0],args[1],actor)
     if(name==='openShift')return db.openShift(args[0],actor)
     if(name==='closeShift')return db.closeShift(args[0],args[1],actor)

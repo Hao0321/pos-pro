@@ -11,6 +11,7 @@ export default function CartPanel({
   onHold,        // 掛單
   pointsRule = { earn: 10, redeem: 1 },
   manualDiscount = 0, setManualDiscount,
+  cartWorkspace,
 }) {
   const submitting = useRef(false)
   const [saving,setSaving] = useState(false)
@@ -28,7 +29,11 @@ export default function CartPanel({
   const [splitCash, setSplitCash] = useState('')
   const [splitCard, setSplitCard] = useState('')
   const [showHoldDlg, setShowHoldDlg] = useState(false)
-  const [holdLabel, setHoldLabel] = useState('')
+  const [localHoldLabel, setLocalHoldLabel] = useState('')
+  const holdLabel=cartWorkspace?.value.holdLabel??localHoldLabel
+  const setHoldLabel=value=>{try{if(cartWorkspace)cartWorkspace.setHoldLabel(value);else setLocalHoldLabel(value)}catch(error){setSaveError(error.message)}}
+  const holding=useRef(false)
+  const [holdBusy,setHoldBusy]=useState(false)
   const [editingPriceId, setEditingPriceId] = useState(null)
   const [priceInput, setPriceInput] = useState('')
 
@@ -72,10 +77,12 @@ export default function CartPanel({
     setMemberQuery(''); setMemberError('')
   }
 
-  async function handleHold() {
-    if (!cart.length) return
-    try{if(onHold)await onHold(holdLabel);setShowHoldDlg(false);setHoldLabel('')}
-    catch(e){setSaveError(e.message)}
+  async function handleHold(label=holdLabel) {
+    if (!cart.length||holding.current) return
+    holding.current=true;setHoldBusy(true);setSaveError('')
+    try{if(onHold)await onHold(label);setShowHoldDlg(false);setLocalHoldLabel('')}
+    catch(e){setSaveError(e.message);setShowHoldDlg(false)}
+    finally{holding.current=false;setHoldBusy(false)}
   }
 
   function startEditPrice(item) {
@@ -283,7 +290,7 @@ export default function CartPanel({
 
   // ===== Member stage =====
   if (stage === 'member') return (
-    <div style={cs.panel}>
+    <div style={cs.panel} data-cart-panel>
       <div style={cs.panelHeader}>
         <span style={{fontWeight:600}}>{tr("綁定會員")}</span>
         <button className="btn-icon" onClick={()=>setStage('cart')}><X size={16}/></button>
@@ -321,13 +328,13 @@ export default function CartPanel({
 
   // ===== Cart stage =====
   return (
-    <div style={cs.panel}>
+    <div style={cs.panel} data-cart-panel>
       <div style={cs.panelHeader}>
         <span style={{fontWeight:600, display:'flex', alignItems:'center', gap:8}}>{tr("購物車")}{cart.length > 0 && <span className="badge badge-blue">{cart.reduce((s,i)=>s+i.qty,0)}{tr(" 件")}</span>}
         </span>
         <div style={{display:'flex', gap:6}}>
           {cart.length > 0 && onHold && (
-            <button className="btn-icon" onClick={()=>setShowHoldDlg(true)} title={tr("掛單")}><Pause size={15}/></button>
+            <button className="btn-icon" data-cart-label onClick={()=>setShowHoldDlg(true)} title={tr("加標籤")} aria-label={tr('加標籤')} style={{minWidth:48,minHeight:48}}><Pause size={18}/></button>
           )}
           {cart.length > 0 && (
             <button className="btn-icon" onClick={onClear} title={tr("清空購物車")}><Trash2 size={15}/></button>
@@ -335,6 +342,8 @@ export default function CartPanel({
         </div>
       </div>
 
+      {cart.length>0&&onHold&&<div className="cart-hold-actions"><button className="btn btn-ghost" data-cart-hold disabled={holdBusy} onClick={()=>handleHold('')}>{tr(holdBusy?'正在保存…':'先掛單')}</button><button className="btn btn-ghost" onClick={()=>setShowHoldDlg(true)}>{tr('加標籤')}</button></div>}
+      {saveError&&<p role="alert" className="held-cart-error">{trMessage(saveError)}</p>}
       <button onClick={()=>setStage('member')} style={cs.memberStrip}>
         <User size={14} style={{color: activeMember?'var(--gold)':'var(--text-tertiary)'}}/>
         {activeMember
@@ -418,13 +427,13 @@ export default function CartPanel({
       {showHoldDlg && (
         <>
           <div style={{position:'fixed',inset:0,background:'rgba(23,37,60,0.50)',zIndex:998}} onClick={()=>setShowHoldDlg(false)}/>
-          <div style={{position:'fixed', top:'40%', left:'50%', transform:'translate(-50%,-50%)', background:'var(--bg-raised)', borderRadius:12, width:340, maxWidth:'90vw', boxShadow:'var(--shadow-lg)', zIndex:999, padding:20}}>
-            <div style={{fontWeight:600, fontSize:15, marginBottom:12}}>{tr("掛單")}</div>
+          <div className="cart-hold-label-dialog" role="dialog" aria-modal="true" aria-labelledby="cart-hold-label-title" style={{position:'fixed', top:'40%', left:'50%', transform:'translate(-50%,-50%)', background:'var(--bg-raised)', borderRadius:12, width:340, maxWidth:'90vw', boxShadow:'var(--shadow-lg)', zIndex:999, padding:20}}>
+            <div id="cart-hold-label-title" style={{fontWeight:600, fontSize:18, marginBottom:12}}>{tr("加標籤再掛單")}</div>
             <input className="field" placeholder={tr("標籤（選填，例：黃先生）")} value={holdLabel} onChange={e=>setHoldLabel(e.target.value)} autoFocus
-              onKeyDown={e=>{ if(e.key==='Enter') handleHold() }}/>
+              maxLength={200} disabled={holdBusy} onKeyDown={e=>{ if(e.key==='Enter') handleHold() }}/>
             <div style={{display:'flex', gap:8, marginTop:12}}>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setShowHoldDlg(false)}>{tr("取消")}</button>
-              <button className="btn btn-primary" style={{flex:1}} onClick={handleHold}>{tr("掛單")}</button>
+              <button className="btn btn-primary" style={{flex:1}} disabled={holdBusy} onClick={()=>handleHold()}>{tr(holdBusy?'正在保存…':"掛單")}</button>
             </div>
           </div>
         </>

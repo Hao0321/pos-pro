@@ -7,6 +7,7 @@ import { getSession, destroySession, writeAuditLog, startIdleTimer, hasPermissio
 import LoginScreen from './pages/LoginScreen'
 import Sidebar from './components/Sidebar'
 import DisplayPreferences from './components/DisplayPreferences'
+import CartWorkspaceNotice from './components/CartWorkspaceNotice'
 import PendingTransactionNotice from './components/PendingTransactionNotice'
 import ReadinessReturnBar from './components/ReadinessReturnBar'
 import {readRecoveryCommand} from './utils/recoveryClient'
@@ -169,6 +170,7 @@ export default function App() {
       <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column', minWidth:0 }}>
         {session.role==='owner'&&view!=='recovery'&&recoveryPending&&<div role="status" style={{padding:12,background:'var(--amber-dim)'}}><button className="btn btn-primary" data-recovery-open onClick={()=>handleNavChange('recovery')}>{tr('一步一步找回資料')}</button></div>}
         {!sharedConnected&&<div role="alert" style={{padding:12,background:'var(--red-dim)'}}>{tr("連不上店面電腦。請恢復店面 Wi-Fi；未確認的交易請沿用原單號核對。")}</div>}
+        {view!=='recovery'&&<CartWorkspaceNotice workspace={store.cartWorkspace} view={view}/>}
         {view!=='recovery'&&<PendingTransactionNotice key={session.userId+':'+session.role} store={store} owner={session.role==='owner'} view={view} onRecovery={()=>handleNavChange('recovery')}/>}
         {backupIssue&&session.role==='owner'&&<div role="alert" style={{padding:10,background:'var(--amber-dim)'}}>{tr("自動備份未完成。")}<button onClick={()=>handleNavChange('readiness')}>{tr("查看與補做備份")}</button></div>}
         {isMobile && (
@@ -183,7 +185,7 @@ export default function App() {
           </div>
         )}
         {/* Quick entry locks its fields while retaining the same-document recovery action. */}
-        <main className="workspace-content" data-view={view} inert={store.checkoutState.phase!=='idle'&&view!=='recovery'||store.financialState.phase!=='idle'&&!['quick','exchange','sales','customers','suppliers','stocktake','refunds','stocksetup','warehouse','recovery','lots'].includes(view)&&!(view==='reservations'&&store.financialState.kind==='reservation'&&store.financialState.phase==='uncertain')?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+        <main className="workspace-content" data-view={view} inert={view==='pos'&&store.cartWorkspace?.blocked||store.checkoutState.phase!=='idle'&&view!=='recovery'||store.financialState.phase!=='idle'&&!['quick','exchange','sales','customers','suppliers','stocktake','refunds','stocksetup','warehouse','recovery','lots'].includes(view)&&!(view==='reservations'&&store.financialState.kind==='reservation'&&store.financialState.phase==='uncertain')?'':undefined} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
           <ReadinessReturnBar store={store} session={session} view={view}/>
           <Suspense fallback={<p role="status">{tr('正在載入…')}</p>}>
           {view==='recovery'&&session.role==='owner'&&<RecoveryPage store={store} session={session}/>}

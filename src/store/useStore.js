@@ -14,6 +14,7 @@ import { browserStorage, writeRecords, acquireBrowserEditor } from '../utils/bro
 import { prepareCheckout } from '../utils/checkoutSafety.mjs'
 import { createCheckoutCoordinator } from '../utils/checkoutCoordinator.mjs'
 import {getRecoveryState} from '../utils/recoveryClient'
+import useCartWorkspace from '../hooks/useCartWorkspace'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {automaticBusinessJournal} from '../../electron/businessJournal.mjs'
 import {PROCUREMENT_KINDS} from '../../electron/procurementRules.mjs'
@@ -71,14 +72,12 @@ export function useStore(session){
   const [restaurantTarget,setRestaurantTarget]=useState(null),[reservationTarget,setReservationTarget]=useState(null)
   const [salesQuote,setSalesQuote]=useState(null)
   const [manualEntries, setManualEntries] = useState([])
-  const [cart,          setCart]          = useState([])
   const [view,          setView]          = useState('dashboard')
   const [readinessTask,setReadinessTask]=useState(null),readinessTaskRef=useRef(null)
   const startReadinessTask=useCallback((kind,productId='')=>{const task=createReadinessTask(kind,productId,sessionRef.current);readinessTaskRef.current=task;setReadinessTask(task);setView(task.view);return task.id},[])
   const finishReadinessTask=useCallback(id=>{const task=readinessTaskRef.current;if(!task||task.id!==id||!readinessTaskFor(task,sessionRef.current,task.view))return false;readinessTaskRef.current=null;setReadinessTask(null);setView('readiness');return true},[])
   useEffect(()=>{const task=readinessTaskRef.current;if(task&&(view!==task.view||!readinessTaskFor(task,sessionRef.current,task.view))){readinessTaskRef.current=null;setReadinessTask(null)}},[view,session?.userId,session?.role])
   const [settingsTarget,setSettingsTarget]=useState(null)
-  const [activeMember,  setActiveMember]  = useState(null)
   const [ready,         setReady]         = useState(false)
   const [dataError, setDataError] = useState('')
   const [checkoutState, setCheckoutState] = useState({phase:'idle'})
@@ -87,29 +86,34 @@ export function useStore(session){
   const [wasteLog,      setWasteLog]      = useState([])
   const [topups,        setTopups]        = useState([])   // 會員儲值紀錄（給會計自動分錄用）
   const [openShift,     setOpenShiftState] = useState(null)
-  const [manualDiscount,setManualDiscount] = useState(0)
   const [pointsRule,    setPointsRule]    = useState({ earn: 10, redeem: 1 }) // 消費 X 元 1 點；1 點折抵 X 元
   const [birthdayBonus, setBirthdayBonus] = useState(100)
   const [restaurantConfig,setRestaurantConfig]=useState(defaultRestaurantConfig)
   const [restaurantEntries,setRestaurantEntries]=useState([])
   const [reservationEntries,setReservationEntries]=useState([])
 
+  const cartWorkspace=useCartWorkspace({session,enabled:ready,members,onHeldOrders:setHeldOrders}),cartWorkspaceRef=useRef(cartWorkspace)
+  cartWorkspaceRef.current=cartWorkspace
+  const {cart,activeMember,manualDiscount,setCart,setActiveMember,setManualDiscount}=cartWorkspace
+  const pendingCheckout=()=>{const raw=browserStorage.getItem('pos_pending_checkout_v1'),local=cartWorkspaceRef.current.checkout();if(raw){const saved=JSON.parse(raw);if(local&&local.plan.order.id!==saved.plan.order.id)throw Error('原交易紀錄需要核對，請保留購物車。');return saved}return local}
+
   const checkoutRef = useRef(null)
   if (!checkoutRef.current) checkoutRef.current=createCheckoutCoordinator({
-    prepare:prepareCheckout,persist:plan=>dbCheckout(plan.order,plan.stockUpdates,plan.memberUpdate,sessionRef.current),lookup:id=>lookupCheckout(id,sessionRef.current),verifyReceipt:verifyCheckoutCostReceipt,
-    readPending:()=>{const raw=browserStorage.getItem('pos_pending_checkout_v1');return raw?JSON.parse(raw):null},
-    writePending:value=>browserStorage.setItem('pos_pending_checkout_v1',JSON.stringify(value)),
-    clearPending:id=>{const raw=browserStorage.getItem('pos_pending_checkout_v1');if(raw&&JSON.parse(raw).plan.order.id!==id)throw new Error('待確認單號不符');browserStorage.removeItem('pos_pending_checkout_v1')},
+    prepare:input=>{cartWorkspaceRef.current.assertProducts(input.products);return prepareCheckout(input)},persist:plan=>dbCheckout(plan.order,plan.stockUpdates,plan.memberUpdate,sessionRef.current,pendingCheckout()?.cartWorkspace),lookup:id=>lookupCheckout(id,sessionRef.current),verifyReceipt:verifyCheckoutCostReceipt,
+    readPending:pendingCheckout,
+    writePending:value=>{const saved=cartWorkspaceRef.current.freezeCheckout(value);browserStorage.setItem('pos_pending_checkout_v1',JSON.stringify(saved))},
+    clearPending:id=>{const raw=browserStorage.getItem('pos_pending_checkout_v1');if(raw&&JSON.parse(raw).plan.order.id!==id)throw new Error('待確認單號不符');browserStorage.removeItem('pos_pending_checkout_v1');cartWorkspaceRef.current.releaseCheckout(id)},
     apply:result=>{
+      cartWorkspaceRef.current.acceptCheckout(result,pendingCheckout())
       setProducts(prev=>prev.map(p=>result.products.find(n=>n.id===p.id)||p))
       if(result.member)setMembers(prev=>prev.map(m=>m.id===result.member.id?result.member:m))
       setOrders(prev=>[result.order,...prev.filter(o=>o.id!==result.order.id)])
-      setCart([]);setActiveMember(null);setManualDiscount(0)
     },onState:setCheckoutState,replayVerified:true,
   })
   useEffect(()=>{const handler=e=>setDataError(e.detail);window.addEventListener('pos-persistence-error',handler);return()=>window.removeEventListener('pos-persistence-error',handler)},[])
-  const reconcileCheckout=()=>checkoutRef.current.reconcile()
-  const retryCheckout=()=>checkoutRef.current.retry()
+  const reconcileCheckout=()=>{if(checkoutRef.current.getState().phase==='idle')checkoutRef.current.restore();return checkoutRef.current.reconcile()}
+  const retryCheckout=()=>{if(checkoutRef.current.getState().phase==='idle')checkoutRef.current.restore();return checkoutRef.current.retry()}
+  useEffect(()=>{if(cartWorkspace.ready&&checkoutRef.current.getState().phase==='idle')try{checkoutRef.current.restore()}catch(error){setDataError(error.message)}},[cartWorkspace.ready,cartWorkspace.value.checkout?.plan.order.id])
   // 初始化：從 SQLite 或 localStorage 載入資料
   useEffect(() => {
     if (!session) { setReady(false); return }
@@ -222,13 +226,13 @@ export function useStore(session){
     setManualEntries(p=>p.filter(e=>e.id!==id))
   },[])
 
-  const ensureCartEditable=()=>{if(checkoutRef.current.getState().phase!=='idle')throw new Error('請先確認原交易結果')}
+  const ensureCartEditable=()=>{if(checkoutRef.current.getState().phase!=='idle')throw new Error('請先確認原交易結果');cartWorkspaceRef.current.guard()}
   function stageQuickSale(items){
     ensureCartEditable();if(dataError)throw Error(dataError)
     if(financialState.phase!=='idle')throw Error('請先確認上一筆單據')
     if(cart.length)throw Error('收銀台已有商品，已保留原購物車。請先完成或處理原單')
     const rows=items.map(item=>{const p=products.find(p=>p.id===item.id);if(!p||p.price!==item.price||!Number.isSafeInteger(item.qty)||item.qty<1||item.qty>p.stock)throw Error('商品價格或可售數量已改變，請重新核對');return {...p,qty:item.qty}})
-    setCart(rows);setActiveMember(null);setManualDiscount(0);setView('pos')
+    cartWorkspaceRef.current.replace({cart:rows,memberId:'',manualDiscount:0});setView('pos')
   }
   const addToCart = useCallback((product,qty=1)=>{
     ensureCartEditable()
@@ -245,13 +249,14 @@ export function useStore(session){
     if (price < 0 || isNaN(price)) return
     setCart(p => p.map(i => i.id === id ? { ...i, price } : i))
   }, [])
-  const clearCart      = useCallback(()=>{ensureCartEditable();setCart([]);setActiveMember(null)},[])
+  const clearCart      = useCallback(()=>{ensureCartEditable();cartWorkspaceRef.current.clear()},[])
 
   const cartSubtotal = cart.reduce((s,i)=>s+i.price*i.qty,0)
   const cartCount    = cart.reduce((s,i)=>s+i.qty,0)
 
   // payments: [{method:'cash',amount:50},{method:'card',amount:50}]，若沒帶就用 payMethod+paid
   const checkout = useCallback(async (payMethod, paid, pointsUsed=0, opts={}) => {
+    ensureCartEditable()
     if (!cart.length) return null
     if (dataError) throw new Error(dataError)
     if (browserStorage.getItem(FINANCIAL_PENDING)) throw new Error('上一筆退款或儲值結果尚未確認，請先以原內容重試並核對。')
@@ -281,43 +286,10 @@ export function useStore(session){
     return result.order
   }, [openShift,dataError])
 
-  // 掛單
-  const holdCart = useCallback(async (label='', cashier='') => {
-    ensureCartEditable()
-    if (!cart.length) return null
-    const held = {
-      id: 'H' + Date.now(),
-      label: label || `掛單 ${new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})}`,
-      cart: [...cart],
-      memberId: activeMember?.id || '',
-      manualDiscount,
-      createdAt: new Date().toISOString(),
-      cashier,
-    }
-    await addHeldOrder(held)
-    setHeldOrders(p => [held, ...p])
-    setCart([])
-    setActiveMember(null)
-    setManualDiscount(0)
-    return held
-  }, [cart, activeMember, manualDiscount])
-
-  const recallHeld = useCallback(async (h) => {
-    ensureCartEditable()
-    await deleteHeldOrder(h.id)
-    setCart(h.cart || [])
-    setManualDiscount(h.manualDiscount || 0)
-    if (h.memberId) {
-      const m = members.find(x => x.id === h.memberId)
-      if (m) setActiveMember(m)
-    }
-    setHeldOrders(p => p.filter(x => x.id !== h.id))
-  }, [members])
-
-  const removeHeld = useCallback(async (id) => {
-    await deleteHeldOrder(id)
-    setHeldOrders(p => p.filter(x => x.id !== id))
-  }, [])
+  // The cart workspace owns acknowledgement and recovery of the original command.
+  const holdCart=useCallback(label=>{ensureCartEditable();return cartWorkspaceRef.current.hold(label||'')},[])
+  const recallHeld=useCallback(row=>{ensureCartEditable();return cartWorkspaceRef.current.recall(row)},[])
+  const removeHeld=useCallback(id=>{ensureCartEditable();const row=heldOrders.find(row=>row.id===id);if(!row)throw Error('這張掛單已變更，請重新查看。');return cartWorkspaceRef.current.remove(row)},[heldOrders])
 
   // 班別
   const startShift = useCallback(async (cashier, openCash, cashierId='',draft=null) => {
@@ -664,7 +636,7 @@ export function useStore(session){
     stockSetupEnabled,commitStockSetup,commitWarehouse,commitLot,
     supplierState,supplierTarget,openSupplierLedger:(supplierId='',purchaseId='')=>{setSupplierTarget({supplierId,purchaseId});setView('suppliers')},consumeSupplierTarget:()=>setSupplierTarget(null),purchaseTarget,openPurchaseSuppliers:()=>{setPurchaseTarget({tab:'suppliers'});setView('purchase')},openPurchaseDocument:id=>{setPurchaseTarget({id});setView('purchase')},consumePurchaseTarget:()=>setPurchaseTarget(null),commitSupplierLedger,refreshSuppliers,
     restaurantTarget,openRestaurantEntry:(id,bookingId='')=>{setRestaurantTarget({id,bookingId});setView('restaurant')},consumeRestaurantTarget:()=>setRestaurantTarget(null),reservationTarget,openReservationBooking:id=>{setReservationTarget({id});setView('reservations')},consumeReservationTarget:()=>setReservationTarget(null),
-    products,members,orders,purchases,sales,salesQuote,openSalesQuote:quote=>{setSalesQuote({id:quote.id,revision:quote.revision});setView('sales')},consumeSalesQuote:()=>setSalesQuote(null),cart,view,setView,ready,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitReservation,commitInventory,commitRestaurant,commitExchange,commitSales,commitCustomerLedger,refreshTrading,customerTarget,openCustomerLedger:id=>{setCustomerTarget(id);setView("customers")},consumeCustomerTarget:()=>setCustomerTarget(""),salesTarget,openSalesDocument:id=>{setSalesTarget(id);setView("sales")},consumeSalesTarget:()=>setSalesTarget(""),restaurantConfig,
+    products,members,orders,purchases,sales,salesQuote,openSalesQuote:quote=>{setSalesQuote({id:quote.id,revision:quote.revision});setView('sales')},consumeSalesQuote:()=>setSalesQuote(null),cart,view,setView,ready:ready&&cartWorkspace.settled,cartWorkspace,dataError,checkoutState,reconcileCheckout,retryCheckout,financialState,retryFinancial,commitReservation,commitInventory,commitRestaurant,commitExchange,commitSales,commitCustomerLedger,refreshTrading,customerTarget,openCustomerLedger:id=>{setCustomerTarget(id);setView("customers")},consumeCustomerTarget:()=>setCustomerTarget(""),salesTarget,openSalesDocument:id=>{setSalesTarget(id);setView("sales")},consumeSalesTarget:()=>setSalesTarget(""),restaurantConfig,
     activeMember,setActiveMember:value=>{ensureCartEditable();setActiveMember(value)},
     addToCart,removeFromCart,updateCartQty,updateCartItemPrice,clearCart,stageQuickSale,
     cartSubtotal,cartCount,checkout,refund,

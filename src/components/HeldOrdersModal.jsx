@@ -1,76 +1,44 @@
-import {tr,getLocale} from "../i18n"
-import { Pause, Trash2, X, ShoppingCart } from 'lucide-react'
+import {useEffect,useRef,useState} from 'react'
+import {tr,trMessage,getLocale} from '../i18n'
+import {X,Pause} from 'lucide-react'
+import '../styles/held-cart.css'
 
-export default function HeldOrdersModal({ heldOrders, members, onRecall, onRemove, onClose }) {
-  return (
-    <>
-      <div style={ho.overlay} onClick={onClose}/>
-      <div style={ho.box}>
-        <div style={ho.head}>
-          <div style={{display:'flex', alignItems:'center', gap:8}}>
-            <Pause size={16}/>
-            <span style={{fontWeight:600}}>{tr("掛單列表")}</span>
-            <span className="badge badge-blue">{heldOrders.length}</span>
-          </div>
-          <button onClick={onClose} style={{padding:6}}><X size={18}/></button>
-        </div>
-        <div style={ho.list}>
-          {heldOrders.length === 0 ? (
-            <div style={{textAlign:'center', padding:60, color:'var(--text-tertiary)'}}>
-              <ShoppingCart size={32} style={{margin:'0 auto 12px', opacity:0.3}}/>
-              <div style={{fontSize:13}}>{tr("沒有掛單")}</div>
-            </div>
-          ) : heldOrders.map(h => {
-            const member = h.memberId ? members.find(m => m.id === h.memberId) : null
-            const total = (h.cart || []).reduce((s,i) => s + i.price * i.qty, 0)
-            const items = (h.cart || []).reduce((s,i) => s + i.qty, 0)
-            return (
-              <div key={h.id} style={ho.row}>
-                <div style={{flex:1, minWidth:0}}>
-                  <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:4}}>
-                    <span style={{fontWeight:500, fontSize:14}}>{tr(h.label)}</span>
-                    {member && <span className="badge badge-gold">{member.name}</span>}
-                  </div>
-                  <div style={{fontSize:11, color:'var(--text-tertiary)'}}>
-                    {new Date(h.createdAt).toLocaleString(getLocale(),{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}
-                    {' · '}{items}{tr(" 件 / NT$ ")}{total.toLocaleString()}
-                  </div>
-                  <div style={{fontSize:11, color:'var(--text-secondary)', marginTop:4, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
-                    {(h.cart || []).map(i => `${i.name}×${i.qty}`).join('、')}
-                  </div>
-                </div>
-                <div style={{display:'flex', gap:6, marginLeft:12}}>
-                  <button className="btn btn-primary btn-sm" onClick={()=>{ onRecall(h); onClose() }}>{tr("取單")}</button>
-                  <button onClick={()=>{ if(confirm(tr("確定刪除此掛單？"))) onRemove(h.id) }} style={{padding:6, color:'var(--red)'}}>
-                    <Trash2 size={14}/>
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </>
-  )
-}
-
-const ho = {
-  overlay:{position:'fixed',inset:0,background:'rgba(23,37,60,0.50)',zIndex:998},
-  box:{
-    position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
-    background:'var(--bg-raised)', borderRadius:12, width:520, maxWidth:'92vw',
-    maxHeight:'85vh', overflow:'hidden', display:'flex', flexDirection:'column',
-    boxShadow:'var(--shadow-lg)', zIndex:999,
-  },
-  head:{
-    display:'flex', justifyContent:'space-between', alignItems:'center',
-    padding:'14px 18px', borderBottom:'1px solid var(--border-dim)',
-  },
-  list:{
-    flex:1, overflowY:'auto',
-  },
-  row:{
-    display:'flex', alignItems:'center', padding:'14px 18px',
-    borderBottom:'1px solid var(--border-dim)',
-  },
+export default function HeldOrdersModal({heldOrders,members,onRecall,onRemove,onClose,hasCart=false}){
+ const [busy,setBusy]=useState(''),[error,setError]=useState(''),[cancelling,setCancelling]=useState(''),running=useRef(false),box=useRef(null),closeRef=useRef(onClose)
+ closeRef.current=onClose
+ useEffect(()=>{const previous=document.activeElement;box.current?.querySelector('button')?.focus();return()=>previous?.focus?.()},[])
+ async function perform(row,remove=false){
+  if(running.current)return;running.current=true;setBusy(row.id);setError('')
+  try{await (remove?onRemove(row.id):onRecall(row));setCancelling('');if(!remove)onClose()}
+  catch(e){setError(e.message||'掛單結果尚未確認，請查詢原編號。')}
+  finally{running.current=false;setBusy('')}
+ }
+ function keydown(e){
+  if(e.key==='Escape'&&!running.current){e.preventDefault();closeRef.current();return}
+  if(e.key!=='Tab')return
+  const nodes=[...box.current.querySelectorAll('button:not(:disabled),summary,[tabindex="0"]')].filter(node=>node.getClientRects().length),first=nodes[0],last=nodes.at(-1)
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}
+ }
+ return <div className="held-cart-overlay" onClick={e=>{if(e.target===e.currentTarget&&!running.current)onClose()}}>
+  <section className="held-cart-dialog" ref={box} role="dialog" aria-modal="true" aria-labelledby="held-cart-title" onKeyDown={keydown} data-held-dialog>
+   <header><div><span className="held-cart-eyebrow"><Pause size={16}/>{tr('暫放的訂單')}</span><h2 id="held-cart-title">{tr('選一張，接著結帳')}</h2></div><button className="btn btn-ghost" aria-label={tr('關閉掛單列表')} disabled={!!busy} onClick={onClose}><X size={20}/></button></header>
+   {hasCart&&<p className="held-cart-hint">{tr('現在的購物車會先掛單，不會被蓋掉。')}</p>}
+   {error&&<p role="alert" className="held-cart-error">{trMessage(error)}</p>}
+   <div className="held-cart-list">
+    {!heldOrders.length&&<p className="held-cart-empty">{tr('沒有掛單')}</p>}
+    {heldOrders.map(row=>{
+     const cart=Array.isArray(row.cart)?row.cart:[],member=members.find(m=>m.id===row.memberId),cents=cart.reduce((sum,item)=>sum+Math.round(item.price*item.qty*100+1e-7),0)-Math.round((row.manualDiscount||0)*100)
+     return <article className="held-cart-row" key={row.id} data-held-row={row.id}>
+      <div className="held-cart-row-title"><h3>{row.label||tr('未命名掛單')}</h3><strong>{new Intl.NumberFormat(getLocale(),{style:'currency',currency:'TWD',maximumFractionDigits:2}).format(Math.max(0,cents)/100)}</strong></div>
+      <p className="held-cart-meta">{new Date(row.createdAt).toLocaleString(getLocale(),{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}{member?' · '+member.name:''}</p>
+      <p className="held-cart-items">{cart.map(item=>`${item.name} × ${item.qty}`).join(' · ')||tr('掛單資料需要核對，原購物車仍保留。')}</p>
+      <button className="btn btn-primary held-cart-recall" data-held-recall={row.id} disabled={!!busy} onClick={()=>perform(row)}>{tr(busy===row.id?'正在核對…':hasCart?'先暫放，再取回':'取回這張單')}</button>
+      <details className="held-cart-more" open={cancelling===row.id||undefined}><summary>{tr('其他操作')}</summary>
+       {cancelling===row.id?<div><p>{tr('確定取消這張掛單？')}</p><div className="held-cart-actions"><button className="btn btn-ghost" disabled={!!busy} onClick={()=>setCancelling('')}>{tr('保留掛單')}</button><button className="btn btn-ghost held-cart-danger" data-held-confirm-remove={row.id} disabled={!!busy} onClick={()=>perform(row,true)}>{tr('確認取消掛單')}</button></div></div>:<button className="btn btn-ghost held-cart-danger" data-held-remove={row.id} disabled={!!busy} onClick={()=>setCancelling(row.id)}>{tr('取消這張掛單')}</button>}
+      </details>
+     </article>
+    })}
+   </div>
+  </section>
+ </div>
 }

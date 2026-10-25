@@ -206,6 +206,11 @@ const modes={
   '--scenarios':['native-scenarios.cjs','POS_SCENARIO_NATIVE_PASS',false],
   '--scenario-ui':['native-scenario-ui.cjs','POS_SCENARIO_UI_PASS',true],
 }
+Object.assign(modes,{
+  '--held-cart':['native-held-cart-state.cjs','POS_HELD_CART_STATE_PASS',false],
+  '--held-cart-ui':['native-held-cart-ui.cjs','POS_HELD_CART_UI_PASS',true],
+  '--held-cart-browser-ui':['native-held-cart-browser-ui.cjs','POS_HELD_CART_BROWSER_UI_PASS',true],
+})
 const selected=process.argv.slice(2);if(selected.length>1||selected.some(k=>!modes[k]))throw Error('Select one native test mode')
 const spec=selected.length?modes[selected[0]]:['native-database.cjs','POS_NATIVE_SECURITY_PASS',false]
 const executable=require('electron'),ui=spec[2]
