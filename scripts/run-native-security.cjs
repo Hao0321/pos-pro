@@ -1,5 +1,8 @@
 const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=require('node:fs'),os=require('node:os')
 const modes={
+  '--member-profile-ui':['native-member-profile-ui.cjs','POS_MEMBER_PROFILE_UI_PASS',true],
+  '--member-profile-state':['native-member-profile-state.cjs','POS_MEMBER_PROFILE_STATE_PASS',false],
+  '--member-profile-browser-ui':['native-member-profile-browser-ui.cjs','POS_MEMBER_PROFILE_BROWSER_UI_PASS',true],
   '--catalogue-purchase-ui':['native-catalogue-purchase-ui.cjs','POS_CATALOGUE_PURCHASE_UI_PASS',true],
   '--catalogue-purchase-browser-ui':['native-catalogue-purchase-browser-ui.cjs','POS_CATALOGUE_PURCHASE_BROWSER_UI_PASS',true],
   '--loyalty-program-ui':['native-loyalty-program-ui.cjs','POS_LOYALTY_PROGRAM_UI_PASS',true],

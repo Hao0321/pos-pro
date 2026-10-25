@@ -1,0 +1,17 @@
+.member-profile-workspace{min-width:0;overflow-wrap:anywhere}
+.member-profile-workspace .btn{min-height:48px;min-width:48px;white-space:normal;font-size:18px}
+.member-profile-overlay{position:fixed;inset:0;z-index:110;display:grid;place-items:center;padding:16px;background:rgba(23,37,60,.3);backdrop-filter:blur(2px)}
+.member-profile-dialog{width:min(460px,100%);max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain;padding:20px;background:var(--bg-raised);color:var(--text-primary);border:1px solid var(--border-mid);border-radius:var(--r4);box-shadow:0 16px 56px #0003;box-sizing:border-box;overflow-wrap:anywhere}
+.member-profile-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.member-profile-dialog h2{font-size:24px;margin:0}.member-profile-dialog h3{font-size:18px;margin:0 0 12px}
+.member-profile-hint{font-size:16px;line-height:1.5;color:var(--text-secondary);margin:8px 0 20px}
+.member-profile-dialog fieldset{border:0;padding:0;margin:0;min-width:0}
+.member-profile-dialog label{display:flex;flex-direction:column;gap:8px;margin:0 0 16px;font-size:18px;min-width:0}
+.member-profile-dialog input{width:100%;min-width:0;min-height:48px;font-size:18px;box-sizing:border-box}
+.member-profile-dialog summary{min-height:48px;display:flex;align-items:center;cursor:pointer;font-size:17px;color:var(--text-secondary)}
+.member-profile-dialog summary::before{content:'＋';margin-right:8px}.member-profile-dialog details[open] summary::before{content:'−'}
+.member-profile-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.member-profile-actions>.btn{flex:1;min-width:100px}
+.member-profile-review{padding:14px;border:1px solid var(--border-mid);border-radius:12px;margin:12px 0;background:var(--bg-overlay)}
+.member-profile-difference{display:flex;flex-direction:column;gap:8px;margin:12px 0;white-space:pre-wrap;line-height:1.5}
+.member-profile-match{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 0}.member-profile-match>div{flex:1;min-width:100px;display:flex;flex-direction:column;gap:6px}
+.member-profile-discard{margin-top:16px}.member-profile-dialog [role=alert]{line-height:1.6;color:var(--red)}

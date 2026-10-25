@@ -8,6 +8,7 @@ import {isShiftCountRequest,admitShiftCount,shiftCountResult,shiftCountRejection
 import {isCashMovementDraft,admitCashMovement,cashMovementOriginal,cashMovementRejection} from '../../electron/cashMovementDraft.mjs'
 import {isProductEdit,PRODUCT_EDIT_JOURNAL} from '../../electron/productEditDraft.mjs'
 import {commitBrowserProductEdit} from './browserProductEdit'
+import {MEMBER_PROFILE_JOURNAL,isMemberProfileRejection} from '../../electron/memberProfile.mjs'
 import {previewBrowserLoyaltyProgram,applyBrowserLoyaltyProgram,touchesLoyaltyRules,writeBrowserLegacyLoyalty} from './browserLoyaltyProgram'
 import {moneyValue,quantityValue,operationHeader,sameCommand} from '../../electron/operationRules.mjs'
 import {commitBrowserInventory,getBrowserStocktakeState} from './browserInventory'
@@ -126,6 +127,11 @@ export async function dbUpdateMember(id, data) {
 }
 export async function dbDeleteMember(id) {
   if (isElectron) return window.electronAPI.db.deleteMember(id)
+}
+export async function saveMemberProfile(action,id,input,actor){
+  const result=isElectron?await (action==='create'?window.electronAPI.db.addMember(input):window.electronAPI.db.updateMember(id,input)):await (await import('./browserMemberProfile')).commitBrowserMemberProfile(action,id,input,actor)
+  if(result?.success!==true)throw Object.assign(Error(result?.error||'會員保存紀錄需要核對，請保留原輸入。'),{memberProfileRejected:isMemberProfileRejection(result,action,id,input)})
+  return result
 }
 
 // ===== Orders =====
@@ -274,12 +280,13 @@ export async function getSetting(key) {
 }
 export async function setSetting(key, value) {
   if(!isElectron&&touchesLoyaltyRules({[key]:value}))return writeBrowserLegacyLoyalty({[key]:value})
+  if(key===MEMBER_PROFILE_JOURNAL)throw Error('會員保存紀錄由正式保存與完整備份流程管理。')
   if(key===PRODUCT_EDIT_JOURNAL)throw Error('商品保存紀錄由正式保存與完整備份流程管理。')
   if(key==='businessExchangeV1')throw Error('報價歷史只能由正式報價或還原流程保存')
   if (isElectron) return window.electronAPI.settings.set(key, value)
   saveLS('pos_settings_' + key, value)
 }
-export async function setSettings(values){if(!isElectron&&touchesLoyaltyRules(values))return writeBrowserLegacyLoyalty(values);if(Object.hasOwn(values,PRODUCT_EDIT_JOURNAL))throw Error('商品保存紀錄由正式保存與完整備份流程管理。');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');if(isElectron)return window.electronAPI.settings.setMany(values);writeBusinessSettings(Object.fromEntries(Object.entries(values).map(([k,v])=>[k,JSON.stringify(v)])));return {success:true}}
+export async function setSettings(values){if(Object.hasOwn(values,MEMBER_PROFILE_JOURNAL))throw Error('會員保存紀錄由正式保存與完整備份流程管理。');if(!isElectron&&touchesLoyaltyRules(values))return writeBrowserLegacyLoyalty(values);if(Object.hasOwn(values,PRODUCT_EDIT_JOURNAL))throw Error('商品保存紀錄由正式保存與完整備份流程管理。');if(Object.hasOwn(values,'businessExchangeV1'))throw Error('報價歷史只能由正式報價或還原流程保存');if(isElectron)return window.electronAPI.settings.setMany(values);writeBusinessSettings(Object.fromEntries(Object.entries(values).map(([k,v])=>[k,JSON.stringify(v)])));return {success:true}}
 export async function getAllSettings() {
   if (isElectron) return window.electronAPI.settings.getAll()
   return {}
