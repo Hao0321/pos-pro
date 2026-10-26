@@ -775,5 +775,6 @@ module.exports = function initDatabase(dbPath) {
   require('./purchaseInvoiceRead.cjs')(db,api,stmts)
   require('./supplierRefundRead.cjs')(db,api,stmts)
   require('./ordinarySupplierReturnOperations.cjs')(db,api,stmts,stockStore)
+  require('./purchaseCorrectionRead.cjs')(db,api,stmts)
   return api
 }

@@ -1,6 +1,7 @@
 import {verifySupplierRefundProof} from '../../electron/supplierRefund.mjs'
 import {verifyPurchaseInvoiceProof} from '../../electron/purchaseInvoice.mjs'
 import {verifyOrdinaryReturnProof} from '../../electron/ordinarySupplierReturn.mjs'
+import {verifyPurchaseCorrectionProof} from '../../electron/purchaseCorrection.mjs'
 import {verifyPurchasePaymentProof} from '../../electron/purchasePayment.mjs'
 import {privateDraftDigest} from '../../electron/privateDrafts.mjs'
 import {saveExpenseEntry as persistExpenseEntry} from '../utils/dataAccess'
@@ -660,6 +661,11 @@ export function useStore(session){
     confirmPurchaseInvoice:async(input,proof,metadata)=>{
       const result=verifyPurchaseInvoiceProof(input,proof);if(!metadata?.isCurrent())return
       const pending=readPendingFinancial();if(pending?.request.id===input.id){if(pending.kind!=='purchase-bill'||privateDraftDigest(pending.request)!==input.digest)throw Error('請款原紀錄需要核對，請保留輸入，勿重複建單。');const {id,time,...body}=proof.request;await executeFinancial('purchase-bill',body,async()=>result,setFinancialState,{id,time})}
+      if(!metadata?.isCurrent())return;return applyInventoryResult(result)
+    },
+    confirmPurchaseCorrection:async(input,proof,metadata)=>{
+      const result=verifyPurchaseCorrectionProof(input,proof);if(!metadata?.isCurrent())return
+      const pending=readPendingFinancial();if(pending?.request.id===input.id){if(pending.kind!==proof.request.kind||privateDraftDigest(pending.request)!==input.digest)throw Error('更正原紀錄需要核對，請保留原因，勿重複操作。');const {id,time,...body}=proof.request;await executeFinancial(proof.request.kind,body,async()=>result,setFinancialState,{id,time})}
       if(!metadata?.isCurrent())return;return applyInventoryResult(result)
     },
     confirmOrdinaryReturn:async(input,proof,metadata)=>{
