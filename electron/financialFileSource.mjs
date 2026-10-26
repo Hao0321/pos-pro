@@ -40,7 +40,7 @@ function financialTable(table,p,currency,origin,origins,tableIndex){
   return {externalId:values[p.externalId],values:cells}
  });return {entity:p.entity,columns,rows}
 }
-export function projectFinancialFileSource(input,currency=''){
+export function projectOriginalFileSource(input,currency='',{requireFinancial=true}={}){
  const root=readFinancialFileDraft(input);if([root.source.system,root.source.company].some(value=>!value.trim()))fail('請填入原系統與公司，才能保留正確的來源對照。')
  if(!['','TWD'].includes(currency)||root.currency&&currency&&root.currency!==currency)fail('原表格幣別與核對選擇不同，請保留原檔核對。')
  const globalCurrency=root.currency||currency,tables=[],origins=new Map(),masterOrigins=new Map(),fileSources=[];let count=0,financial=0
@@ -57,7 +57,8 @@ export function projectFinancialFileSource(input,currency=''){
    const base=tables.length;for(const [index,value]of projected.source.tables.entries()){tables.push(value);fileSources.push({table:base+index,...origin})}for(const [key,value]of projected.origins){const [index,row]=key.split(':');origins.set((base+Number(index))+':'+row,value)}for(const [key,value]of projected.masterOrigins||[]){const [index,row]=key.split(':');masterOrigins.set((base+Number(index))+':'+row,value)}
   }
  }
- if(!financial)fail('這份原檔沒有未收或未付款，請使用主檔與庫存搬家入口。')
+ if(requireFinancial&&!financial)fail('這份原檔沒有未收或未付款，請使用主檔與庫存搬家入口。')
  const source=readCanonicalMigrationDraft({protocol:MIGRATION_PROTOCOL,id:root.id,source:root.source,tables});return {source,origins,masterOrigins,fileSources,raw:root}
 }
+export const projectFinancialFileSource=(input,currency='')=>projectOriginalFileSource(input,currency)
 export function readFinancialFileSource(text,currency=''){return projectFinancialFileSource(parseAgentDocument(text,{maxBytes:250000}),currency)}

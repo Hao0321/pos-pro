@@ -7,6 +7,7 @@ import {WORKBOOK_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_FENCE} from './workbookMi
 import {TABULAR_MIGRATION_PROTOCOL,TABULAR_MIGRATION_FENCE} from './tabularMigration.mjs'
 import {OPENING_MASTER_PROTOCOL} from './openingMigrationSource.mjs'
 import {isOpeningCutoverMaster} from './openingCutoverRules.mjs'
+import {migrationBatchSourceText,retainMigrationBatchFeature} from './migrationBatchDraft.mjs'
 
 export function appendBrowserMasterMigration(book,input,scope,actor,time,{deferOpeningReceipt=false}={}){
   if(deferOpeningReceipt){if(input?.protocol!==OPENING_MASTER_PROTOCOL&&!isOpeningCutoverMaster(input?.protocol))throw Error('期初主檔只能與原期初批次一起保存。')}
@@ -35,11 +36,12 @@ export function appendBrowserMasterMigration(book,input,scope,actor,time,{deferO
   return {book:deferOpeningReceipt?next:finishBrowserMasterMigration(next,input,saved),receipt:saved}
 }
 export function finishBrowserMasterMigration(book,input,saved){
-  const next={...book,auditLog:[...book.auditLog]},source=readMasterMigrationInput(input).source
+  let next={...book,auditLog:[...book.auditLog]};const source=readMasterMigrationInput(input).source
   next.auditLog.push(masterMigrationAudit(saved))
   next.settings=[...next.settings.filter(row=>![MASTER_MIGRATION_FENCE,MASTER_MIGRATION_HEAD].includes(row.key)),{key:MASTER_MIGRATION_FENCE,value:'1'},{key:MASTER_MIGRATION_HEAD,value:JSON.stringify(saved.hash)}]
   if([TABULAR_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_PROTOCOL].includes(source.protocol))next.settings=[...next.settings.filter(row=>row.key!==TABULAR_MIGRATION_FENCE),{key:TABULAR_MIGRATION_FENCE,value:'1'}]
   if(source.protocol===WORKBOOK_MIGRATION_PROTOCOL)next.settings=[...next.settings.filter(row=>row.key!==WORKBOOK_MIGRATION_FENCE),{key:WORKBOOK_MIGRATION_FENCE,value:'1'}]
+  if(migrationBatchSourceText(input.sourceText))next=retainMigrationBatchFeature(next)
   readMasterMigrationHistory(next)
   return next
 }

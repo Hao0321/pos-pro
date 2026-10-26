@@ -79,7 +79,7 @@
     "protocol": "pos-migration-draft/v1",
     "schema": "/agent/migration-draft-v1.schema.json",
     "guide": "/agent/guides/migration.txt",
-    "status": "owner-master-and-stock-review",
+    "status": "owner-master-stock-and-balance-review",
     "businessCommit": false,
     "humanReviewRequired": true,
     "moneyMovement": false,
@@ -90,11 +90,9 @@
     ],
     "identity": "Exact source system + company + entity + externalId. No name-only merge.",
     "unsupportedCommit": [
-      "opening-receivables",
-      "opening-payables",
       "history-reference"
     ],
-    "confirmation": "Authenticated owner previews counts, source-ID mappings, source/local field differences and unresolved issues. Original stock facts continue into a separate stock/cost trial in the same entry. A displayed confirmation atomically commits the reviewed batch; Agent cannot approve or execute.",
+    "confirmation": "An authenticated owner reviews source IDs, original values, missing facts and local/source conflicts. Master-only batches use one master review; original stock or receivable/payable batches use one whole-opening trial. Only the displayed owner confirmation commits the complete supported batch. An Agent cannot approve or execute.",
     "openingStock": {
       "tableEntity": "opening-stock",
       "sourceProtocol": "pos-migration-draft/v1",
@@ -129,7 +127,9 @@
         "ownerReviewRequired": true
       },
       "legacyXls": false,
-      "externalAiUpload": false
+      "externalAiUpload": false,
+      "multipleFiles": true,
+      "maxFiles": 20
     },
     "financialFiles": {
       "protocol": "pos-financial-file-migration/v1",
@@ -142,6 +142,24 @@
       "requestProtocol": "pos-opening-migration/v3",
       "receiptProtocol": "pos-opening-migration-receipt/v3",
       "protectionVersion": 20,
+      "humanReviewRequired": true,
+      "originalFilesPreserved": true,
+      "externalAiUpload": false,
+      "externalAgentWriteApi": false,
+      "fullMigrationComplete": false,
+      "installerUpdated": false
+    },
+    "sourceBatch": {
+      "protocol": "pos-migration-batch/v1",
+      "schema": "/agent/migration-batch-v1.schema.json",
+      "guide": "/agent/guides/batch-migration.txt",
+      "sourceFormats": [
+        "csv",
+        "tsv",
+        "xlsx"
+      ],
+      "maxFiles": 20,
+      "protectionVersion": 21,
       "humanReviewRequired": true,
       "originalFilesPreserved": true,
       "externalAiUpload": false,

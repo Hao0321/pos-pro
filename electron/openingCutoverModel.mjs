@@ -13,6 +13,7 @@ import {openingCutoverSourceDigest,openingActivationRequest,OPENING_CUTOVER_FENC
 import {makeOpeningCutoverReceipt,cutoverOpeningRows,assertOpeningCutoverResult} from './openingCutoverReceipt.mjs'
 import {OPENING_RAW_CUTOVER_RECEIPT} from './openingCutoverRules.mjs'
 import {FINANCIAL_FILES_FENCE} from './financialFileDraft.mjs'
+import {migrationBatchSourceText,retainMigrationBatchFeature} from './migrationBatchDraft.mjs'
 
 const same=(a,b)=>canonicalSignature(a)===canonicalSignature(b),bad=message=>{throw message?Error(message):cutoverError()}
 const profileKeys=['id','name','contact','phone','email','address','note']
@@ -23,7 +24,7 @@ export function cutoverEconomicDigest(book,scope,context,plan,masterReceipt=null
  const economic={masters:masterReceipt?.rows.map(({targetId,entity,applied})=>({targetId,entity,applied}))||[],stock:stock.valuation||null,stockRows:plan.stockRows.map(row=>{const actual=book.products.find(p=>p.id===row.productId);if(!actual)bad();return {id:actual.id,unit:actual.unit,stock:actual.stock}}),customers:views.customer.customers.map(row=>({...Object.fromEntries(profileKeys.map(key=>[key,row[key]??''])),available:row.available,revision:row.revision})),customerRevision:views.customer.revision,customerClaims:views.customer.openingClaims||[],customerFunds:views.customer.receipts,supplierRevision:views.supplier.revision,supplierClaims:views.supplier.openingClaims||[],supplierFunds:views.supplier.payments}
  return {digest:privateDraftDigest(economic),economic,views,stock}
 }
-export function withCutoverSettings(book,receipt){const values={agentMasterMigrationVersionFence:'1',agentTabularMigrationVersionFence:'1',agentWorkbookMigrationVersionFence:'1',stockOpeningMigrationVersionFence:'1',[OPENING_CUTOVER_FENCE]:'1',[OPENING_CUTOVER_HEAD]:JSON.stringify(receipt.hash),...(receipt.protocol===OPENING_RAW_CUTOVER_RECEIPT?{[FINANCIAL_FILES_FENCE]:'1'}:{})};return {...book,settings:[...(book.settings||[]).filter(row=>!Object.hasOwn(values,row.key)),...Object.entries(values).map(([key,value])=>({key,value}))]}}
+export function withCutoverSettings(book,receipt){const values={agentMasterMigrationVersionFence:'1',agentTabularMigrationVersionFence:'1',agentWorkbookMigrationVersionFence:'1',stockOpeningMigrationVersionFence:'1',[OPENING_CUTOVER_FENCE]:'1',[OPENING_CUTOVER_HEAD]:JSON.stringify(receipt.hash),...(receipt.protocol===OPENING_RAW_CUTOVER_RECEIPT?{[FINANCIAL_FILES_FENCE]:'1'}:{})};const next={...book,settings:[...(book.settings||[]).filter(row=>!Object.hasOwn(values,row.key)),...Object.entries(values).map(([key,value])=>({key,value}))]};return migrationBatchSourceText(JSON.parse(receipt.signature).sourceText)?retainMigrationBatchFeature(next):next}
 export function cutoverCustomerRequest(input,row,revision,time){return {id:openingCustomerCreateId(input.id,row.sourceKey),kind:'customer-ledger',action:'customer-create',storeId:input.scope.storeId,epoch:input.scope.epoch,expectedRevision:revision,time,date:input.cutoffDate,customer:structuredClone(row.values)}}
 
 // Complete in-memory postimage of the same operations the native transaction

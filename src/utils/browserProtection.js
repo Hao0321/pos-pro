@@ -5,7 +5,7 @@ import {stockLedgerDigest} from '../../electron/stockLedgerModel.mjs'
 let validatedSignature=null,cachedGraphSignature=null,cachedGraph=null
 export function browserProtectionGraph(record){
  const meta=record.recovery??{version:1,snapshots:[],originalIds:[],events:[]}
- if(![1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20].includes(meta.version))throw Error('備份保護紀錄不完整或內容不同，請保留原檔核對')
+ if(![1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21].includes(meta.version))throw Error('備份保護紀錄不完整或內容不同，請保留原檔核對')
  if(meta.version===1&&meta.snapshots.some(row=>Object.hasOwn(row,'storage')))throw Error('備份保護紀錄不完整或內容不同，請保留原檔核對')
  const signature=canonicalSignature(meta)
  if(signature===cachedGraphSignature)return structuredClone(cachedGraph)

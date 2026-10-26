@@ -4,6 +4,9 @@ import {businessId} from './businessExchange.mjs'
 import {projectOpeningBalanceSource,projectOpeningBalanceTables} from './openingBalanceSource.mjs'
 import {readFinancialFileSource} from './financialFileSource.mjs'
 import {decimalUnits} from './decimalUnits.mjs'
+import {parseAgentDocument} from './agentHandoff.mjs'
+import {MIGRATION_BATCH_PROTOCOL} from './migrationBatchDraft.mjs'
+import {projectMigrationBatchSource} from './migrationBatchSource.mjs'
 
 // Source/receipt proof. Raw v3 sources are re-read through the same bounded
 // decoder. This is not a write authority; the full book also checks linked
@@ -35,7 +38,8 @@ export const openingBarrierId=(id,side)=>'opening-activation-'+(side==='receivab
 export function readOpeningCutoverFacts(input){
  draftObject(input,requestFields,requestFields.filter(key=>key!=='review'));assertPrivateDraftContext(input.scope)
  if(!isOpeningCutoverProtocol(input.protocol)||!['','TWD'].includes(input.currency)||input.scope.role!=='owner'||!Array.isArray(input.masterChoices)||input.masterChoices.length>5000||!Array.isArray(input.partyChoices)||input.partyChoices.length>5000)bad()
- const parsed=input.protocol===OPENING_RAW_CUTOVER_PROTOCOL?projectOpeningBalanceTables(readFinancialFileSource(input.sourceText,input.currency),input.cutoffDate):projectOpeningBalanceSource(input.sourceText,input.cutoffDate)
+ const raw=input.protocol===OPENING_RAW_CUTOVER_PROTOCOL?parseAgentDocument(input.sourceText,{maxBytes:250000}):null,batch=raw?.protocol===MIGRATION_BATCH_PROTOCOL
+ const parsed=raw?projectOpeningBalanceTables(batch?projectMigrationBatchSource(raw,input.currency):readFinancialFileSource(input.sourceText,input.currency),input.cutoffDate,{allowEmpty:batch}):projectOpeningBalanceSource(input.sourceText,input.cutoffDate)
  if(parsed.otherEntities.length||input.id!==openingCutoverId(parsed.source,input.scope))bad()
  draftObject(input.declaredTotals,['stockValue','receivableInvoices','receivableCredits','payableInvoices','payableCredits'],[])
  const totals={receivableInvoices:parsed.totals.receivable.invoiceCents,receivableCredits:parsed.totals.receivable.creditCents,payableInvoices:parsed.totals.payable.invoiceCents,payableCredits:parsed.totals.payable.creditCents}
