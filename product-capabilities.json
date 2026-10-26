@@ -128,7 +128,7 @@
       "name": "部分退貨、折抵、供應商退款及更正",
       "status": "unmeasured",
       "implementation": "available",
-      "nextExperiment": "驗證分批小數尾差、已付退款、原編號恢復、回滾、重啟與備份 M43：供應商退款與誤記更正共用可接續輸入、精確分幣、固定原筆唯讀確認及班次變更核對；原金額／方式固定，常見更正原因可直接選。沿用原採購、現金與會計，說明見 docs/SUPPLIER_REFUNDS.md。真人、實體手機與全範圍驗收仍未完成。"
+      "nextExperiment": "驗證分批小數尾差、已付退款、原編號恢復、回滾、重啟與備份 M43：供應商退款與誤記更正共用可接續輸入、精確分幣、固定原筆唯讀確認及班次變更核對；原金額／方式固定，常見更正原因可直接選。沿用原採購、現金與會計，說明見 docs/SUPPLIER_REFUNDS.md。真人、實體手機與全範圍驗收仍未完成。 M44：驗證一般非批次退貨的持久原始輸入、原採購分攤、相關庫存核對、原筆庫存／成本回執與店家確認的 Agent 代填；說明見 docs/ORDINARY_SUPPLIER_RETURNS.md。其餘能力與真人、實體手機及外部 Agent 驗收保持未完成。"
     },
     {
       "id": "procurement.approvals-advances",

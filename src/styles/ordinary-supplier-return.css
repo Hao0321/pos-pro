@@ -1,0 +1,11 @@
+.ordinary-return-card{width:min(100%,600px)}
+.ordinary-return-card select,.ordinary-return-card input,.ordinary-return-card textarea{width:100%;box-sizing:border-box;min-height:48px;font:inherit}
+.ordinary-return-items{display:grid;gap:12px;margin:4px 0}
+.ordinary-return-card .ordinary-return-item{display:grid;gap:6px;padding:12px;border:1px solid var(--border-dim);border-radius:12px;min-width:0}
+.ordinary-return-item strong,.ordinary-return-item span{overflow-wrap:anywhere}
+.ordinary-return-item span{font-size:14px;font-weight:400;color:var(--text-secondary)}
+.ordinary-return-total{font-size:22px;line-height:1.5;overflow-wrap:anywhere}
+.ordinary-return-reasons{display:grid;gap:8px;padding-top:8px}
+.ordinary-return-reasons button{min-height:48px;white-space:normal;overflow-wrap:anywhere;line-height:1.5}
+.ordinary-return-card>fieldset{border:0;padding:0;min-width:0}
+.ordinary-return-card button,.ordinary-return-card summary{min-height:48px}

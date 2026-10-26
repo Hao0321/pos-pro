@@ -1,0 +1,15 @@
+import {draftObject,privateDraftDigest} from '../../electron/privateDrafts.mjs'
+import {ORDINARY_RETURN_FAMILY,ordinaryReturnItemsDigest,ordinaryReturnBasis} from '../../electron/ordinarySupplierReturn.mjs'
+import {invoiceQuantity} from '../../electron/purchaseInvoice.mjs'
+export const newOrdinaryReturn=()=>({target:null,form:{invoiceId:'',quantities:[],reason:''},agent:{raw:'',applied:null},submission:null})
+export function validOrdinaryReturn(value){try{
+ draftObject(value,['target','form','agent','submission']);const f=value.form;draftObject(f,['invoiceId','quantities','reason'])
+ if(typeof f.invoiceId!=='string'||f.invoiceId.length>128||typeof f.reason!=='string'||f.reason.length>500||!Array.isArray(f.quantities)||f.quantities.length>1000||f.quantities.some(q=>typeof q!=='string'||q.length>32))return false
+ draftObject(value.agent,['raw','applied']);if(typeof value.agent.raw!=='string'||new TextEncoder().encode(value.agent.raw).length>32768)return false
+ if(value.agent.applied){draftObject(value.agent.applied,['digest','total']);if(!/^[a-f0-9]{64}$/.test(value.agent.applied.digest)||typeof value.agent.applied.total!=='number'||!Number.isFinite(value.agent.applied.total)||value.agent.applied.total<0)return false}
+ if(value.target){const t=value.target;draftObject(t,['purchaseId','supplierId','supplierName','purchaseDigest','itemsDigest','basisDigest','itemCount','costActive']);if(['purchaseId','supplierId'].some(k=>typeof t[k]!=='string'||!t[k]||t[k].length>128)||typeof t.supplierName!=='string'||t.supplierName.length>2000||!['purchaseDigest','itemsDigest','basisDigest'].every(k=>/^[a-f0-9]{64}$/.test(t[k]))||!Number.isInteger(t.itemCount)||t.itemCount<1||t.itemCount>1000||t.itemCount!==f.quantities.length||typeof t.costActive!=='boolean')return false}
+ if(value.submission){draftObject(value.submission,['id','time','digest']);if(!value.target||!/^ordinary-return-[-a-f0-9]{36}$/.test(value.submission.id)||!Number.isFinite(Date.parse(value.submission.time))||!/^[a-f0-9]{64}$/.test(value.submission.digest))return false}return true
+}catch{return false}}
+export function ordinaryReturnTarget(snapshot){const {po,supplier}=snapshot;return {purchaseId:po.id,supplierId:po.supplierId,supplierName:supplier.name,purchaseDigest:privateDraftDigest(po),itemsDigest:ordinaryReturnItemsDigest(po),basisDigest:ordinaryReturnBasis(snapshot),itemCount:po.items.length,costActive:snapshot.costActive}}
+export const ordinaryReturnReview=(saved,context)=>({context,basisDigest:saved.target.basisDigest,costActive:saved.target.costActive})
+export function ordinaryReturnLookup(saved,context){if(!validOrdinaryReturn(saved)||!saved.submission)throw Error('退貨原紀錄需要核對，請保留輸入，勿重複退貨。');return {family:ORDINARY_RETURN_FAMILY,context,id:saved.submission.id,digest:saved.submission.digest,document:{purchaseId:saved.target.purchaseId,invoiceId:saved.form.invoiceId,quantities:saved.form.quantities.map(q=>q===''?0:invoiceQuantity(q)),reason:saved.form.reason,expectedPurchaseDigest:saved.target.purchaseDigest,review:ordinaryReturnReview(saved,context)}}}

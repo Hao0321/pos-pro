@@ -1,4 +1,7 @@
 import {SUPPLIER_REFUND_FAMILY,supplierRefundOriginal} from '../../electron/supplierRefund.mjs'
+import {ORDINARY_RETURN_FAMILY,ordinaryReturnOriginal,verifyOrdinaryReturnProof} from '../../electron/ordinarySupplierReturn.mjs'
+import {browserToBook} from '../../electron/recoveryRules.mjs'
+import {validateStockCostBook} from '../../electron/stockBackup.mjs'
 import {PURCHASE_INVOICE_FAMILY,purchaseInvoiceOriginal} from '../../electron/purchaseInvoice.mjs'
 import {browserDrawerOriginal} from './browserExpenseDrawer'
 import {PURCHASE_PAYMENT_FAMILY,purchasePaymentOriginal} from '../../electron/purchasePayment.mjs'
@@ -26,6 +29,11 @@ export function getBrowserPrivateDraftContext(actor){return withSalesLock(()=>{
  return context(saved,actor)
 })}
 export async function lookupBrowserPrivateDraftOriginal(input,actor){await getBrowserPrivateDraftContext(actor);return withSalesLock(()=>{
+ if(input.family===ORDINARY_RETURN_FAMILY){
+  const saved=readRecords(),current=context(saved,actor),state=validateStockCostBook(browserToBook(saved.data)),proof=ordinaryReturnOriginal(input,current,readBrowserSupplier(saved))
+  if(proof.status==='missing'){assertOriginalOperationAvailable('applyInventoryOperation',input.id,saved);if(state.operations.some(row=>row.id===JSON.stringify(['applyInventoryOperation',input.id])))throw Error('退貨原紀錄需要核對，請保留輸入，勿重複退貨。');return proof}
+  proof.result=browserStockBusinessResult('applyInventoryOperation',proof.request,saved,actor);verifyOrdinaryReturnProof(input,proof);return proof
+ }
  const saved=readRecords(),current=context(saved,actor);if(input.family===SUPPLIER_REFUND_FAMILY){const proof=supplierRefundOriginal(input,current,readBrowserSupplier(saved));if(proof.status==='missing')assertOriginalOperationAvailable('applyInventoryOperation',input.id,saved);return proof}if(input.family===PURCHASE_INVOICE_FAMILY){const proof=purchaseInvoiceOriginal(input,current,readBrowserSupplier(saved));if(proof.status==='missing')assertOriginalOperationAvailable('applyInventoryOperation',input.id,saved);return proof}if(input.family===PURCHASE_PAYMENT_FAMILY){const proof=purchasePaymentOriginal(input,current,readBrowserSupplier(saved));if(proof.status==='missing')assertOriginalOperationAvailable('applyInventoryOperation',input.id,saved);return proof}if(['expense-drawer','expense-drawer-return'].includes(input.family))return browserDrawerOriginal(input,saved,actor);if(input.family==='expense-entry')return browserExpenseOriginal(input,saved,actor);if(input.family==='held-cart')return heldOriginal(input,current,browserHeldJournal(saved),saved.data.pos2_held_orders);assertDraftLookup(input,current)
  if(input.family==='loyalty-program'){const get=key=>readExchangeTextSetting(saved.data.pos_business_settings,key);return loyaltyProgramOriginal(input,loyaltyFacts(current,readLoyaltyRules(get),readLoyaltyPrograms(get(LOYALTY_PROGRAMS)),issuedLoyaltyValue(saved.data.pos2_members,saved.data.pos2_orders)))}
  if(input.family==='product-edit')return productEditOriginal(input,current,readProductEditJournal(readExchangeTextSetting(saved.data.pos_business_settings,PRODUCT_EDIT_JOURNAL)))

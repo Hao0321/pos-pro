@@ -209,6 +209,9 @@ const modes={
 Object.assign(modes,{
   '--expense-entry':['native-expense-entry-state.cjs','POS_EXPENSE_ENTRY_STATE_PASS',false],
   '--supplier-refund':['native-supplier-refund-state.cjs','POS_SUPPLIER_REFUND_STATE_PASS',false],
+  '--ordinary-supplier-return':['native-ordinary-supplier-return-state.cjs','POS_ORDINARY_RETURN_STATE_PASS',false],
+  '--ordinary-supplier-return-ui':['native-ordinary-supplier-return-ui.cjs','POS_ORDINARY_RETURN_UI_PASS',true],
+  '--ordinary-supplier-return-browser-ui':['native-ordinary-supplier-return-browser-ui.cjs','POS_ORDINARY_RETURN_BROWSER_UI_PASS',true],
   '--supplier-refund-ui':['native-supplier-refund-ui.cjs','POS_SUPPLIER_REFUND_UI_PASS',true],
   '--supplier-refund-browser-ui':['native-supplier-refund-browser-ui.cjs','POS_SUPPLIER_REFUND_BROWSER_UI_PASS',true],
   '--purchase-invoice':['native-purchase-invoice-state.cjs','POS_PURCHASE_INVOICE_STATE_PASS',false],
