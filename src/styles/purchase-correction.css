@@ -1,0 +1,9 @@
+.purchase-correction-source{display:grid;gap:6px;padding:14px;border:1px solid var(--border-dim);border-radius:12px;overflow-wrap:anywhere}
+.purchase-correction-source>span{font-size:15px;color:var(--text-secondary)}
+.purchase-correction-source>strong{font-size:26px;line-height:1.4}
+.purchase-correction-source>p{margin:0;font-size:15px;line-height:1.6}
+.purchase-correction-card form{margin-top:16px}
+.purchase-correction-card textarea{font:inherit;min-height:80px;box-sizing:border-box}
+.purchase-correction-card button,.purchase-correction-card summary{min-height:48px;white-space:normal;overflow-wrap:anywhere;line-height:1.5;box-sizing:border-box}
+.purchase-correction-presets{display:grid;gap:8px;padding-top:8px}
+.purchase-correction-shift{font-size:15px;line-height:1.7;overflow-wrap:anywhere}

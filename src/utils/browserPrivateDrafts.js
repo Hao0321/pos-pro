@@ -1,4 +1,5 @@
 import {SUPPLIER_REFUND_FAMILY,supplierRefundOriginal} from '../../electron/supplierRefund.mjs'
+import {PURCHASE_CORRECTION_FAMILY,purchaseCorrectionOriginal} from '../../electron/purchaseCorrection.mjs'
 import {ORDINARY_RETURN_FAMILY,ordinaryReturnOriginal,verifyOrdinaryReturnProof} from '../../electron/ordinarySupplierReturn.mjs'
 import {browserToBook} from '../../electron/recoveryRules.mjs'
 import {validateStockCostBook} from '../../electron/stockBackup.mjs'
@@ -29,6 +30,7 @@ export function getBrowserPrivateDraftContext(actor){return withSalesLock(()=>{
  return context(saved,actor)
 })}
 export async function lookupBrowserPrivateDraftOriginal(input,actor){await getBrowserPrivateDraftContext(actor);return withSalesLock(()=>{
+ if(input.family===PURCHASE_CORRECTION_FAMILY){const saved=readRecords(),proof=purchaseCorrectionOriginal(input,context(saved,actor),readBrowserSupplier(saved));if(proof.status==='missing')assertOriginalOperationAvailable('applyInventoryOperation',input.id,saved);return proof}
  if(input.family===ORDINARY_RETURN_FAMILY){
   const saved=readRecords(),current=context(saved,actor),state=validateStockCostBook(browserToBook(saved.data)),proof=ordinaryReturnOriginal(input,current,readBrowserSupplier(saved))
   if(proof.status==='missing'){assertOriginalOperationAvailable('applyInventoryOperation',input.id,saved);if(state.operations.some(row=>row.id===JSON.stringify(['applyInventoryOperation',input.id])))throw Error('退貨原紀錄需要核對，請保留輸入，勿重複退貨。');return proof}
