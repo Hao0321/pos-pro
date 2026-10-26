@@ -12,6 +12,7 @@ import {assertSalesResult} from '../../electron/salesPlan.mjs'
 import {assertCustomerLedgerResult} from '../../electron/customerLedger.mjs'
 import {assertSupplierLedgerResult} from '../../electron/supplierLedger.mjs'
 import {assertSupplierInventoryResult} from '../../electron/supplierInventory.mjs'
+import {isOrdinaryReturn,assertOrdinaryReturnCost} from '../../electron/ordinarySupplierReturn.mjs'
 import {PHYSICAL_STOCKTAKE,assertPhysicalStocktakeResult} from '../../electron/physicalStocktake.mjs'
 import {assertReviewedRefundResult} from '../../electron/refundReview.mjs'
 import {assertStockSetupResult} from '../../electron/stockSetupReview.mjs'
@@ -71,6 +72,7 @@ export function assertReceipt(kind,request,result){
   }
   if(['stocktake','receive','receive-lots','receive-reviewed',...PROCUREMENT_KINDS].includes(kind)){
     assertSupplierInventoryResult(request,result)
+    if(isOrdinaryReturn(request))assertOrdinaryReturnCost(request,result)
     if(row.kind!==kind||row.signature!==JSON.stringify(canonical(request))||!Array.isArray(row.productIds)||!row.productIds.length&&!PROCUREMENT_KINDS.includes(kind)||!Array.isArray(result.products)||result.products.length!==row.productIds.length||new Set(row.productIds).size!==row.productIds.length||row.productIds.some(id=>!result.products.some(p=>p.id===id)))throw Error('庫存保存結果尚未確認：回覆內容不符')
     if(kind==='stocktake'&&(row.productIds.length!==request.counts.length||request.counts.some(c=>!row.productIds.includes(c.id))))throw Error('盤點回覆缺少原品項')
     if(kind==='stocktake'&&request.protocol===PHYSICAL_STOCKTAKE)assertPhysicalStocktakeResult(request,result)

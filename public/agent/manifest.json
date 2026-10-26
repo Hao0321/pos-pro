@@ -182,5 +182,14 @@
     "humanReviewRequired": true,
     "automaticMoneyMovement": false,
     "linkFragment": false
+  },
+  "ordinarySupplierReturnDraft": {
+    "protocol": "pos-ordinary-supplier-return-draft/v1",
+    "schema": "/agent/ordinary-supplier-return-draft-v1.schema.json",
+    "context": "Explicit owner handoff for ordinary non-lot goods return; store, epoch, purchase, relevant stock and selected invoice source",
+    "paste": "採購 → 辦理退貨 → 讓 Agent 幫我填",
+    "humanReviewRequired": true,
+    "automaticMoneyMovement": false,
+    "linkFragment": false
   }
 }

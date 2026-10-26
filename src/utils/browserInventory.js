@@ -1,6 +1,7 @@
 import {RECEIPT_REVIEW_KIND,retainReceiptReviewFeature,hasReceiptLots} from '../../electron/receiptReview.mjs'
 import {readRecords,writeRecords,withSalesLock,assertOriginalOperationAvailable,RECORD_KEY} from './browserStorage'
-import {assertPrivateDraftCaller} from '../../electron/privateDrafts.mjs'
+import {assertPrivateDraftCaller,privateDraftContext} from '../../electron/privateDrafts.mjs'
+import {isOrdinaryReturn,assertOrdinaryReturnHeader,admitOrdinaryReturn} from '../../electron/ordinarySupplierReturn.mjs'
 import {INVENTORY_PREFIX,INVENTORY_ACTION} from '../../electron/inventoryOperations.mjs'
 import {planSupplierInventory,supplierInventoryReceipt} from '../../electron/supplierInventory.mjs'
 import {readBrowserSupplier} from './browserSupplierLedger'
@@ -30,6 +31,11 @@ export function commitBrowserInventory(request,actor){
     let replay=false,historyChecked=false,writing=false,beforeRaw=null
     try{
       const saved=readRecords(),r=saved.data,key=INVENTORY_PREFIX+request.id
+      if(isOrdinaryReturn(request)){
+        verify(actor,saved);const context=privateDraftContext(readExchangeTextSetting(r.pos_business_settings,'sharedStoreId'),saved.salesEpoch,actor,r.pos_users)
+        assertOrdinaryReturnHeader(request,context);replay=!!r.pos_audit_log.find(row=>row.id===key);historyChecked=true
+        if(!replay){const data=readBrowserSupplier(saved),state=validateStockCostBook(browserToBook(r)),po=data.purchases.find(p=>p.id===request.purchaseId),supplier=data.suppliers.find(s=>s.id===po?.supplierId);admitOrdinaryReturn(request,context,{po,supplier,products:data.products,costActive:!!state.projection,lotsActive:!!state.projection?.lots})}
+      }
       if(request.kind===RECEIPT_REVIEW_KIND||request.kind===PURCHASE_UNITS_KIND||request.sourceCatalogue||r.pos_business_settings.some(row=>row.key===PURCHASE_UNITS_SETTING))verify(actor,saved)
       if(assertPrivateDraftCaller(request,actor))verify(actor,saved)
       if(request.protocol!==PHYSICAL_STOCKTAKE&&hasBrowserStockCost(saved))return commitBrowserStockBusiness('applyInventoryOperation',request,actor,saved)
