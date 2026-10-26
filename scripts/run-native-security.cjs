@@ -2,6 +2,8 @@ const {spawnSync}=require('node:child_process'),path=require('node:path'),fs=req
 const modes={
   '--migration-batch-state':['native-migration-batch-state.cjs','POS_MIGRATION_BATCH_STATE_PASS',true],
   '--migration-batch-ui':['native-migration-batch-ui.cjs','POS_MIGRATION_BATCH_UI_PASS',true],
+  '--home-focus-ui':['native-home-focus-ui.cjs','POS_HOME_FOCUS_UI_PASS',true],
+  '--home-focus-browser-ui':['native-home-focus-browser-ui.cjs','POS_HOME_FOCUS_BROWSER_PASS',true],
   '--migration-batch-browser-ui':['native-migration-batch-browser-ui.cjs','POS_MIGRATION_BATCH_BROWSER_PASS',true],
   '--member-profile-ui':['native-member-profile-ui.cjs','POS_MEMBER_PROFILE_UI_PASS',true],
   '--waste-entry-ui':['native-waste-entry-ui.cjs','POS_WASTE_ENTRY_UI_PASS',true],

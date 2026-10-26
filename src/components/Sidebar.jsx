@@ -39,8 +39,8 @@ const NAV = [
 export default function Sidebar({ view, setView, session, lowStockCount, todayRevenue, todayOrders,todayBusinessCount, onLogout, pendingOrders = 0, openShift = null,largeText=false,toggleLargeText,simpleMode=false,toggleSimpleMode,stockSetupEnabled=false }) {
   const [now, setNow] = useState(new Date())
   const [showMore,setShowMore]=useState(false)
-  const common=new Set(['dashboard','quick','pos','reservations','restaurant','shifts','readiness','inventory','purchase','suppliers'])
-  useEffect(()=>{if(!common.has(view))setShowMore(true)},[view])
+  const common=new Set(['dashboard','quick','pos','restaurant'])
+  useEffect(()=>{setShowMore(false)},[view,simpleMode])
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
@@ -89,7 +89,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
                       : key === 'orders' && pendingOrders > 0 ? pendingOrders
                       : null
           return (
-            <button key={key} className="workspace-nav-item" data-nav={key} aria-current={active?'page':undefined} onClick={() => setView(key)}
+            <button key={key} className="workspace-nav-item" data-nav={key} aria-current={active?'page':undefined} onClick={() => {setShowMore(false);setView(key)}}
               style={{
                 ...s.navItem,
                 display:simpleMode&&!showMore&&!common.has(key)&&view!==key?'none':'flex',
@@ -118,7 +118,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
             </button>
           )
         })}
-        {simpleMode&&<button className="btn btn-ghost" aria-label={tr("展開全部功能")} aria-expanded={showMore} style={{minHeight:48,fontSize:16,marginTop:6}} onClick={()=>setShowMore(v=>!v)}>{showMore?tr("收起更多功能"):tr("全部功能")}</button>}
+        {simpleMode&&<button className="btn btn-ghost" data-nav-more aria-label={tr("展開全部功能")} aria-expanded={showMore} style={{minHeight:48,fontSize:16,marginTop:6}} onClick={()=>setShowMore(v=>!v)}>{showMore?tr("收起更多功能"):tr("全部功能")}</button>}
       </nav>
 
       {/* 底部 - 警示 + 用戶 */}

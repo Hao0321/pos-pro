@@ -16,6 +16,8 @@ async function input(target,selector,value,type='HTMLInputElement',event='input'
 const select=(target,selector,value)=>input(target,selector,value,'HTMLSelectElement','change')
 async function tap(target,selector){
   await wait(target,`!!document.querySelector(${JSON.stringify(selector)})`,'rendered pointer target '+selector)
+  const reveal=await js(target,'(()=>{const element=document.querySelector('+JSON.stringify(selector)+'),closed=element.closest("[data-home-more]:not([open])");if(closed&&!closed.querySelector(":scope>summary").contains(element))return "[data-home-more]>summary";if(element.matches("[data-nav]")&&!element.checkVisibility()&&element.closest(".workspace-sidebar")?.querySelector("[data-nav-more][aria-expanded=false]"))return "[data-nav-more]";return null})()')
+  if(reveal){if(reveal===selector)throw Error('Disclosure cannot reveal itself');await tap(target,reveal);await wait(target,'(()=>{const element=document.querySelector('+JSON.stringify(selector)+');return element?.checkVisibility()&&element.getBoundingClientRect().height>0})()','visible target after actual disclosure '+selector)}
   await js(target,`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center'})`)
   const rect=`(()=>{const element=document.querySelector(${JSON.stringify(selector)}),r=element.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return !element.disabled&&!element.closest('[inert]')&&r.x>=0&&r.y>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1&&hit&&element.contains(hit)})()`
   await wait(target,rect,'reachable pointer '+selector)

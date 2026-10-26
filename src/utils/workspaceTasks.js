@@ -55,3 +55,10 @@ export function workspaceReminders(store,session){
   }
   return reminders
 }
+
+export function homePrimaryTask(store,session){
+  if(!hasPermission(session,'pos.use'))return null
+  if(!store.openShift)return {id:'start',title:'帶我開始營業',detail:'跟著步驟，準備開店。',view:'readiness'}
+  if(store.cart.length)return {id:'continue',title:'繼續這筆收款',detail:'購物車已保留，接著核對金額。',view:'pos'}
+  return WORKSPACE_TASKS.find(task=>task.id==='sale')
+}
