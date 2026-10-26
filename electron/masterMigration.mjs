@@ -9,6 +9,7 @@ import {OPENING_MASTER_PROTOCOL,OPENING_MASTER_SOURCE,projectOpeningMigrationSou
 import {assertNoUnhandledOpeningValue} from './openingMigrationTables.mjs'
 import {isOpeningCutoverMaster} from './openingCutoverRules.mjs'
 import {readOpeningCutoverMaster} from './openingCutoverSource.mjs'
+import {MIGRATION_BATCH_FENCE,migrationBatchSourceText} from './migrationBatchDraft.mjs'
 
 export const MASTER_MIGRATION_METHOD='applyMasterMigration'
 export const MASTER_MIGRATION_ACTION='AGENT_MASTER_MIGRATION'
@@ -40,7 +41,7 @@ export function assertMasterOwner(book,actor,scope=null){
 function setting(book,key){return (book.settings||[]).find(row=>row.key===key)?.value??null}
 export function readMasterMigrationHistory(book){try{return inspectMasterMigrationHistory(book)}catch{fail()}}
 function inspectMasterMigrationHistory(book){
-  let tabular=false,workbook=false
+  let tabular=false,workbook=false,batch=false
   const audits=(book.auditLog||[]).filter(row=>row.action===MASTER_MIGRATION_ACTION||String(row.id).startsWith('master-migration:'))
   const receipts=audits.map(audit=>{
     const receipt=typeof audit.detail==='string'?JSON.parse(audit.detail):audit.detail
@@ -50,6 +51,7 @@ function inspectMasterMigrationHistory(book){
     const request=JSON.parse(body.signature),source=readMasterMigrationInput(request).source
     if([TABULAR_MIGRATION_PROTOCOL,WORKBOOK_MIGRATION_PROTOCOL].includes(source.protocol))tabular=true
     if(source.protocol===WORKBOOK_MIGRATION_PROTOCOL)workbook=true
+    if(migrationBatchSourceText(request.sourceText))batch=true
     if(body.signature!==canonicalSignature(request)||request.id!==body.id||request.scope.userId!==body.actor.userId||!same(body.source,source.source)||body.rows.length!==source.tables.reduce((n,t)=>n+t.rows.length,0))fail()
     let position=0;const counts=emptyCounts(),keys=new Set()
     for(const [ti,table]of source.tables.entries())for(const [ri,row]of table.rows.entries()){
@@ -70,7 +72,8 @@ function inspectMasterMigrationHistory(book){
   if(savedHead!==null&&(typeof savedHead!=='string'||!/^[a-f0-9]{64}$/.test(savedHead))||head!==savedHead||receipts.length&&setting(book,MASTER_MIGRATION_FENCE)!=='1')fail()
   if(tabular&&setting(book,TABULAR_MIGRATION_FENCE)!=='1')fail()
   if(workbook&&setting(book,WORKBOOK_MIGRATION_FENCE)!=='1')fail()
-  return {receipts,byId,mappings,head,tabular,workbook}
+  if(batch&&(setting(book,MIGRATION_BATCH_FENCE)!=='1'||setting(book,'financialFileMigrationVersionFence')!=='1'))fail()
+  return {receipts,byId,mappings,head,tabular,workbook,batch}
 }
 export function readMasterMigrationInput(input){
   const combined=isOpeningCutoverMaster(input?.protocol),opening=input?.protocol===OPENING_MASTER_PROTOCOL||combined

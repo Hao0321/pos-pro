@@ -1,3 +1,4 @@
+import {migrationBatchSourceText,MIGRATION_BATCH_FENCE} from './migrationBatchDraft.mjs'
 import {canonicalSignature} from './operationRules.mjs'
 import {privateDraftDigest,draftObject} from './privateDrafts.mjs'
 import {readExchangeTextSetting} from './businessExchange.mjs'
@@ -26,6 +27,7 @@ function inspect(book,masterHistory){
   return receipt
  }).sort((a,b)=>a.sequence-b.sequence),byId=new Map(),byProduct=new Map(),byRow=new Map(),children=new Set(),barriers=new Set(),partyTargets=new Map(),storeId=readExchangeTextSetting(book.settings||[],'sharedStoreId')
  const flag=setting(book,OPENING_CUTOVER_FENCE),rawFlag=setting(book,'financialFileMigrationVersionFence');if(flag!==undefined&&flag!=='1'||rawFlag!==undefined&&rawFlag!=='1'||receipts.some(row=>row.protocol===OPENING_RAW_CUTOVER_RECEIPT)&&rawFlag!=='1')bad()
+ if(receipts.some(row=>migrationBatchSourceText(JSON.parse(row.signature).sourceText))&&setting(book,MIGRATION_BATCH_FENCE)!=='1')bad()
  const masters=masterHistory||readMasterMigrationHistory(book);let head=null
  const oldProducts=new Set(),oldRows=new Set()
  for(const audit of book.auditLog||[])if(audit.action==='AGENT_OPENING_MIGRATION'){const saved=typeof audit.detail==='string'?JSON.parse(audit.detail):audit.detail;for(const row of saved.rows||[]){oldProducts.add(row.sourceProductKey);oldRows.add(row.sourceRowKey)}}

@@ -5,6 +5,7 @@ module.exports=function prepareMigration(db,stmts,orderInsertParams,supplierPara
     encoding.validateSettingRows(rawSettings,'sqlite')
     require('./masterMigration.mjs').readMasterMigrationHistory(data)
     require('./reservationHistory.mjs').readReservationBook(data)
+    if(data.settings?.some(row=>row.key==='migrationSourceBatchVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installMigrationBatchFence(db)
     if(data.settings?.some(row=>row.key==='financialFileMigrationVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installFinancialFileFence(db)
     if(rawSettings.some(row=>row.key==='reservationDepositApplicationVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installReservationDepositApplicationFence(db)
     if(rawSettings.some(row=>row.key==='reservationDepositVersionFence'&&row.value==='1'))require('./databaseFeatureFence.cjs').installReservationDepositFence(db)

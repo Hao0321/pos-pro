@@ -1,6 +1,7 @@
 import {OPENING_SOURCE_PLAN,readOpeningSourceData,openingSourceMasterWork} from './openingSourceData.mjs'
 import {OPENING_CUTOVER_PROTOCOL,OPENING_CUTOVER_MASTER,OPENING_RAW_CUTOVER_PROTOCOL,OPENING_RAW_CUTOVER_MASTER,openingCutoverId,readOpeningCutoverFacts,cutoverError} from './openingCutoverRules.mjs'
 import {privateDraftDigest} from './privateDrafts.mjs'
+import {migrationBatchSourceText} from './migrationBatchDraft.mjs'
 
 export function openingCutoverPlanInput(input){const {id,...body}=input;return {...body,protocol:OPENING_SOURCE_PLAN}}
 export function readOpeningCutoverInput(input){readOpeningCutoverFacts(input);const parsed=readOpeningSourceData(openingCutoverPlanInput(input));return {...parsed,work:openingSourceMasterWork(parsed,openingCutoverPlanInput(input))}}
@@ -13,6 +14,6 @@ export function openingCutoverMasterRequest(input){
 }
 export function readOpeningCutoverMaster(input){
  const planned={protocol:OPENING_SOURCE_PLAN,sourceText:input.sourceText,cutoffDate:input.cutoffDate,currency:input.currency,scope:input.scope,masterChoices:input.choices,partyChoices:[],declaredTotals:{}},parsed=readOpeningSourceData(planned),work=openingSourceMasterWork(parsed,planned)
- if(input.protocol!==(parsed.projected.raw?OPENING_RAW_CUTOVER_MASTER:OPENING_CUTOVER_MASTER)||input.parentId!==openingCutoverId(parsed.projected.source,input.scope)||!work.source.tables.length||!parsed.finance.facts.length)throw cutoverError()
+ if(input.protocol!==(parsed.projected.raw?OPENING_RAW_CUTOVER_MASTER:OPENING_CUTOVER_MASTER)||input.parentId!==openingCutoverId(parsed.projected.source,input.scope)||!work.source.tables.length||!parsed.finance.facts.length&&!(migrationBatchSourceText(input.sourceText)&&parsed.stock.opening.length))throw cutoverError()
  return work
 }

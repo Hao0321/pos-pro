@@ -65,5 +65,13 @@
     "humanReviewRequired": true,
     "automaticMoneyMovement": false,
     "linkFragment": false
+  },
+  "migrationBatchDraft": {
+    "protocol": "pos-migration-batch/v1",
+    "schema": "/agent/migration-batch-v1.schema.json",
+    "guide": "/agent/guides/batch-migration.txt",
+    "manifest": "/agent/manifest.json",
+    "humanReviewRequired": true,
+    "externalAgentWriteApi": false
   }
 }

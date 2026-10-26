@@ -8,13 +8,14 @@ import {openingCutoverSourceDigest} from '../../electron/openingCutoverRules.mjs
 import {assertOpeningCutoverResult} from '../../electron/openingCutoverReceipt.mjs'
 import {canonicalSignature} from '../../electron/operationRules.mjs'
 import {FINANCIAL_FILES_PROTOCOL} from '../../electron/financialFileDraft.mjs'
-import {readFinancialFileSource} from '../../electron/financialFileSource.mjs'
+import {MIGRATION_BATCH_PROTOCOL} from '../../electron/migrationBatchDraft.mjs'
+import {readOpeningRawSource} from '../../electron/migrationBatchSource.mjs'
 
 export const cutoverTotalKeys=['stockValue','receivableInvoices','receivableCredits','payableInvoices','payableCredits']
 export const emptyCutoverDraft=()=>({text:'',cutoffDate:'',currency:'',masterChoices:[],partyChoices:[],declaredTotals:{}})
 export {cutoverSourceCanRoute} from '../../electron/migrationSource.mjs'
 export function cutoverSourceDate(text){
- try{const raw=parseAgentDocument(text,{maxBytes:250000}),packed=raw.protocol===FINANCIAL_FILES_PROTOCOL,value=packed?readFinancialFileSource(text).source:raw,dates=new Set(),stockDate=packed?null:openingSourceDate(text);if(stockDate)dates.add(openingDate(stockDate));for(const table of value.tables||[]){if(!['opening-stock','opening-receivables','opening-payables'].includes(table.entity))continue;const indices=table.columns.flatMap((name,index)=>['cutoffdate','asofdate','切換日','截止日期'].includes(name.trim().toLowerCase().replace(/[\s_-]/g,''))?[index]:[]);for(const row of table.rows)for(const index of indices)if(row.values[index])dates.add(openingDate(row.values[index]))}return dates.size===1?[...dates][0]:''}catch{return ''}
+ try{const raw=parseAgentDocument(text,{maxBytes:250000}),packed=[FINANCIAL_FILES_PROTOCOL,MIGRATION_BATCH_PROTOCOL].includes(raw.protocol),value=packed?readOpeningRawSource(text).source:raw,dates=new Set(),stockDate=packed?null:openingSourceDate(text);if(stockDate)dates.add(openingDate(stockDate));for(const table of value.tables||[]){if(!['opening-stock','opening-receivables','opening-payables'].includes(table.entity))continue;const indices=table.columns.flatMap((name,index)=>['cutoffdate','asofdate','切換日','截止日期'].includes(name.trim().toLowerCase().replace(/[\s_-]/g,''))?[index]:[]);for(const row of table.rows)for(const index of indices)if(row.values[index])dates.add(openingDate(row.values[index]))}return dates.size===1?[...dates][0]:''}catch{return ''}
 }
 export function validCutoverDraft(value){
  try{
